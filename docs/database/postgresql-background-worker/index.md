@@ -1,3 +1,7 @@
+---
+title: "PostgreSQL Background Worker 全解：从 RegisterBackgroundWorker 到 4 类逻辑复制 worker"
+---
+
 # PostgreSQL Background Worker 全解：从 `RegisterBackgroundWorker` 到逻辑复制 4 类 worker 的全生命周期
 
 | 编写人 | 编写内容 | 编写时间 |

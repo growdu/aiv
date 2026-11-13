@@ -89,6 +89,7 @@
 | 主题补丁 | `tools/patch-theme.py` | marker-based 幂等注入：SEO meta、相关文章、PV、OG 卡片等 |
 | 素材搬运 | `tools/copy-vendor.py` | logo、打赏图 → 主题 `medias/` |
 | 内容校验 | `tools/check-markdown.py` / `fix-markdown.py` | front matter、链接、格式校验与修复 |
+| 契约闸门 | `tools/check-content-contract.py` | 按内容契约校验所有内容单元，违规退出码 1（CI 用） |
 | CDN 本地化 | `tools/localize-cdn.py` | 把主题的 jsDelivr CDN 换成本地资源（国内访问） |
 | 评论初始化 | `tools/init-gitalk-issues.js` | 为新文章预创建 Gitalk issue |
 | Hexo 扩展 | `scripts/*.js` | filter/helper：mermaid 渲染、HTML 文章处理、智能摘要 |
@@ -201,6 +202,8 @@
 | `aiv/pipeline/build/`、`aiv/pipeline/out/` | 片段与成片 | ❌ |
 | `publish/` | 契约层、调度、能力声明、outbox | ✅ |
 | `weixin/` `toutiao/` `channels/` `bilibili/` | 平台 adapter | ✅ |
+| `requirements/` | 依赖清单（按模块分文件） | ✅ |
+| `.github/workflows/` | `hexo.yml`（构建部署）、`contracts.yml`（契约闸门） | ✅ |
 
 ---
 
@@ -222,26 +225,85 @@ make EP=<期号> all    # validate → brand → render → compose
 cd publish && python3 -m publishkit.cli schedule candidates
 cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 cd publish && python3 -m publishkit.cli schedule status
+
+# 契约闸门
+python3 tools/sync-hexo.py                 # 先产出内容单元
+python3 tools/check-content-contract.py   # 校验 568 个内容单元，违规退出码 1
 ```
 
 ---
 
-## 七、当前状态
+## 七、开发环境
+
+依赖清单在 [`requirements/`](requirements/README.md)，**按模块装**：
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements/publish.txt    # 契约层与调度层（零运行时依赖）
+pip install -r requirements/weixin.txt     # 公众号 adapter
+pip install -r requirements/aiv.txt        # AIV 视频生产线
+```
+
+pip 装不了的系统依赖：`ffmpeg` / `ffprobe`（出片与切片）、中文字体（封面与字幕）、
+cairo 的头文件（`pycairo`）。
+
+### CI 闸门
+
+| 工作流 | 干什么 | 触发 |
+| --- | --- | --- |
+| `hexo.yml` | 构建与部署 | push 到 master |
+| `contracts.yml` | 内容契约 + 契约层 / 头条 / 公众号测试 | push 或 PR 到 master |
+
+`contracts.yml` 里的四步：产出内容单元 → 内容契约闸门（违规即失败）→
+契约层测试 → 两个 adapter 的测试。视频线（aiv）不在里面：它要 cairo 与
+ffmpeg 这套系统依赖，失败模式是「渲染不出片」而不是「契约被破」。
+
+### 给一篇文章声明发布平台
+
+发布候选集的**唯一依据**是母稿 front matter 里的 `platforms`：
+
+```yaml
+---
+platforms:
+  - toutiao
+  - wechat
+---
+```
+
+不写 `platforms` 的文章不进任何平台的候选集——这是内容契约 §4.1 的规定，
+不是调度器的默认行为。声明之后：
+
+```bash
+cd publish && python3 -m publishkit.cli schedule candidates   # 看候选集
+cd publish && python3 -m publishkit.cli schedule weekly --dry-run
+```
+
+---
+
+## 八、当前状态
 
 | 模块 | 状态 |
 | --- | --- |
 | 站点构建 | 成熟，CI 全自动（2~3 分钟） |
+| 内容契约 | 闸门已进 CI（`contracts.yml`）；568 个内容单元 0 违规 |
 | 公众号 | 已实现到**草稿箱**；发表接口无权限（`48001`），自动化边界 = 自动进草稿箱 |
 | 头条号 | 出包可用；账号未认证，API 权限开不了，走「出包 + 人工发」 |
 | 视频号 / B 站 | 出包 + 人工发布清单；B 站 `ARC_BASE` 未开通 |
 | AIV | 第一季 EP01/EP02 已出片；契约化流程稳定 |
-| 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；仅驱动文档类平台 |
+| 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；候选集由母稿 `platforms` 决定 |
 
-规格里仍挂着的待验证项见各 `spec/` 文档末尾的「待验证项」章节。
+**还没就绪的三处**（详见各 spec 的「待验证项」）：
+
+1. 公众号线**不在契约层里**——没有 `publish/capabilities/wechat.toml`，
+   它的发布状态也不写 `publish/outbox`，只活在本机（`weixin/wechat/state.py`）。
+2. 站点**看不到视频**：video widget 关着、菜单无视频入口、outbox 也没汇总成
+   `publish_index`。
+3. 调度器**从未真正跑过**：`publish/deploy/` 里的 cron / launchd 模板还没安装，
+   `publish/schedule.json` 仍是空的。
 
 ---
 
-## 八、延伸阅读
+## 九、延伸阅读
 
 | 文档 | 内容 |
 | --- | --- |
