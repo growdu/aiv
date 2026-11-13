@@ -32,24 +32,29 @@ WECHAT_CAPABILITY = CAPABILITIES_DIR / "wechat.toml"
 def _wechat_posts():
     """Import ``wechat.posts`` without importing it at module level.
 
-    weixin/ 正在被并行开发，它挪目录或改导入路径时本条自动 skip，
+    weixin/ 正在被并行开发，它挪目录或改了导入路径时本条自动 skip，
     不给别人的工作添麻烦。
+
+    用 importlib 而不是 ``from wechat import posts``：那个包不在
+    site-packages 里，静态导入在类型检查器眼里永远是「找不到的模块」。
     """
     if not WEIXIN_DIR.is_dir():
         return None
     if str(WEIXIN_DIR) not in sys.path:
         sys.path.insert(0, str(WEIXIN_DIR))
     try:
-        from wechat import posts
+        import importlib
+
+        return importlib.import_module("wechat.posts")
     except Exception:  # pragma: no cover - weixin 那边在并行开发
         return None
-    return posts
 
 
 def test_wechat_limits_match_the_weixin_constants():
     posts = _wechat_posts()
     if posts is None:
         pytest.skip("weixin/ 不可用，跳过与 wechat.posts 的对照")
+    assert posts is not None
 
     if not WECHAT_CAPABILITY.is_file():
         pytest.skip(
@@ -69,6 +74,7 @@ def test_the_weixin_constants_are_readable_at_all():
     posts = _wechat_posts()
     if posts is None:
         pytest.skip("weixin/ 不可用")
+    assert posts is not None
 
     assert isinstance(posts.TITLE_LIMIT, int)
     assert isinstance(posts.BODY_LIMIT, int)

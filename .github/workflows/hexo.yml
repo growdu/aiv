@@ -65,6 +65,12 @@ jobs:
         run: npm audit --audit-level=high || true
       - name: Sync content to Hexo
         run: python3 tools/sync-hexo.py
+      - name: Build video pages
+        # AIV 的口播稿 → 站上的视频内容单元与合集页。
+        run: python3 tools/build-video-pages.py
+      - name: Build publish index
+        # publish/outbox 的发布状态 → 站点用的发布索引（文章页的「这篇还发到了」）。
+        run: python3 tools/build-publish-index.py
       - name: Apply theme patches
         run: python3 tools/patch-theme.py
       - name: Copy vendor assets
@@ -241,6 +247,10 @@ jobs:
           PY
       - name: Sync content to Hexo
         run: python3 tools/sync-hexo.py
+      - name: Build video pages
+        run: python3 tools/build-video-pages.py
+      - name: Build publish index
+        run: python3 tools/build-publish-index.py
       - name: Apply theme patches
         run: python3 tools/patch-theme.py
       - name: Copy vendor assets

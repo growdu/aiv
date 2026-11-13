@@ -1,0 +1,21 @@
+# yamllint 配置
+#
+# 仓库里的 YAML（GitHub Actions 工作流、主题配置）普遍超过 80 列：
+# 一行命令或一段路径写不下时，拆行比让它超长更难读。默认的 80 列限制
+# 对这个仓库没有意义，所以放宽。
+---
+extends: default
+
+rules:
+  line-length:
+    max: 160
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+  # 工作流里 `on:` 会被 YAML 1.1 解析成布尔 True，这是规范行为不是错误。
+  truthy:
+    allowed-values: ["true", "false", "on"]
+  comments:
+    min-spaces-from-content: 1
+  # 本仓库的 YAML 一律不带 `---` 文档起始标记（_config.yml、_config.matery.yml、
+  # 两个工作流都是），单文档不需要它。
+  document-start: disable
