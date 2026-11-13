@@ -230,9 +230,12 @@ def test_render_scene_validates_params_before_rendering(tmp_path, contract):
 def _without_mascot(monkeypatch) -> None:
     """让形象一律不画。
 
-    3D 形象是**媒体产物，不入库**（见 `character/README.md`）。基准指纹若带着
-    素材抓，换台机器、换个干净检出就必然对不上——测试会退化成「看本机有没有图」，
-    而不是「看这次改造有没有改到画面」。强制不画，基准才在任何检出里都成立。
+    基准指纹若带着形象素材抓，素材一改（重新生成形象、加眼镜）基准就红——
+    测试会退化成「盯素材的字节」，而不是「盯这次改造有没有改到画面」。
+    强制不画，基准才只对**场景代码**负责。
+
+    （形象 PNG 现在是入库的，见 `aiv/.gitignore` 的放行清单；但基准仍然
+    绑在「不画形象」上——基准要盯的是代码，不是素材。）
 
     落版头像 `avatar.jpg` 是入库的，两边都会画，不受这个开关影响。
     """
@@ -256,14 +259,40 @@ def _scene_frame_hash(module_name: str, params: dict, t: float) -> str:
     return hashlib.sha256(bytes(surface.get_data())).hexdigest()
 
 
-def test_contract_driven_rendering_is_pixel_identical(contract, monkeypatch):
+@pytest.fixture
+def baseline_frames():
+    """基准指纹里的逐帧哈希。
+
+    基准**绑在字体上**：换一款字体，同一段文字的像素就不同，比出来的是
+    噪声不是信号。跨平台时（macOS 的 PingFang SC vs Linux 的 Noto Sans CJK SC）
+    必然对不上，而这条守卫本来要盯的是「有没有手滑改到画面」，不是
+    「两台机器的字体一不一样」——所以字体不一致时跳过并说明原因。
+
+    做成 fixture 而不是每次手动调一次：**要跟基准比像素的测试必须伸手要它**，
+    于是「忘了加守卫」这件事不会再发生（跨平台 CI 第一次就抓到了这种漏）。
+    """
+    data = json.loads(BASELINE.read_text(encoding="utf-8"))
+    from pyv import fonts
+
+    baseline_font = data["capture"].get("font", "")
+    current = fonts.font_family()
+    if baseline_font and baseline_font != current:
+        pytest.skip(
+            f"基准是在「{baseline_font}」下抓的，当前机器是「{current}」——"
+            f"跨字体像素本来就不同，这条基准在这里测不出东西"
+        )
+    return data["frames"]
+
+
+def test_contract_driven_rendering_is_pixel_identical(contract, monkeypatch,
+                                                      baseline_frames):
     """契约化之后，画面必须与改造前一模一样。
 
     基准指纹是「文案还写死在场景代码里」时抓的。把文案搬进契约最容易出的
     事故就是顺手把画面也改了——而画面变了不会有任何报错，只有逐像素比对能发现。
     """
     _without_mascot(monkeypatch)
-    baseline = json.loads(BASELINE.read_text(encoding="utf-8"))["frames"]
+    baseline = baseline_frames
     for segment in contract.segments:
         for t in (0.0, 0.45, 0.9):
             key = f"{segment.renderer}@{t}"
@@ -274,12 +303,13 @@ def test_contract_driven_rendering_is_pixel_identical(contract, monkeypatch):
             )
 
 
-def test_pixel_baseline_excludes_local_mascot_asset(contract, monkeypatch):
+def test_pixel_baseline_excludes_local_mascot_asset(contract, monkeypatch,
+                                                    baseline_frames):
     """基准指纹里不含本机的形象素材。
 
-    形象 PNG 不入库，干净检出里根本没有它。基准若是带着素材抓的，
-    就会在主工作区绿、在干净检出里必然红——那等于把测试绑死在一台机器的状态上，
-    而它本该盯的是「代码有没有改画面」。这条测试盯住「基准与素材无关」这个前提本身。
+    基准必须与形象素材无关：素材一改（重新生成形象）基准就红，等于把测试
+    绑死在素材的字节上，而它本该盯的是「代码有没有改画面」。
+    这条测试盯住「基准与素材无关」这个前提本身。
     """
     from pyv import character
 
@@ -297,4 +327,4 @@ def test_pixel_baseline_excludes_local_mascot_asset(contract, monkeypatch):
                   if s.renderer == "pyv.scenes.s01_intro")
     key = "pyv.scenes.s01_intro@0.45"
     assert _scene_frame_hash("pyv.scenes.s01_intro", params, 0.45) \
-        == baseline["frames"][key]
+        == baseline_frames[key]

@@ -1,0 +1,73 @@
+name: AIV pipeline
+
+# 这条流水线不许只在 macOS 上绿。
+#
+# macOS 自带 PingFang SC，Linux 上没有——过去「换台机器跑一遍」根本跑不起来，
+# 于是跨平台这件事一直只是嘴上说说。这个工作流在 ubuntu 上真跑一遍：
+# 装开源中文字体、装依赖、跑全部测试。
+#
+# 光跑测试还不够：测试里**真的会合成出一段成片**（用入库的真实旁白与 BGM，
+# 见 tests/test_compose_end_to_end.py），并按规格核对——所以这条流水线
+# 证明的不只是「零件能用」，而是「整条能走通」。
+#
+# 已知差异：逐像素基准是按 PingFang SC 抓的，Linux 上字体不同，
+# 那条守卫会**跳过并说明原因**（不是红，也不是假装绿）。
+
+on:
+  push:
+    paths:
+      - "aiv/**"
+      - ".github/workflows/aiv-pipeline.yml"
+  pull_request:
+    paths:
+      - "aiv/**"
+  workflow_dispatch:
+
+concurrency:
+  group: aiv-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Linux 上跑测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 装系统依赖
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            ffmpeg fontconfig fonts-noto-cjk make \
+            python3-cairo python3-numpy python3-pil python3-scipy python3-pytest
+          fc-cache -f
+
+      - name: 确认 Python 依赖可用
+        run: |
+          # 系统包装的版本与发行版一起走，最稳；只有在装不上时才退回 pip。
+          # 不无条件跑 pip：它会把 apt 的 numpy 升到 2.x，和 apt 的 scipy 打架。
+          python3 -c "import cairo, numpy, PIL, scipy, pytest" || \
+            python3 -m pip install --break-system-packages -r aiv/pipeline/requirements.txt
+
+      - name: 确认字体解析到了开源中文字体
+        working-directory: aiv/pipeline
+        run: python3 -m pyv.cli doctor
+
+      - name: 跑测试
+        working-directory: aiv/pipeline
+        run: |
+          set -o pipefail
+          python3 -m pytest tests/ -q -rf 2>&1 | tee /tmp/pytest.log || true
+          # 失败条目用 ::error:: 报成注解：**不登录也能从 API 看到是哪条挂了**。
+          # 工作流日志要仓库管理员权限才能下，注解不要——CI 挂了却看不到原因，
+          # 等于白跑。
+          #
+          # `|| true` 必须在**大括号里**：管道优先级高于 `||`，写成
+          # `grep ... || true | while` 会被解析成 `grep || (true | while)`；
+          # 而且没有匹配时 grep 退出码是 1，在 `set -e` 下会把整个步骤打断——
+          # 上一版就是这么把「测试全过」变成「步骤失败」的。
+          { grep -E "^(FAILED|ERROR) " /tmp/pytest.log || true; } \
+            | while IFS= read -r line; do
+                echo "::error title=pytest 失败::${line}"
+              done
+          if grep -qE "^(FAILED|ERROR) " /tmp/pytest.log; then exit 1; fi

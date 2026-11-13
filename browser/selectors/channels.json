@@ -1,0 +1,50 @@
+{
+  "_note": "视频号助手的页面结构。**这些是探测出来的，不是猜的**——2026-11-13 用真实账号（growdu）探过投稿页。页面改版时重新跑 `python3 -m browser.cli probe`，照着探出来的结构改这张表。候选按顺序试，挨个不中就换下一个。",
+
+  "entry_url": "https://channels.weixin.qq.com/platform/post/create",
+
+  "_text_layout_note": "实测：视频号**有独立的短标题框**与描述框，所以是 separate。描述框是 contenteditable，在里面打 #话题 会被编辑器自动变成真话题（<span class=\"hl topic\">），不用点「#话题」按钮。",
+  "text_layout": "separate",
+
+  "_timeouts_note": "publish_ready_ms：上传完成后平台还要处理视频（转码、取封面），这期间「发表」是灰的，点它不会发出去。实测 12:31（上传后 14 分钟）按钮已可点，14:05（上传后 1 分钟）仍是灰的。publish_effect_ms：点完「发表」最多等多久看页面有没有反应。",
+  "timeouts": {
+    "publish_ready_ms": 900000,
+    "publish_effect_ms": 60000
+  },
+
+  "selectors": {
+    "login": {
+      "_note": "登录后左侧导航会带上 current 类；没登录时页面里是 qrconnect 的 iframe。",
+      "logged_in_marker": ["a.finder-ui-desktop-menu__link_current"],
+      "logged_out_marker": ["iframe[src*='qrconnect']"]
+    },
+    "post": {
+      "video_file_input": ["input[type=file][accept*='video']"],
+      "title_input": ["input[placeholder='填写短标题有机会获得更多流量']"],
+      "description_input": ["div.input-editor[data-placeholder='添加描述']"],
+      "cover_input": ["input[type=file][accept*='image']"],
+      "original_checkbox": [".declare-original-checkbox input[type=checkbox]"],
+      "topic_chip": ["span.hl.topic[data-type='topic']"],
+      "submit_button": ["button.weui-desktop-btn_primary:has-text('发表')"],
+      "_published_marker_note": "点完「发表」后页面上出现的东西（成功提示/链接框）。**还空着**——2026-11-13 那次没成功点出去，所以没观察到成功态长什么样。空着 = 点了之后只能靠 URL 变化判断有没有反应；宁可报「没反应」也不假装成功。",
+      "published_marker": [],
+      "published_notice": [],
+      "published_url_text": [],
+      "published_url_input": [],
+      "published_url_contains": ["weixin.qq.com/sph", "channels.weixin.qq.com/web/pages/feed", "finder.video.qq.com"]
+    },
+    "original_dialog": {
+      "_note": "勾「声明原创」会弹出「原创权益」弹窗：要再勾一次同意、再点弹窗里的「声明原创」，主勾选框才真的算勾上。",
+      "agree_checkbox": [".declare-original-dialog input[type=checkbox]"],
+      "confirm_button": [".declare-original-dialog button:has-text('声明原创')"],
+      "cancel_button": [".declare-original-dialog button:has-text('取消')"]
+    },
+    "list": {
+      "_note": "内容管理 → 视频 列表。**列表行渲染在 iframe 里**（micro/content/iframe/post-card.html），主文档看不到行。行里显示的是**简介**，不是短标题——找行要给简介里那段文字。分享菜单里三项：复制视频ID / 下载视频二维码 / 复制视频链接，**必须精确匹配**（2026-11-13 实测：模糊匹配会抄回视频ID）。",
+      "entry_item": [".finder-ui-desktop-sub-menu__item:has-text('视频')"],
+      "nav_parent": [".finder-ui-desktop-menu__sub__wrp"],
+      "share_button": [".post-feed-item:has-text('{row_text}') .opr-item-wrap .more-actions"],
+      "copy_link_item": [":text-is('复制视频链接')"]
+    }
+  }
+}

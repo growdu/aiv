@@ -59,6 +59,7 @@ from .assets import (
 from .capability import Capability
 from .contract import ToutiaoArticle
 from .render import RenderResult, render
+from .wordcount import platform_word_count
 
 __all__ = [
     "PackageResult", "flatten_id", "snapshot_name", "write_package",
@@ -119,6 +120,8 @@ class PackageResult:
     package_dir: Path
     files: tuple[str, ...]
     reason: str | None = None
+    #: 这篇在头条号编辑器里会显示成多少字（平台自己的口径，不是字符数）。
+    platform_chars: int = 0
 
 
 def flatten_id(content_id: str) -> str:
@@ -425,7 +428,21 @@ def write_package(
     checklist.append(
         "- [ ] 检查正文末尾是纯文本「完整版见 {}」，不是超链接".format(site)
     )
-    checklist.append("- [ ] 发表")
+    # 2026-11-13 实测：平台的发表是**两步**——点「预览并发布」只弹「预览确认发布」
+    # 面板，面板里的「确认发布」才真的发。清单只写「发表」，操作的人点完第一下
+    # 以为发出去了就收工，文章根本没出去。
+    checklist.append(
+        "- [ ] 发表：点「预览并发布」**只弹面板**，要在「预览确认发布」面板里"
+        "再点「确认发布」才算发出去"
+    )
+    # 同一天实测到的第二个坑：编辑器底部会一直显示「保存失败」，那是**自动存草稿**
+    # 那个分支被平台拒了（save=0），**跟发不出去没关系**。不写清楚，操作的人会
+    # 以为没发成功，于是再发一遍——结果发成两篇。
+    checklist.append(
+        "- [ ] 编辑器一直显示「保存失败」不是没发出去：那只是**自动存草稿**被拒"
+        "（平台那个分支坏了），发表走的是另一条路，正常发出去；"
+        "**别因为它以为没发成功就重发一遍**"
+    )
 
     notes = list(article.notes)
     referenced = sum(1 for number in numbers if 1 <= number <= len(article.images))
@@ -439,6 +456,21 @@ def write_package(
         notes.append(
             "正文里的 {} 在切片里没有对应的图".format(
                 "、".join("【图{}】".format(number) for number in orphans)
+            )
+        )
+
+    # 平台按它自己的口径判「段落字数过多」，口径不是字符数 ——
+    # 所以这段检查只能算在**渲染之后**的每一段上（见 wordcount.py）。
+    long_blocks = [
+        platform_word_count(block)
+        for block in rendered.blocks
+        if platform_word_count(block) > limits.paragraph_words
+    ]
+    if long_blocks:
+        notes.append(
+            "有 {} 段超过 {} 平台字（最长一段 {} 字），平台会提示「段落字数过多」"
+            "，上传前建议手工分段".format(
+                len(long_blocks), limits.paragraph_words, max(long_blocks)
             )
         )
 
@@ -462,6 +494,7 @@ def write_package(
         package_dir=package_dir,
         files=_package_files(package_dir),
         reason=reason,
+        platform_chars=platform_word_count(rendered.text),
     )
 
 

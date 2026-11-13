@@ -28,6 +28,7 @@ image_formats = ["webp"]
 cover_ratio = "3:4"
 cover_min_pixels = [600, 800]
 max_body_images = 3
+paragraph_words = 200
 
 [adapter]
 package = "toutiao"
@@ -43,6 +44,7 @@ image_formats = ["webp"]
 cover_ratio = "3:4"
 cover_min_pixels = [600, 800]
 max_body_images = 3
+paragraph_words = 200
 """
 
 
@@ -79,10 +81,12 @@ def test_load_capability_reads_every_field():
     assert cap.limits.title_chars == 30
     assert cap.limits.body_chars == 3000
     assert cap.limits.digest_chars == 120
-    assert cap.limits.image_bytes == 5242880
+    # 20MB：实测上传面板原文「单张图片最大支持20MB」。
+    assert cap.limits.image_bytes == 20971520
     assert cap.limits.image_formats == ("webp",)
-    assert cap.limits.cover_ratio == "3:4"
-    assert cap.limits.cover_min_pixels == (600, 800)
+    # 横图：实测封面框 152×118（≈1.29:1），平台原文「不可小于 452*352」。
+    assert cap.limits.cover_ratio == "452:352"
+    assert cap.limits.cover_min_pixels == (452, 352)
     assert cap.limits.max_body_images == 3
     assert cap.adapter_package == "toutiao"
     assert cap.adapter_command == ("python3", "-m", "toutiao.cli")
@@ -97,6 +101,7 @@ def test_public_interface_is_locked():
     assert tuple(f.name for f in dataclasses.fields(Limits)) == (
         "title_chars", "body_chars", "digest_chars", "image_bytes",
         "image_formats", "cover_ratio", "cover_min_pixels", "max_body_images",
+        "paragraph_words",
     )
     assert tuple(f.name for f in dataclasses.fields(Capability)) == (
         "id", "name", "kind", "automation", "review", "requires_certification",
