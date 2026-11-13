@@ -37,6 +37,10 @@ _FONTS = (
     "/System/Library/Fonts/STHeiti Medium.ttc",
     "/Library/Fonts/Arial Unicode.ttf",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    # Debian/Ubuntu 的 fonts-noto-cjk 装在这两个目录（容器镜像默认走
+    # google-noto-cjk，桌面版发行版走 opentype/noto），两个都留着。
+    "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 )
 

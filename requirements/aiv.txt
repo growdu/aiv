@@ -1,0 +1,13 @@
+# AIV 视频生产线（aiv/pipeline/pyv、character、voice、brand）。
+#
+# pycairo  画面绘制（文字在 cairo 阶段渲染，不交给模型）
+# numpy    音频分析与波形
+# pillow   形象贴图
+# scipy    语音信号处理（读音验收）
+#
+# 另外还需要系统层的 ffmpeg / ffprobe 与中文字体，见 requirements/README.md。
+-r dev.txt
+numpy>=1.26
+pillow>=10.0
+pycairo>=1.26
+scipy>=1.11

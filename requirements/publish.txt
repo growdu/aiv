@@ -1,0 +1,5 @@
+# 发布契约层与调度层（publish/publishkit）。
+#
+# 运行时依赖：**零**。只用标准库（json / tomllib / pathlib …），
+# 这是刻意的——契约层是整个发布链路的底座，不该因为装依赖失败而起不来。
+-r dev.txt
