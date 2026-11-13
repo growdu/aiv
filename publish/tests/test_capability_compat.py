@@ -6,14 +6,14 @@
 **解法不是改 weixin/，而是在契约层加这条兼容性测试**（规格 §5.3）——
 它**只读** weixin/，不改它一个字节；任一边漂移，测试立刻红。
 
-今天它还 skip：``publish/capabilities/wechat.toml`` 还没进仓库——平台能力
-声明分散在几个分支上（规格 §12）。那份文件落地的那一刻，这条测试开始生效。
+今天它生效了：``publish/capabilities/wechat.toml`` 已进仓库（2026-11-13），
+公众号的能力声明不再是散在几个分支上的口头约定。
 
-> **落地那份文件的人请先看这里**：规格 §5 的示例里写的是 ``title_chars = 32``，
-> 但 ``weixin/wechat/titles.py:36`` 的 ``TITLE_LIMIT`` 是 **64**（公众号编辑器的
-> 真实上限）。规格 §5.3 自己那条断言（``== posts.TITLE_LIMIT``）与 §5 的示例
-> TOML 是互相矛盾的——示例照抄进来，这条测试会立刻变红。取值以 weixin/ 的
-> 常量为准。
+> **值从哪来**：以 ``weixin/`` 的常量为准。规格 §5 的示例里写的是
+> ``title_chars = 32``，但 ``weixin/wechat/titles.py:36`` 的 ``TITLE_LIMIT``
+> 是 **64**（公众号编辑器的真实上限）。规格 §5.3 自己那条断言
+> （``== posts.TITLE_LIMIT``）与 §5 的示例 TOML 是互相矛盾的——示例照抄
+> 进来，这条测试会立刻变红。
 """
 
 import sys

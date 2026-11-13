@@ -286,19 +286,26 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | --- | --- |
 | 站点构建 | 成熟，CI 全自动（2~3 分钟） |
 | 内容契约 | 闸门已进 CI（`contracts.yml`）；568 个内容单元 0 违规 |
-| 公众号 | 已实现到**草稿箱**；发表接口无权限（`48001`），自动化边界 = 自动进草稿箱 |
+| 公众号 | 已实现到**草稿箱**；发表接口无权限（`48001`），自动化边界 = 自动进草稿箱；**已进契约层**（能力声明 + outbox 幂等键） |
 | 头条号 | 出包可用；账号未认证，API 权限开不了，走「出包 + 人工发」 |
 | 视频号 / B 站 | 出包 + 人工发布清单；B 站 `ARC_BASE` 未开通 |
 | AIV | 第一季 EP01/EP02 已出片；契约化流程稳定 |
 | 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；候选集由母稿 `platforms` 决定 |
 
-**还没就绪的三处**（详见各 spec 的「待验证项」）：
+**平台与契约层的关系**（四个平台，两个档位）：
 
-1. 公众号线**不在契约层里**——没有 `publish/capabilities/wechat.toml`，
-   它的发布状态也不写 `publish/outbox`，只活在本机（`weixin/wechat/state.py`）。
-2. 站点**看不到视频**：video widget 关着、菜单无视频入口、outbox 也没汇总成
+| 平台 | 能力声明 | 幂等键写在哪 | 自动化停在哪 |
+| --- | --- | --- | --- |
+| 公众号 | `wechat.toml` | `publish/outbox/`（入库） | 草稿箱（人工发表） |
+| 头条号 | `toutiao.toml` | `publish/outbox/`（入库） | 出包（人工上传） |
+| 视频号 | `channels.toml` | `publish/outbox/`（入库） | 出包 + 人工发布清单 |
+| B 站 | `bilibili.toml` | `publish/outbox/`（入库） | 投稿包（`ARC_BASE` 未开通） |
+
+**还没就绪的两处**（详见各 spec 的「待验证项」）：
+
+1. 站点**看不到视频**：video widget 关着、菜单无视频入口、outbox 也没汇总成
    `publish_index`。
-3. 调度器**从未真正跑过**：`publish/deploy/` 里的 cron / launchd 模板还没安装，
+2. 调度器**从未真正跑过**：`publish/deploy/` 里的 cron / launchd 模板还没安装，
    `publish/schedule.json` 仍是空的。
 
 ---

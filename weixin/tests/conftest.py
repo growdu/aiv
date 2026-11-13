@@ -25,6 +25,18 @@ def isolated_credentials(monkeypatch):
     monkeypatch.delenv("WX_COVER", raising=False)
 
 
+@pytest.fixture(autouse=True)
+def isolated_outbox(monkeypatch, tmp_path_factory):
+    """Point the outbox snapshot at a temporary directory.
+
+    发布状态快照的默认位置是仓库里的 ``publish/outbox/``——那是要入库的
+    幂等键，不是测试的沙箱。测试写进去会污染工作树（头条号那边有一条
+    守卫测试专门抓这个），所以这里把它挪到临时目录。
+    """
+    outbox = tmp_path_factory.mktemp("outbox")
+    monkeypatch.setenv("PUBLISH_OUTBOX_DIR", str(outbox))
+
+
 @pytest.fixture(scope="session")
 def repo_root() -> Path:
     return REPO_ROOT
