@@ -1,0 +1,11 @@
+{
+  "extraPaths": [
+    "publish",
+    "weixin",
+    "toutiao",
+    "channels",
+    "bilibili",
+    "aiv/pipeline"
+  ],
+  "reportMissingImports": "warning"
+}
