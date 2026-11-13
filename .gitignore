@@ -50,3 +50,6 @@ db.json
 
 # npm dependency lock (managed by release, not committed)
 package-lock.json
+
+# Draft design for a future AI content pipeline (not part of the current architecture)
+dbmedia/
