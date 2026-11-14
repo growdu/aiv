@@ -164,6 +164,16 @@ jobs:
                   print(f'{fpath} not found, skipping')
           "
       - name: Initialize Gitalk issues
+        # 整个工作流里**只有这一处**建 Gitalk issue。
+        # 两处都建会打架：各自列一遍 issue、各自觉得"这篇还没有"、
+        # 各自建一份，2026-11-13 因此攒出 182 对重复 issue。
+        # 另一个 build（build-github-pages）不再建，它只出产物；
+        # 以后要加第二处建 issue 的地方，先想清楚竞态。
+        #
+        # 这一处指向 growdu.cn（主域名）。growdu.github.io/blog 用同一个
+        # gitalk-id，issue 是同一个，正文里的链接以主域名为准。
+        # 万一服务器这套 build 挂了，Pages 那套会先上线：那时候评论区的
+        # issue 由第一个留言的人自行创建（Gitalk 的本来行为），不会卡住。
         run: node tools/init-gitalk-issues.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -266,15 +276,16 @@ jobs:
     runs-on: ubuntu-latest
     # 同上：run 不结束 → 并发组不释放 → 后面所有推送都卡住。
     timeout-minutes: 20
-    # Serialize after the growdu.cn build.  Both jobs used to create the
-    # Gitalk issues concurrently: each listed the existing issues, each
-    # saw the post as missing, and each created its own copy -> 182
-    # duplicate issue pairs.  With `needs` the second job runs after the
-    # first one finished creating them and simply skips them.
-    # `always()` keeps the fallback: if the server build fails, the
-    # Pages build (and its issue pass) still runs.
-    needs: build
-    if: ${{ always() }}
+    # 这个 job 与上面的 build **并行**跑，不再 needs: build。
+    #
+    # 当初串行是因为两套 Gitalk issue 会打架：两个 job 各自列一遍 issue、
+    # 各自觉得"这篇还没有"、各自建了一份，于是攒出 182 对重复 issue。
+    # 串行只是把竞态藏起来，还白搭了 9 分钟（两次 hexo generate 前后排）。
+    # 现在改由 **gitalk-issues 这个独立 job 统一建**：整个工作流里只有它
+    # 调 init-gitalk-issues.js，两个 build 只负责出产物，竞态从根上没了。
+    #
+    # 不再 needs build，也就不再需要 if: always()——没有上游 job，自然
+    # 不受上游成败影响；服务器那套 build 挂了，Pages 这套照样出站点。
     steps:
       - uses: actions/checkout@v7
         with:
@@ -367,13 +378,6 @@ jobs:
             echo 'ERROR: SW cache name placeholder not replaced' >&2
             exit 1
           fi
-      - name: Initialize Gitalk issues (GitHub Pages target)
-        if: ${{ always() }}
-        run: node tools/init-gitalk-issues.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITALK_SITE_URL: https://growdu.github.io
-          GITALK_SITE_ROOT: /blog/
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

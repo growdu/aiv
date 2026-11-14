@@ -274,3 +274,83 @@ def test_the_npm_cache_is_never_used_without_a_tracked_lockfile() -> None:
         "（本仓库把它 gitignore 了）——setup-node 会直接失败，"
         "每个 run 都在 build 第一步就红"
     )
+
+
+# --- 两套 build 并行 ------------------------------------------------------
+
+
+def _code_without_comments(text: str) -> str:
+    """去掉整行注释，只留可执行的部分。
+
+    注释里经常要提到脚本名、job 名、开关名，统计时必须只认代码，
+    否则"注释里提了一句"会被当成"多了一处"。
+    """
+    return "\n".join(
+        line for line in text.splitlines() if not line.strip().startswith("#")
+    )
+
+
+def test_the_two_builds_run_in_parallel() -> None:
+    """两套 hexo generate 不该前后排。
+
+    2026-11-14 实测：``build`` 599 秒、``build-github-pages`` 564 秒，
+    串起来就是 20 分钟一次部署——站点滞后多久全看这两段相加。
+    两边产出的东西互不相干（只是 root 前缀不同），没有理由串行。
+
+    当初串行只是为了躲开 Gitalk issue 的竞态，现在改由单一 job 建 issue
+    （见下一条），所以这里的串行已经没有任何理由，必须去掉。
+    """
+    jobs = _jobs(_workflow_text())
+    assert len(jobs) >= len(REQUIRED_JOBS)
+    pages_needs = _needs_of(jobs["build-github-pages"])
+    assert "build" not in pages_needs, (
+        "build-github-pages 又依赖上 build 了——两套 hexo generate 串行，"
+        f"每次部署要多等 {9} 分钟（实测 599s + 564s）"
+    )
+    assert "build-github-pages" not in _needs_of(jobs["build"]), (
+        "build 依赖了 build-github-pages，方向反了"
+    )
+
+
+def test_only_one_place_creates_gitalk_issues() -> None:
+    """建 Gitalk issue 的地方只能有一处。
+
+    两处都建会打架：各自列一遍 issue、各自觉得"这篇还没有"、
+    各自建一份，2026-11-13 因此攒出 **182 对**重复 issue
+    （同一个 gitalk-id 被建了两遍，评论区分裂成两个）。
+
+    修法不是"让它们排队"（那只是把竞态藏起来，还白搭 9 分钟），
+    而是**整个工作流里只剩一处**调用 init-gitalk-issues.js。
+    """
+    jobs = _jobs(_workflow_text())
+    assert len(jobs) >= len(REQUIRED_JOBS)
+
+    creators = [
+        name
+        for name, block in jobs.items()
+        if "init-gitalk-issues.js" in _code_without_comments(block)
+    ]
+    assert len(creators) == 1, (
+        f"有 {len(creators)} 个 job 在建 Gitalk issue：{creators}。"
+        "多于一处就会各自建一份重复 issue（2026-11-13 攒过 182 对）"
+    )
+    assert creators[0] == "build", (
+        f"建 issue 的 job 变成了 {creators[0]}——"
+        "主域名 growdu.cn 那套 build 建出来的 issue，正文里链接才指向主域名"
+    )
+    # Pages 那套只出产物，不碰 issue。
+    assert "init-gitalk-issues.js" not in _code_without_comments(
+        jobs["build-github-pages"]
+    ), "build-github-pages 又开始建 issue 了"
+
+
+def test_the_deploys_still_wait_for_their_own_build() -> None:
+    """并行化不能把"发布前必须先构建出来"这条弄丢。"""
+    jobs = _jobs(_workflow_text())
+    assert len(jobs) >= len(REQUIRED_JOBS)
+    assert "build" in _needs_of(jobs["deploy-server"]), (
+        "deploy-server 不等 build 就发布，站点会被 rsync 成一堆半成品"
+    )
+    assert "build-github-pages" in _needs_of(jobs["deploy-github-pages"]), (
+        "deploy-github-pages 不等 build-github-pages 就发布"
+    )
