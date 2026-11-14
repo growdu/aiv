@@ -198,18 +198,29 @@ inject_css = """<meta property="og:title" content="<%= page.title || config.titl
 <% } else { %>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"<%= config.title %>","url":"<%- config.url %>"}</script>
 <% } %>
+<% var _hasCode = !!(page.content && /<(?:pre|code)\b/i.test(page.content)); %>
+<% if (_hasCode) { %>
 <link href="<%- url_for('/libs/prism/prism.min.css') %>" rel="stylesheet"/>
 <style>
 pre[class*="language-"]{background:#263238!important;border-radius:6px;padding:14px 16px;font-size:14px;margin:16px 0;overflow-x:auto;line-height:1.55}
 code[class*="language-"]{background:transparent!important;padding:0;font-family:Consolas,Monaco,'Source Code Pro',monospace;font-size:14px}
 :not(pre)>code[class*="language-"]{background:#f5f5f5!important;padding:2px 6px;border-radius:4px}
-</style>"""
+</style>
+<% } %>"""
 
-inject_js = """<% if (is_post()) { %>
+# prism 只在"文章页且正文里有代码块"时才加载。
+# 全站 672 篇文章、首页/归档/分类/标签这些页面绝大多数一个代码块都没有，
+# 却照样要拉 14 KB 的 prism.min.css 和 13 KB 的 prism JS。
+# 判据取自渲染后的正文（<pre> / <code>），deferred 脚本先于 DOMContentLoaded
+# 执行，所以这里只用正文内容判断，不依赖脚本加载顺序。
+PRISM_BLOCK = """<% var _hasCode = !!(page.content && /<(?:pre|code)\\b/i.test(page.content)); %>
+<% if (is_post() && _hasCode) { %>
 <script src="<%= url_for('/lib/prism/prism-core.min.js') %>"></script>
 <script src="<%= url_for('/lib/prism/prism-autoloader.min.js') %>"></script>
 <script>if(window.Prism&&Prism.plugins&&Prism.plugins.autoloader){Prism.plugins.autoloader.languages_path='<%= url_for("/lib/prism/components/") %>';}</script>
-<% } %>
+<% } %>"""
+
+inject_js = PRISM_BLOCK + """
 <% if (theme.mermaid.enable) { %>
 <script>
 /* Mermaid loader -----------------------------------------------------------
@@ -423,7 +434,10 @@ THEME_MERMAID_BLOCK = re.compile(
 # removed again before a fresh copy is inserted, otherwise every run of
 # this script would append another copy to the theme.
 OLD_INJECTED_BLOCK = re.compile(
-    r'<% if \(is_post\(\)\) \{ %>\s*'
+    # 新版注入块前面会多一行 _hasCode 声明，一并吃掉
+    r'(?:<% var _hasCode[^\n]*\n)?'
+    # 旧版条件是 is_post()，新版是 is_post() && _hasCode
+    r'<% if \(is_post\(\)(?: && _hasCode)?\) \{ %>\s*'
     r'<script src="[^"]*prism-core\.min\.js[^"]*"></script>.*?'
     r'<% \} %>\n',
     re.S,

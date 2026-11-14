@@ -6,7 +6,7 @@
     <%- partial('_partial/header') %>
 
     <%- partial('_partial/cn-banner', { cnTarget: 'https://growdu.cn/' }) %>
-    <script src="<%- url_for('/js/cn-banner.js') %>"></script>
+    <script defer src="<%- url_for('/js/cn-banner.js') %>"></script>
     <%- body %>
 
     <%- partial('_partial/footer') %>
@@ -40,7 +40,7 @@
         
         <script type="text/javascript">
             // 只在桌面版网页启用特效
-            var windowWidth = $(window).width();
+            var windowWidth = window.innerWidth;
             if (windowWidth > 768) {
                 document.write('<script type="text/javascript" src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.sakura) %>"><\/script>');
             }
@@ -51,7 +51,7 @@
     <% if (theme.snowdown.enable) { %> 
         <script type="text/javascript">
             // 只在桌面版网页启用特效
-            var windowWidth = $(window).width();
+            var windowWidth = window.innerWidth;
             if (windowWidth > 768) {
                 document.write('<script type="text/javascript" src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.snow) %>"><\/script>');
             }
@@ -62,7 +62,7 @@
     <% if (theme.mouseStar.enable) { %> 
         <script type="text/javascript">
             // 只在桌面版网页启用特效
-            var windowWidth = $(window).width();
+            var windowWidth = window.innerWidth;
             if (windowWidth > 768) {
                 document.write('<script type="text/javascript" src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.star) %>"><\/script>');
             }
@@ -70,8 +70,8 @@
     <% } %>
 
     <% if (theme.tcaptcha.enable) { %> 
-        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
-        <script src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.tcaptcha) %>"></script>
+        <script defer src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script defer src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.tcaptcha) %>"></script>
         <button id="TencentCaptcha" data-appid="<%- theme.tcaptcha.appid %>" data-cbfn="callback" type="button" hidden></button>
     <% } %>
 
@@ -85,9 +85,9 @@
     <% } %>
 
     <% if (theme.tidio.enable) { %>
-        <script src="//code.tidio.co/<%- theme.tidio.public_key %>.js"></script>
+        <script defer src="//code.tidio.co/<%- theme.tidio.public_key %>.js"></script>
         <script>
-            $(document).ready(function () {
+            document.addEventListener('DOMContentLoaded', function () {
                 setInterval(change_Tidio, 50);
                 function change_Tidio() {
                     var tidio=$("#tidio-chat iframe");
@@ -290,7 +290,8 @@
   if (main) document.body.classList.add('on-rec-all-page');
 })();
 </script>
-<% if (is_post()) { %>
+<% var _hasCode = !!(page.content && /<(?:pre|code)\b/i.test(page.content)); %>
+<% if (is_post() && _hasCode) { %>
 <script src="<%= url_for('/lib/prism/prism-core.min.js') %>"></script>
 <script src="<%= url_for('/lib/prism/prism-autoloader.min.js') %>"></script>
 <script>if(window.Prism&&Prism.plugins&&Prism.plugins.autoloader){Prism.plugins.autoloader.languages_path='<%= url_for("/lib/prism/components/") %>';}</script>
