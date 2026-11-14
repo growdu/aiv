@@ -354,3 +354,29 @@ def test_the_deploys_still_wait_for_their_own_build() -> None:
     assert "build-github-pages" in _needs_of(jobs["deploy-github-pages"]), (
         "deploy-github-pages 不等 build-github-pages 就发布"
     )
+
+
+def test_the_icon_subset_step_never_blocks_the_deploy() -> None:
+    """字体裁剪是锦上添花，不许把发布带崩。
+
+    ``tools/subset-icons.py`` 裁成功省 240 KB，裁失败保持原字体——网站照常
+    上线。所以这一步必须 ``continue-on-error``：让"省了点体积"去换"站点
+    发不出去"，不划算。
+
+    空白图标的防线在工具内部（码位必须在原字体里、裁完必须在 cmap 里），
+    这里的 continue-on-error 说的是另一件事：工具本身跑不起来时也别阻断。
+    """
+    text = _workflow_text()
+    steps = re.findall(
+        r"- name: Subset Font Awesome fonts\n(.*?)(?=\n      - name:|\n  [a-zA-Z-]+:)",
+        text,
+        re.S,
+    )
+    assert len(steps) == 2, (
+        f"两套 build 都应该有字体裁剪步骤（现在找到 {len(steps)} 个）"
+    )
+    for step in steps:
+        assert "continue-on-error: true" in step, (
+            "字体裁剪步骤没有 continue-on-error——裁剪失败会把发布一起带崩"
+        )
+        assert "tools/subset-icons.py" in step, "裁剪步骤调的不是 tools/subset-icons.py"

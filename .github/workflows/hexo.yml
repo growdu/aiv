@@ -90,6 +90,16 @@ jobs:
         run: python3 tools/copy-vendor.py
       - name: Build with Hexo
         run: npx hexo generate
+      - name: Subset Font Awesome fonts
+        # 字体裁剪是锦上添花：裁成功省 240 KB，裁失败就保持原样。
+        # 所以这一步**不许**把整条流水线带崩——continue-on-error 就是这个意思。
+        # 工具内部还有两道自检（码位必须本来就在原字体里、裁完必须在 cmap 里），
+        # 任何一处不对劲都会放弃裁剪、保留原字体，绝不上线空白图标。
+        continue-on-error: true
+        run: |
+          python3 -m venv .venv-icons
+          .venv-icons/bin/pip install --quiet fonttools brotli
+          .venv-icons/bin/python tools/subset-icons.py --public public
       - name: Verify rendered HTML body tags
         # Catches regressions like the 2026-08-10 broken <body> tag
         # caused by injecting partials inside the body tag itself.
@@ -329,6 +339,14 @@ jobs:
         run: python3 tools/copy-vendor.py
       - name: Build GitHub Pages site
         run: npx hexo generate
+      - name: Subset Font Awesome fonts
+        # 与 growdu.cn 那套 build 同一个裁剪步骤（两边的图标清单一样）。
+        # 同样是"失败不阻断"：工具内部有自检，放弃裁剪就保留原字体。
+        continue-on-error: true
+        run: |
+          python3 -m venv .venv-icons
+          .venv-icons/bin/pip install --quiet fonttools brotli
+          .venv-icons/bin/python tools/subset-icons.py --public public
       - name: Verify rendered HTML body tags
         run: |
           python3 - <<'PYCHECK'
