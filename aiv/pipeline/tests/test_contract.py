@@ -12,6 +12,7 @@
 第 3 条是关键：把文案搬进契约最容易出的事故是「顺手把画面也改了」，
 而画面变了不会有任何报错，只有逐像素比对能发现。
 """
+
 import ast
 import hashlib
 import importlib
@@ -45,8 +46,7 @@ def contract():
 @pytest.fixture(scope="module")
 def all_contracts():
     """每一期的契约，按期号索引。"""
-    return {path.stem: contract_mod.load_contract(path)
-            for path in ALL_CONTRACT_PATHS}
+    return {path.stem: contract_mod.load_contract(path) for path in ALL_CONTRACT_PATHS}
 
 
 # ---------------------------------------------------------------- 契约完整性
@@ -109,12 +109,11 @@ def _scene_literals(module_name: str) -> list[str]:
     值 `worker` 会被 `worker_h` 这种版式变量名误伤。
     """
     module = importlib.import_module(module_name)
-    tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
-    return [
-        node.value
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str)
-    ]
+    source = getattr(module, "__file__", None)
+    if source is None:
+        raise AssertionError(f"模块 {module_name} 没有 __file__，读不了源码")
+    tree = ast.parse(Path(source).read_text(encoding="utf-8"))
+    return [node.value for node in ast.walk(tree) if isinstance(node, ast.Constant) and isinstance(node.value, str)]
 
 
 def _param_keys(contract) -> set[str]:
@@ -218,8 +217,9 @@ def test_render_scene_validates_params_before_rendering(tmp_path, contract):
     from pyv import render
     from pyv.timeline import Scene
 
-    scene = Scene(id="s01", start=0.0, end=1.0, type="code", subtitle="测试",
-                  renderer="pyv.scenes.s01_intro", params={})
+    scene = Scene(
+        id="s01", start=0.0, end=1.0, type="code", subtitle="测试", renderer="pyv.scenes.s01_intro", params={}
+    )
     with pytest.raises(MissingParam):
         render.render_scene(scene, tmp_path / "x.mp4", width=320, height=180)
 
@@ -284,8 +284,7 @@ def baseline_frames():
     return data["frames"]
 
 
-def test_contract_driven_rendering_is_pixel_identical(contract, monkeypatch,
-                                                      baseline_frames):
+def test_contract_driven_rendering_is_pixel_identical(contract, monkeypatch, baseline_frames):
     """契约化之后，画面必须与改造前一模一样。
 
     基准指纹是「文案还写死在场景代码里」时抓的。把文案搬进契约最容易出的
@@ -298,13 +297,10 @@ def test_contract_driven_rendering_is_pixel_identical(contract, monkeypatch,
             key = f"{segment.renderer}@{t}"
             assert key in baseline, f"基准里没有 {key}"
             actual = _scene_frame_hash(segment.renderer, segment.params, t)
-            assert actual == baseline[key], (
-                f"{key} 的画面变了：文案搬进契约不该动到画面"
-            )
+            assert actual == baseline[key], f"{key} 的画面变了：文案搬进契约不该动到画面"
 
 
-def test_pixel_baseline_excludes_local_mascot_asset(contract, monkeypatch,
-                                                    baseline_frames):
+def test_pixel_baseline_excludes_local_mascot_asset(contract, monkeypatch, baseline_frames):
     """基准指纹里不含本机的形象素材。
 
     基准必须与形象素材无关：素材一改（重新生成形象）基准就红，等于把测试
@@ -323,8 +319,6 @@ def test_pixel_baseline_excludes_local_mascot_asset(contract, monkeypatch,
     if not character.STATIC_IMAGE.is_file():
         pytest.skip("本机没有形象素材，这条前提无从验证")
     _without_mascot(monkeypatch)
-    params = next(s.params for s in contract.segments
-                  if s.renderer == "pyv.scenes.s01_intro")
+    params = next(s.params for s in contract.segments if s.renderer == "pyv.scenes.s01_intro")
     key = "pyv.scenes.s01_intro@0.45"
-    assert _scene_frame_hash("pyv.scenes.s01_intro", params, 0.45) \
-        == baseline_frames[key]
+    assert _scene_frame_hash("pyv.scenes.s01_intro", params, 0.45) == baseline_frames[key]

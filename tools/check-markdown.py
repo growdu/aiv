@@ -30,7 +30,8 @@ def check_file(p):
         return stats, issues
 
     # 2. Detect unclosed / odd-count code fences
-    fences = [(i, l) for i, l in enumerate(raw_lines, 1) if re.match(r'^\s*```', l)]
+    fences = [(i, line) for i, line in enumerate(raw_lines, 1)
+              if re.match(r'^\s*```', line)]
     stats['fences'] = len(fences)
     if stats['fences'] % 2 != 0:
         issues.append((fences[-1][0], 'odd-fence', f'{stats["fences"]} fences (last at L{fences[-1][0]})'))

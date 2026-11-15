@@ -5,6 +5,7 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -335,8 +336,12 @@ def test_an_unchanged_snapshot_keeps_its_timestamp(tmp_path, monkeypatch):
     否则每次重跑都把工作树弄脏，而内容一个字都没变。
     """
     path = tmp_path / "outbox" / "ep01__channels.json"
-    payload = dict(episode="ep01", status="packaged", title="短标题",
-                   package_dir="channels/out/ep01", published_url=None, reason="理由")
+    # 显式标注成 dict[str, Any]：dict(...) 推导出来的值类型是
+    # str | None（published_url=None 拉低了整条），**payload 展开后
+    # 每个关键字都变成 str | None，与 write_snapshot 的签名对不上。
+    payload: dict[str, Any] = dict(
+        episode="ep01", status="packaged", title="短标题",
+        package_dir="channels/out/ep01", published_url=None, reason="理由")
     snapshot.write_snapshot(path, **payload)
     first = json.loads(path.read_text(encoding="utf-8"))
 
@@ -352,8 +357,12 @@ def test_an_unchanged_snapshot_keeps_its_timestamp(tmp_path, monkeypatch):
 def test_a_changed_snapshot_gets_a_new_timestamp(tmp_path, monkeypatch):
     """状态真的变了，时间戳要跟着变。"""
     path = tmp_path / "outbox" / "ep01__channels.json"
-    payload = dict(episode="ep01", status="packaged", title="短标题",
-                   package_dir="channels/out/ep01", published_url=None, reason="理由")
+    # 显式标注成 dict[str, Any]：dict(...) 推导出来的值类型是
+    # str | None（published_url=None 拉低了整条），**payload 展开后
+    # 每个关键字都变成 str | None，与 write_snapshot 的签名对不上。
+    payload: dict[str, Any] = dict(
+        episode="ep01", status="packaged", title="短标题",
+        package_dir="channels/out/ep01", published_url=None, reason="理由")
     snapshot.write_snapshot(path, **payload)
     first = json.loads(path.read_text(encoding="utf-8"))
 

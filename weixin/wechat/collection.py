@@ -144,7 +144,7 @@ def build_categories(posts) -> dict:
     return {name: tuple(items) for name, items in ordered}
 
 
-def category_archive_url(source_url: str, category: str, path: str = None) -> str:
+def category_archive_url(source_url: str, category: str, path: str | None = None) -> str:
     """The blog's own archive page for a category.
 
     Hexo's category generator is enabled with unlimited paging, so the
