@@ -316,7 +316,10 @@ function fitMermaidDiagrams() {
      MIN_SCALE we therefore keep the natural size and let the container
      scroll horizontally instead of shipping unreadable diagrams. */
   var MIN_SCALE = 0.7;
-  var svgs = root.querySelectorAll('.mermaid svg');
+  /* 期号区块（契约七 §4.2）把正文的第一张机制图搬到了文章内容**之外**，
+     所以这里除了 #articleContent 还得看 .episode-block——否则那张图
+     在窄屏上会按原始宽度溢出，而且点不开放大。 */
+  var svgs = document.querySelectorAll('#articleContent .mermaid svg, .episode-block .mermaid svg');
   for (var i = 0; i < svgs.length; i++) {
     var svg = svgs[i];
     var box = svg.parentNode;
@@ -372,7 +375,7 @@ window.initMermaidDiagrams = function () {
   window.addEventListener('resize', fitMermaidDiagrams);
   document.addEventListener('click', function (e) {
     var svg = e.target && e.target.closest
-      ? e.target.closest('#articleContent .mermaid svg')
+      ? e.target.closest('#articleContent .mermaid svg, .episode-block .mermaid svg')
       : null;
     if (!svg) return;
     var vb = (svg.getAttribute('viewBox') || '').split(/[\\s,]+/);
@@ -429,6 +432,10 @@ MERMAID_UI_CSS = (
 #articleContent .mermaid{margin:16px auto;text-align:center;max-width:100%;overflow:auto;max-height:80vh;overscroll-behavior:contain;border-radius:6px}
 #articleContent .mermaid svg{display:inline-block;vertical-align:middle;cursor:zoom-in}
 #articleContent .mermaid.mermaid-broken{max-height:none;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;color:#92400e;text-align:left;font-size:13px;line-height:1.6}
+/* 期号区块里那张机制图不在 #articleContent 里，样式要跟正文里的一致 */
+.episode-block .mermaid{margin:16px auto;text-align:center;max-width:100%;overflow:auto;max-height:80vh;overscroll-behavior:contain;border-radius:6px}
+.episode-block .mermaid svg{display:inline-block;vertical-align:middle;cursor:zoom-in}
+.episode-block .mermaid.mermaid-broken{max-height:none;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;color:#92400e;text-align:left;font-size:13px;line-height:1.6}
 .mermaid-zoom{position:fixed;top:0;right:0;bottom:0;left:0;z-index:100000;background:rgba(0,0,0,.9);overflow:auto;padding:32px;box-sizing:border-box;cursor:zoom-out}
 .mermaid-zoom svg{display:block;margin:0 auto;max-width:none!important}
 """
@@ -1893,6 +1900,72 @@ if os.path.isfile(post_detail):
 else:
     print("WARNING: post-detail.ejs not found for video-embed")
 
+# --- 3.8. Episode block (期号区块：母稿页即期号页) -------------------------
+# 契约七 §4.2：母稿页顶部那一块期号区块（期号头 / 钩子 / 播放器 / 平台链接 /
+# 机制图 / 速览 / 源码与复现 / 系列导航）。
+#
+# **partial 手写入库**（themes/matery/layout/_partial/episode-block.ejs），
+# 这里只做两件事：
+#
+#   1. 注入渲染位：在正文之前 include 期号区块（D3：期号区块在正文之前）。
+#   2. 搬运机制图：正文里的第一张 mermaid 搬进区块，正文里去掉那张图——
+#      一张图只该出现一次（区块里一份 + 正文里一份是重复内容）。
+#
+# 数据源是 ``source/_data/podcast_index.json``（``tools/build-podcast-index.py``
+# 的产物），partial 只读它，不做任何推断。
+#
+# 幂等：文件里已经有 episode-block 就不重复注入。
+EPISODE_BLOCK_SNIPPET = r"""<%
+/* 期号区块（契约七 §4.2）：正文的第一张机制图搬进区块，正文里不再重复。
+   非期号页（没有 episode 字段）原样输出，不受任何影响。 */
+var _epContent = page.content;
+var _epFigure = null;
+if (page.episode) {
+  var _epMermaid = _epContent.match(/<div class="mermaid"[^>]*>[\s\S]*?<\/div>/);
+  if (_epMermaid) {
+    var _epAfter = _epContent.substring(_epMermaid.index + _epMermaid[0].length);
+    var _epCaption = _epAfter.match(/^\s*<p>([\s\S]*?)<\/p>/);
+    _epFigure = { diagram: _epMermaid[0], caption: _epCaption ? _epCaption[1] : '' };
+    _epContent = _epContent.replace(_epMermaid[0], '');
+  }
+}
+%>
+<%- partial('_partial/episode-block', { figure: _epFigure }) %>
+"""
+
+# 锚点：优先插在 TL;DR 之前（期号头是页面的身份，比摘要更该先看见），
+# 退而求其次插在正文容器之前。锚点是**整段标签**，替换时整段换掉。
+EPISODE_BLOCK_ANCHORS = (
+    "<%- partial('_partial/post-tldr') %>",
+    '<div id="articleContent">',
+)
+
+post_detail = os.path.join(theme_dir, "layout", "_partial", "post-detail.ejs")
+if os.path.isfile(post_detail):
+    with open(post_detail, encoding="utf-8") as f:
+        pd = f.read()
+    changed = False
+    if "episode-block" not in pd:
+        anchor = next((a for a in EPISODE_BLOCK_ANCHORS if a in pd), None)
+        if anchor is None:
+            print("WARNING: post-detail.ejs has no anchor for episode-block")
+        else:
+            pd = pd.replace(anchor, EPISODE_BLOCK_SNIPPET + anchor, 1)
+            changed = True
+            print("Injected episode-block before " + anchor)
+    else:
+        print("episode-block already present")
+    # 正文改用「搬走机制图之后」的内容。
+    if "<%- page.content %>" in pd:
+        pd = pd.replace("<%- page.content %>", "<%- _epContent %>", 1)
+        changed = True
+        print("post-detail.ejs: article body now renders _epContent")
+    if changed:
+        with open(post_detail, "w", encoding="utf-8") as f:
+            f.write(pd)
+else:
+    print("WARNING: post-detail.ejs not found for episode-block")
+
 # --- 4. Custom blog styling (subtle, keep original theme colors) ---
 custom_css = """<style id="custom-blog-style">
 /* Article typography */
@@ -3176,6 +3249,189 @@ elif os.path.isfile(my_css_path):
         print("Appended SUBSCRIBE-CARD-FOOTER CSS to my.css")
 else:
     print("my.css not found, skipping subscribe-card CSS")
+
+# --- 13. Episode block (期号区块) ---
+# 契约七 §4.2 的那一块。幂等：marker 已在 my.css 里就跳过。
+episode_block_marker = "/* EPISODE-BLOCK */"
+my_css_path = os.path.join(theme_dir, "source", "css", "my.css")
+ep_css = """/* EPISODE-BLOCK */
+.episode-block {
+    margin: 0 0 24px;
+    border-left: 4px solid #009688;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f0faf8 0%, #e6f4f1 100%);
+}
+body.DarkMode .episode-block {
+    background: linear-gradient(135deg, rgba(0,150,136,0.10) 0%, rgba(0,150,136,0.04) 100%);
+    border-left-color: #4dd0e1;
+}
+.episode-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin-bottom: 10px;
+}
+.episode-no {
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    background: #009688;
+    padding: 3px 10px;
+    border-radius: 12px;
+    letter-spacing: .5px;
+}
+.episode-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #263238;
+    line-height: 1.5;
+}
+.episode-series {
+    font-size: 12px;
+    color: #607d8b;
+    border: 1px solid rgba(0,150,136,.35);
+    border-radius: 12px;
+    padding: 2px 10px;
+}
+.episode-hook {
+    font-size: 15px;
+    line-height: 1.75;
+    color: #37474f;
+    margin-bottom: 14px;
+}
+.episode-player {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.episode-player iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+.episode-player--none {
+    position: static;
+    aspect-ratio: auto;
+    background: rgba(0,150,136,.06);
+    color: #607d8b;
+    font-size: 14px;
+    padding: 16px;
+    text-align: center;
+}
+.episode-platforms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.episode-platform {
+    font-size: 13px;
+    color: #009688;
+    border: 1px solid rgba(0,150,136,.35);
+    border-radius: 16px;
+    padding: 4px 14px;
+    text-decoration: none;
+    transition: background .15s ease;
+}
+.episode-platform:hover { background: rgba(0,150,136,.10); }
+.episode-figure { margin: 0 0 14px; }
+.episode-figure-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #009688;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+.episode-figure-caption {
+    font-size: 13px;
+    color: #607d8b;
+    line-height: 1.7;
+    margin-top: 6px;
+}
+.episode-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    font-size: 13px;
+    color: #607d8b;
+    margin-bottom: 14px;
+}
+.episode-meta-link { color: #009688; text-decoration: none; font-weight: 600; }
+.episode-meta-link:hover { text-decoration: underline; }
+.episode-detail {
+    margin: 0 0 14px;
+    border: 1px solid rgba(0,150,136,.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,.55);
+}
+.episode-detail summary { cursor: pointer; font-size: 14px; font-weight: 600; color: #00796b; }
+.episode-detail-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #009688;
+    letter-spacing: 1px;
+    margin: 10px 0 6px;
+}
+.episode-sources { margin: 0 0 4px; padding-left: 20px; }
+.episode-sources li { font-size: 13px; color: #455a64; }
+.episode-sources code { font-size: 12px; word-break: break-all; }
+.episode-repro {
+    margin: 0;
+    padding: 10px 12px;
+    background: #263238;
+    color: #eceff1;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.7;
+}
+.episode-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    border-top: 1px solid rgba(0,150,136,.18);
+    padding-top: 12px;
+}
+.episode-nav-item { font-size: 13px; color: #455a64; text-decoration: none; }
+.episode-nav-item:hover { color: #009688; }
+.episode-nav-all { margin-left: auto; font-weight: 600; color: #009688; }
+body.DarkMode .episode-title { color: #eceff1; }
+body.DarkMode .episode-hook { color: #cfd8dc; }
+body.DarkMode .episode-series,
+body.DarkMode .episode-meta,
+body.DarkMode .episode-figure-caption { color: #b0bec5; }
+body.DarkMode .episode-detail {
+    background: rgba(255,255,255,.04);
+    border-color: rgba(77,208,225,.25);
+}
+body.DarkMode .episode-detail summary { color: #4dd0e1; }
+body.DarkMode .episode-sources li { color: #cfd8dc; }
+body.DarkMode .episode-nav-item { color: #b0bec5; }
+@media (max-width: 600px) {
+    .episode-title { font-size: 15px; }
+    .episode-hook { font-size: 14px; }
+}
+"""
+if os.path.isfile(my_css_path):
+    with open(my_css_path, encoding="utf-8") as f:
+        _mycss = f.read()
+    if episode_block_marker in _mycss:
+        print("episode-block CSS already present, skipping")
+    else:
+        with open(my_css_path, "a", encoding="utf-8") as f:
+            f.write(ep_css)
+        print("Appended EPISODE-BLOCK CSS to my.css")
+else:
+    print("my.css not found, skipping episode-block CSS")
 
 # --- 8. Drop unused vendored libs from themes/matery/source/libs/ ---
 # The vendored theme ships 30+ libs but the live templates only reference

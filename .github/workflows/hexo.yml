@@ -90,12 +90,23 @@ jobs:
       - name: Build publish index
         # publish/outbox 的发布状态 → 站点用的发布索引（文章页的「这篇还发到了」）。
         run: python3 tools/build-publish-index.py
+      - name: Build podcast index
+        # 母稿的期号字段 → 站点用的期号索引（母稿页顶部那一块期号区块）。
+        # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物），
+        # 必须在 patch-theme.py 之前（partial 在渲染时读它）。
+        run: python3 tools/build-podcast-index.py
       - name: Apply theme patches
         run: python3 tools/patch-theme.py
       - name: Copy vendor assets
         run: python3 tools/copy-vendor.py
       - name: Build with Hexo
         run: npx hexo generate
+      - name: Verify episode blocks
+        # 期号区块必须在**渲染产物**里真的在：期号头、钩子、播放器、
+        # 平台链接、源码清单、复现命令、系列导航。
+        # 这一步不能省——期号数据走三条通道（母稿透传 / 发布索引 / 主题
+        # partial），任何一环断了页面照常渲染，只是那一块是空的。
+        run: python3 tools/check-episode-block.py
       - name: Subset Font Awesome fonts
         # 字体裁剪是锦上添花：裁成功省 240 KB，裁失败就保持原样。
         # 所以这一步**不许**把整条流水线带崩——失败只发一条 ::warning:: 注解，
@@ -351,12 +362,23 @@ jobs:
         run: python3 tools/build-video-pages.py
       - name: Build publish index
         run: python3 tools/build-publish-index.py
+      - name: Build podcast index
+        # 母稿的期号字段 → 站点用的期号索引（母稿页顶部那一块期号区块）。
+        # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物），
+        # 必须在 patch-theme.py 之前（partial 在渲染时读它）。
+        run: python3 tools/build-podcast-index.py
       - name: Apply theme patches
         run: python3 tools/patch-theme.py
       - name: Copy vendor assets
         run: python3 tools/copy-vendor.py
       - name: Build GitHub Pages site
         run: npx hexo generate
+      - name: Verify episode blocks
+        # 期号区块必须在**渲染产物**里真的在：期号头、钩子、播放器、
+        # 平台链接、源码清单、复现命令、系列导航。
+        # 这一步不能省——期号数据走三条通道（母稿透传 / 发布索引 / 主题
+        # partial），任何一环断了页面照常渲染，只是那一块是空的。
+        run: python3 tools/check-episode-block.py
       - name: Subset Font Awesome fonts
         # 与 growdu.cn 那套 build 同一个裁剪步骤（两边的图标清单一样）。
         # 同样是"失败不阻断"：失败只发一条 ::warning:: 注解。

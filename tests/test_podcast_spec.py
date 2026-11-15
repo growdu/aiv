@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -107,9 +108,6 @@ PLANNED_PATHS = {
     "publish/publishkit/linkcheck.py",
     "publish/tests/test_evidence.py",
     "publish/tests/test_episode_page.py",
-    "source/_data/",
-    "source/_data/podcast_index.json",
-    "source/podcast/index.md",
     "source/feed.xml",
     "aiv/pipeline/scripts/episode-baseline.py",
     # 契约八（长视频三档）计划新增的路径：
@@ -129,7 +127,7 @@ PLANNED_PATHS = {
 REPO_TOP_DIRS = {
     "aiv", "bilibili", "browser", "channels", "docs", "douyin",
     "public", "publish", "review", "scripts", "source", "tests",
-    "tools", "toutiao", "weixin",
+    "themes", "tools", "toutiao", "weixin",
 }
 
 # **生成目录**：`.gitignore` 里的 `/source/`（只放行 `source/all/` 与
@@ -441,15 +439,35 @@ def test_generated_prefixes_are_really_gitignored():
     assert "public/" in gitignore, "public/ 应当仍在 .gitignore 里"
 
 
-def test_planned_paths_are_actually_missing():
-    """计划新增的路径现在应当还不存在。
+def _git_tracked_paths() -> set[str]:
+    """仓库里**真正跟踪**的文件。
 
-    哪天它们被创建了，这条测试会红——那是提醒把路径从 `PLANNED_PATHS`
-    移走（移除即承认它已经落地），不是失败。
+    判断「一个路径是不是仓库里的事实」，看的是 git 跟踪，不是磁盘上有没有：
+    `source/` 与 `public/` 整个是 gitignore 的生成目录，本地跑过一次构建
+    就有文件——用存在性判断会得到一个与实现无关的假红。
     """
-    already = sorted(p for p in PLANNED_PATHS if (REPO / p).exists())
+    result = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "-z"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return {path for path in result.stdout.split("\0") if path}
+
+
+def test_planned_paths_are_actually_missing():
+    """计划新增的路径现在还不该是**仓库里的事实**。
+
+    哪天它们被提交了，这条测试会红——那是提醒把路径从 `PLANNED_PATHS`
+    移走（移除即承认它已经落地），不是失败。
+
+    判据是 **git 跟踪**，不是磁盘上有没有：`source/` 整个是 gitignore 的
+    生成目录，本地构建过一次就有文件，用存在性判断会得到假红。
+    """
+    tracked = _git_tracked_paths()
+    already = sorted(p for p in PLANNED_PATHS if p.rstrip("/") in tracked)
     assert not already, (
-        f"这些路径已经存在了，请从 PLANNED_PATHS 移除：{already}"
+        f"这些路径已经入库了，请从 PLANNED_PATHS 移除：{already}"
     )
 
 
