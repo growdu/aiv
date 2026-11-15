@@ -481,7 +481,8 @@ def _upload_cover(client, result, args, external_prepared=None, card=None,
         prepared = external_prepared
     else:
         prepared = assets_module.prepare_image(card or DEFAULT_COVER)
-    digest = hashlib.sha1(prepared.data).hexdigest()
+    # 素材缓存的键：本地内容指纹，不是签名（微信不校验它）。
+    digest = hashlib.sha256(prepared.data).hexdigest()
     crop_list = assets_module.cover_crop_list(prepared.width, prepared.height)
     media_id = cache.get(digest) if (cache is not None and use_cache) else None
     if media_id:

@@ -123,7 +123,8 @@ def rasterise(path: Path, out_dir: Path) -> Path:
     width = min(width, MAX_RENDER_WIDTH)
     height = min(height, MAX_RENDER_HEIGHT)
 
-    digest = hashlib.sha1()
+    # 缓存键：本地内容指纹，不是签名。
+    digest = hashlib.sha256()
     digest.update(path.read_bytes())
     key = digest.hexdigest()[:16]
 

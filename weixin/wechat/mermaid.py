@@ -54,7 +54,8 @@ class MermaidAsset:
 
 def mermaid_key(source: str) -> str:
     """Stable key for a diagram, independent of its position in the post."""
-    return hashlib.sha1(source.encode("utf-8")).hexdigest()[:16]
+    # 缓存键：本地内容指纹，不是签名。
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()[:16]
 
 
 def _find_chrome() -> str | None:

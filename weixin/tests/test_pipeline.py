@@ -86,7 +86,9 @@ class _Handler(BaseHTTPRequestHandler):
     # pattern.
     waf_titles = set()
 
-    def log_message(self, *args):
+    def log_message(self, format, *args):
+        # 签名跟 BaseHTTPRequestHandler 一致：基类的 format 是
+        # 位置或关键字参数，子类收成 *args 就不兼容了。
         pass
 
     def _read_body(self):
@@ -547,7 +549,8 @@ def test_publish_rehosts_an_external_image(tmp_path, server, monkeypatch):
     Image.new("RGB", (40, 30), (10, 120, 200)).save(payload, format="PNG")
 
     class _ImageHandler(BaseHTTPRequestHandler):
-        def log_message(self, *args):
+        def log_message(self, format, *args):
+            # 签名跟基类一致（见上面那处）。
             pass
 
         def do_GET(self):
@@ -1320,7 +1323,8 @@ def test_an_external_picture_can_serve_as_the_cover(tmp_path, server, monkeypatc
     Image.new("RGB", (40, 30), (10, 120, 200)).save(payload, format="PNG")
 
     class _ImageHandler(BaseHTTPRequestHandler):
-        def log_message(self, *args):
+        def log_message(self, format, *args):
+            # 签名跟基类一致（见上面那处）。
             pass
 
         def do_GET(self):
@@ -1873,7 +1877,9 @@ def test_a_cover_material_that_was_deleted_is_uploaded_again(tmp_path, server,
     out_dir = tmp_path / "out"
 
     prepared = prepare_image(cover)
-    digest = hashlib.sha1(prepared.data).hexdigest()
+    # 素材缓存的键：与 wechat/cli.py 里算的是同一个 sha256，
+    # 改了这里测试就对不上了。它是内容指纹，不是签名。
+    digest = hashlib.sha256(prepared.data).hexdigest()
     MaterialCache(out_dir / "materials.json").put(digest, "STALE_ID")
     _Handler.stale_materials = {"STALE_ID"}
 
