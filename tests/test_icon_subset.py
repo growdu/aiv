@@ -262,12 +262,26 @@ def test_every_used_icon_lives_in_the_font_of_its_family() -> None:
 # --- 裁剪本身 -------------------------------------------------------------
 
 
-def test_the_subset_shrinks_the_font_and_keeps_the_glyphs(tmp_path: Path) -> None:
-    """裁完的字体必须更小，而且用到的码位一个不少。
+def test_missing_fonttools_is_reported_not_crashed(monkeypatch, capsys) -> None:
+    """缺 fontTools 时要明说，不能让构建以一句 ImportError 收场。
 
-    需要 fontTools；site-guard 的 CI 只装了 pytest，这项在那边会跳过
-    （裁剪由 build 那个 job 自己装 fontTools 跑）。
+    2026-11-15 实测：CI 里那一步退出码 1，字体没裁成，日志里只有一句
+    「Process completed with exit code 1」——看不出是没装上还是裁不动。
+    现在缺依赖会说清楚、发 ::warning:: 注解，并且**退出 0**（原字体照常
+    发布，站点不受影响）。
     """
+    def fake_import(name):
+        raise ImportError(f"No module named {name!r}")
+
+    monkeypatch.setattr(subset_icons, "_import_module", fake_import)
+    assert subset_icons._fonttools_ready() is False
+
+    out = capsys.readouterr().out
+    assert "::warning::" in out, "缺依赖时应该发一条 ::warning:: 注解"
+    assert "fontTools" in out, "警告里要说清缺的是哪个模块"
+
+
+def test_the_subset_shrinks_the_font_and_keeps_the_glyphs(tmp_path: Path) -> None:
     pytest.importorskip("fontTools")
 
     webfonts = tmp_path / "webfonts"

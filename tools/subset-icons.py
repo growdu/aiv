@@ -161,6 +161,33 @@ def _cmap_codepoints(path: Path) -> set[int]:
         return codepoints
 
 
+def _import_module(name: str):
+    """单独抽出来，方便测试把"缺依赖"这条路径走一遍。"""
+    return __import__(name)
+
+
+def _fonttools_ready() -> bool:
+    """裁剪要 fontTools（裁 woff2 还要 brotli）。
+
+    缺了就明说，而不是让构建以一句看不懂的 ImportError 收场——CI 里这一步
+    失败不影响发布，但得让人一眼看出是"没装上"而不是"裁不动"。
+    """
+    missing = []
+    for module in ("fontTools", "brotli"):
+        try:
+            _import_module(module)
+        except ImportError:
+            missing.append(module)
+    if missing:
+        print(
+            "::warning::字体裁剪跳过：缺少 "
+            + "、".join(missing)
+            + "（CI 里用 pip install fonttools brotli 装）"
+        )
+        return False
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -250,6 +277,10 @@ def main() -> int:
                     print(f"  [dry-run] {path.name} 保留 {len(keep)} 个码位")
         return 0
 
+    if not _fonttools_ready():
+        print("  字体文件保持原样，站点不受影响。")
+        return 0
+
     total_before = 0
     total_after = 0
     staged: list[tuple[Path, Path]] = []
@@ -316,7 +347,7 @@ def main() -> int:
         for _, tmp in staged:
             if tmp.exists():
                 tmp.unlink()
-        print(f"  裁剪放弃：{exc}", file=sys.stderr)
+        print(f"::warning::字体裁剪放弃：{exc}")
         print("  字体文件保持原样，站点不受影响。", file=sys.stderr)
         return 1
 

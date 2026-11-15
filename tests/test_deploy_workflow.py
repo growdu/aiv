@@ -376,7 +376,14 @@ def test_the_icon_subset_step_never_blocks_the_deploy() -> None:
         f"两套 build 都应该有字体裁剪步骤（现在找到 {len(steps)} 个）"
     )
     for step in steps:
-        assert "continue-on-error: true" in step, (
-            "字体裁剪步骤没有 continue-on-error——裁剪失败会把发布一起带崩"
+        assert (
+            "continue-on-error: true" in step or "|| echo" in step
+        ), (
+            "字体裁剪步骤没有 continue-on-error、也没有 || echo 兜底——"
+            "裁剪失败会把发布一起带崩"
         )
         assert "tools/subset-icons.py" in step, "裁剪步骤调的不是 tools/subset-icons.py"
+        assert "::warning::" in step, (
+            "裁剪失败要发一条 ::warning:: 注解，否则日志里只有一句"
+            "「exit code 1」，看不出是没装上还是裁不动"
+        )
