@@ -1,13 +1,17 @@
 """竖版（1080×1920）的通用守卫。
 
-每个场景模块的竖版画法各写各的，但**两条底线全季统一**：
+每个场景模块的竖版画法各写各的，但**四条底线全季统一**：
 
 1. **画面里不许有墨顶到画布边缘。** 那说明有东西被裁掉了——标题太长、
    框排出了画布。**被裁掉一半的标题在渲染图上一眼看不出来**：画面照样
    生成、时长照样对，只有在手机上满屏看才发现少半个字。
-2. **画面里不许有墨掉到字幕带以下**（y ≥ 1393）。竖版的字幕抬到了平台
-   UI 之上，画面内容掉下去就压在字幕上（横版踩过这个坑，见
-   `tests/test_scene_layout.py`）。
+2. **画面里不许有墨掉到内容区下沿以下**（y > 1344）。竖版的字幕抬到了
+   平台 UI 之上（y=1393），画面内容掉下去就压在字幕上（横版踩过这个坑，
+   见 `tests/test_scene_layout.py`）。
+3. **画面里不许有墨跑进右侧的按钮栏**（x > 960）。抖音那一档的点赞/评论/
+   分享栏落在画面右下角，内容压上去就等于没画。
+4. **竖版不再画说明行**——底部只留字幕，说明行与字幕讲的是同一句话，
+   两行叠在下面只会互相干扰。
 
 **守卫怎么知道一个模块「做了竖版」**：按约定，竖版画法必须叫
 `_render_vertical`。没做的模块跳过（跳过理由写清楚），做了的立刻受
@@ -27,6 +31,7 @@ import pytest
 
 from pyv import contract as contract_mod
 from pyv import episodes as episodes_mod
+from pyv import scene_layout
 from pyv.palette import COLORS, hex_to_rgb
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,6 +43,21 @@ WIDTH, HEIGHT = 1080, 1920
 #: 字幕带的最高点。竖版字幕抬到了平台 UI 之上（`palette.VERTICAL_UI_BOTTOM`），
 #: 画面内容必须在它上面。
 SUBTITLE_BAND_TOP = 1393
+
+#: 内容区下沿。竖版画面里的墨不许掉到它以下——那里已经是字幕带了
+#: （内容区下沿 1344，字幕带 1393，中间留 49px）。
+CONTENT_BOTTOM = 1344
+
+#: 右侧平台 UI 预留（抖音的点赞/评论/分享栏）。
+RAIL_RIGHT = 120
+
+#: 内容右缘：预留那条线。墨不许越过它。
+CONTENT_RIGHT = WIDTH - RAIL_RIGHT
+
+#: 允许比内容右缘多出的几像素。cairo 把曲线边缘软化到边界之外
+#: （圆角的最外圈只盖住像素的一小块，亮度差不到 3/255），量出来会多出
+#: 1–2px。那不是「压进按钮栏」——真正越界的是字和图形，量出来是十几像素。
+CONTENT_RIGHT_SLACK = 3
 
 #: 画布边缘留几条像素不碰。碰到边缘就是被裁了。
 EDGE_MARGIN = 3
@@ -119,9 +139,10 @@ def test_the_vertical_scene_is_not_cut_off(episode, segment):
                          ids=[f"{ep}-{s.renderer.split('.')[-1]}"
                               for ep, s in _segments()])
 def test_the_vertical_scene_stays_above_the_subtitle(episode, segment):
-    """竖版画面里不许有墨掉到字幕带以下。
+    """竖版画面里不许有墨掉到内容区下沿以下。
 
-    竖版字幕抬到了平台 UI 之上（y=1393），画面内容掉下去就压在字幕上。
+    竖版字幕抬到了平台 UI 之上（y=1393），内容区下沿取 1344——
+    内容掉下去就压在字幕上（横版踩过这个坑，见 `tests/test_scene_layout.py`）。
     """
     path = _module_path(segment.renderer)
     if not _has_vertical_variant(path):
@@ -131,10 +152,51 @@ def test_the_vertical_scene_stays_above_the_subtitle(episode, segment):
     if rows.size == 0:
         pytest.fail(f"{segment.renderer} 的竖版画什么都没画")
 
-    assert rows.max() < SUBTITLE_BAND_TOP, (
+    assert rows.max() <= CONTENT_BOTTOM, (
         f"{segment.renderer} 的竖版画有东西掉到 y={rows.max()}，"
-        f"字幕带从 y={SUBTITLE_BAND_TOP} 开始——两者会绞在一起"
+        f"内容区下沿是 {CONTENT_BOTTOM}——再往下就压在字幕上了"
     )
+
+
+@pytest.mark.parametrize("episode,segment", list(_segments()),
+                         ids=[f"{ep}-{s.renderer.split('.')[-1]}"
+                              for ep, s in _segments()])
+def test_the_vertical_scene_stays_left_of_the_platform_buttons(episode, segment):
+    """竖版画面不许有墨跑进右侧的点赞/评论/分享栏。
+
+    抖音那一档的按钮栏落在画面右下角，内容压上去就等于没画——
+    这是**工程上的保守取值**，不是平台文档里写明的数字。
+    """
+    path = _module_path(segment.renderer)
+    if not _has_vertical_variant(path):
+        pytest.skip(f"{path.name} 还没做竖版")
+
+    _, cols = _render_vertical(segment.renderer, segment.params)
+    if cols.size == 0:
+        pytest.fail(f"{segment.renderer} 的竖版画什么都没画")
+
+    assert cols.max() <= CONTENT_RIGHT + CONTENT_RIGHT_SLACK, (
+        f"{segment.renderer} 有东西跑到 x={cols.max()}，"
+        f"右侧按钮栏从 x={CONTENT_RIGHT} 开始——会被压住"
+    )
+
+
+def test_no_vertical_scene_draws_a_caption_line():
+    """竖版底部只留字幕，不再有说明行。
+
+    说明行与字幕讲的是同一句话（csn/s02 的说明「按时间戳排，并不可靠」
+    对应的字幕是「并发提交 时间顺序不可靠」），两行叠在下面只会互相干扰；
+    s02 的字幕甚至和标题一字不差。
+
+    **横版的说明行保留**——横版底部没有字幕，也没有平台 UI。
+    """
+    assert not hasattr(scene_layout, "caption"), (
+        "scene_layout 还有 caption()——竖版不该再画说明行")
+    offenders = [
+        path.name for path in SCENES_DIR.glob("*.py")
+        if "scene_layout.caption(" in path.read_text(encoding="utf-8")
+    ]
+    assert not offenders, f"这些模块还在画说明行：{offenders}"
 
 
 def test_the_vertical_convention_is_documented():
@@ -144,4 +206,6 @@ def test_the_vertical_convention_is_documented():
     )
     assert "字号不缩" in source
     assert "放得下" in source
+    assert "右侧" in source
+    assert "字幕" in source
     assert VERTICAL_ENTRY in source or True  # 入口名写在各模块的 docstring 里
