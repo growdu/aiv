@@ -1156,9 +1156,17 @@ def _overall_action(drafts) -> str:
 
 
 def _git(*args, cwd: Path):
-    """Run a git command in the repository and return ``(code, output)``."""
+    """Run a git command in the repository and return ``(code, output)``.
+
+    **The decoding has to be explicit.**  ``text=True`` follows the
+    machine's preferred encoding -- GBK on a Chinese Windows -- while
+    git writes UTF-8.  One Chinese file name in the output then breaks
+    the decode, the output is lost, and the caller gets ``None`` instead
+    of the lines it asked for.
+    """
     result = subprocess.run(
-        ["git"] + list(args), cwd=str(cwd), capture_output=True, text=True)
+        ["git"] + list(args), cwd=str(cwd), capture_output=True,
+        encoding="utf-8", errors="replace")
     return result.returncode, result.stdout.strip()
 
 
@@ -1244,7 +1252,37 @@ def _batch_lock_path(out_dir) -> Path:
 
 
 def _pid_alive(pid: int) -> bool:
-    """True when a process with that pid is still running."""
+    """True when a process with that pid is still running.
+
+    **Windows needs its own way to ask.**  ``os.kill(pid, 0)`` is the Unix
+    way of saying "does this pid exist" -- on Windows ``os.kill`` maps to
+    ``TerminateProcess``, so asking with signal 0 would *kill* the very
+    process we are asking about.  So the question is asked through
+    ``OpenProcess`` instead: it fails with ``ERROR_INVALID_PARAMETER``
+    (87) when the pid does not exist, and with ``ERROR_ACCESS_DENIED``
+    (5) when it exists but belongs to somebody else -- which still means
+    it is running.
+    """
+    if os.name == "nt":
+        import ctypes
+
+        process_query_limited_information = 0x1000
+        error_invalid_parameter = 87
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        # A handle is a pointer: the default return type (c_int) would
+        # truncate it on a 64-bit Windows, and a handle whose low half
+        # happens to be zero would be read as "no such process".
+        kernel32.OpenProcess.restype = ctypes.c_void_p
+        kernel32.OpenProcess.argtypes = [
+            ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32]
+        kernel32.CloseHandle.restype = ctypes.c_int
+        kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+        handle = kernel32.OpenProcess(
+            process_query_limited_information, False, pid)
+        if handle:
+            kernel32.CloseHandle(handle)
+            return True
+        return ctypes.get_last_error() != error_invalid_parameter
     try:
         os.kill(pid, 0)
     except ProcessLookupError:

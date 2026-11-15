@@ -18,21 +18,13 @@ from __future__ import annotations
 
 import hashlib
 import re
-import subprocess
 from pathlib import Path
+
+from . import chrome as chrome_module
 
 __all__ = ["rasterise", "svg_size"]
 
-# The same browsers the mermaid renderer looks for.
-_CHROME_CANDIDATES = (
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/Applications/Chromium.app/Contents/MacOS/Chromium",
-    "/usr/bin/google-chrome",
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-)
-
-RENDER_TIMEOUT = 60
+RENDER_TIMEOUT = chrome_module.RENDER_TIMEOUT
 
 # The picture is drawn at its own size and then scaled down by the
 # image preparation, so this is only a ceiling for the absurd ones.
@@ -46,10 +38,12 @@ _VIEWBOX = re.compile(
 
 
 def _find_chrome() -> str | None:
-    for candidate in _CHROME_CANDIDATES:
-        if Path(candidate).exists():
-            return candidate
-    return None
+    """The browser that draws the picture, or ``None`` when there is none.
+
+    Kept as a module-level name because the callers -- and the tests --
+    ask this module where the browser is.
+    """
+    return chrome_module.find_chrome()
 
 
 def _root_attributes(text: str) -> dict:
@@ -134,32 +128,9 @@ def rasterise(path: Path, out_dir: Path) -> Path:
     if target.is_file() and target.stat().st_size > 0:
         return target
 
-    command = [
-        chrome,
-        "--headless",
-        "--disable-gpu",
-        "--no-sandbox",
-        "--hide-scrollbars",
-        "--default-background-color=FFFFFFFF",
-        "--screenshot={}".format(target),
-        "--window-size={},{}".format(width, height),
-        path.resolve().as_uri(),
-    ]
-    try:
-        result = subprocess.run(
-            command, capture_output=True, text=True, timeout=RENDER_TIMEOUT)
-    except FileNotFoundError:
-        raise ValueError(
-            "SVG 需要浏览器才能转成 PNG，但找不到 Chrome: {}".format(path)) from None
-    except subprocess.TimeoutExpired:
-        raise ValueError(
-            "SVG 转 PNG 超时（{} 秒）: {}".format(RENDER_TIMEOUT, path)) from None
-
-    if result.returncode != 0 or not target.is_file():
-        message = (result.stderr or result.stdout or "").strip().splitlines()
-        detail = message[-1][:200] if message else "没有输出"
-        raise ValueError(
-            "SVG 转 PNG 失败（Chrome 返回 {}）: {} —— {}".format(
-                result.returncode, path, detail))
+    ok, detail = chrome_module.screenshot(
+        chrome, target, width, height, path, timeout=RENDER_TIMEOUT)
+    if not ok:
+        raise ValueError("SVG 转 PNG 失败: {} —— {}".format(path, detail))
 
     return target

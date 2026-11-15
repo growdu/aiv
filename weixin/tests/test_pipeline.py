@@ -2,6 +2,7 @@ import hashlib
 import io
 import json
 import subprocess
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from types import SimpleNamespace
@@ -11,7 +12,7 @@ from PIL import Image
 
 from wechat import notify as notify_module
 from wechat import split as split_module
-from wechat.cli import (_docs_changed, _drop_batch_lock, _fingerprint,
+from wechat.cli import (_docs_changed, _drop_batch_lock, _fingerprint, _git,
                        _render_parts, _take_batch_lock, main)
 from wechat.assets import prepare_image
 from wechat.material import MaterialCache
@@ -1049,19 +1050,27 @@ def test_a_second_batch_does_not_run_while_one_is_going(tmp_path, server, monkey
     out_dir = tmp_path / "out"
     lock = out_dir / "batch.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
-    # The pid of another process that is running: init always is.
-    lock.write_text("1", encoding="utf-8")
+    # The pid of another process that is running.  "init" (pid 1) is such
+    # a process on Unix, but Windows has no init -- so start a process
+    # that does nothing and use its pid instead.
+    sleeper = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        lock.write_text(str(sleeper.pid), encoding="utf-8")
 
-    _Handler.calls = []
-    code = main(["batch"] + _args(posts_dir, out_dir, server=server))
-    assert code == 0
-    assert _Handler.calls.count("/cgi-bin/draft/add") == 0
+        _Handler.calls = []
+        code = main(["batch"] + _args(posts_dir, out_dir, server=server))
+        assert code == 0
+        assert _Handler.calls.count("/cgi-bin/draft/add") == 0
 
-    # Once the lock is gone the next batch runs as usual.
-    lock.unlink()
-    _Handler.calls = []
-    assert main(["batch"] + _args(posts_dir, out_dir, server=server)) == 0
-    assert _Handler.calls.count("/cgi-bin/draft/add") == 3
+        # Once the lock is gone the next batch runs as usual.
+        lock.unlink()
+        _Handler.calls = []
+        assert main(["batch"] + _args(posts_dir, out_dir, server=server)) == 0
+        assert _Handler.calls.count("/cgi-bin/draft/add") == 3
+    finally:
+        sleeper.kill()
+        sleeper.wait()
 
 
 def test_a_lock_left_behind_by_a_dead_process_is_taken_over(tmp_path):
@@ -1227,6 +1236,25 @@ def test_docs_changed_is_false_right_after_a_commit(tmp_path):
         ["git", "rev-parse", "HEAD"], cwd=str(repo), capture_output=True,
         text=True).stdout.strip() + "\n", encoding="utf-8")
     assert _docs_changed(repo, stamp) is False
+
+
+def test_git_output_with_a_chinese_file_name_is_decoded_as_utf8(tmp_path):
+    """git 写 UTF-8，输出也得按 UTF-8 读回来。
+
+    ``text=True`` 在中文 Windows 上按 GBK 解：文件名成了乱码，
+    解码直接炸掉时整份输出还会变成 ``None``——调用方拿到的不是那几行，
+    是一片空白。
+    """
+    repo = _git_repo(tmp_path)
+    # git 默认把非 ASCII 的路径转义成八进制；关掉它，路径才会原样吐出来。
+    subprocess.run(["git", "config", "core.quotePath", "false"], cwd=str(repo),
+                   check=True, capture_output=True)
+    (repo / "docs" / "标题裁剪与封面.md").write_text("中文名\n", encoding="utf-8")
+
+    code, out = _git("status", "--porcelain", "--", "docs", cwd=repo)
+
+    assert code == 0
+    assert "标题裁剪与封面.md" in out
 
 
 def test_docs_changed_notices_a_new_committed_article(tmp_path):

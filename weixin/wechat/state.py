@@ -13,7 +13,6 @@ committed.
 
 from __future__ import annotations
 
-import fcntl
 import json
 import os
 import tempfile
@@ -21,6 +20,8 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+
+from . import locking as locking_module
 
 __all__ = ["PublishState", "StateStore", "needs_draft", "needs_submit"]
 
@@ -61,13 +62,8 @@ class StateStore:
         idempotency exists to prevent.
         """
         lock_path = self.path.with_name(self.path.name + ".lock")
-        lock_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(lock_path, "a+") as handle:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-            try:
-                yield
-            finally:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        with locking_module.exclusive(lock_path):
+            yield
 
     def _write(self, posts: dict) -> None:
         """Write the ledger out.

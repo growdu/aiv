@@ -17,9 +17,12 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+from . import chrome as chrome_module
 
 __all__ = ["MermaidAsset", "mermaid_key", "render_mermaid", "default_runner"]
 
@@ -32,14 +35,6 @@ DEFAULT_BACKGROUND = "white"
 # scales images down to the body width, so the extra pixels survive.
 DEFAULT_SCALE = 2
 RENDER_TIMEOUT = 180
-
-_CHROME_CANDIDATES = (
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/Applications/Chromium.app/Contents/MacOS/Chromium",
-    "/usr/bin/google-chrome",
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-)
 
 
 @dataclass(frozen=True)
@@ -59,10 +54,8 @@ def mermaid_key(source: str) -> str:
 
 
 def _find_chrome() -> str | None:
-    for candidate in _CHROME_CANDIDATES:
-        if Path(candidate).exists():
-            return candidate
-    return None
+    """The browser mermaid-cli should drive, or ``None`` when there is none."""
+    return chrome_module.find_chrome()
 
 
 def _summarize_error(stderr: str, stdout: str) -> str:
@@ -101,8 +94,11 @@ def default_runner(source: str, out_file: Path):
     if chrome:
         env["PUPPETEER_EXECUTABLE_PATH"] = chrome
 
+    # On Windows npx is a .cmd file, and "npx" on its own is only found
+    # through PATHEXT, so the real file is looked up here.
+    npx = shutil.which("npx") or "npx"
     command = [
-        "npx", "-y", "@mermaid-js/mermaid-cli@{}".format(MERMAID_CLI_VERSION),
+        npx, "-y", "@mermaid-js/mermaid-cli@{}".format(MERMAID_CLI_VERSION),
         "-i", str(source_file),
         "-o", str(out_file),
         "-w", str(DEFAULT_WIDTH),
@@ -111,7 +107,8 @@ def default_runner(source: str, out_file: Path):
     ]
     try:
         result = subprocess.run(
-            command, capture_output=True, text=True, env=env, timeout=RENDER_TIMEOUT)
+            command, capture_output=True, env=env, timeout=RENDER_TIMEOUT,
+            encoding="utf-8", errors="replace")
     except FileNotFoundError:
         return False, "npx not found: install Node.js to render mermaid diagrams"
     except subprocess.TimeoutExpired:

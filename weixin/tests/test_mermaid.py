@@ -105,3 +105,58 @@ def test_render_mermaid_uses_same_key_as_render_module(tmp_path):
     assets = render_mermaid(blocks, tmp_path, runner=runner)
     key = next(iter(assets))
     assert key == render_key("graph TD;\nA-->B;")
+
+
+def test_the_npx_is_looked_up_in_the_path_instead_of_guessed(tmp_path, monkeypatch):
+    """npx 在 Windows 上是 npx.cmd，光写 "npx" 是拉不起来的。
+
+    ``npx`` 这个名字要靠 PATHEXT 才能找到 .cmd，所以得真的去 PATH 里查。
+    """
+    import shutil
+
+    from wechat import mermaid as mermaid_module
+
+    captured = {}
+
+    class _Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(command, **kwargs):
+        captured["command"] = list(command)
+        captured["env"] = kwargs.get("env", {})
+        return _Result()
+
+    monkeypatch.setattr(mermaid_module.subprocess, "run", fake_run)
+
+    mermaid_module.default_runner("graph TD;\nA-->B;\n", tmp_path / "out.png")
+
+    assert captured["command"][0] == (shutil.which("npx") or "npx")
+
+
+def test_the_browser_on_this_machine_is_handed_to_mermaid_cli(tmp_path, monkeypatch):
+    """系统里的浏览器得给 mermaid-cli 用，别让它自己下一个 Chromium。"""
+    from wechat import chrome as chrome_module
+    from wechat import mermaid as mermaid_module
+
+    captured = {}
+
+    class _Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(command, **kwargs):
+        captured["env"] = kwargs.get("env", {})
+        return _Result()
+
+    monkeypatch.setattr(mermaid_module.subprocess, "run", fake_run)
+
+    mermaid_module.default_runner("graph TD;\nA-->B;\n", tmp_path / "out.png")
+
+    expected = chrome_module.find_chrome()
+    if expected is None:
+        assert "PUPPETEER_EXECUTABLE_PATH" not in captured["env"]
+    else:
+        assert captured["env"]["PUPPETEER_EXECUTABLE_PATH"] == expected

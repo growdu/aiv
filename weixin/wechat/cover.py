@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import colorsys
 import hashlib
+import os
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -31,6 +32,11 @@ HEIGHT = 383
 # The cover list of an official account is shown at 2.35:1.
 _RATIO = WIDTH / HEIGHT
 
+# Windows keeps its fonts in one directory; the name depends on the
+# language pack, but these two are there on every Chinese Windows, and
+# every Windows has the Latin ones.
+_WINDOWS_FONTS = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
+
 _FONTS = (
     "/System/Library/Fonts/Hiragino Sans GB.ttc",
     "/System/Library/Fonts/Supplemental/Songti.ttc",
@@ -42,11 +48,20 @@ _FONTS = (
     "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    # Windows：微软雅黑（msyh.ttc）是中文版 Windows 自带的中文字体，
+    # 黑体（simhei.ttf）次之。路径用 WINDIR 拼，不写死 C:。
+    str(_WINDOWS_FONTS / "msyh.ttc"),
+    str(_WINDOWS_FONTS / "msyhl.ttc"),
+    str(_WINDOWS_FONTS / "simhei.ttf"),
+    str(_WINDOWS_FONTS / "simsun.ttc"),
 )
 
 _FALLBACK_FONTS = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/Library/Fonts/Arial Unicode.ttf",
+    # Windows 的拉丁字体：arial.ttf 每台都有，segoeui.ttf 次之。
+    str(_WINDOWS_FONTS / "arial.ttf"),
+    str(_WINDOWS_FONTS / "segoeui.ttf"),
 )
 
 _BRAND = "growdu.cn"
