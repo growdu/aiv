@@ -10,6 +10,14 @@
 #
 # ⚠️ title_chars = 64：公众号编辑器的真实上限。规格 §5 的示例里写的是
 # 32，那份示例照抄进来这条兼容性测试会立刻变红（见测试文件开头的说明）。
+#
+# ⚠️ body_chars = 60000：**不是平台的硬限制**，是工具选的一档。
+# 官方字段表写「少于 2 万字符」，2026-11-14 实测推翻了这个说法——
+# draft/add 收下 20001 / 25000 / 40000 / 65535 / 100000 字符全部成功，
+# draft/get 读回来长度与提交一致，一字未少（见 weixin/README.md 与
+# weixin/docs/06-超长文章拆分.md）。工具默认取 60000：渲染后的 HTML
+# 里只有约四分之一是读者看得见的字，60000 字符约合读者那儿的 1.5 万字。
+# 想换档用 --max-length / WX_MAX_LENGTH（实测天花板 100000）。
 
 id = "wechat"
 name = "微信公众号"
@@ -37,11 +45,11 @@ requires_certification = true
 requires_min_followers = 0
 
 # verified = 这些数值最后对着平台文档与实测复核过的日期（ISO 日期）。
-verified = "2026-11-11"
+verified = "2026-11-14"
 
 [limits]
 title_chars = 64
-body_chars = 20000
+body_chars = 60000
 digest_chars = 120
 
 [adapter]

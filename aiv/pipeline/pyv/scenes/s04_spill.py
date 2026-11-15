@@ -32,9 +32,14 @@ REQUIRED = ("title", "memory_label", "disk_label", "spill_label", "chips",
 
 
 class Chip(NamedTuple):
-    """一块芯片在某一时刻的位置。progress 是搬运进度（0 还在内存，1 已落盘）。"""
+    """一块芯片在某一时刻的位置。progress 是搬运进度（0 还在内存，1 已落盘）。
 
-    index: int
+    字段叫 slot 而不是 index：NamedTuple 继承自 tuple，``index`` 是
+    tuple 自带的方法（``.index(value)``），拿它当字段名会把它盖掉——
+    类型检查器会报「index 覆盖了基类同名方法」。
+    """
+
+    slot: int
     x: float
     y: float
     progress: float
@@ -315,7 +320,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         alpha = 1.0 - 0.30 * chip.progress
         rounded_rect(ctx, chip.x, chip.y, chip_w, chip_h, 9, COLORS["secondary"],
                      alpha=alpha)
-        text(ctx, chips[chip.index], chip.x + chip_w / 2, chip.y + chip_h * 0.70, 28,
+        text(ctx, chips[chip.slot], chip.x + chip_w / 2, chip.y + chip_h * 0.70, 28,
              "#FFFFFF", anchor="center", bold=True, alpha=alpha)
 
     text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
@@ -372,7 +377,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
         alpha = 1.0 - 0.30 * chip.progress
         rounded_rect(ctx, chip.x, chip.y, chip_w, chip_h, 9, COLORS["secondary"],
                      alpha=alpha)
-        scene_layout.line(ctx, chips[chip.index], chip.x + chip_w / 2,
+        scene_layout.line(ctx, chips[chip.slot], chip.x + chip_w / 2,
                           chip.y + chip_h * 0.70, chip_w, 30, "#FFFFFF",
                           bold=True, alpha=alpha, anchor="center")
 
