@@ -16,6 +16,7 @@
 **幂等的三件事**（规格 §7.1）：抽帧与软链绑成片 sha256（复用），
 文案绑当前元数据（每次重写），发布状态绑成片 sha256（保留）。
 """
+
 from __future__ import annotations
 
 import json
@@ -64,8 +65,12 @@ class PackageResult:
     warnings: list[str] = field(default_factory=list)
 
 
-def _checklist(episode: str, copy: contract.BiliCopy,
-               info: preflight.VideoInfo, warnings: list[str]) -> str:
+def _checklist(
+    episode: str,
+    copy: contract.BiliCopy,
+    info: preflight.VideoInfo,
+    warnings: list[str],
+) -> str:
     tags = contract.tags_line(copy.tags)
     lines = [
         f"# 待发布：{copy.title}（{episode}）",
@@ -76,7 +81,8 @@ def _checklist(episode: str, copy: contract.BiliCopy,
         f"| 标题 | {copy.title}（{len(copy.title)} 字） |",
         f"| 分区 | tid = {copy.tid} |",
         f"| 标签 | {tags} |",
-        f"| 简介 | {copy.description[:40]}… |" if len(copy.description) > 40
+        f"| 简介 | {copy.description[:40]}… |"
+        if len(copy.description) > 40
         else f"| 简介 | {copy.description} |",
         "| 封面 | `cover.jpg` |",
         "| 字幕 | `subtitle.srt`（有的话一起传） |",
@@ -93,7 +99,7 @@ def _checklist(episode: str, copy: contract.BiliCopy,
         "- [ ] 声明原创，确认不允许转载",
         "- [ ] 提交投稿",
         "- [ ] 回填链接："
-        f"`python -m bilibili.cli mark published {episode} --url \"<链接>\"`",
+        f'`python -m bilibili.cli mark published {episode} --url "<链接>"`',
         "",
     ]
     if warnings:
@@ -126,24 +132,35 @@ def _bilibili_only(meta: epmeta.EpisodeMeta) -> epmeta.EpisodeMeta:
     「这一期没配视频号文案」不是B站的发布问题，不该进B站的清单。
     """
     return epmeta.EpisodeMeta(
-        episode=meta.episode, title=meta.title, cover_at=meta.cover_at,
-        url=meta.url, channels=None, bilibili=meta.bilibili, path=meta.path)
+        episode=meta.episode,
+        title=meta.title,
+        cover_at=meta.cover_at,
+        url=meta.url,
+        channels=None,
+        bilibili=meta.bilibili,
+        path=meta.path,
+    )
 
 
 def _for_bilibili(findings: list) -> list:
     """只留B站自己的 finding。"""
     kept = []
     for finding in findings:
-        if (finding.rule_id == "epmeta.platform-missing"
-                and "bilibili" not in finding.message):
+        if (
+            finding.rule_id == "epmeta.platform-missing"
+            and "bilibili" not in finding.message
+        ):
             continue
         kept.append(finding)
     return kept
 
 
-def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
-                       episode: str,
-                       capabilities_dir: str | Path | None = None) -> list:
+def preflight_findings(
+    meta: epmeta.EpisodeMeta,
+    info: preflight.VideoInfo,
+    episode: str,
+    capabilities_dir: str | Path | None = None,
+) -> list:
     """出包前的预检：文案层 + 技术层。
 
     返回的 finding 里 `error` 的必须先改，`warning` 的要写进清单。
@@ -155,15 +172,25 @@ def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
         limits_loader=_bilibili_limits_loader(capabilities_dir),
     )
     findings = _for_bilibili(findings)
-    findings.extend(preflight.check_video(info, "bilibili", capabilities_dir))
+    findings.extend(
+        preflight.check_video(
+            info,
+            "bilibili",
+            Path(capabilities_dir) if capabilities_dir is not None else None,
+        )
+    )
     return findings
 
 
-def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
-                  out_root: str | Path,
-                  subtitle_events: Sequence[subtitle.SubtitleEventLike] | None = None,
-                  capabilities_dir: str | Path | None = None,
-                  outbox_dir: str | Path | None = None) -> PackageResult:
+def build_package(
+    episode: str,
+    meta: epmeta.EpisodeMeta,
+    video: str | Path,
+    out_root: str | Path,
+    subtitle_events: Sequence[subtitle.SubtitleEventLike] | None = None,
+    capabilities_dir: str | Path | None = None,
+    outbox_dir: str | Path | None = None,
+) -> PackageResult:
     """出一期在B站上的发布包。
 
     `subtitle_events` 给了就把字幕转成 `subtitle.srt` 一并放进包里。
@@ -194,8 +221,15 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
     files: dict[str, Path] = {}
     # 包里该有的东西。**清单、封面、软链一样都不能少**——少了就是
     # 一个发不出去的包，而命令会报「成功」。
-    names = ["video.mp4", "cover.jpg", "title.txt", "description.txt",
-             "tags.txt", "publish.md", "meta.json"]
+    names = [
+        "video.mp4",
+        "cover.jpg",
+        "title.txt",
+        "description.txt",
+        "tags.txt",
+        "publish.md",
+        "meta.json",
+    ]
     files = {name: target / name for name in names}
 
     reused = False
@@ -204,8 +238,7 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
         # **但要复查包里东西还在不在**：软链会悬空（成片被删了/换了），
         # 别的文件也会被人手删。少了任何一件就重出——复用不是
         # 「目录还在就算数」。
-        missing = sorted(name for name, path in files.items()
-                         if not path.exists())
+        missing = sorted(name for name, path in files.items() if not path.exists())
         if not missing:
             reused = True
     if not reused:
@@ -226,10 +259,10 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
     # 否则包里的文案停在旧版本，而命令还报「成功」——那是静默成功。
     (target / "title.txt").write_text(copy.title, encoding="utf-8")
     (target / "description.txt").write_text(copy.description, encoding="utf-8")
-    (target / "tags.txt").write_text(
-        contract.tags_line(copy.tags), encoding="utf-8")
+    (target / "tags.txt").write_text(contract.tags_line(copy.tags), encoding="utf-8")
     (target / "publish.md").write_text(
-        _checklist(episode, copy, info, warnings), encoding="utf-8")
+        _checklist(episode, copy, info, warnings), encoding="utf-8"
+    )
 
     # 字幕跟着 storyboard 走：**有就每次重写**。
     # 字幕是本地产物，但清单里说「有的话一起传」——
@@ -254,38 +287,60 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
         published_url = None
 
     (target / "meta.json").write_text(
-        json.dumps({
-            "episode": episode,
-            "video_sha256": digest,
-            "files": sorted(files),
-            "cover_at": copy.cover_at,
-            # 人工发布这一步没做完，状态就只能是「待上传」。
-            "status": status,
-            "published_url": published_url,
-        }, ensure_ascii=False, indent=2, sort_keys=True),
+        json.dumps(
+            {
+                "episode": episode,
+                "video_sha256": digest,
+                "files": sorted(files),
+                "cover_at": copy.cover_at,
+                # 人工发布这一步没做完，状态就只能是「待上传」。
+                "status": status,
+                "published_url": published_url,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        ),
         encoding="utf-8",
     )
 
-    store.save(episode, state.BiliState(
-        episode=episode, video_sha256=digest, status=status,
-        resource_id=previous.resource_id,
-        published_url=published_url,
-    ))
+    store.save(
+        episode,
+        state.BiliState(
+            episode=episode,
+            video_sha256=digest,
+            status=status,
+            resource_id=previous.resource_id,
+            published_url=published_url,
+        ),
+    )
 
-    reason = ("B站 ARC_BASE 权限未开通，已出包待人工上传" if status == "packaged"
-              else "人工发布后回填")
+    reason = (
+        "B站 ARC_BASE 权限未开通，已出包待人工上传"
+        if status == "packaged"
+        else "人工发布后回填"
+    )
     outbox = Path(outbox_dir) if outbox_dir else snapshot.OUTBOX_DIR
     snapshot.write_snapshot(
         outbox / f"{episode}__bilibili.json",
-        episode=episode, status=status, title=copy.title,
-        package_dir=repo_relative(target), published_url=published_url,
+        episode=episode,
+        status=status,
+        title=copy.title,
+        package_dir=repo_relative(target),
+        published_url=published_url,
         reason=reason,
         # 档位从**同一份**能力声明里读——写死的话，改完 TOML 快照还在说旧档位。
         automation=snapshot.automation_of(capabilities_dir),
     )
     return PackageResult(
-        episode=episode, dir=target, files=files, video_sha256=digest,
-        status=status, reason=reason, reused=reused, warnings=warnings,
+        episode=episode,
+        dir=target,
+        files=files,
+        video_sha256=digest,
+        status=status,
+        reason=reason,
+        reused=reused,
+        warnings=warnings,
     )
 
 
