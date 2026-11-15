@@ -133,6 +133,26 @@ def rewrite_links(body, script_to_permalink):
     return re.sub(r"\]\(([^)]+)\)", replace, body)
 
 
+def read_publish_meta(episode):
+    """这一期的发布元数据（``aiv/publish/<EP>.json``）。
+
+    **它是母版标题的出处**（视频发布契约 §4.3：「这一期的标题（母版标题）。
+    各平台文案默认从这里派生」）。画面契约 ``aiv/contracts/<EP>.json`` 里的
+    title 是**画面标题**，两者不必相同——EP01 的画面标题是「openGauss 的并行
+    逻辑解码」，母版标题是「PostgreSQL 18 并行逻辑解码」。
+
+    所以站上的视频页用母版标题：那一期在 B站/视频号叫什么，站内就叫什么。
+    """
+    path = AIV_ROOT / "publish" / f"{episode}.json"
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def build_page(episode, script_path, outbox):
     """Build one content unit. Returns ``(slug, markdown)``."""
     script_file = AIV_ROOT / script_path
@@ -142,8 +162,12 @@ def build_page(episode, script_path, outbox):
     contract = {}
     if contract_file.is_file():
         contract = json.loads(contract_file.read_text(encoding="utf-8"))
-    title = contract.get("title") or fields.get("title") or episode
+
+    meta = read_publish_meta(episode)
+    # 母版标题优先：那一期在平台上叫什么，站内就叫什么。
+    title = meta.get("title") or contract.get("title") or fields.get("title") or episode
     date = fields.get("date") or "1970-01-01"
+    description = meta.get("description") or ""
 
     platforms = sorted(
         platform

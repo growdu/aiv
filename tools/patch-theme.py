@@ -1793,6 +1793,92 @@ if os.path.isfile(post_detail):
 else:
     print("WARNING: post-detail.ejs not found for post-publish")
 
+# --- 3.7. Video embed (the episode's published video) ---
+# 视频页上要能直接看那一期（发布架构 §9 的「视频详情页」）。
+#
+# **成片不在站点托管**：它住在 B站 / 视频号（视频发布契约 §6.1），站点只嵌
+# 播放器 + 给外链。B站页可以嵌 iframe，视频号没有可嵌的页面，给链接。
+#
+# 数据来自同一个发布索引：已发布的（有 published_url）才给播放器，
+# 没发布的（还在出包）显示状态，不假装有。
+video_ejs = """<%/*
+  Video embed — the published episode.
+
+  The video itself lives on Bilibili / WeChat Channels (publish/spec/07
+  §6.1); this site only embeds the player and links out.  A B站 URL
+  carries the BV id, which is what the player needs; 视频号 has no
+  embeddable page, so it gets a plain link.
+
+  Same data source as the publish spectrum: source/_data/publish_index.json.
+*/%>
+<%
+var videoIndex = (site.data && site.data.publish_index) ? site.data.publish_index : null;
+var videoContentId = '';
+if (page.source && page.source.indexOf('_posts/') === 0) {
+  videoContentId = page.source.substring('_posts/'.length).replace(/\\.md$/, '');
+}
+var videoRecord = null;
+if (videoIndex && videoIndex.videos) {
+  videoRecord = videoIndex.videos[videoContentId] || null;
+}
+var videoBvid = '';
+var videoOutlinks = [];
+if (videoRecord && videoRecord.platforms) {
+  videoRecord.platforms.forEach(function (item) {
+    if (!item.published_url) { return; }
+    var bvidMatch = item.published_url.match(/BV[0-9A-Za-z]+/);
+    if (bvidMatch) {
+      videoBvid = bvidMatch[0];
+    } else {
+      videoOutlinks.push(item);
+    }
+  });
+}
+%>
+<% if (videoRecord && (videoBvid || videoOutlinks.length)) { %>
+<div class="card video-embed" data-aos="fade-up">
+  <div class="card-content">
+    <div class="video-embed-title"><i class="fas fa-video"></i> 看这一期</div>
+    <% if (videoBvid) { %>
+      <div class="video-embed-frame">
+        <iframe src="//player.bilibili.com/player.html?bvid=<%= videoBvid %>&page=1"
+                scrolling="no" frameborder="0" allowfullscreen="true"></iframe>
+      </div>
+    <% } %>
+    <% if (videoOutlinks.length) { %>
+      <div class="video-embed-links">
+        <% videoOutlinks.forEach(function (item) { %>
+          <a class="publish-spectrum-item" href="<%- item.published_url %>"
+             target="_blank" rel="noopener"><%= item.platform_name %></a>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</div>
+<% } %>"""
+
+with open(os.path.join(partial_dir, "video-embed.ejs"), "w", encoding="utf-8") as f:
+    f.write(video_ejs)
+print("Created video-embed.ejs")
+
+post_detail = os.path.join(theme_dir, "layout", "_partial", "post-detail.ejs")
+if os.path.isfile(post_detail):
+    with open(post_detail, encoding="utf-8") as f:
+        pd = f.read()
+    if "video-embed" not in pd:
+        pd = pd.replace(
+            "partial('_partial/post-publish')",
+            "partial('_partial/post-publish') %>\\n        <%- partial('_partial/video-embed')",
+            1,
+        )
+        with open(post_detail, "w", encoding="utf-8") as f:
+            f.write(pd)
+        print("Injected video-embed after post-publish")
+    else:
+        print("video-embed already present")
+else:
+    print("WARNING: post-detail.ejs not found for video-embed")
+
 # --- 4. Custom blog styling (subtle, keep original theme colors) ---
 custom_css = """<style id="custom-blog-style">
 /* Article typography */
@@ -1937,6 +2023,16 @@ a:focus-visible,button:focus-visible{outline:2px solid #009688;outline-offset:2p
 .publish-spectrum-item a:hover{text-decoration:underline}
 .publish-spectrum-status{font-size:11px;color:#90a4ae;text-transform:uppercase;letter-spacing:.5px}
 @media(prefers-color-scheme:dark){.publish-spectrum-title{color:#b0bec5}.publish-spectrum-item{background:rgba(0,150,136,.10);border-color:rgba(77,208,225,.35);color:#4dd0e1}.publish-spectrum-item a{color:#4dd0e1}.publish-spectrum-status{color:#78909c}}
+
+/* --- Video embed: the published episode.  The video lives on B站/视频号;
+       the site only embeds the player and links out. --- */
+.video-embed{margin:20px 0}
+.video-embed-title{font-size:16px;font-weight:700;margin-bottom:10px;color:#455a64}
+.video-embed-title i{margin-right:6px;color:#e53935}
+.video-embed-frame{position:relative;width:100%;padding-top:56.25%;border-radius:8px;overflow:hidden;background:#000}
+.video-embed-frame iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+.video-embed-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+@media(prefers-color-scheme:dark){.video-embed-title{color:#b0bec5}}
 </style>"""
 
 custom_js = """<script id="custom-blog-script">

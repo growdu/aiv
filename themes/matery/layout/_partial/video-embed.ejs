@@ -1,0 +1,55 @@
+<%/*
+  Video embed — the published episode.
+
+  The video itself lives on Bilibili / WeChat Channels (publish/spec/07
+  §6.1); this site only embeds the player and links out.  A B站 URL
+  carries the BV id, which is what the player needs; 视频号 has no
+  embeddable page, so it gets a plain link.
+
+  Same data source as the publish spectrum: source/_data/publish_index.json.
+*/%>
+<%
+var videoIndex = (site.data && site.data.publish_index) ? site.data.publish_index : null;
+var videoContentId = '';
+if (page.source && page.source.indexOf('_posts/') === 0) {
+  videoContentId = page.source.substring('_posts/'.length).replace(/\.md$/, '');
+}
+var videoRecord = null;
+if (videoIndex && videoIndex.videos) {
+  videoRecord = videoIndex.videos[videoContentId] || null;
+}
+var videoBvid = '';
+var videoOutlinks = [];
+if (videoRecord && videoRecord.platforms) {
+  videoRecord.platforms.forEach(function (item) {
+    if (!item.published_url) { return; }
+    var bvidMatch = item.published_url.match(/BV[0-9A-Za-z]+/);
+    if (bvidMatch) {
+      videoBvid = bvidMatch[0];
+    } else {
+      videoOutlinks.push(item);
+    }
+  });
+}
+%>
+<% if (videoRecord && (videoBvid || videoOutlinks.length)) { %>
+<div class="card video-embed" data-aos="fade-up">
+  <div class="card-content">
+    <div class="video-embed-title"><i class="fas fa-video"></i> 看这一期</div>
+    <% if (videoBvid) { %>
+      <div class="video-embed-frame">
+        <iframe src="//player.bilibili.com/player.html?bvid=<%= videoBvid %>&page=1"
+                scrolling="no" frameborder="0" allowfullscreen="true"></iframe>
+      </div>
+    <% } %>
+    <% if (videoOutlinks.length) { %>
+      <div class="video-embed-links">
+        <% videoOutlinks.forEach(function (item) { %>
+          <a class="publish-spectrum-item" href="<%- item.published_url %>"
+             target="_blank" rel="noopener"><%= item.platform_name %></a>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</div>
+<% } %>
