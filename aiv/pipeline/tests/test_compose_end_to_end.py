@@ -58,11 +58,20 @@ SUBTITLE_FILL = "#FF00FF"
 
 def _probe(path):
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries",
-         "stream=codec_type,codec_name,width,height,r_frame_rate,pix_fmt,"
-         "time_base,sample_rate,channels:format=duration",
-         "-of", "json", str(path)],
-        check=True, capture_output=True, text=True,
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_type,codec_name,width,height,r_frame_rate,pix_fmt,"
+            "time_base,sample_rate,channels:format=duration",
+            "-of",
+            "json",
+            str(path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout
     return json.loads(out)
 
@@ -73,19 +82,15 @@ def _narration() -> Path:
         path = episodes.narration_path(ep)
         if path.is_file():
             return path
-    raise AssertionError(
-        "仓库里一期旁白都没有——「出片必需的输入要入库」这条口径坏了"
-    )
+    raise AssertionError("仓库里一期旁白都没有——「出片必需的输入要入库」这条口径坏了")
 
 
 def _storyboard(narration) -> Storyboard:
     """两段正文场景，规格与正式成片一致。"""
     half = DURATION / 2
     scenes = [
-        Scene(id="s01", start=0.0, end=half, type="code",
-              subtitle="第一段字幕", renderer="sample_scene"),
-        Scene(id="s02", start=half, end=DURATION, type="code",
-              subtitle="第二段字幕", renderer="sample_scene"),
+        Scene(id="s01", start=0.0, end=half, type="code", subtitle="第一段字幕", renderer="sample_scene"),
+        Scene(id="s02", start=half, end=DURATION, type="code", subtitle="第二段字幕", renderer="sample_scene"),
     ]
     return Storyboard(
         version=1,
@@ -104,7 +109,9 @@ def _first_frame(path):
     frame = path.with_suffix(".frame.png")
     subprocess.run(
         ["ffmpeg", "-v", "error", "-y", "-i", str(path), "-vframes", "1", str(frame)],
-        check=True, capture_output=True, text=True,
+        check=True,
+        capture_output=True,
+        text=True,
     )
     # 走 tobytes() 而不是 getdata()：getdata() 返回的是 ImagingCore，
     # 类型检查器看不出它能迭代；tobytes() 出来的字节流按 RGB 切片，
@@ -121,23 +128,18 @@ def test_the_chinese_subtitle_has_real_glyphs_in_the_current_font():
     而「文件生成成功」是发现不了的。
     """
     missing = [ch for ch in SUBTITLE_TEXT if fonts.missing_glyph(ch)]
-    assert not missing, (
-        f"这些字在当前字体（{fonts.font_family()}）里画不出来，会变成豆腐块：{missing}"
-    )
+    assert not missing, f"这些字在当前字体（{fonts.font_family()}）里画不出来，会变成豆腐块：{missing}"
 
 
 def test_a_fresh_clone_can_produce_a_broadcastable_episode(tmp_path):
     """从入库素材直接合成出符合规格的成片。"""
     narration = _narration()
     storyboard = _storyboard(narration)
-    assert storyboard.validate() == [], (
-        f"合成的 storyboard 不合契约：{storyboard.validate()}"
-    )
+    assert storyboard.validate() == [], f"合成的 storyboard 不合契约：{storyboard.validate()}"
     assert BGM.is_file(), f"仓库里没有 BGM：{BGM}"
 
     out = tmp_path / "ep-smoke.mp4"
-    compose_mod.compose(storyboard, tmp_path / "build", out,
-                        narration=narration, bgm=BGM)
+    compose_mod.compose(storyboard, tmp_path / "build", out, narration=narration, bgm=BGM)
 
     assert out.is_file(), f"成片没生成：{out}"
     assert out.stat().st_size > 0, "成片是空的"
@@ -152,23 +154,17 @@ def test_a_fresh_clone_can_produce_a_broadcastable_episode(tmp_path):
     assert (video["width"], video["height"]) == (1920, 1080)
     assert video["r_frame_rate"] == "24/1"
     # 规格钉死的时间基：concat 阶段要求各片段时间基一致
-    assert video["time_base"] == "1/24000", (
-        f"video_track_timescale 不对：{video['time_base']}"
-    )
+    assert video["time_base"] == "1/24000", f"video_track_timescale 不对：{video['time_base']}"
 
     audio = streams["audio"]
     assert audio["codec_name"] == "aac"
     assert audio["sample_rate"] == "48000"
     assert audio["channels"] == 2
 
-    assert abs(float(info["format"]["duration"]) - DURATION) < 0.3, (
-        f"成片时长不对：{info['format']['duration']}"
-    )
+    assert abs(float(info["format"]["duration"]) - DURATION) < 0.3, f"成片时长不对：{info['format']['duration']}"
 
     # 画面里必须有字幕的洋红色：白底 + 深蓝块里混进洋红，
     # 只可能是字幕烧上去了（也说明中文字形真的画出来了）。
     pixels = _first_frame(out)
     magenta = sum(1 for r, g, b in pixels if r > 200 and b > 200 and g < 100)
-    assert magenta > 50, (
-        f"成片第一帧里没有字幕的洋红色（{magenta} 个像素）——字幕没烧进去"
-    )
+    assert magenta > 50, f"成片第一帧里没有字幕的洋红色（{magenta} 个像素）——字幕没烧进去"

@@ -29,9 +29,14 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 底板目录：现在是 brand/plates/，早期版本在 brand/assets/plates/。
 # 两个都认，免得脚本因为目录挪过家就直接崩。
-PLATES = next((d for d in (os.path.join(ROOT, "plates"),
-                            os.path.join(ROOT, "assets", "plates"))
-               if os.path.isdir(d)), os.path.join(ROOT, "plates"))
+PLATES = next(
+    (
+        d
+        for d in (os.path.join(ROOT, "plates"), os.path.join(ROOT, "assets", "plates"))
+        if os.path.isdir(d)
+    ),
+    os.path.join(ROOT, "plates"),
+)
 BACKUP = os.path.join(PLATES, "original")
 
 
@@ -57,23 +62,31 @@ def pick_font(candidates):
 # 拉丁字标用 Avenir Next（macOS 自带），Linux 上退到 DejaVu Sans；
 # 中文用 Hiragino Sans GB（macOS 自带），Linux 上退到 Noto Sans CJK SC。
 # **字形因此不同**：Linux 上修复出来的底板与 macOS 版不是逐像素一致。
-AVENIR_HEAVY = pick_font([
-    ("/System/Library/Fonts/Avenir Next.ttc", 8),
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 0),
-])
-AVENIR_BOLD = pick_font([
-    ("/System/Library/Fonts/Avenir Next.ttc", 0),
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0),
-])
-AVENIR_MEDIUM = pick_font([
-    ("/System/Library/Fonts/Avenir Next.ttc", 5),
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0),
-])
-CJK_W6 = pick_font([
-    ("/System/Library/Fonts/Hiragino Sans GB.ttc", 2),
-    ("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 0),
-    ("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc", 0),
-])
+AVENIR_HEAVY = pick_font(
+    [
+        ("/System/Library/Fonts/Avenir Next.ttc", 8),
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 0),
+    ]
+)
+AVENIR_BOLD = pick_font(
+    [
+        ("/System/Library/Fonts/Avenir Next.ttc", 0),
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0),
+    ]
+)
+AVENIR_MEDIUM = pick_font(
+    [
+        ("/System/Library/Fonts/Avenir Next.ttc", 5),
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0),
+    ]
+)
+CJK_W6 = pick_font(
+    [
+        ("/System/Library/Fonts/Hiragino Sans GB.ttc", 2),
+        ("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 0),
+        ("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc", 0),
+    ]
+)
 
 # 渲染时 zoompan 会放大约 6%，画面边缘约 3% 会被裁掉，文字右侧留到 1840 以内
 MARGIN = 1840
@@ -198,7 +211,9 @@ def draw_globe(draw, box, color, width=4):
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     r = (x1 - x0) / 2
     draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=color, width=width)
-    draw.ellipse([cx - r * 0.42, cy - r, cx + r * 0.42, cy + r], outline=color, width=width)
+    draw.ellipse(
+        [cx - r * 0.42, cy - r, cx + r * 0.42, cy + r], outline=color, width=width
+    )
     draw.line([cx - r, cy, cx + r, cy], fill=color, width=width)
 
 
@@ -209,15 +224,30 @@ def draw_thumb(draw, box, color, width=4):
     def p(px, py):
         return (x0 + px * sx, y0 + py * sy)
 
-    outline = [p(6, 44), p(6, 18), p(16, 18), p(23, 5), p(30, 4), p(30, 13),
-               p(25, 21), p(24, 24), p(41, 24), p(45, 28), p(45, 40), p(41, 44), p(6, 44)]
+    outline = [
+        p(6, 44),
+        p(6, 18),
+        p(16, 18),
+        p(23, 5),
+        p(30, 4),
+        p(30, 13),
+        p(25, 21),
+        p(24, 24),
+        p(41, 24),
+        p(45, 28),
+        p(45, 40),
+        p(41, 44),
+        p(6, 44),
+    ]
     draw.line(outline, fill=color, width=width, joint="curve")
     draw.line([p(16, 18), p(16, 44)], fill=color, width=width)
 
 
 def draw_pill(draw, box, color, width=3):
     x0, y0, x1, y1 = box
-    draw.rounded_rectangle([x0, y0, x1, y1], radius=(y1 - y0) / 2, outline=color, width=width)
+    draw.rounded_rectangle(
+        [x0, y0, x1, y1], radius=(y1 - y0) / 2, outline=color, width=width
+    )
 
 
 def draw_play(draw, box, color):
@@ -227,8 +257,14 @@ def draw_play(draw, box, color):
     draw.rounded_rectangle([x0, y0, x1, y1], radius=w * 0.28, fill=color)
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     tw, th = w * 0.34, h * 0.40
-    draw.polygon([(cx - tw * 0.55, cy - th / 2), (cx - tw * 0.55, cy + th / 2),
-                  (cx + tw * 0.75, cy)], fill=(255, 255, 255))
+    draw.polygon(
+        [
+            (cx - tw * 0.55, cy - th / 2),
+            (cx - tw * 0.55, cy + th / 2),
+            (cx + tw * 0.75, cy),
+        ],
+        fill=(255, 255, 255),
+    )
 
 
 def draw_block(im, items, glow_radius=18, glow_color=(150, 226, 255), glow_alpha=0.42):
@@ -273,22 +309,45 @@ def fix_intro(path):
     probe = ImageDraw.Draw(Image.new("RGB", (8, 8)))
     items = []
 
-    f_wm, size = fit_font(AVENIR_HEAVY[0], AVENIR_HEAVY[1], "Growdu", MARGIN - 1112, 230)
+    f_wm, size = fit_font(
+        AVENIR_HEAVY[0], AVENIR_HEAVY[1], "Growdu", MARGIN - 1112, 230
+    )
     bb = probe.textbbox((0, 0), "Growdu", font=f_wm)
-    items.append((lambda d, c: draw_tracked(d, (1112, 396 - bb[1]), "Growdu", f_wm, c), white))
+    items.append(
+        (lambda d, c: draw_tracked(d, (1112, 396 - bb[1]), "Growdu", f_wm, c), white)
+    )
     print("  字标字号 %d" % size)
 
-    f_tag, size = fit_font(AVENIR_MEDIUM[0], AVENIR_MEDIUM[1], "Database · Knowledge · Growth",
-                           MARGIN - 1078, 90, tracking=2)
+    f_tag, size = fit_font(
+        AVENIR_MEDIUM[0],
+        AVENIR_MEDIUM[1],
+        "Database · Knowledge · Growth",
+        MARGIN - 1078,
+        90,
+        tracking=2,
+    )
     bb = probe.textbbox((0, 0), "D", font=f_tag)
-    items.append((lambda d, c: draw_tracked(d, (1078, 596 - bb[1]),
-                                            "Database · Knowledge · Growth", f_tag, c, tracking=2), white))
+    items.append(
+        (
+            lambda d, c: draw_tracked(
+                d,
+                (1078, 596 - bb[1]),
+                "Database · Knowledge · Growth",
+                f_tag,
+                c,
+                tracking=2,
+            ),
+            white,
+        )
+    )
     print("  英文标语字号 %d" % size)
 
     pill = (995, 696, MARGIN, 830)
     items.append((lambda d, c: draw_pill(d, pill, c, width=3), cyan))
     w_txt, g_txt = "深入数据库 · 分享", "技术之美"
-    f_cn, size = fit_font(CJK_W6[0], CJK_W6[1], w_txt + g_txt, pill[2] - pill[0] - 100, 90)
+    f_cn, size = fit_font(
+        CJK_W6[0], CJK_W6[1], w_txt + g_txt, pill[2] - pill[0] - 100, 90
+    )
     bb = probe.textbbox((0, 0), "深", font=f_cn)
     total = text_width(probe, w_txt, f_cn) + text_width(probe, g_txt, f_cn)
     tx = pill[0] + (pill[2] - pill[0] - total) / 2
@@ -324,7 +383,10 @@ def fix_outro(path):
     latin, cjk = "Growdu · ", "与你一起，探索数据库的无边世界"
     best = None
     for size in range(84, 30, -1):
-        fl, fc = font(AVENIR_BOLD[0], size, AVENIR_BOLD[1]), font(CJK_W6[0], size, CJK_W6[1])
+        fl, fc = (
+            font(AVENIR_BOLD[0], size, AVENIR_BOLD[1]),
+            font(CJK_W6[0], size, CJK_W6[1]),
+        )
         if text_width(probe, latin, fl) + text_width(probe, cjk, fc) <= MARGIN - 870:
             best = (fl, fc, size)
             break
@@ -363,7 +425,9 @@ def fix_outro(path):
         elif kind == "play":
             draw_play(d, (x + pad_l, iy, x + pad_l + icon, iy + icon), navy)
         else:
-            draw_thumb(d, (x + pad_l, iy + 6, x + pad_l + icon, iy + icon - 6), navy, width=4)
+            draw_thumb(
+                d, (x + pad_l, iy + 6, x + pad_l + icon, iy + icon - 6), navy, width=4
+            )
         f = f_lat if kind == "globe" else f_btn
         tx = x + pad_l + icon + icon_gap
         bb = probe.textbbox((0, 0), label[0], font=f)
@@ -376,14 +440,16 @@ def fix_outro(path):
 
 def main():
     os.makedirs(BACKUP, exist_ok=True)
-    for name, fn in (("growdu_intro_1080p.png", fix_intro),
-                     ("growdu_outro_1080p.png", fix_outro)):
+    for name, fn in (
+        ("growdu_intro_1080p.png", fix_intro),
+        ("growdu_outro_1080p.png", fix_outro),
+    ):
         path = os.path.join(PLATES, name)
         bak = os.path.join(BACKUP, name)
         if not os.path.exists(bak):
             Image.open(path).convert("RGB").save(bak)
         else:
-            Image.open(bak).convert("RGB").save(path)   # 始终基于原始图重跑
+            Image.open(bak).convert("RGB").save(path)  # 始终基于原始图重跑
         print("修复 %s" % name)
         fn(path)
     print("完成。")

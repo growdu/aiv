@@ -47,7 +47,9 @@ __all__ = ["RenderResult", "render"]
 # ``<head>`` it does not have, so they are not an option here.
 _P_STYLE = "margin:0 0 16px 0;line-height:1.75;font-size:16px;color:#333333;"
 _H2_STYLE = "margin:24px 0 12px 0;font-size:18px;font-weight:bold;color:#222222;"
-_ITEM_STYLE = "margin:0 0 8px 0;padding-left:12px;line-height:1.75;font-size:16px;color:#333333;"
+_ITEM_STYLE = (
+    "margin:0 0 8px 0;padding-left:12px;line-height:1.75;font-size:16px;color:#333333;"
+)
 _MARK_STYLE = "margin:16px 0;text-align:center;color:#999999;font-size:14px;"
 _CODE_STYLE = (
     "padding:1px 4px;background-color:#f5f5f5;border-radius:3px;"
@@ -328,9 +330,7 @@ class _Pairing:
     def remaining(self, index: int, token: _Token) -> int:
         """How many delimiter characters of a run are still free."""
         return (
-            token.count
-            - self.used_open.get(index, 0)
-            - self.used_close.get(index, 0)
+            token.count - self.used_open.get(index, 0) - self.used_close.get(index, 0)
         )
 
 
@@ -368,7 +368,8 @@ def _pair_delimiters(tokens: list[_Token]) -> _Pairing:
     against the tags of another pair, and the tags can only nest.
     """
     runs = [
-        index for index, token in enumerate(tokens)
+        index
+        for index, token in enumerate(tokens)
         if token.kind == "delim" and token.value in ("*", "_")
     ]
     count = len(runs)
@@ -400,8 +401,11 @@ def _pair_delimiters(tokens: list[_Token]) -> _Pairing:
         found = -1
         while candidate != -1:
             opener = tokens[runs[candidate]]
-            if (opener.can_open and opener.value == closer.value
-                    and not _odd_match(opener, closer)):
+            if (
+                opener.can_open
+                and opener.value == closer.value
+                and not _odd_match(opener, closer)
+            ):
                 found = candidate
                 break
             candidate = prev[candidate]
@@ -487,7 +491,9 @@ def _render_token(index: int, token: _Token, pairing: _Pairing, as_html: bool) -
     return token.value
 
 
-def _render_range(tokens, pairing: _Pairing, as_html: bool, low: int, high: int, out: list) -> None:
+def _render_range(
+    tokens, pairing: _Pairing, as_html: bool, low: int, high: int, out: list
+) -> None:
     """Render the pieces between two positions, tags and all."""
     index = low
     while index < high:
@@ -501,7 +507,9 @@ def _render_range(tokens, pairing: _Pairing, as_html: bool, low: int, high: int,
         index = chain[-1][0] + 1
 
 
-def _render_chain(tokens, pairing: _Pairing, as_html: bool, index: int, chain: list, out: list) -> None:
+def _render_chain(
+    tokens, pairing: _Pairing, as_html: bool, index: int, chain: list, out: list
+) -> None:
     """Render a run of delimiters that opened more than one pair.
 
     ``****x****`` is two pairs that share the same two runs: the first
