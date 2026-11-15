@@ -45,7 +45,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
 def cmd_align(args: argparse.Namespace) -> int:
     from pyv import align
     storyboard = align.build_storyboard(
-        args.audio, args.script, args.out, contract_path=args.scenes
+        args.audio, args.script, args.out, contract_path=args.scenes,
+        canvas=args.canvas,
     )
     print(
         f"OK {len(storyboard.scenes)} 个视觉段，"
@@ -55,7 +56,12 @@ def cmd_align(args: argparse.Namespace) -> int:
 
 
 def cmd_render(args: argparse.Namespace) -> int:
-    from pyv import render, subtitle
+    from pyv import character, render, subtitle
+    if args.character:
+        if not character.use_image(args.character):
+            print(f"ERROR 形象素材不存在：{args.character}", file=sys.stderr)
+            return 1
+        print(f"形象素材 → {character.STATIC_IMAGE}")
     storyboard = _load_or_report(args)
     if storyboard is None:
         return 1
@@ -99,6 +105,14 @@ def cmd_compose(args: argparse.Namespace) -> int:
 
 def cmd_brand(args: argparse.Namespace) -> int:
     from pyv import brand
+    source = Storyboard.load(args.storyboard)
+    if palette.is_vertical(source.video.width, source.video.height):
+        # 品牌片素材是 1920x1080 的横版，贴到 1080x1920 上会被拉变形。
+        # 竖版那一档走 `nobrand`（无品牌版），不套品牌片。
+        print("ERROR 竖版画布不套品牌片：品牌片素材是 1920x1080 的横版，"
+              "贴到 1080x1920 上会被拉变形。竖版那一档用 `nobrand`。",
+              file=sys.stderr)
+        return 1
     out = brand.apply_plates(
         args.storyboard, args.out, args.build,
         intro=not args.no_intro, outro=not args.no_outro,
@@ -117,6 +131,34 @@ def cmd_brand(args: argparse.Namespace) -> int:
         f"OK 品牌片：{detail}；"
         f"{len(storyboard.scenes)} 个场景，总时长 {storyboard.duration:.3f}s → {out}"
     )
+    return 0
+
+
+def cmd_nobrand(args: argparse.Namespace) -> int:
+    """产出一份「无品牌导流版」storyboard。
+
+    **抖音这一档用它**：抖音禁「过度营销信息」与站外引流，片头字标与片尾的
+    `growdu.cn` 胶囊正好撞上（规格 §6.6.4）。
+
+    不需要品牌片素材：仓库里一张 `brand/clips/*.mp4` 都没有也能产出这一版。
+    """
+    from pyv import brand
+    out = brand.make_nobrand(args.storyboard, args.out)
+    storyboard = Storyboard.load(out)
+    errors = storyboard.validate()
+    if errors:
+        for e in errors:
+            print(f"ERROR {e}", file=sys.stderr)
+        return 1
+    plates = [s for s in storyboard.scenes if s.id.startswith("brand_")]
+    if plates:
+        # 出了带品牌片的「无品牌版」——那是最难发现的错：
+        # 文件在、时长对、命令报成功，只有画面里多了一整屏字标。
+        print(f"ERROR 无品牌版里还有品牌场景："
+              f"{'、'.join(s.id for s in plates)}", file=sys.stderr)
+        return 1
+    print(f"OK 无品牌导流版：{len(storyboard.scenes)} 个场景，"
+          f"总时长 {storyboard.duration:.3f}s → {out}")
     return 0
 
 
@@ -282,7 +324,9 @@ def cmd_publish(args: argparse.Namespace) -> int:
     findings = epmeta.check_meta(
         meta, contract_episode=contract_episode, duration=duration)
     if info is not None:
-        for platform in ("channels", "bilibili"):
+        # 每个配了文案的平台都做一次成片预检。平台清单只有一个来源
+        # （epmeta 的 PLATFORM_SPECS）——在这里再抄一份，迟早会漏掉新平台。
+        for platform in epmeta.PLATFORM_SPECS:
             findings.extend(preflight.check_video(info, platform))
 
     for finding in findings:
@@ -367,11 +411,16 @@ def main(argv: list[str] | None = None) -> int:
     p_align.add_argument("--out", required=True)
     p_align.add_argument("--scenes", default=str(contract.DEFAULT_CONTRACT),
                          help="视觉分镜契约（本期文案与段落划分）")
+    p_align.add_argument("--canvas", default="horizontal",
+                         choices=sorted(palette.CANVASES),
+                         help="画布档位：横版 1920x1080 / 竖版 1080x1920")
     p_align.set_defaults(func=cmd_align)
 
     p_render = sub.add_parser("render")
     p_render.add_argument("--storyboard", required=True)
     p_render.add_argument("--out", required=True)
+    p_render.add_argument("--character", default=None,
+                           help="换一份形象素材（如无标牌版）")
     p_render.set_defaults(func=cmd_render)
 
     p_compose = sub.add_parser("compose")
@@ -389,6 +438,12 @@ def main(argv: list[str] | None = None) -> int:
     p_brand.add_argument("--no-intro", action="store_true")
     p_brand.add_argument("--no-outro", action="store_true")
     p_brand.set_defaults(func=cmd_brand)
+
+    p_nobrand = sub.add_parser(
+        "nobrand", help="产出无品牌导流版 storyboard（抖音这一档用）")
+    p_nobrand.add_argument("--storyboard", required=True)
+    p_nobrand.add_argument("--out", required=True)
+    p_nobrand.set_defaults(func=cmd_nobrand)
 
     p_persona = sub.add_parser("persona")
     persona_sub = p_persona.add_subparsers(dest="persona_command", required=True)

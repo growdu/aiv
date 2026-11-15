@@ -175,24 +175,34 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
     previous = store.get(episode)
     digest = preflight.file_sha256(video_path)
 
-    files: dict[str, Path] = {}
+    # 包里该有的东西。**清单、封面、软链一样都不能少**——少了就是
+    # 一个发不出去的包，而命令会报「成功」。
+    names = ("video.mp4", "cover-4x3.jpg", "cover-3x4.jpg",
+             "title.txt", "description.txt", "topics.txt", "publish.md")
+    files = {name: target / name for name in names}
+
     reused = False
     if previous.video_sha256 == digest and (target / "meta.json").is_file():
         # 成片没变：抽帧与软链复用，不重做费事的那部分。
-        reused = True
-        meta_file = json.loads((target / "meta.json").read_text(encoding="utf-8"))
-        files = {name: target / name for name in meta_file["files"]}
-    else:
+        # **但要复查包里东西还在不在**：软链会悬空（成片被删了/换了），
+        # 别的文件也会被人手删。少了任何一件就重出——复用不是
+        # 「目录还在就算数」。
+        missing = sorted(name for name, path in files.items()
+                         if not path.exists())
+        if not missing:
+            reused = True
+    if not reused:
         target.mkdir(parents=True, exist_ok=True)
         assets.make_covers(video_path, copy.cover_at, target)
         link = target / "video.mp4"
         if link.exists() or link.is_symlink():
             link.unlink()
         link.symlink_to(video_path.resolve())
-
-        names = ("video.mp4", "cover-4x3.jpg", "cover-3x4.jpg",
-                 "title.txt", "description.txt", "topics.txt", "publish.md")
-        files = {name: target / name for name in names}
+    else:
+        # 封面重抽一次：包里那张是上一次抽的，而元数据里的取帧点可能改了。
+        # 封面与 `meta.json` 记的 `cover_at` 对不上，人按清单选封面就会
+        # 选错那一帧（清单说 1.0 秒，包里那张是 3 秒的）。
+        assets.make_covers(video_path, copy.cover_at, target)
 
     # **文案每次都按当前元数据重写。**
     # 成片没变 ≠ 文案没变：改了标题再重跑，必须出新标题。
@@ -232,8 +242,10 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
         published_url=published_url,
     ))
 
-    reason = ("视频号无公开发布接口，已出包待人工上传" if status == "packaged"
-              else "人工发布后回填")
+    reason = {
+        "packaged": "视频号无公开发布接口，已出包待人工上传",
+        "drafted": "已存草稿，待人工发表",
+    }.get(status, "人工发布后回填")
     outbox = Path(outbox_dir) if outbox_dir else snapshot.OUTBOX_DIR
     snapshot.write_snapshot(
         outbox / f"{episode}__channels.json",
@@ -256,6 +268,27 @@ def mark_published(target: str | Path, url: str) -> Path:
     data = json.loads(path.read_text(encoding="utf-8"))
     data["status"] = "published"
     data["published_url"] = url
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    return path
+
+
+def mark_drafted(target: str | Path) -> Path:
+    """回填「已存草稿」：草稿已在平台上，等人点发表。
+
+    **和 `published` 是两回事。** 草稿还没发出去，所以 `published_url` 要清掉——
+    留着旧链接会让人以为这条已经发出去了（头条号那边就踩过同一个坑：
+    `drafted` 被读成「还没发」或「已发」都会导致重发）。
+    """
+    directory = Path(target)
+    path = directory / "meta.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"发布包不存在：{directory}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["status"] = "drafted"
+    data["published_url"] = None
     path.write_text(
         json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8",

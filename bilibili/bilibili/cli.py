@@ -111,32 +111,72 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_mark(args: argparse.Namespace) -> int:
-    store = state.StateStore(Path(args.out) / "state.json")
-    current = store.get(args.episode)
-    current.status = "published"
-    current.published_url = args.url
-    store.save(args.episode, current)
+    """回填发布状态。
 
-    meta = epmeta.load_meta(args.episode)
+    **两个状态的区别不能混。**
+    `drafted` = 视频已存进B站 的**草稿箱**，还没公开；
+    `published` = 已经公开出去，有链接了。
+    标成 `published` 必须给 `--url`——没有链接就不该说「已发布」。
+
+    **先做完会失败的事，再落状态。** 顺序反了就会留下假的「已发布」：
+    状态文件写着已发布、快照也写了链接，而发布包根本不存在——
+    下一个人照着快照去找，找不到任何东西。
+    """
+    if args.state == "published" and not args.url:
+        print("ERROR 标成 published 必须给 --url——"
+              "没有公开链接就不该说「已发布」。", file=sys.stderr)
+        return 2
+
+    # 1. 元数据：读不到就退出（这一期压根没配 B站文案）
+    try:
+        meta = epmeta.load_meta(args.episode)
+    except epmeta.MetaError as error:
+        print(f"ERROR {error}", file=sys.stderr)
+        return 1
     title = _title_of(meta)
 
+    # 2. 发布包：没有包就没有「发出去的是哪一版」——不许回填
     target = Path(args.out) / args.episode
     try:
-        package.mark_published(target, args.url)
+        if args.state == "published":
+            package.mark_published(target, args.url)
+        else:
+            # B站这一档没有「草稿」要写进包里的 meta.json，
+            # 但包**必须在**：草稿是拿这个包投出去的。
+            if not (target / "meta.json").is_file():
+                raise FileNotFoundError(f"发布包不存在：{target}")
     except FileNotFoundError as error:
-        print(f"WARNING {error}", file=sys.stderr)
+        print(f"ERROR {error}", file=sys.stderr)
+        print("      没有发布包就回填不了：先出包，再投稿，再回填"
+              f"（python -m bilibili.cli package {args.episode}）",
+              file=sys.stderr)
+        return 1
+
+    # 3. 到这儿才算成了：状态与快照一起落
+    store = state.StateStore(Path(args.out) / "state.json")
+    current = store.get(args.episode)
+    current.status = args.state
+    if args.state == "published":
+        current.published_url = args.url
+    store.save(args.episode, current)
 
     outbox = Path(args.outbox) if args.outbox else snapshot.OUTBOX_DIR
+    reason = ("人工发布后回填" if args.state == "published"
+              else "已存草稿，未投稿")
     snapshot.write_snapshot(
         outbox / f"{args.episode}__bilibili.json",
-        episode=args.episode, status="published", title=title,
+        episode=args.episode, status=args.state, title=title,
         # 相对路径：快照要入库，绝对路径换台机器就对不上
-        package_dir=package.repo_relative(target), published_url=args.url,
-        reason="人工发布后回填",
+        package_dir=package.repo_relative(target),
+        published_url=current.published_url,
+        reason=reason,
     )
-    notify.notify(args.episode, "published", title, str(target),
+    notify.notify(args.episode, args.state, title, str(target),
                   os.environ.get(WEBHOOK_ENV))
-    print(f"OK {args.episode} 已回填发布链接")
+    if args.state == "published":
+        print(f"OK {args.episode} 已回填发布链接")
+    else:
+        print(f"OK {args.episode} 已标成「{args.state}」（还没公开）")
     return 0
 
 
@@ -158,9 +198,10 @@ def main(argv: list[str] | None = None) -> int:
     p_status.set_defaults(func=cmd_status)
 
     p_mark = sub.add_parser("mark")
-    p_mark.add_argument("state", choices=["published"])
+    p_mark.add_argument("state", choices=["drafted", "published"])
     p_mark.add_argument("episode")
-    p_mark.add_argument("--url", required=True)
+    p_mark.add_argument("--url", default=None,
+                        help="公开链接；标 published 时必填")
     p_mark.add_argument("--out", default=str(DEFAULT_OUT))
     p_mark.add_argument("--outbox", default=None,
                         help="状态快照目录，默认 publish/outbox")
