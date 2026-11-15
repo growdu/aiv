@@ -110,4 +110,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                           max_width - (text_x - left) - w * 0.020, 32,
                           COLORS["secondary"], alpha=appear)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

@@ -161,4 +161,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                           chip_y + 58, 460, 46, COLORS["accent"],
                           bold=True, alpha=appear, anchor="right")
 
-    scene_layout.caption(ctx, p["caption"], w, h)

@@ -155,4 +155,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                               sy + node_h + h * 0.028, node_w, 32,
                               COLORS["primary"], alpha=appear, anchor="center")
 
-    scene_layout.caption(ctx, p["caption"], w, h)

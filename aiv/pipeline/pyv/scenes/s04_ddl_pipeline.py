@@ -146,4 +146,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                   axis_x, card_y + card_h + gap - h * 0.004,
                   COLORS["accent"], 4, 12, alpha=appear)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

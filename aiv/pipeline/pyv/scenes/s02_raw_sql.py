@@ -108,4 +108,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     arrow(ctx, left + content_w / 2, 690, left + content_w / 2, 780,
           COLORS["accent"], 7, 24)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

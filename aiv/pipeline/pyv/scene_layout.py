@@ -14,10 +14,12 @@
     收字号——**宁可字小一点，也不能出框**：出框的标题在手机上就是
     「被裁掉半个字」，而这种事在渲染图上一眼看不出来（画面照样生成）。
 
-规矩三：**说明与字幕都在字幕带之上。**
-    竖版字幕抬到了平台 UI 之上（`palette.VERTICAL_UI_BOTTOM`），
-    画面里的说明也跟着抬——两行都在下缘就会绞在一起
-    （横版踩过这个坑，见 `tests/test_scene_layout.py`）。
+规矩三：**底部只留字幕。**
+    竖版不再画说明行——底部那一行是字幕的位置：说明行与字幕讲的是
+    同一句话（csn/s02 的说明「按时间戳排，并不可靠」对应的字幕是
+    「并发提交 时间顺序不可靠」），两行叠在下面只会互相干扰；
+    s02 的字幕甚至和标题一字不差。
+    **横版的说明行保留**——横版底部没有字幕，也没有平台 UI。
 
 规矩四：**右侧让出平台 UI。**
     抖音那一档的点赞/评论/分享栏落在画面右下角，内容压上去就等于
@@ -31,7 +33,6 @@
 | 标题基线 | 0.075 | 144 | 所有场景统一 |
 | 内容区上沿 | 0.130 | 250 | 内容从这里开始 |
 | 内容区下沿 | 0.700 | 1344 | 内容到这里为止 |
-| 说明基线 | 0.695 | 1334 | 说明的墨迹下沿要高于字幕带 1393 |
 
 这些数字不是随手定的：**内容区下沿 1344 与字幕带 1393 之间留 49px**，
 画面内容掉下去就压在字幕上；**右缘 960 与画面边缘 1080 之间是给按钮栏
@@ -49,7 +50,6 @@ from pyv.palette import COLORS
 TITLE_Y = 0.075
 CONTENT_TOP = 0.130
 CONTENT_BOTTOM = 0.700
-CAPTION_Y = 0.695
 
 #: 左边距（比例相对画面宽度）。
 #: 横版的内容从 w*0.06 开始，竖版沿用同一个边距。
@@ -62,9 +62,8 @@ MARGIN_X = 0.06
 #: 留出一条。横版不用留（横版发的是视频号/B站，不叠平台 UI）。
 RAIL_RIGHT = 120
 
-#: 标题与说明的字号（竖版比横版大一号：手机上看，标题要顶得住）
+#: 标题的字号（竖版比横版大一号：手机上看，标题要顶得住）
 TITLE_SIZE = 68
-CAPTION_SIZE = 40
 
 #: 字号收小的下限。再小就不是「字」了，宁可让版式重排。
 MIN_SIZE = 20.0
@@ -149,17 +148,6 @@ def title(ctx: cairo.Context, text_value: str, w: int, h: int,
     """
     line(ctx, text_value, w * MARGIN_X, h * TITLE_Y, content_width(w),
          size, color, bold=bold, alpha=alpha)
-
-
-def caption(ctx: cairo.Context, text_value: str, w: int, h: int,
-            size: float = CAPTION_SIZE, color: str = COLORS["primary"],
-            alpha: float = 1.0) -> None:
-    """竖版的说明（画面左下角那行字）。
-
-    位置在字幕带之上——两行都在下缘会绞在一起（横版踩过）。
-    """
-    line(ctx, text_value, w * MARGIN_X, h * CAPTION_Y, content_width(w),
-         size, color, alpha=alpha)
 
 
 def content_width(w: int) -> float:

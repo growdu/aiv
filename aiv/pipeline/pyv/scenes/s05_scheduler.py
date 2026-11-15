@@ -190,4 +190,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                   cx + step - lane_chip_w / 2, lane_y, COLORS["accent"], 5, 18,
                   alpha=appear)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

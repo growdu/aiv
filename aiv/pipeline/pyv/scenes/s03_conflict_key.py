@@ -212,4 +212,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                       badge_y + 40, badge_w - 20, 32, "#FFFFFF", bold=True,
                       alpha=appear, anchor="center")
 
-    scene_layout.caption(ctx, p["caption"], w, h)
