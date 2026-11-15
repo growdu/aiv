@@ -15,6 +15,23 @@ $(function () {
     /*菜单切换*/
     $('.sidenav').sidenav();
 
+    /* 初始化首页文章区的 tabs。
+     *
+     * Materialize 自带 Tabs 组件（``M.Tabs``），但本主题从来没调用过
+     * ``.tabs()``——三个面板于是依次平铺渲染，访客点「编辑推荐」看起来
+     * 像切了，其实什么都没发生：一个**假控件**。
+     *
+     * 初始化后，Materialize 会给激活面板加 ``active`` 类并用内联
+     * ``display`` 切换显隐；``my.css`` 里另有「默认只显示第一个面板」的
+     * 规则兜底（JS 没跑起来时首页也不会一次铺开 18 张卡片）。
+     *
+     * 只有首页存在这个 ``ul.tabs``，所以选不到就是没有，不是出错。
+     */
+    let homeTabs = $('.home-tabs .tabs');
+    if (homeTabs.length && typeof homeTabs.tabs === 'function') {
+        homeTabs.tabs();
+    }
+
     /* 修复文章卡片 div 的宽度. */
     let fixPostCardWidth = function (srcId, targetId) {
         let srcDiv = $('#' + srcId);

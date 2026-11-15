@@ -2479,3 +2479,12 @@ body.DarkMode .latest-episode-all { color: #b0bec5; }
     .latest-episode-hook { font-size: 13px; }
     .latest-episode-all { margin-left: 0; }
 }
+/* HOME-TABS */
+/* 默认只显示第一个面板：Materialize 的 tabs 没初始化时，首页不会一次
+   铺开三组共 18 张卡片。JS 跑起来后由 Materialize 用内联 display 接管。 */
+.home-tabs .home-tab-panel {
+    display: none;
+}
+.home-tabs .home-tab-panel.active {
+    display: block;
+}

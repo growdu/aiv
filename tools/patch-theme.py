@@ -3564,6 +3564,50 @@ if os.path.isfile(my_css_path):
 else:
     print("my.css not found, skipping latest-episode CSS")
 
+# --- 15. Home tabs (首页文章区的 tab 切换) ---
+# 首页的三个 tab（最新发布 / 编辑推荐 / 近期热门）此前是**假控件**：
+# Materialize 的 tabs 组件从没被初始化过，三个面板依次平铺渲染，
+# 访客点「编辑推荐」看起来像切了，其实什么都没发生。
+#
+# 修法是让 ``matery.js`` 调用 ``.tabs()``（Materialize 自带 Tabs）。
+# 这里补的是**兜底**：Materialize 用内联 ``display`` 切换显隐，
+# 而内联样式要等 JS 跑起来才写上——在它写上之前，三个面板会一起铺开
+# （首页一次出现 18 张卡片）。
+#
+# 所以默认只显示第一个面板，JS 跑起来后由 Materialize 接管。
+# 写成 ``.home-tab-panel`` 而不是 ``#home-tab-latest``：
+# 面板的 id 以后可能改，类名是这里与模板之间的约定。
+#
+# 幂等：marker 已在 my.css 里就跳过。
+#
+# marker 与 CSS 正文**同源**（正文由 marker 拼出来）：写成两个独立的
+# 字符串常量的话，改了其中一个就会对不上——而「对不上」的后果是
+# patch-theme 认为这段 CSS 已经注入过（marker 在 my.css 里），
+# 于是**永远不写正文**，兜底规则静默失效。
+home_tabs_marker = "/* HOME-TABS */"
+my_css_path = os.path.join(theme_dir, "source", "css", "my.css")
+ht_css = home_tabs_marker + """
+/* 默认只显示第一个面板：Materialize 的 tabs 没初始化时，首页不会一次
+   铺开三组共 18 张卡片。JS 跑起来后由 Materialize 用内联 display 接管。 */
+.home-tabs .home-tab-panel {
+    display: none;
+}
+.home-tabs .home-tab-panel.active {
+    display: block;
+}
+"""
+if os.path.isfile(my_css_path):
+    with open(my_css_path, encoding="utf-8") as f:
+        _mycss = f.read()
+    if home_tabs_marker in _mycss:
+        print("home-tabs CSS already present, skipping")
+    else:
+        with open(my_css_path, "a", encoding="utf-8") as f:
+            f.write(ht_css)
+        print("Appended HOME-TABS CSS to my.css")
+else:
+    print("my.css not found, skipping home-tabs CSS")
+
 # --- 8. Drop unused vendored libs from themes/matery/source/libs/ ---
 # The vendored theme ships 30+ libs but the live templates only reference
 # 13 (animate, aos, awesome, codeBlock, instantpage, jqcloud, jquery,
