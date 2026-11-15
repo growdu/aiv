@@ -108,6 +108,34 @@ def _write_posts_tree(root, date_text="2026-10-15 09:00:00"):
         '---\ntitle: "一篇普通文章"\ndate: {}\n---\n\n正文。\n'.format(date_text),
         encoding="utf-8",
     )
+
+    # 视频内容单元（``tools/build-video-pages.py`` 的产物）：它的日期来自
+    # 口播稿（``aiv/字幕-*.md``）的 front matter——母稿里的
+    # ``episode_subtitle`` 指明了是哪一份。
+    for slug, draft_path in SIX_DRAFTS.items():
+        draft_text = (REPO_ROOT / draft_path).read_text(encoding="utf-8")
+        subtitle_rel = ""
+        for line in draft_text.split("\n"):
+            if line.startswith("episode_subtitle:"):
+                subtitle_rel = line.split(":", 1)[1].strip()
+                break
+        if not subtitle_rel:
+            continue
+        subtitle_file = REPO_ROOT / subtitle_rel
+        if not subtitle_file.is_file():
+            continue
+        subtitle_text = subtitle_file.read_text(encoding="utf-8")
+        subtitle_date = ""
+        for line in subtitle_text.split("\n"):
+            if line.startswith("date:"):
+                subtitle_date = line.split(":", 1)[1].strip()
+                break
+        video = posts_dir / "video" / (slug + ".md")
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_text(
+            '---\ntitle: "口播稿"\ndate: {}\nkind: video\n---\n'.format(subtitle_date),
+            encoding="utf-8",
+        )
     return posts_dir
 
 
@@ -119,9 +147,45 @@ def _write_publish_index(root, videos):
     return path
 
 
+def _default_videos():
+    """六期视频在发布索引里的样子。
+
+    真实构建里 ``build-publish-index.py`` 会把每个视频内容单元都收进
+    ``videos``（地址来自内容单元，平台来自 outbox 快照）。这里照着做，
+    免得测试里「视频页不存在」成了默认状态——那是个特例，不是常态。
+    """
+    videos = {}
+    for slug, draft_path in SIX_DRAFTS.items():
+        draft_text = (REPO_ROOT / draft_path).read_text(encoding="utf-8")
+        subtitle_rel = ""
+        for line in draft_text.split("\n"):
+            if line.startswith("episode_subtitle:"):
+                subtitle_rel = line.split(":", 1)[1].strip()
+                break
+        subtitle_date = ""
+        subtitle_file = REPO_ROOT / subtitle_rel
+        if subtitle_file.is_file():
+            for line in subtitle_file.read_text(encoding="utf-8").split("\n"):
+                if line.startswith("date:"):
+                    subtitle_date = line.split(":", 1)[1].strip()
+                    break
+        videos["video/" + slug] = {
+            "content_id": "video/" + slug,
+            "kind": "video",
+            "title": "一期口播稿",
+            "url": "/{}/{}/{}/video/{}/".format(
+                subtitle_date[:4], subtitle_date[5:7], subtitle_date[8:10], slug
+            ),
+            "platforms": [],
+        }
+    return videos
+
+
 def _build(tmp_path, monkeypatch, videos=None, date_text="2026-10-15 09:00:00"):
     posts_dir = _write_posts_tree(tmp_path, date_text)
-    _write_publish_index(tmp_path, videos or {})
+    _write_publish_index(
+        tmp_path, _default_videos() if videos is None else videos
+    )
     monkeypatch.setattr(podcast_index, "POSTS_DIR", posts_dir)
     monkeypatch.setattr(podcast_index, "PUBLISH_INDEX", posts_dir.parent / "_data" / "publish_index.json")
     return podcast_index.build_index()
@@ -187,6 +251,26 @@ def test_the_index_carries_the_drafts_own_episode_facts(tmp_path, monkeypatch):
     assert "src/backend/access/heap/heapam.c" in row["sources"]
     assert row["repro"]
     assert row["subtitle"] == "aiv/字幕-行锁.md"
+
+
+def test_the_episode_label_is_padded_once_and_for_all(tmp_path, monkeypatch):
+    """期号标签（EP01）在索引里定一次，主题、系列页、检查器都用它。
+
+    三处各拼一遍「EP」+ 补零，早晚拼歪（而且 EP1 与 EP01 不是同一个字符串）。
+    """
+    index = _build(tmp_path, monkeypatch)
+
+    labels = [row["episode_label"] for row in index["episodes"]]
+    assert labels == ["EP01", "EP02", "EP03", "EP04", "EP05", "EP06"]
+
+
+def test_the_index_carries_the_video_page_date(tmp_path, monkeypatch):
+    """视频页的地址也是派生的（日期 + content_id），所以索引里要带日期。"""
+    index = _build(tmp_path, monkeypatch)
+    row = next(r for r in index["episodes"] if r["episode"] == "row-lock")
+
+    assert row["video_content_id"] == "video/row-lock"
+    assert row["video_date"] == "2026-11-12"
 
 
 def test_the_platform_links_come_from_the_publish_index(tmp_path, monkeypatch):
@@ -352,6 +436,8 @@ def _episode_row(**overrides):
     row = {
         "episode": "row-lock",
         "episode_no": 6,
+        "episode_label": "EP06",
+        "title": "两个事务改同一行，谁先谁后",
         "hook": "MVCC 让读不挡写",
         "sources": ["src/backend/access/heap/heapam.c"],
         "repro": ["git clone https://github.com/postgres/postgres"],
@@ -372,7 +458,7 @@ def _good_page(row):
     """一份「全都对」的页面。"""
     return (
         '<div class="card episode-block">'
-        "<div>EP{}</div>".format(row["episode_no"])
+        "<div>{}</div>".format(row["episode_label"])
         + "<div>{}</div>".format(row["hook"])
         + '<iframe src="//player.bilibili.com/player.html?bvid=BV1NBWv6qECn"></iframe>'
         + '<a href="https://www.bilibili.com/video/BV1NBWv6qECn">在B站看</a>'
@@ -410,7 +496,7 @@ def test_an_unpublished_episode_has_to_say_so():
     row = _episode_row(platforms=[])
     html = (
         '<div class="card episode-block">'
-        "<div>EP6</div><div>MVCC 让读不挡写</div>"
+        "<div>EP06</div><div>MVCC 让读不挡写</div>"
         "<div>这一期的视频还没发出去——发出去之后这里会出现播放器。</div>"
         "<code>src/backend/access/heap/heapam.c</code>"
         "<pre>git clone https://github.com/postgres/postgres</pre>"
@@ -440,7 +526,7 @@ def test_an_episode_published_only_elsewhere_says_so():
     )
     html = (
         '<div class="card episode-block">'
-        "<div>EP6</div><div>MVCC 让读不挡写</div>"
+        "<div>EP06</div><div>MVCC 让读不挡写</div>"
         "<div>这一期的视频还没发到 B站——发出去之后这里会出现播放器。</div>"
         '<a href="https://www.douyin.com/video/7708359383492218122">在抖音看</a>'
         "<code>src/backend/access/heap/heapam.c</code>"
@@ -488,6 +574,19 @@ def _write_public_tree(root, row, html):
     return target
 
 
+def _write_series_page(root, row):
+    """系列页（/videos/）的渲染产物。"""
+    target = Path(root) / "videos" / "index.html"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        "<h1>系列页</h1><h2>{} · {}</h2><p>{}</p>".format(
+            row["episode_label"], row["title"], row["hook"]
+        ),
+        encoding="utf-8",
+    )
+    return target
+
+
 def _write_index_file(root, row):
     path = Path(root) / "podcast_index.json"
     path.write_text(json.dumps({"episodes": [row]}, ensure_ascii=False), encoding="utf-8")
@@ -498,6 +597,7 @@ def test_the_checker_fails_the_build_when_the_block_is_missing(tmp_path):
     """命令行入口要真的以非零退出——CI 靠它拦下坏构建。"""
     row = _episode_row()
     _write_public_tree(tmp_path, row, "<div>普通文章，没有期号区块</div>")
+    _write_series_page(tmp_path, row)
     index_path = _write_index_file(tmp_path, row)
 
     assert (
@@ -511,6 +611,7 @@ def test_the_checker_fails_the_build_when_the_block_is_missing(tmp_path):
 def test_the_checker_passes_a_good_build(tmp_path):
     row = _episode_row()
     _write_public_tree(tmp_path, row, _good_page(row))
+    _write_series_page(tmp_path, row)
     index_path = _write_index_file(tmp_path, row)
 
     assert (
@@ -518,6 +619,22 @@ def test_the_checker_passes_a_good_build(tmp_path):
             ["--public", str(tmp_path), "--index", str(index_path)]
         )
         == 0
+    )
+
+
+def test_the_checker_reports_a_series_page_that_missed_an_episode(tmp_path):
+    """系列页是期号线的入口——漏一期，那一期就等于没发布。"""
+    row = _episode_row()
+    _write_public_tree(tmp_path, row, _good_page(row))
+    series = _write_series_page(tmp_path, row)
+    series.write_text("<h1>系列页</h1>", encoding="utf-8")
+    index_path = _write_index_file(tmp_path, row)
+
+    assert (
+        episode_checker.main(
+            ["--public", str(tmp_path), "--index", str(index_path)]
+        )
+        == 1
     )
 
 

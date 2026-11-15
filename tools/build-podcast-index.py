@@ -157,6 +157,25 @@ def read_publish_index():
         return {}
 
 
+def read_video_date(slug):
+    """视频内容单元的日期。
+
+    视频页是独立内容单元（``tools/build-video-pages.py`` 生成的），
+    它的地址要由 **日期 + content_id** 派生，所以这里得把日期也带上——
+    站点构建层的规则是 ``tools/site_root.py`` 的 ``permalink``，
+    不另写一份前缀拼接。
+    """
+    path = POSTS_DIR / VIDEO_PREFIX / (slug + ".md")
+    if not path.is_file():
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    fields, _body = parse_front_matter(text)
+    return fields.get("date", "")[:10]
+
+
 def platform_label(item):
     """期号区块里的平台说法。"""
     platform = item.get("platform") or ""
@@ -185,10 +204,16 @@ def build_index():
         row = dict(episode)
         # 期号标题用**口播稿的标题**（期号的身份），不是母稿的文章标题
         # ——母稿标题就在页面顶上，再写一遍是噪音。
+        # 母稿标题另存一份：系列页要用它当「完整版」的链接文字。
         row["title"] = video.get("title") or episode["draft_title"]
-        row.pop("draft_title", None)
+        # 期号标签（EP01）在这里定一次：主题、系列页、检查器都用它，
+        # 三处各拼一遍「EP」+ 补零，早晚拼歪。
+        row["episode_label"] = (
+            "EP{:02d}".format(row["episode_no"]) if row["episode_no"] else ""
+        )
         row["video_content_id"] = VIDEO_PREFIX + slug if video else ""
         row["video_url"] = video_url
+        row["video_date"] = read_video_date(slug)
         row["platforms"] = platforms
         rows.append(row)
 
