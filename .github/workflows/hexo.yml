@@ -95,6 +95,10 @@ jobs:
         # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物），
         # 必须在 patch-theme.py 之前（partial 在渲染时读它）。
         run: python3 tools/build-podcast-index.py
+      - name: Build series page
+        # 期号索引 → 系列页（/videos/）。一期一行：期号、钩子、时长、
+        # 完整版（母稿页）、平台。
+        run: python3 tools/build-series-page.py
       - name: Apply theme patches
         run: python3 tools/patch-theme.py
       - name: Copy vendor assets
@@ -367,6 +371,10 @@ jobs:
         # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物），
         # 必须在 patch-theme.py 之前（partial 在渲染时读它）。
         run: python3 tools/build-podcast-index.py
+      - name: Build series page
+        # 期号索引 → 系列页（/videos/）。一期一行：期号、钩子、时长、
+        # 完整版（母稿页）、平台。
+        run: python3 tools/build-series-page.py
       - name: Apply theme patches
         run: python3 tools/patch-theme.py
       - name: Copy vendor assets

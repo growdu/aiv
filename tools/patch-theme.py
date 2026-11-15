@@ -1966,6 +1966,38 @@ if os.path.isfile(post_detail):
 else:
     print("WARNING: post-detail.ejs not found for episode-block")
 
+# --- 3.9. Latest episode (首页的「最新一期」) -----------------------------
+# 站点入口之一（契约七 §7.2）：首页上要能一眼看到「最新一期是什么」。
+#
+# partial 手写入库（themes/matery/layout/_partial/latest-episode.ejs），
+# 这里只注入渲染位。数据源是 ``source/_data/podcast_index.json``——
+# 与文章页的期号区块同一个源，首页与期号页说的必须是同一件事。
+LATEST_EPISODE_ANCHORS = (
+    "<%- partial('_partial/learning-path') %>",
+)
+
+home_content = os.path.join(theme_dir, "layout", "_partial", "home-content.ejs")
+if os.path.isfile(home_content):
+    with open(home_content, encoding="utf-8") as f:
+        hc = f.read()
+    if "latest-episode" not in hc:
+        anchor = next((a for a in LATEST_EPISODE_ANCHORS if a in hc), None)
+        if anchor is None:
+            print("WARNING: home-content.ejs has no anchor for latest-episode")
+        else:
+            hc = hc.replace(
+                anchor,
+                "<%- partial('_partial/latest-episode') %>\n\n    " + anchor,
+                1,
+            )
+            with open(home_content, "w", encoding="utf-8") as f:
+                f.write(hc)
+            print("Injected latest-episode before " + anchor)
+    else:
+        print("latest-episode already present")
+else:
+    print("WARNING: home-content.ejs not found for latest-episode")
+
 # --- 4. Custom blog styling (subtle, keep original theme colors) ---
 custom_css = """<style id="custom-blog-style">
 /* Article typography */
@@ -3432,6 +3464,105 @@ if os.path.isfile(my_css_path):
         print("Appended EPISODE-BLOCK CSS to my.css")
 else:
     print("my.css not found, skipping episode-block CSS")
+
+# --- 14. Latest episode (首页的「最新一期」) ---
+# 契约七 §7.2 的站点入口。幂等：marker 已在 my.css 里就跳过。
+latest_episode_marker = "/* LATEST-EPISODE */"
+my_css_path = os.path.join(theme_dir, "source", "css", "my.css")
+le_css = """/* LATEST-EPISODE */
+.latest-episode {
+    margin: 0 0 28px;
+}
+.latest-episode-inner {
+    padding: 18px 22px;
+    border: 1px solid rgba(0,150,136,.22);
+    border-left: 4px solid #009688;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f0faf8 0%, #e6f4f1 100%);
+}
+body.DarkMode .latest-episode-inner {
+    background: linear-gradient(135deg, rgba(0,150,136,0.10) 0%, rgba(0,150,136,0.04) 100%);
+    border-color: rgba(77,208,225,.25);
+    border-left-color: #4dd0e1;
+}
+.latest-episode-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #009688;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+.latest-episode-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+}
+.latest-episode-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #263238;
+    line-height: 1.5;
+}
+.latest-episode-hook {
+    font-size: 14px;
+    line-height: 1.75;
+    color: #37474f;
+    margin-top: 8px;
+}
+.latest-episode-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+.latest-episode-link {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: #009688;
+    padding: 6px 18px;
+    border-radius: 18px;
+    text-decoration: none;
+}
+.latest-episode-link:hover { background: #00796b; color: #fff; }
+.latest-episode-platform {
+    font-size: 13px;
+    color: #009688;
+    border: 1px solid rgba(0,150,136,.35);
+    border-radius: 16px;
+    padding: 5px 14px;
+    text-decoration: none;
+}
+.latest-episode-platform:hover { background: rgba(0,150,136,.10); }
+.latest-episode-all {
+    margin-left: auto;
+    font-size: 13px;
+    color: #455a64;
+    text-decoration: none;
+}
+.latest-episode-all:hover { color: #009688; }
+body.DarkMode .latest-episode-title { color: #eceff1; }
+body.DarkMode .latest-episode-hook { color: #cfd8dc; }
+body.DarkMode .latest-episode-all { color: #b0bec5; }
+@media (max-width: 600px) {
+    .latest-episode-title { font-size: 16px; }
+    .latest-episode-hook { font-size: 13px; }
+    .latest-episode-all { margin-left: 0; }
+}
+"""
+if os.path.isfile(my_css_path):
+    with open(my_css_path, encoding="utf-8") as f:
+        _mycss = f.read()
+    if latest_episode_marker in _mycss:
+        print("latest-episode CSS already present, skipping")
+    else:
+        with open(my_css_path, "a", encoding="utf-8") as f:
+            f.write(le_css)
+        print("Appended LATEST-EPISODE CSS to my.css")
+else:
+    print("my.css not found, skipping latest-episode CSS")
 
 # --- 8. Drop unused vendored libs from themes/matery/source/libs/ ---
 # The vendored theme ships 30+ libs but the live templates only reference

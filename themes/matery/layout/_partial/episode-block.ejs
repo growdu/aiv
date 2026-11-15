@@ -46,7 +46,7 @@ if (episodeNow && episodeNow.platforms) {
     episodePlatforms.push(item);
   });
 }
-var episodeNumber = episodeNow ? String(episodeNow.episode_no || 0) : '';
+var episodeLabel = episodeNow ? (episodeNow.episode_label || ('EP' + episodeNow.episode_no)) : '';
 var episodeFigure = (typeof figure !== 'undefined' && figure) ? figure : null;
 %>
 <% if (episodeNow) { %>
@@ -54,7 +54,7 @@ var episodeFigure = (typeof figure !== 'undefined' && figure) ? figure : null;
   <div class="card-content">
 
     <div class="episode-head">
-      <span class="episode-no">EP<%= episodeNumber %></span>
+      <span class="episode-no"><%= episodeLabel %></span>
       <span class="episode-title"><%= episodeNow.title %></span>
       <% if (episodeNow.series) { %>
       <span class="episode-series"><%= episodeNow.series %></span>
@@ -134,10 +134,10 @@ var episodeFigure = (typeof figure !== 'undefined' && figure) ? figure : null;
     <% if (episodePrev || episodeNext) { %>
     <nav class="episode-nav">
       <% if (episodePrev) { %>
-      <a class="episode-nav-item" href="<%- url_for(episodePrev.url) %>">上一期 EP<%= String(episodePrev.episode_no || 0) %></a>
+      <a class="episode-nav-item" href="<%- url_for(episodePrev.url) %>">上一期 <%= episodePrev.episode_label %></a>
       <% } %>
       <% if (episodeNext) { %>
-      <a class="episode-nav-item" href="<%- url_for(episodeNext.url) %>">下一期 EP<%= String(episodeNext.episode_no || 0) %></a>
+      <a class="episode-nav-item" href="<%- url_for(episodeNext.url) %>">下一期 <%= episodeNext.episode_label %></a>
       <% } %>
       <a class="episode-nav-item episode-nav-all" href="<%- url_for('/videos/') %>">全部期号</a>
     </nav>

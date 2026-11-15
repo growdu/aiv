@@ -117,7 +117,6 @@ def test_a_video_page_carries_its_kind_and_its_platforms(tmp_path, monkeypatch):
     monkeypatch.setattr(video_pages, "CONTRACTS_DIR", aiv / "contracts")
     monkeypatch.setattr(video_pages, "OUTBOX_DIR", outbox)
     monkeypatch.setattr(video_pages, "POSTS_DIR", tmp_path / "posts")
-    monkeypatch.setattr(video_pages, "COLLECTION_DIR", tmp_path / "videos")
 
     assert video_pages.main([]) == 0
 
@@ -127,9 +126,39 @@ def test_a_video_page_carries_its_kind_and_its_platforms(tmp_path, monkeypatch):
     assert "  - channels" in page
     assert "两个事务改同一行，谁先谁后" in page
 
-    collection = (tmp_path / "videos" / "index.md").read_text(encoding="utf-8")
-    assert "row-lock" in collection
-    assert "bilibili" in collection
+
+def test_the_video_pages_tool_does_not_write_the_series_page(tmp_path, monkeypatch):
+    """合集页（系列页）由 ``build-series-page.py`` 写——一个文件一个写入者。
+
+    两个工具写同一个文件，谁赢要看流水线顺序；改了一处却没生效，
+    排查起来最费时间。
+    """
+    aiv = tmp_path / "aiv"
+    (aiv / "contracts").mkdir(parents=True)
+    (aiv / "pipeline").mkdir()
+    (aiv / "字幕-行锁.md").write_text(
+        '---\ntitle: "两个事务改同一行，谁先谁后"\ndate: 2026-11-12\n---\n\n# 口播稿\n',
+        encoding="utf-8",
+    )
+    (aiv / "contracts" / "row-lock.json").write_text(
+        json.dumps({"episode": "row-lock", "title": "两个事务改同一行，谁先谁后"}),
+        encoding="utf-8",
+    )
+    (aiv / "pipeline" / "Makefile").write_text(
+        "ifeq ($(EP),row-lock)\nSCRIPT := $(ROOT)/字幕-行锁.md\nendif\n",
+        encoding="utf-8",
+    )
+    outbox = tmp_path / "outbox"
+    outbox.mkdir()
+
+    monkeypatch.setattr(video_pages, "AIV_ROOT", aiv)
+    monkeypatch.setattr(video_pages, "MAKEFILE", aiv / "pipeline" / "Makefile")
+    monkeypatch.setattr(video_pages, "CONTRACTS_DIR", aiv / "contracts")
+    monkeypatch.setattr(video_pages, "OUTBOX_DIR", outbox)
+    monkeypatch.setattr(video_pages, "POSTS_DIR", tmp_path / "posts")
+
+    assert video_pages.main([]) == 0
+    assert not (tmp_path / "source" / "videos" / "index.md").exists()
 
 
 # --- 发布索引 -------------------------------------------------------------

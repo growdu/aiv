@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""期号区块的**渲染产物**检查。
+"""期号线的**渲染产物**检查。
 
-构建完之后跑一遍：每一期母稿页的 HTML 里必须真的有期号区块，
-而且区块里该有的东西都在——期号头、钩子、播放器（还没发出去就明说）、
-平台链接、源码清单、复现命令、系列导航。
+构建完之后跑一遍：
+
+1. 每一期母稿页的 HTML 里必须真的有期号区块，而且区块里该有的东西都在——
+   期号头、钩子、播放器（还没发出去就明说）、平台链接、源码清单、
+   复现命令、系列导航；
+2. 系列页（``/videos/``）必须把每一期都列出来。
 
 **为什么必须有这一步**：期号区块的数据走三条不同的通道——
 
@@ -81,8 +84,7 @@ def check_episode(html, episode, previous=None, following=None):
     返回**问题清单**（空清单 = 通过）。
     """
     problems = []
-    no = episode.get("episode_no")
-    tag = "EP{}".format(no)
+    tag = episode.get("episode_label") or "EP{}".format(episode.get("episode_no"))
 
     if BLOCK_CLASS not in html:
         problems.append("{}: 页面里没有期号区块（{}）".format(tag, BLOCK_CLASS))
@@ -141,8 +143,29 @@ def check_episode(html, episode, previous=None, following=None):
     return problems
 
 
+def check_series_page(index, public_dir):
+    """系列页（``/videos/``）必须把每一期列出来。
+
+    系列页是期号线的**入口**：读者从那儿挑一期。入口漏了一期，
+    那一期就等于没发布——比「页面上少一行」严重得多。
+    """
+    problems = []
+    path = Path(public_dir) / "videos" / "index.html"
+    if not path.is_file():
+        return ["系列页不存在：{}".format(path)]
+    html = path.read_text(encoding="utf-8", errors="replace")
+    for episode in index.get("episodes", []) or []:
+        label = episode.get("episode_label") or "EP{}".format(episode.get("episode_no"))
+        if label not in html:
+            problems.append("系列页上没有 {}".format(label))
+        hook = episode.get("hook") or ""
+        if hook and not on_page(html, hook):
+            problems.append("系列页上没有 {} 的钩子".format(label))
+    return problems
+
+
 def check_all(index, public_dir):
-    """整条期号线：逐期检查渲染产物。"""
+    """整条期号线：逐期检查渲染产物，再看系列页。"""
     episodes = index.get("episodes", []) or []
     problems = []
     for position, episode in enumerate(episodes):
@@ -160,6 +183,7 @@ def check_all(index, public_dir):
             continue
         html = path.read_text(encoding="utf-8", errors="replace")
         problems.extend(check_episode(html, episode, previous, following))
+    problems.extend(check_series_page(index, public_dir))
     return problems
 
 
