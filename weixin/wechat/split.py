@@ -367,7 +367,7 @@ def _fit_group(group: list, budget: int, measure, plain_measure) -> list:
 
 
 def plan_parts(blocks: list, limit: int, measure, plain_measure=None,
-                reserve: int = None) -> list:
+                reserve: int | None = None) -> list:
     """Decide how many drafts an article becomes.
 
     ``measure(blocks)`` returns the rendered size with syntax

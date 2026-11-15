@@ -165,6 +165,8 @@
     </div>
 
     <% if (theme.gitalk && theme.gitalk.enable) { %>
+        <%- partial('_partial/post-publish') %>
+        <%- partial('_partial/video-embed') %>
         <%- partial('_partial/related-posts') %>
     <%- partial('_partial/gitalk-card') %>
     <% } %>

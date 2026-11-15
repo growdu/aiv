@@ -13,14 +13,24 @@
 """
 from __future__ import annotations
 
-import cairo
-
 from pyv import fonts
+
+
+def _cairo():
+    """惰性取 cairo 模块。
+
+    cairo 是原生扩展，导入它要装 libcairo。墨迹计算用得上它，
+    但本模块的导入本身不该要求这个依赖存在。
+    """
+    import cairo
+
+    return cairo
 
 
 def _render(text: str, x: float, baseline: float, size: float,
             width: int = 1920, height: int = 1080,
             font: str | None = None):
+    cairo = _cairo()
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
     ctx = cairo.Context(surface)
     ctx.select_font_face(font or fonts.font_family())

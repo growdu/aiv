@@ -137,9 +137,21 @@ def _all_candidates() -> list[FontCandidate]:
     return candidates
 
 
+def _cairo():
+    """惰性取 cairo 模块。
+
+    cairo 是原生扩展：导入它要装 libcairo。字体解析（列字体、问
+    fontconfig）用不上它，所以只有真的要量文字时才 import——本模块
+    导入时不拖上这个依赖。
+    """
+    import cairo
+
+    return cairo
+
+
 def _resolved_width(family: str, sample: str = "并行解码") -> float:
     """cairo 实际解析该字体族后的文本宽度。"""
-    import cairo
+    cairo = _cairo()
 
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1)
     ctx = cairo.Context(surface)
@@ -236,7 +248,7 @@ def assert_font_available() -> None:
 
 def missing_glyph(ch: str) -> bool:
     """这个字符在当前字体里是不是画不出来（会变成豆腐块）。"""
-    import cairo
+    cairo = _cairo()
 
     def pixels(text: str) -> bytes:
         surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 80, 80)

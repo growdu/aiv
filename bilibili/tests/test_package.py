@@ -6,6 +6,7 @@ import os
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
 from PIL import Image
@@ -18,8 +19,7 @@ from bilibili import assets, package, snapshot, state
 
 def test_build_package_writes_every_file(meta, video, tmp_path):
     result = package.build_package("ep02", meta, video, tmp_path / "out")
-    for name in ("video.mp4", "cover.jpg", "title.txt", "description.txt",
-                 "tags.txt", "publish.md", "meta.json"):
+    for name in ("video.mp4", "cover.jpg", "title.txt", "description.txt", "tags.txt", "publish.md", "meta.json"):
         assert name in result.files, f"发布包缺 {name}"
         assert result.files[name].exists()
 
@@ -35,10 +35,8 @@ def test_the_video_is_a_symlink_not_a_copy(meta, video, tmp_path):
 def test_the_text_files_hold_the_copy(meta, video, tmp_path):
     result = package.build_package("ep02", meta, video, tmp_path / "out")
     assert result.files["title.txt"].read_text(encoding="utf-8") == meta.bilibili["title"]
-    assert result.files["description.txt"].read_text(encoding="utf-8") == \
-        meta.bilibili["description"]
-    assert result.files["tags.txt"].read_text(encoding="utf-8") == \
-        "openGauss,数据库,源码"
+    assert result.files["description.txt"].read_text(encoding="utf-8") == meta.bilibili["description"]
+    assert result.files["tags.txt"].read_text(encoding="utf-8") == "openGauss,数据库,源码"
 
 
 def test_the_checklist_says_pending_upload_not_published(meta, video, tmp_path):
@@ -84,10 +82,13 @@ def test_the_cover_is_cropped_not_stretched():
     assert out.size == assets.COVER_SIZE
 
     # 黑色块的包围盒：宽高必须一致
-    black = out.convert("L").point(lambda p: 255 if p < 128 else 0)
-    left, upper, right, lower = black.getbbox()
-    assert abs((right - left) - (lower - upper)) <= 2, (
-        f"封面被拉伸了：色块 {right - left}×{lower - upper}")
+    # 阈值走查表（point 的序列重载）而不是 lambda：lambda 那条重载把参数
+    # 标成 ImagePointTransform，在它上面做 < 比较类型检查器不认。
+    black = out.convert("L").point([255 if v < 128 else 0 for v in range(256)])
+    bbox = black.getbbox()
+    assert bbox is not None, "封面里没有黑色块"
+    left, upper, right, lower = bbox
+    assert abs((right - left) - (lower - upper)) <= 2, f"封面被拉伸了：色块 {right - left}×{lower - upper}"
     # 而且不能小到没影：源图 108/1920 的宽度，缩放后仍是这个比例
     assert 60 <= (right - left) <= 85
 
@@ -128,10 +129,8 @@ def test_the_cover_fails_loudly_when_the_frame_point_is_past_the_end(video, tmp_
 # --- 字幕 --------------------------------------------------------------------
 
 
-def test_the_subtitle_file_is_written_when_events_are_given(
-        meta, video, subtitle_events, tmp_path):
-    result = package.build_package("ep02", meta, video, tmp_path / "out",
-                                   subtitle_events=subtitle_events)
+def test_the_subtitle_file_is_written_when_events_are_given(meta, video, subtitle_events, tmp_path):
+    result = package.build_package("ep02", meta, video, tmp_path / "out", subtitle_events=subtitle_events)
     assert "subtitle.srt" in result.files
     text = result.files["subtitle.srt"].read_text(encoding="utf-8")
     assert text.startswith("1\n00:00:00,000 --> 00:00:02,500\n第一句")
@@ -139,16 +138,18 @@ def test_the_subtitle_file_is_written_when_events_are_given(
 
 def test_the_subtitle_file_is_parsable(meta, video, subtitle_events, tmp_path):
     """SRT 的时间码格式：HH:MM:SS,mmm。"""
-    result = package.build_package("ep02", meta, video, tmp_path / "out",
-                                   subtitle_events=subtitle_events)
+    result = package.build_package("ep02", meta, video, tmp_path / "out", subtitle_events=subtitle_events)
     text = result.files["subtitle.srt"].read_text(encoding="utf-8")
     blocks = [b for b in text.strip().split("\n\n") if b.strip()]
     assert len(blocks) == 2
     for index, block in enumerate(blocks, start=1):
         lines = block.split("\n")
         assert lines[0] == str(index)
-        assert re.fullmatch(r"\d{2}:\d{2}:\d{2},\d{3} --> "
-                            r"\d{2}:\d{2}:\d{2},\d{3}", lines[1])
+        assert re.fullmatch(
+            r"\d{2}:\d{2}:\d{2},\d{3} --> "
+            r"\d{2}:\d{2}:\d{2},\d{3}",
+            lines[1],
+        )
         assert lines[2].strip()
 
 
@@ -159,8 +160,7 @@ def test_without_events_there_is_no_subtitle_file(meta, video, tmp_path):
     assert not (result.dir / "subtitle.srt").exists()
 
 
-def test_the_subtitle_is_refreshed_when_the_events_change(
-        meta, video, subtitle_events, tmp_path):
+def test_the_subtitle_is_refreshed_when_the_events_change(meta, video, subtitle_events, tmp_path):
     """字幕是产物，跟着 storyboard 走——storyboard 变了，字幕必须跟着变。"""
     from bilibili import subtitle
 
@@ -173,8 +173,7 @@ def test_the_subtitle_is_refreshed_when_the_events_change(
     assert "第一句" not in text
 
 
-def test_a_stale_subtitle_is_removed_when_the_events_are_gone(
-        meta, video, subtitle_events, tmp_path):
+def test_a_stale_subtitle_is_removed_when_the_events_are_gone(meta, video, subtitle_events, tmp_path):
     """storyboard 没了却留着旧字幕，人会传一个对不上的版本。"""
     out = tmp_path / "out"
     package.build_package("ep02", meta, video, out, subtitle_events=subtitle_events)
@@ -217,11 +216,10 @@ def test_changing_the_copy_refreshes_the_package(meta, video, tmp_path):
     out = tmp_path / "out"
     package.build_package("ep02", meta, video, out)
 
-    changed = dataclasses.replace(
-        meta, bilibili={**meta.bilibili, "title": "新标题"})
+    changed = dataclasses.replace(meta, bilibili={**meta.bilibili, "title": "新标题"})
     result = package.build_package("ep02", changed, video, out)
 
-    assert result.reused is True          # 视频与封面确实复用了
+    assert result.reused is True  # 视频与封面确实复用了
     assert (out / "ep02" / "title.txt").read_text(encoding="utf-8") == "新标题"
     assert "新标题" in (out / "ep02" / "publish.md").read_text(encoding="utf-8")
 
@@ -305,33 +303,28 @@ def test_the_package_writes_an_outbox_snapshot(meta, video, tmp_path):
     assert data["status"] == "packaged"
     assert data["published_url"] is None
     # 快照要入库——package_dir 必须是相对路径，不能是本机绝对路径
-    assert not Path(data["package_dir"]).is_absolute(), (
-        f"package_dir 是绝对路径：{data['package_dir']}")
+    assert not Path(data["package_dir"]).is_absolute(), f"package_dir 是绝对路径：{data['package_dir']}"
 
 
-def test_the_snapshot_reads_the_automation_from_the_capability_file(
-        meta, video, tmp_path, outbox):
+def test_the_snapshot_reads_the_automation_from_the_capability_file(meta, video, tmp_path, outbox):
     """档位由能力声明说了算，不能写死。
 
     写死的话，改完 TOML 快照还在说旧档位——那是静默的假话。
     """
     caps = tmp_path / "capabilities"
     caps.mkdir()
-    source = (Path(__file__).resolve().parents[2] / "publish" / "capabilities"
-              / "bilibili.toml")
+    source = Path(__file__).resolve().parents[2] / "publish" / "capabilities" / "bilibili.toml"
     (caps / "bilibili.toml").write_text(
-        source.read_text(encoding="utf-8").replace(
-            'automation = "manual"', 'automation = "api_publish"'),
-        encoding="utf-8")
+        source.read_text(encoding="utf-8").replace('automation = "manual"', 'automation = "api_publish"'),
+        encoding="utf-8",
+    )
 
-    package.build_package("ep02", meta, video, tmp_path / "out",
-                          capabilities_dir=caps)
+    package.build_package("ep02", meta, video, tmp_path / "out", capabilities_dir=caps)
     data = json.loads((outbox / "ep02__bilibili.json").read_text(encoding="utf-8"))
     assert data["automation"] == "api_publish"
 
 
-def test_the_snapshot_automation_matches_the_repository_capability(
-        meta, video, tmp_path, outbox):
+def test_the_snapshot_automation_matches_the_repository_capability(meta, video, tmp_path, outbox):
     """默认出包时，档位就是仓库里那份能力声明写的那个。"""
     package.build_package("ep02", meta, video, tmp_path / "out")
     data = json.loads((outbox / "ep02__bilibili.json").read_text(encoding="utf-8"))
@@ -344,8 +337,17 @@ def test_an_unchanged_snapshot_keeps_its_timestamp(tmp_path, monkeypatch):
     否则每次重跑都把工作树弄脏，而内容一个字都没变。
     """
     path = tmp_path / "outbox" / "ep02__bilibili.json"
-    payload = dict(episode="ep02", status="packaged", title="短标题",
-                   package_dir="bilibili/out/ep02", published_url=None, reason="理由")
+    # 显式标注成 dict[str, Any]：dict(...) 推导出来的值类型是
+    # str | None（published_url=None 拉低了整条），**payload 展开后
+    # 每个关键字都变成 str | None，与 write_snapshot 的签名对不上。
+    payload: dict[str, Any] = dict(
+        episode="ep02",
+        status="packaged",
+        title="短标题",
+        package_dir="bilibili/out/ep02",
+        published_url=None,
+        reason="理由",
+    )
     snapshot.write_snapshot(path, **payload)
     first = json.loads(path.read_text(encoding="utf-8"))
 
@@ -366,8 +368,7 @@ def test_a_hard_violation_stops_the_package(meta, video, tmp_path, monkeypatch):
     from pyv import epmeta
 
     def fake_check_meta(*args, **kwargs):
-        return [epmeta.Finding("epmeta.text-limit", epmeta.ERROR,
-                                "bilibili 的 title 太长", "ep02")]
+        return [epmeta.Finding("epmeta.text-limit", epmeta.ERROR, "bilibili 的 title 太长", "ep02")]
 
     monkeypatch.setattr(package.epmeta, "check_meta", fake_check_meta)
     out = tmp_path / "out"
@@ -381,8 +382,7 @@ def test_a_warning_is_written_into_the_checklist(meta, video, tmp_path, monkeypa
     from pyv import epmeta
 
     def fake_check_meta(*args, **kwargs):
-        return [epmeta.Finding("epmeta.cover-at", epmeta.WARNING,
-                                "封面帧取在片尾", "ep02")]
+        return [epmeta.Finding("epmeta.cover-at", epmeta.WARNING, "封面帧取在片尾", "ep02")]
 
     monkeypatch.setattr(package.epmeta, "check_meta", fake_check_meta)
     result = package.build_package("ep02", meta, video, tmp_path / "out")
@@ -396,28 +396,76 @@ def test_a_clean_package_has_no_warnings(meta, video, tmp_path):
     assert result.warnings == []
 
 
-@pytest.mark.parametrize("section", [
-    {"title": "标" * 80, "description": "短", "tags": ["a"], "tid": 231,
-     "copyright": 1, "no_reprint": 1},                                   # 标题 > 79 字
-    {"title": "短", "description": "字" * 250, "tags": ["a"], "tid": 231,
-     "copyright": 1, "no_reprint": 1},                                   # 简介 > 249 字
-    {"title": "短", "description": "短", "tags": ["字" * 200], "tid": 231,
-     "copyright": 1, "no_reprint": 1},                                   # 标签总长 > 199
-    {"title": "短", "description": "短", "tags": ["字" * 21], "tid": 231,
-     "copyright": 1, "no_reprint": 1},                                   # 单个标签 > 20 字
-    {"title": "短", "description": "短", "tags": ["a"], "tid": 231,
-     "copyright": 3, "no_reprint": 1},                                   # copyright 越界
-    {"title": "短", "description": "短", "tags": ["a"], "tid": 231,
-     "copyright": 1, "no_reprint": 5},                                   # no_reprint 越界
-    {"title": "短", "description": "短", "tags": ["a"], "tid": 231,
-     "copyright": 2, "no_reprint": 1},                                   # 转载缺 source
-])
+@pytest.mark.parametrize(
+    "section",
+    [
+        {
+            "title": "标" * 80,
+            "description": "短",
+            "tags": ["a"],
+            "tid": 231,
+            "copyright": 1,
+            "no_reprint": 1,
+        },  # 标题 > 79 字
+        {
+            "title": "短",
+            "description": "字" * 250,
+            "tags": ["a"],
+            "tid": 231,
+            "copyright": 1,
+            "no_reprint": 1,
+        },  # 简介 > 249 字
+        {
+            "title": "短",
+            "description": "短",
+            "tags": ["字" * 200],
+            "tid": 231,
+            "copyright": 1,
+            "no_reprint": 1,
+        },  # 标签总长 > 199
+        {
+            "title": "短",
+            "description": "短",
+            "tags": ["字" * 21],
+            "tid": 231,
+            "copyright": 1,
+            "no_reprint": 1,
+        },  # 单个标签 > 20 字
+        {
+            "title": "短",
+            "description": "短",
+            "tags": ["a"],
+            "tid": 231,
+            "copyright": 3,
+            "no_reprint": 1,
+        },  # copyright 越界
+        {
+            "title": "短",
+            "description": "短",
+            "tags": ["a"],
+            "tid": 231,
+            "copyright": 1,
+            "no_reprint": 5,
+        },  # no_reprint 越界
+        {
+            "title": "短",
+            "description": "短",
+            "tags": ["a"],
+            "tid": 231,
+            "copyright": 2,
+            "no_reprint": 1,
+        },  # 转载缺 source
+    ],
+)
 def test_the_limits_are_errors_not_truncations(meta, video, tmp_path, section):
     """超限要报错，不能悄悄裁一刀（规格 §6.3）。"""
     from pyv import epmeta
 
     broken = epmeta.EpisodeMeta(
-        episode="ep02", title=meta.title, cover_at=meta.cover_at, url=meta.url,
+        episode="ep02",
+        title=meta.title,
+        cover_at=meta.cover_at,
+        url=meta.url,
         bilibili=section,
     )
     out = tmp_path / "out"
@@ -426,14 +474,17 @@ def test_the_limits_are_errors_not_truncations(meta, video, tmp_path, section):
     assert not (out / "ep02").exists()
 
 
-def test_the_channels_section_is_not_the_bilibili_adapters_business(
-        meta, video, tmp_path):
+def test_the_channels_section_is_not_the_bilibili_adapters_business(meta, video, tmp_path):
     """B站的 adapter 不该被视频号那段文案绊住。"""
     from pyv import epmeta
 
     only_bilibili = epmeta.EpisodeMeta(
-        episode="ep02", title=meta.title, cover_at=meta.cover_at, url=meta.url,
-        channels=None, bilibili=meta.bilibili,
+        episode="ep02",
+        title=meta.title,
+        cover_at=meta.cover_at,
+        url=meta.url,
+        channels=None,
+        bilibili=meta.bilibili,
     )
     result = package.build_package("ep02", only_bilibili, video, tmp_path / "out")
     assert result.warnings == []
@@ -461,28 +512,40 @@ def test_the_cli_packages_and_marks_an_episode(tmp_path, monkeypatch, make_video
 
     publish_dir = tmp_path / "publish"
     publish_dir.mkdir()
-    (publish_dir / "ep02.json").write_text(json.dumps({
-        "episode": "ep02",
-        "title": "一个 64 位计数器，决定所有事务的提交顺序",
-        "cover_at": 1.0,
-        "url": "https://growdu.cn/2026/11/12/life/aiv/",
-        "bilibili": {
-            "title": "一个 64 位计数器，决定所有事务的提交顺序",
-            "description": "并发时 commit 的先后是乱的。",
-            "tags": ["openGauss", "数据库", "源码"],
-            "tid": 231,
-            "copyright": 1,
-            "no_reprint": 1,
-        },
-    }, ensure_ascii=False), encoding="utf-8")
+    (publish_dir / "ep02.json").write_text(
+        json.dumps(
+            {
+                "episode": "ep02",
+                "title": "一个 64 位计数器，决定所有事务的提交顺序",
+                "cover_at": 1.0,
+                "url": "https://growdu.cn/2026/11/12/life/aiv/",
+                "bilibili": {
+                    "title": "一个 64 位计数器，决定所有事务的提交顺序",
+                    "description": "并发时 commit 的先后是乱的。",
+                    "tags": ["openGauss", "数据库", "源码"],
+                    "tid": 231,
+                    "copyright": 1,
+                    "no_reprint": 1,
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
 
     aiv_root = tmp_path / "aiv"
     (aiv_root / "out").mkdir(parents=True)
     make_video(aiv_root / "out" / "ep02.mp4")
-    (aiv_root / "storyboard_ep02.json").write_text(json.dumps({
-        "subtitles": [{"start": 0.0, "end": 1.5, "text": "命令行也出字幕"}],
-        "scenes": [],
-    }, ensure_ascii=False), encoding="utf-8")
+    (aiv_root / "storyboard_ep02.json").write_text(
+        json.dumps(
+            {
+                "subtitles": [{"start": 0.0, "end": 1.5, "text": "命令行也出字幕"}],
+                "scenes": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
 
     monkeypatch.setattr(cli, "AIV_ROOT", aiv_root)
     monkeypatch.setattr(epmeta, "PUBLISH_DIR", publish_dir)
@@ -497,25 +560,21 @@ def test_the_cli_packages_and_marks_an_episode(tmp_path, monkeypatch, make_video
     assert "命令行也出字幕" in (out / "ep02" / "subtitle.srt").read_text(encoding="utf-8")
 
     url = "https://www.bilibili.com/video/BV1xx"
-    assert cli.main(["mark", "published", "ep02", "--url", url,
-                     "--out", str(out)]) == 0
+    assert cli.main(["mark", "published", "ep02", "--url", url, "--out", str(out)]) == 0
     assert cli.main(["status", "ep02", "--out", str(out)]) == 0
 
     state_data = json.loads((out / "state.json").read_text(encoding="utf-8"))
     assert state_data["episodes"]["ep02"]["status"] == "published"
     assert state_data["episodes"]["ep02"]["published_url"] == url
 
-    shot = json.loads((tmp_path / "outbox" / "ep02__bilibili.json")
-                      .read_text(encoding="utf-8"))
+    shot = json.loads((tmp_path / "outbox" / "ep02__bilibili.json").read_text(encoding="utf-8"))
     assert shot["status"] == "published"
     assert shot["published_url"] == url
     # 回填出来的快照同样要相对路径——快照要入库
-    assert not Path(shot["package_dir"]).is_absolute(), (
-        f"package_dir 是绝对路径：{shot['package_dir']}")
+    assert not Path(shot["package_dir"]).is_absolute(), f"package_dir 是绝对路径：{shot['package_dir']}"
 
 
-def test_the_cli_fails_loudly_when_the_video_is_missing(tmp_path, monkeypatch,
-                                                         capsys):
+def test_the_cli_fails_loudly_when_the_video_is_missing(tmp_path, monkeypatch, capsys):
     """成片不在就报错退出，不能出一个没有视频的包。"""
     from pyv import epmeta
 
@@ -523,11 +582,25 @@ def test_the_cli_fails_loudly_when_the_video_is_missing(tmp_path, monkeypatch,
 
     publish_dir = tmp_path / "publish"
     publish_dir.mkdir()
-    (publish_dir / "ep02.json").write_text(json.dumps({
-        "episode": "ep02", "title": "x", "cover_at": 1.0,
-        "bilibili": {"title": "t", "description": "d", "tags": ["a"],
-                     "tid": 231, "copyright": 1, "no_reprint": 1},
-    }, ensure_ascii=False), encoding="utf-8")
+    (publish_dir / "ep02.json").write_text(
+        json.dumps(
+            {
+                "episode": "ep02",
+                "title": "x",
+                "cover_at": 1.0,
+                "bilibili": {
+                    "title": "t",
+                    "description": "d",
+                    "tags": ["a"],
+                    "tid": 231,
+                    "copyright": 1,
+                    "no_reprint": 1,
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
 
     aiv_root = tmp_path / "aiv"
     (aiv_root / "out").mkdir(parents=True)
@@ -637,8 +710,7 @@ def test_a_failing_webhook_does_not_break_the_run(capsys):
     """通知推送失败只告警，不崩——发布本身不能被一条通知带崩。"""
     from bilibili import notify
 
-    text = notify.notify("ep02", "packaged", "标题", "bilibili/out/ep02",
-                          webhook="not-a-url")
+    text = notify.notify("ep02", "packaged", "标题", "bilibili/out/ep02", webhook="not-a-url")
     assert "待你上传" in text
     assert "WARNING" in capsys.readouterr().out
 

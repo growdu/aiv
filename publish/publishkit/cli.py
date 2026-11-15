@@ -122,14 +122,18 @@ class AdapterResult:
     timed_out: bool = False
 
 
-def _common_options() -> argparse.ArgumentParser:
+def _common_options() -> _Parser:
     """四个命令都能用的选项。
 
     每一个都能把写盘的位置指到别处——测试绝不许写进仓库。
     用了 ``SUPPRESS``：没给的选项不进命名空间，所以「命令行在前、
     子命令在后」两种写法都能用，而且子命令不会用默认值覆盖前面给过的值。
+
+    **返回的是 _Parser 而不是 ArgumentParser**：add_parser 的 parents 参数
+    要的是 _Parser（argparse 的类型标注里 _Parser 才是它自己那套），
+    给错类型类型检查器会报。
     """
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = _Parser(add_help=False)
     parser.add_argument(
         "--repo-root",
         metavar="路径",
@@ -675,10 +679,9 @@ def cmd_schedule_status(args) -> int:
             )
         )
 
-    for key in state.unfinished_weeks():
+    for key, unfinished in state.unfinished_records():
         if key == week:
             continue
-        unfinished = state.get(key)
         print(
             "  {} 没跑完：{}（{}）——下次跑会先重试它".format(
                 key, unfinished.content_id, "、".join(unfinished.platforms)

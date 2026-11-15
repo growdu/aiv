@@ -6,64 +6,68 @@
 4. Inject custom blog styling (colors, typography, effects).
 5. Inject homepage statistics + category navigation.
 """
-import os, re, shutil, sys
 
-theme_dir = 'themes/matery'
+import os
+import re
+import shutil
+import sys
+
+theme_dir = "themes/matery"
 
 # --- 1. Remove default menu ---
-path = os.path.join(theme_dir, '_config.yml')
+path = os.path.join(theme_dir, "_config.yml")
 try:
-    with open(path, encoding='utf-8') as f:
+    with open(path, encoding="utf-8") as f:
         content = f.read()
 except FileNotFoundError:
-    print(f'{path} not found, skipping', file=sys.stderr)
+    print(f"{path} not found, skipping", file=sys.stderr)
     sys.exit(0)
 
 new_content = re.sub(
-    r'^menu:\s*\n(?:[ \t]+.*\n)*',
-    '',
+    r"^menu:\s*\n(?:[ \t]+.*\n)*",
+    "",
     content,
     count=1,
     flags=re.MULTILINE,
 )
-with open(path, 'w', encoding='utf-8') as f:
+with open(path, "w", encoding="utf-8") as f:
     f.write(new_content)
-print('Removed default menu from theme config')
+print("Removed default menu from theme config")
 
 # --- 1.5. Replace default fox logo with custom image ---
 # The header.ejs partial in the theme renders `theme.logo` (default
 # `/medias/logo.png`, the fox).  _config.matery.yml overrides it to
 # `/medias/logo.jpg`, so we just need to publish the new image under
 # that path inside the theme's source tree.
-src_logo = '1.jpg'
-dst_logo = os.path.join(theme_dir, 'source', 'medias', 'logo.jpg')
+src_logo = "1.jpg"
+dst_logo = os.path.join(theme_dir, "source", "medias", "logo.jpg")
 if os.path.isfile(src_logo):
     os.makedirs(os.path.dirname(dst_logo), exist_ok=True)
     shutil.copy2(src_logo, dst_logo)
-    print(f'Copied {src_logo} -> {os.path.relpath(dst_logo, theme_dir)}')
+    print(f"Copied {src_logo} -> {os.path.relpath(dst_logo, theme_dir)}")
 else:
-    print(f'WARNING: {src_logo} not found, logo not replaced', file=sys.stderr)
+    print(f"WARNING: {src_logo} not found, logo not replaced", file=sys.stderr)
 
 # --- 1.5b. Sync profile avatar from 1.jpg ---
 # about.ejs renders `theme.profile.avatar` (default `/medias/avatar.jpg`).
 # Reusing the same 1.jpg source keeps the top-nav logo and the about-page
 # avatar visually consistent and means the user only edits one file.
-src_avatar = '1.jpg'
-dst_avatar = os.path.join(theme_dir, 'source', 'medias', 'avatar.jpg')
+src_avatar = "1.jpg"
+dst_avatar = os.path.join(theme_dir, "source", "medias", "avatar.jpg")
 if os.path.isfile(src_avatar):
     os.makedirs(os.path.dirname(dst_avatar), exist_ok=True)
     shutil.copy2(src_avatar, dst_avatar)
-    print(f'Copied {src_avatar} -> {os.path.relpath(dst_avatar, theme_dir)}')
+    print(f"Copied {src_avatar} -> {os.path.relpath(dst_avatar, theme_dir)}")
 else:
-    print(f'WARNING: {src_avatar} not found, avatar not replaced', file=sys.stderr)
+    print(f"WARNING: {src_avatar} not found, avatar not replaced", file=sys.stderr)
 
 # --- 1.6. Publish computer-themed cover/banner/feature images ---
 # The default matery theme ships nature photos (pegasi, snow mountains,
 # deserts, ...).  We replace them with computer-industry images generated
 # into ./theme-assets/ so the hero, banner rotation and post thumbnails
 # fit the database-kernel focus of the blog.
-THEME_ASSETS_DIR = 'theme-assets'
-MEDIAS = os.path.join(theme_dir, 'source', 'medias')
+THEME_ASSETS_DIR = "theme-assets"
+MEDIAS = os.path.join(theme_dir, "source", "medias")
 if os.path.isdir(THEME_ASSETS_DIR):
     os.makedirs(MEDIAS, exist_ok=True)
     n_copied = 0
@@ -75,9 +79,14 @@ if os.path.isdir(THEME_ASSETS_DIR):
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(src, dst)
             n_copied += 1
-    print(f'Published {n_copied} theme assets into {os.path.relpath(MEDIAS, theme_dir)}')
+    print(
+        f"Published {n_copied} theme assets into {os.path.relpath(MEDIAS, theme_dir)}"
+    )
 else:
-    print(f'WARNING: {THEME_ASSETS_DIR} not found, theme assets not published', file=sys.stderr)
+    print(
+        f"WARNING: {THEME_ASSETS_DIR} not found, theme assets not published",
+        file=sys.stderr,
+    )
 
 # --- 1.7. Publish reward QR codes from repo root ---
 # matery's default reward.ejs partial reads theme.reward.wechat /
@@ -85,24 +94,26 @@ else:
 # images next to the article body.  Copy the user's weixin.jpg /
 # zhifubao.jpg from the repo root into themes/matery/source/medias/reward/
 # so that the configured paths resolve at build time.
-REWARD_DIR = os.path.join(theme_dir, 'source', 'medias', 'reward')
+REWARD_DIR = os.path.join(theme_dir, "source", "medias", "reward")
 reward_pairs = [
-    ('weixin.jpg',   'weixin.jpg'),
-    ('gzh.jpg',      'gzh.jpg'),
-    ('zhifubao.jpg', 'zhifubao.jpg'),
+    ("weixin.jpg", "weixin.jpg"),
+    ("gzh.jpg", "gzh.jpg"),
+    ("zhifubao.jpg", "zhifubao.jpg"),
 ]
 reward_copied = []
 for src_name, dst_name in reward_pairs:
     src = src_name
     if not os.path.isfile(src):
-        print(f'WARNING: {src} not found, skipping', file=sys.stderr)
+        print(f"WARNING: {src} not found, skipping", file=sys.stderr)
         continue
     os.makedirs(REWARD_DIR, exist_ok=True)
     dst = os.path.join(REWARD_DIR, dst_name)
     shutil.copy2(src, dst)
     reward_copied.append(dst_name)
 if reward_copied:
-    print(f'Published {len(reward_copied)} reward QR(s) into {os.path.relpath(REWARD_DIR, theme_dir)}: {", ".join(reward_copied)}')
+    print(
+        f"Published {len(reward_copied)} reward QR(s) into {os.path.relpath(REWARD_DIR, theme_dir)}: {', '.join(reward_copied)}"
+    )
 
 # --- 1.8. Override reward.ejs partial with a centered-modal UI ---
 # matery's stock reward.ejs is a hover-to-reveal popover that's anchored
@@ -153,13 +164,13 @@ reward_ejs = r"""<% if (theme.reward && theme.reward.enable) { %>
 </script>
 <% } %>"""
 
-reward_ejs_path = os.path.join(theme_dir, 'layout', '_partial', 'reward.ejs')
-with open(reward_ejs_path, 'w', encoding='utf-8') as f:
+reward_ejs_path = os.path.join(theme_dir, "layout", "_partial", "reward.ejs")
+with open(reward_ejs_path, "w", encoding="utf-8") as f:
     f.write(reward_ejs)
-print(f'Wrote {os.path.relpath(reward_ejs_path, theme_dir)} (centered-modal reward UI)')
+print(f"Wrote {os.path.relpath(reward_ejs_path, theme_dir)} (centered-modal reward UI)")
 
 # --- 2. Inject prism.js CSS + Mermaid.js ---
-inject_css = """<meta property="og:title" content="<%= page.title || config.title %>">
+inject_css = r"""<meta property="og:title" content="<%= page.title || config.title %>">
 <% var _u = url_for(page.path); var _rel = (config.root && _u.indexOf(config.root) === 0) ? _u.slice(config.root.length) : _u.replace(/^\/+/, ''); var _selfUrl = config.url + '/' + _rel; var _ogRaw = page.cover || page.thumbnail || '/medias/featureimages/0.jpg'; var ogImage = /^https?:\/\//i.test(_ogRaw) ? _ogRaw : config.url + _ogRaw; %>
 <meta name="theme-color" content="#009688">
 <link rel="preconnect" href="https://vercount.one">
@@ -383,24 +394,24 @@ window.initMermaidDiagrams = function () {
 </script>
 <% } %>"""
 
-for root, dirs, files in os.walk(os.path.join(theme_dir, 'layout')):
+for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
     for fname in files:
-        if not fname.endswith('.ejs'):
+        if not fname.endswith(".ejs"):
             continue
         fpath = os.path.join(root, fname)
-        with open(fpath, encoding='utf-8') as f:
+        with open(fpath, encoding="utf-8") as f:
             c = f.read()
         changed = False
-        if '</head>' in c and '<meta property="og:title"' not in c:
-            c = c.replace('</head>', inject_css + '\n</head>', 1)
+        if "</head>" in c and '<meta property="og:title"' not in c:
+            c = c.replace("</head>", inject_css + "\n</head>", 1)
             changed = True
-        if '</body>' in c and '/lib/prism/prism-core.min.js' not in c:
-            c = c.replace('</body>', inject_js + '\n</body>', 1)
+        if "</body>" in c and "/lib/prism/prism-core.min.js" not in c:
+            c = c.replace("</body>", inject_js + "\n</body>", 1)
             changed = True
         if changed:
-            with open(fpath, 'w', encoding='utf-8') as f:
+            with open(fpath, "w", encoding="utf-8") as f:
                 f.write(c)
-            print(f'Injected CSS/JS into {os.path.relpath(fpath, theme_dir)}')
+            print(f"Injected CSS/JS into {os.path.relpath(fpath, theme_dir)}")
 
 # --- 2b. Mermaid UI: containment + click-to-zoom overlay -------------------
 # Mermaid renders every diagram exactly once, at its natural pixel size, and
@@ -410,22 +421,26 @@ for root, dirs, files in os.walk(os.path.join(theme_dir, 'layout')):
 # of the 827px column empty.  These rules keep a diagram inside the column,
 # cap the vertical space it may take (the remainder scrolls), and provide
 # the overlay that renders a diagram at its natural size.
-MERMAID_UI_START = '/* blog-mermaid-ui:start */'
-MERMAID_UI_END = '/* blog-mermaid-ui:end */'
-MERMAID_UI_CSS = MERMAID_UI_START + """
+MERMAID_UI_START = "/* blog-mermaid-ui:start */"
+MERMAID_UI_END = "/* blog-mermaid-ui:end */"
+MERMAID_UI_CSS = (
+    MERMAID_UI_START
+    + """
 #articleContent .mermaid{margin:16px auto;text-align:center;max-width:100%;overflow:auto;max-height:80vh;overscroll-behavior:contain;border-radius:6px}
 #articleContent .mermaid svg{display:inline-block;vertical-align:middle;cursor:zoom-in}
 #articleContent .mermaid.mermaid-broken{max-height:none;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;color:#92400e;text-align:left;font-size:13px;line-height:1.6}
 .mermaid-zoom{position:fixed;top:0;right:0;bottom:0;left:0;z-index:100000;background:rgba(0,0,0,.9);overflow:auto;padding:32px;box-sizing:border-box;cursor:zoom-out}
 .mermaid-zoom svg{display:block;margin:0 auto;max-width:none!important}
-""" + MERMAID_UI_END
+"""
+    + MERMAID_UI_END
+)
 
 # The theme ships its own mermaid <script> block at the top of <body>.  It
 # downloads and parses the 3.3 MB bundle on every page of the site and
 # initialises mermaid a second time with a conflicting theme, so the theme
 # configured in _config.matery.yml was never the one that was used.
 THEME_MERMAID_BLOCK = re.compile(
-    r'[ \t]*<% if \(theme\.mermaid\.enable\) \{ %>.*?<% \} %>\n',
+    r"[ \t]*<% if \(theme\.mermaid\.enable\) \{ %>.*?<% \} %>\n",
     re.S,
 )
 
@@ -439,20 +454,20 @@ OLD_INJECTED_BLOCK = re.compile(
     # 旧版条件是 is_post()，新版是 is_post() && _hasCode
     r'<% if \(is_post\(\)(?: && _hasCode)?\) \{ %>\s*'
     r'<script src="[^"]*prism-core\.min\.js[^"]*"></script>.*?'
-    r'<% \} %>\n',
+    r"<% \} %>\n",
     re.S,
 )
 
-for root, dirs, files in os.walk(os.path.join(theme_dir, 'layout')):
+for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
     for fname in files:
-        if not fname.endswith('.ejs'):
+        if not fname.endswith(".ejs"):
             continue
         fpath = os.path.join(root, fname)
-        with open(fpath, encoding='utf-8') as f:
+        with open(fpath, encoding="utf-8") as f:
             c = f.read()
         changed = False
 
-        stripped = THEME_MERMAID_BLOCK.sub('', c)
+        stripped = THEME_MERMAID_BLOCK.sub("", c)
         if stripped != c:
             c = stripped
             changed = True
@@ -461,32 +476,34 @@ for root, dirs, files in os.walk(os.path.join(theme_dir, 'layout')):
         # more than one when an older revision of this script appended
         # instead of replacing).
         while OLD_INJECTED_BLOCK.search(c):
-            c = OLD_INJECTED_BLOCK.sub('', c)
+            c = OLD_INJECTED_BLOCK.sub("", c)
             changed = True
 
         if MERMAID_UI_START in c:
             c = re.sub(
-                re.escape(MERMAID_UI_START) + '.*?' + re.escape(MERMAID_UI_END),
+                re.escape(MERMAID_UI_START) + ".*?" + re.escape(MERMAID_UI_END),
                 lambda _m: MERMAID_UI_CSS,
                 c,
                 flags=re.S,
             )
             changed = True
-        elif '</head>' in c:
-            c = c.replace('</head>', '<style>\n' + MERMAID_UI_CSS + '\n</style>\n</head>', 1)
+        elif "</head>" in c:
+            c = c.replace(
+                "</head>", "<style>\n" + MERMAID_UI_CSS + "\n</style>\n</head>", 1
+            )
             changed = True
 
-        if '</body>' in c:
-            c = c.replace('</body>', inject_js + '\n</body>', 1)
+        if "</body>" in c:
+            c = c.replace("</body>", inject_js + "\n</body>", 1)
             changed = True
 
         if changed:
-            with open(fpath, 'w', encoding='utf-8') as f:
+            with open(fpath, "w", encoding="utf-8") as f:
                 f.write(c)
-            print(f'Patched mermaid UI into {os.path.relpath(fpath, theme_dir)}')
+            print(f"Patched mermaid UI into {os.path.relpath(fpath, theme_dir)}")
 
 # --- 3. Inject Gitalk comments ---
-partial_dir = os.path.join(theme_dir, 'layout', '_partial')
+partial_dir = os.path.join(theme_dir, "layout", "_partial")
 os.makedirs(partial_dir, exist_ok=True)
 
 gitalk_card_ejs = """<% if (theme.gitalk && theme.gitalk.enable) { %>
@@ -539,7 +556,7 @@ gitalk_card_ejs = """<% if (theme.gitalk && theme.gitalk.enable) { %>
 </div>
 <% } %>"""
 
-with open(os.path.join(partial_dir, 'gitalk-card.ejs'), 'w', encoding='utf-8') as f:
+with open(os.path.join(partial_dir, "gitalk-card.ejs"), "w", encoding="utf-8") as f:
     f.write(gitalk_card_ejs)
 
 # --- 7. Inject region banner (home page only) ---
@@ -561,12 +578,12 @@ css_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.isfile(css_path):
     with open(css_path, encoding="utf-8") as f:
         _css_existing = f.read()
-    if '/* cn-region-banner */' in _css_existing:
-        print('cn-region-banner CSS already present, skipping append')
+    if "/* cn-region-banner */" in _css_existing:
+        print("cn-region-banner CSS already present, skipping append")
     else:
         with open(css_path, "a", encoding="utf-8") as f:
             f.write(banner_css)
-        print('Appended cn-region-banner CSS to my.css')
+        print("Appended cn-region-banner CSS to my.css")
 
 # cn-banner.ejs: HTML-only partial (no inline <script>).
 # We DO NOT touch layout.ejs here — the layout already contains the
@@ -574,15 +591,15 @@ if os.path.isfile(css_path):
 # marker-based injection caused a broken HTML regression on 2026-08-10.
 banner_partial = os.path.join(theme_dir, "layout", "_partial", "cn-banner.ejs")
 banner_partial_content = (
-    "<div id=\"cn-region-banner\" class=\"cn-region-banner\" hidden>\n"
-    "  <div class=\"cn-region-banner__inner\">\n"
-    "    <span class=\"cn-region-banner__icon\" aria-hidden=\"true\">🇨🇳</span>\n"
-    "    <div class=\"cn-region-banner__text\">\n"
+    '<div id="cn-region-banner" class="cn-region-banner" hidden>\n'
+    '  <div class="cn-region-banner__inner">\n'
+    '    <span class="cn-region-banner__icon" aria-hidden="true">🇨🇳</span>\n'
+    '    <div class="cn-region-banner__text">\n'
     "      <strong>检测到你可能在内地</strong>\n"
     "      <span>建议切换到国内站 <code>growdu.cn</code> 获得更快的访问速度</span>\n"
     "    </div>\n"
-    "    <a class=\"cn-region-banner__btn\" href=\"<%= cnTarget %>\" rel=\"noopener\">立即前往</a>\n"
-    "    <button class=\"cn-region-banner__close\" type=\"button\" aria-label=\"关闭\">×</button>\n"
+    '    <a class="cn-region-banner__btn" href="<%= cnTarget %>" rel="noopener">立即前往</a>\n'
+    '    <button class="cn-region-banner__close" type="button" aria-label="关闭">×</button>\n'
     "  </div>\n"
     "</div>\n"
 )
@@ -667,44 +684,47 @@ if os.path.isfile(bg_path):
         content = f.read()
     # 8.1 替换 hero typing texts (随主题已有内联脚本)
     import re as _re
-    new_block = (
-        "var texts=" + repr(hero_typing_texts).replace("\\'", "'") + ";\n"
-    )
+
+    new_block = "var texts=" + repr(hero_typing_texts).replace("\\'", "'") + ";\n"
     pattern = _re.compile(r"var\s+texts=\[.*?\];", _re.S)
     if pattern.search(content):
         content = pattern.sub(new_block.rstrip(), content, count=1)
     # 8.2 替换 hero-tech 徽章列表为综合内容
     tech_old = (
-        "<div class=\"hero-tech\">\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-database\"></i> PostgreSQL</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-database\"></i> openGauss</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-sitemap\"></i> 分布式系统</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-bolt\"></i> DPDK</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-bolt\"></i> VPP</span>\n"
+        '<div class="hero-tech">\n'
+        '    <span class="hero-badge"><i class="fas fa-database"></i> PostgreSQL</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-database"></i> openGauss</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-sitemap"></i> 分布式系统</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-bolt"></i> DPDK</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-bolt"></i> VPP</span>\n'
         "</div>"
     )
     tech_new = (
-        "<div class=\"hero-tech\">\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-database\"></i> PostgreSQL</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-database\"></i> openGauss</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-sitemap\"></i> 分布式系统</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-bolt\"></i> DPDK / VPP</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-chart-line\"></i> 股票 · 金融</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-tools\"></i> 工具 · 视频 · 培训</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-yin-yang\"></i> 哲学 · 人生</span>\n"
-        "    <span class=\"hero-badge\"><i class=\"fas fa-city\"></i> 社会观察</span>\n"
+        '<div class="hero-tech">\n'
+        '    <span class="hero-badge"><i class="fas fa-database"></i> PostgreSQL</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-database"></i> openGauss</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-sitemap"></i> 分布式系统</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-bolt"></i> DPDK / VPP</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-chart-line"></i> 股票 · 金融</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-tools"></i> 工具 · 视频 · 培训</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-yin-yang"></i> 哲学 · 人生</span>\n'
+        '    <span class="hero-badge"><i class="fas fa-city"></i> 社会观察</span>\n'
         "</div>"
     )
     if tech_old in content:
         content = content.replace(tech_old, tech_new, 1)
     # 8.3 在 brand-description 之后插入 motto (从 theme.motto.texts 读取)
     motto_old = """<span id="subtitle"></span>"""
-    if motto_old in content and "motto-row" not in content and "hero-motto-line" not in content:
+    if (
+        motto_old in content
+        and "motto-row" not in content
+        and "hero-motto-line" not in content
+    ):
         motto_block = (
             "<% if (theme.motto && theme.motto.enable && theme.motto.texts && theme.motto.texts.length) { %>\n"
-            "<div class=\"hero-motto\" id=\"hero-motto\">\n"
+            '<div class="hero-motto" id="hero-motto">\n'
             "  <% theme.motto.texts.forEach(function(line, i) { %>\n"
-            "    <span class=\"hero-motto-line<% if (i===0) { %> is-active<% } %>\" data-idx=\"<%= i %>\"><%= line %></span>\n"
+            '    <span class="hero-motto-line<% if (i===0) { %> is-active<% } %>" data-idx="<%= i %>"><%= line %></span>\n'
             "  <% }); %>\n"
             "</div>\n"
             "<script>\n"
@@ -726,13 +746,20 @@ if os.path.isfile(bg_path):
     if "hero-subdesc" not in content:
         # ensure the description wrapper exists before injecting
         pass
-    if "hero-subdesc" not in content and '<div class="description center-align">' in content:
+    if (
+        "hero-subdesc" not in content
+        and '<div class="description center-align">' in content
+    ):
         desc_block = (
             "<% if (theme.subDesc && theme.subDesc.enable && theme.subDesc.text) { %>\n"
-            "<div class=\"hero-subdesc\"><%= theme.subDesc.text %></div>\n"
+            '<div class="hero-subdesc"><%= theme.subDesc.text %></div>\n'
             "<% } %>\n"
         )
-        content = content.replace("<div class=\"description center-align\">", desc_block + "<div class=\"description center-align\">", 1)
+        content = content.replace(
+            '<div class="description center-align">',
+            desc_block + '<div class="description center-align">',
+            1,
+        )
     with open(bg_path, "w", encoding="utf-8") as f:
         f.write(content)
     print("Updated hero (motto + sub description + comprehensive typing texts)")
@@ -743,7 +770,7 @@ css_append = (
     ".hero-motto{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:14px auto 0;max-width:760px;font-size:18px;letter-spacing:.05em;font-weight:600;color:#fff;}\n"
     ".hero-motto-line{opacity:.55;transition:opacity .8s ease,transform .8s ease;transform:translateY(2px);text-shadow:0 2px 8px rgba(0,0,0,.4);}\n"
     ".hero-motto-line.is-active{opacity:1;transform:translateY(0);}\n"
-    ".hero-motto-line + .hero-motto-line::before{content:\"\u00B7 \";opacity:.5;margin-right:14px;color:#fff;}\n"
+    '.hero-motto-line + .hero-motto-line::before{content:"\u00b7 ";opacity:.5;margin-right:14px;color:#fff;}\n'
     "/* hero sub description */\n"
     ".hero-subdesc{margin:10px auto 0;max-width:760px;font-size:13px;letter-spacing:.04em;opacity:.92;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.35);}\n"
     "@media (max-width:600px){.hero-motto{font-size:14px;gap:8px;}.hero-motto-line + .hero-motto-line::before{margin-right:8px;}}\n"
@@ -752,12 +779,12 @@ css_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.isfile(css_path):
     with open(css_path, encoding="utf-8") as f:
         _css_existing = f.read()
-    if '/* hero motto */' in _css_existing:
-        print('hero-motto CSS already present, skipping append')
+    if "/* hero motto */" in _css_existing:
+        print("hero-motto CSS already present, skipping append")
     else:
         with open(css_path, "a", encoding="utf-8") as f:
             f.write(css_append)
-        print('Appended hero-motto / hero-subdesc CSS to my.css')
+        print("Appended hero-motto / hero-subdesc CSS to my.css")
 
 # --- 8.6 注入首页 hero 响应式 + 自适应修复样式 ---
 # 解决问题：
@@ -1128,11 +1155,11 @@ if os.path.isfile(css_path):
     with open(css_path, encoding="utf-8") as f:
         _css_existing = f.read()
     if responsive_hero_marker in _css_existing:
-        print('responsive-hero CSS already present, skipping append')
+        print("responsive-hero CSS already present, skipping append")
     else:
         with open(css_path, "a", encoding="utf-8") as f:
             f.write(responsive_hero_css)
-        print('Appended RESPONSIVE-HERO-FIX CSS to my.css')
+        print("Appended RESPONSIVE-HERO-FIX CSS to my.css")
 
 # --- 8.7 注入 cover-social-link 修复样式 ---
 # 解决问题：首页 hero 底部社交图标（github、邮件、QQ、RSS 等）
@@ -1194,11 +1221,11 @@ if os.path.isfile(css_path):
     with open(css_path, encoding="utf-8") as f:
         _css_existing = f.read()
     if social_link_marker in _css_existing:
-        print('cover-social-link CSS already present, skipping append')
+        print("cover-social-link CSS already present, skipping append")
     else:
         with open(css_path, "a", encoding="utf-8") as f:
             f.write(social_link_css)
-        print('Appended COVER-SOCIAL-LINK-FIX CSS to my.css')
+        print("Appended COVER-SOCIAL-LINK-FIX CSS to my.css")
 
 # --- 8.8 注入非首页页面响应式优化 ---
 # 覆盖范围：
@@ -1606,22 +1633,25 @@ if os.path.isfile(css_path):
     with open(css_path, encoding="utf-8") as f:
         _css_existing = f.read()
     if page_responsive_marker in _css_existing:
-        print('page-responsive CSS already present, skipping append')
+        print("page-responsive CSS already present, skipping append")
     else:
         with open(css_path, "a", encoding="utf-8") as f:
             f.write(page_responsive_css)
-        print('Appended PAGE-RESPONSIVE-FIX CSS to my.css')
+        print("Appended PAGE-RESPONSIVE-FIX CSS to my.css")
 
-print('Created gitalk-card.ejs')
+print("Created gitalk-card.ejs")
 
-post_detail = os.path.join(theme_dir, 'layout', '_partial', 'post-detail.ejs')
+post_detail = os.path.join(theme_dir, "layout", "_partial", "post-detail.ejs")
 if os.path.isfile(post_detail):
-    with open(post_detail, encoding='utf-8') as f:
+    with open(post_detail, encoding="utf-8") as f:
         pd = f.read()
     original = pd
-    for pat in ['<%- partial("_partial/gitalk") %>', "<%- partial('_partial/gitalk') %>"]:
-        pd = pd.replace(pat, '')
-    if 'gitalk-card' not in pd:
+    for pat in [
+        '<%- partial("_partial/gitalk") %>',
+        "<%- partial('_partial/gitalk') %>",
+    ]:
+        pd = pd.replace(pat, "")
+    if "gitalk-card" not in pd:
         new_pd, count = re.subn(
             r"(<%\s*if\s*\(theme\.gitalk\s*&&\s*theme\.gitalk\.enable\)\s*\{\s*%>)(.*?)(<%\s*\}\s*%>)",
             r"\1\n        <%- partial('_partial/gitalk-card') %>\n    \3",
@@ -1630,23 +1660,23 @@ if os.path.isfile(post_detail):
         )
         if count > 0:
             pd = new_pd
-            print(f'Injected gitalk-card into gitalk if-block')
+            print("Injected gitalk-card into gitalk if-block")
         else:
-            lines = pd.split('\n')
+            lines = pd.split("\n")
             for i, line in enumerate(lines):
-                if 'prev-next' in line:
+                if "prev-next" in line:
                     lines.insert(i, "    <%- partial('_partial/gitalk-card') %>")
-                    pd = '\n'.join(lines)
-                    print('Injected gitalk-card before prev-next (fallback)')
+                    pd = "\n".join(lines)
+                    print("Injected gitalk-card before prev-next (fallback)")
                     break
     else:
-        print('gitalk-card already present')
+        print("gitalk-card already present")
     if pd != original:
-        with open(post_detail, 'w', encoding='utf-8') as f:
+        with open(post_detail, "w", encoding="utf-8") as f:
             f.write(pd)
-        print('Saved post-detail.ejs')
+        print("Saved post-detail.ejs")
 else:
-    print('WARNING: post-detail.ejs not found')
+    print("WARNING: post-detail.ejs not found")
 # --- 3.5. Related posts by category ---
 related_ejs = """<%
   var related = [];
@@ -1683,27 +1713,186 @@ related_ejs = """<%
 </div>
 <% } %>"""
 
-with open(os.path.join(partial_dir, 'related-posts.ejs'), 'w', encoding='utf-8') as f:
+with open(os.path.join(partial_dir, "related-posts.ejs"), "w", encoding="utf-8") as f:
     f.write(related_ejs)
-print('Created related-posts.ejs')
+print("Created related-posts.ejs")
 
-post_detail = os.path.join(theme_dir, 'layout', '_partial', 'post-detail.ejs')
+post_detail = os.path.join(theme_dir, "layout", "_partial", "post-detail.ejs")
 if os.path.isfile(post_detail):
-    with open(post_detail, encoding='utf-8') as f:
+    with open(post_detail, encoding="utf-8") as f:
         pd = f.read()
-    if 'related-posts' not in pd:
+    if "related-posts" not in pd:
         pd = pd.replace(
             "partial('_partial/gitalk-card')",
             "partial('_partial/related-posts') %>\n    <%- partial('_partial/gitalk-card')",
             1,
         )
-        with open(post_detail, 'w', encoding='utf-8') as f:
+        with open(post_detail, "w", encoding="utf-8") as f:
             f.write(pd)
-        print('Injected related-posts before gitalk-card')
+        print("Injected related-posts before gitalk-card")
     else:
-        print('related-posts already present')
+        print("related-posts already present")
 else:
-    print('WARNING: post-detail.ejs not found for related-posts')
+    print("WARNING: post-detail.ejs not found for related-posts")
+
+# --- 3.6. Publish spectrum (where this piece also went) ---
+# 站点是内容谱系的根（发布架构 §9.3）：文章页要能回答「这篇还发到了哪些平台」。
+# 数据来自 source/_data/publish_index.json（tools/build-publish-index.py 从
+# publish/outbox/ 的快照汇总而来），partial 只读它，不做任何推断。
+publish_ejs = """<%/*
+  Publish spectrum — where this piece also went.
+
+  The site is the root of the content lineage (publish/spec/00 §9.3): an
+  article page should answer "where else did this go?".  The answer comes
+  from `source/_data/publish_index.json`, which `tools/build-publish-index.py`
+  builds out of the publish layer's snapshots (`publish/outbox/*.json`).
+
+  The content id is the path under `source/_posts/` without the suffix --
+  the same id the publish layer uses as its idempotency key.
+*/%>
+<%
+var publishIndex = (site.data && site.data.publish_index) ? site.data.publish_index : null;
+var publishContentId = '';
+if (page.source && page.source.indexOf('_posts/') === 0) {
+  publishContentId = page.source.substring('_posts/'.length).replace(/\\.md$/, '');
+}
+var publishRecord = null;
+if (publishIndex) {
+  if (publishIndex.articles && publishIndex.articles[publishContentId]) {
+    publishRecord = publishIndex.articles[publishContentId];
+  } else if (publishIndex.videos && publishIndex.videos[publishContentId]) {
+    publishRecord = publishIndex.videos[publishContentId];
+  }
+}
+%>
+<% if (publishRecord && publishRecord.platforms && publishRecord.platforms.length) { %>
+<div class="card publish-spectrum" data-aos="fade-up">
+  <div class="card-content">
+    <div class="publish-spectrum-title"><i class="fas fa-share-nodes"></i> 这篇还发到了</div>
+    <div class="publish-spectrum-list">
+      <% publishRecord.platforms.forEach(function (item) { %>
+        <span class="publish-spectrum-item">
+          <% if (item.published_url) { %>
+            <a href="<%- item.published_url %>" target="_blank" rel="noopener"><%= item.platform_name %></a>
+          <% } else { %>
+            <span class="publish-spectrum-name"><%= item.platform_name %></span>
+            <span class="publish-spectrum-status"><%= item.status %></span>
+          <% } %>
+        </span>
+      <% }); %>
+    </div>
+  </div>
+</div>
+<% } %>"""
+
+with open(os.path.join(partial_dir, "post-publish.ejs"), "w", encoding="utf-8") as f:
+    f.write(publish_ejs)
+print("Created post-publish.ejs")
+
+post_detail = os.path.join(theme_dir, "layout", "_partial", "post-detail.ejs")
+if os.path.isfile(post_detail):
+    with open(post_detail, encoding="utf-8") as f:
+        pd = f.read()
+    if "post-publish" not in pd:
+        pd = pd.replace(
+            "partial('_partial/related-posts')",
+            "partial('_partial/post-publish') %>\n        <%- partial('_partial/related-posts')",
+            1,
+        )
+        with open(post_detail, "w", encoding="utf-8") as f:
+            f.write(pd)
+        print("Injected post-publish before related-posts")
+    else:
+        print("post-publish already present")
+else:
+    print("WARNING: post-detail.ejs not found for post-publish")
+
+# --- 3.7. Video embed (the episode's published video) ---
+# 视频页上要能直接看那一期（发布架构 §9 的「视频详情页」）。
+#
+# **成片不在站点托管**：它住在 B站 / 视频号（视频发布契约 §6.1），站点只嵌
+# 播放器 + 给外链。B站页可以嵌 iframe，视频号没有可嵌的页面，给链接。
+#
+# 数据来自同一个发布索引：已发布的（有 published_url）才给播放器，
+# 没发布的（还在出包）显示状态，不假装有。
+video_ejs = """<%/*
+  Video embed — the published episode.
+
+  The video itself lives on Bilibili / WeChat Channels (publish/spec/07
+  §6.1); this site only embeds the player and links out.  A B站 URL
+  carries the BV id, which is what the player needs; 视频号 has no
+  embeddable page, so it gets a plain link.
+
+  Same data source as the publish spectrum: source/_data/publish_index.json.
+*/%>
+<%
+var videoIndex = (site.data && site.data.publish_index) ? site.data.publish_index : null;
+var videoContentId = '';
+if (page.source && page.source.indexOf('_posts/') === 0) {
+  videoContentId = page.source.substring('_posts/'.length).replace(/\\.md$/, '');
+}
+var videoRecord = null;
+if (videoIndex && videoIndex.videos) {
+  videoRecord = videoIndex.videos[videoContentId] || null;
+}
+var videoBvid = '';
+var videoOutlinks = [];
+if (videoRecord && videoRecord.platforms) {
+  videoRecord.platforms.forEach(function (item) {
+    if (!item.published_url) { return; }
+    var bvidMatch = item.published_url.match(/BV[0-9A-Za-z]+/);
+    if (bvidMatch) {
+      videoBvid = bvidMatch[0];
+    } else {
+      videoOutlinks.push(item);
+    }
+  });
+}
+%>
+<% if (videoRecord && (videoBvid || videoOutlinks.length)) { %>
+<div class="card video-embed" data-aos="fade-up">
+  <div class="card-content">
+    <div class="video-embed-title"><i class="fas fa-video"></i> 看这一期</div>
+    <% if (videoBvid) { %>
+      <div class="video-embed-frame">
+        <iframe src="//player.bilibili.com/player.html?bvid=<%= videoBvid %>&page=1"
+                scrolling="no" frameborder="0" allowfullscreen="true"></iframe>
+      </div>
+    <% } %>
+    <% if (videoOutlinks.length) { %>
+      <div class="video-embed-links">
+        <% videoOutlinks.forEach(function (item) { %>
+          <a class="publish-spectrum-item" href="<%- item.published_url %>"
+             target="_blank" rel="noopener"><%= item.platform_name %></a>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</div>
+<% } %>"""
+
+with open(os.path.join(partial_dir, "video-embed.ejs"), "w", encoding="utf-8") as f:
+    f.write(video_ejs)
+print("Created video-embed.ejs")
+
+post_detail = os.path.join(theme_dir, "layout", "_partial", "post-detail.ejs")
+if os.path.isfile(post_detail):
+    with open(post_detail, encoding="utf-8") as f:
+        pd = f.read()
+    if "video-embed" not in pd:
+        pd = pd.replace(
+            "partial('_partial/post-publish')",
+            "partial('_partial/post-publish') %>\\n        <%- partial('_partial/video-embed')",
+            1,
+        )
+        with open(post_detail, "w", encoding="utf-8") as f:
+            f.write(pd)
+        print("Injected video-embed after post-publish")
+    else:
+        print("video-embed already present")
+else:
+    print("WARNING: post-detail.ejs not found for video-embed")
+
 # --- 4. Custom blog styling (subtle, keep original theme colors) ---
 custom_css = """<style id="custom-blog-style">
 /* Article typography */
@@ -1835,6 +2024,29 @@ a:focus-visible,button:focus-visible{outline:2px solid #009688;outline-offset:2p
 .reward-qr img{display:block;width:200px;height:200px;max-width:60vw;max-height:60vw;object-fit:contain;border:1px solid #e0e0e0;border-radius:8px;background:#fff}
 .reward-qr p{margin:8px 0 0;font-size:13px;color:#666}
 @media(prefers-color-scheme:dark){.reward-content{background:#1f1f1f;border-color:#333}.reward-title{color:#bbb}.reward-qr p{color:#aaa}.reward-qr img{background:#fff;border-color:#444}}
+
+/* --- Publish spectrum: where this piece also went.  The site is the
+       root of the content lineage (publish/spec/00 §9.3); this block is
+       that lineage made visible on the article page. --- */
+.publish-spectrum{margin:20px 0}
+.publish-spectrum-title{font-size:16px;font-weight:700;margin-bottom:10px;color:#455a64}
+.publish-spectrum-title i{margin-right:6px;color:#009688}
+.publish-spectrum-list{display:flex;flex-wrap:wrap;gap:10px}
+.publish-spectrum-item{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#f0faf8;border:1px solid #b2dfdb;border-radius:16px;font-size:13px;color:#00695c}
+.publish-spectrum-item a{color:#00695c;text-decoration:none}
+.publish-spectrum-item a:hover{text-decoration:underline}
+.publish-spectrum-status{font-size:11px;color:#90a4ae;text-transform:uppercase;letter-spacing:.5px}
+@media(prefers-color-scheme:dark){.publish-spectrum-title{color:#b0bec5}.publish-spectrum-item{background:rgba(0,150,136,.10);border-color:rgba(77,208,225,.35);color:#4dd0e1}.publish-spectrum-item a{color:#4dd0e1}.publish-spectrum-status{color:#78909c}}
+
+/* --- Video embed: the published episode.  The video lives on B站/视频号;
+       the site only embeds the player and links out. --- */
+.video-embed{margin:20px 0}
+.video-embed-title{font-size:16px;font-weight:700;margin-bottom:10px;color:#455a64}
+.video-embed-title i{margin-right:6px;color:#e53935}
+.video-embed-frame{position:relative;width:100%;padding-top:56.25%;border-radius:8px;overflow:hidden;background:#000}
+.video-embed-frame iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+.video-embed-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+@media(prefers-color-scheme:dark){.video-embed-title{color:#b0bec5}}
 </style>"""
 
 custom_js = """<script id="custom-blog-script">
@@ -1845,24 +2057,24 @@ custom_js = """<script id="custom-blog-script">
 })();
 </script>"""
 
-for root, dirs, files in os.walk(os.path.join(theme_dir, 'layout')):
+for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
     for fname in files:
-        if not fname.endswith('.ejs'):
+        if not fname.endswith(".ejs"):
             continue
         fpath = os.path.join(root, fname)
-        with open(fpath, encoding='utf-8') as f:
+        with open(fpath, encoding="utf-8") as f:
             c = f.read()
         changed = False
-        if '</head>' in c and 'custom-blog-style' not in c:
-            c = c.replace('</head>', custom_css + '\n</head>', 1)
+        if "</head>" in c and "custom-blog-style" not in c:
+            c = c.replace("</head>", custom_css + "\n</head>", 1)
             changed = True
-        if '</body>' in c and 'custom-blog-script' not in c:
-            c = c.replace('</body>', custom_js + '\n</body>', 1)
+        if "</body>" in c and "custom-blog-script" not in c:
+            c = c.replace("</body>", custom_js + "\n</body>", 1)
             changed = True
         if changed:
-            with open(fpath, 'w', encoding='utf-8') as f:
+            with open(fpath, "w", encoding="utf-8") as f:
                 f.write(c)
-            print(f'Injected custom CSS/JS into {os.path.relpath(fpath, theme_dir)}')
+            print(f"Injected custom CSS/JS into {os.path.relpath(fpath, theme_dir)}")
 
 # --- 5. Hero stats + profile + dual sidebars ---
 # Hero statistics + personal profile inside the cover section
@@ -1899,24 +2111,28 @@ hero_ejs = """<% if (is_home() && page.current === 1) { %>
 <% } %>
 """
 hero_injected = False
-for hero_file in ['_partial/bg-cover-content.ejs', '_partial/index-cover.ejs', '_partial/bg-cover.ejs']:
-    hero_path = os.path.join(theme_dir, 'layout', hero_file)
+for hero_file in [
+    "_partial/bg-cover-content.ejs",
+    "_partial/index-cover.ejs",
+    "_partial/bg-cover.ejs",
+]:
+    hero_path = os.path.join(theme_dir, "layout", hero_file)
     if not os.path.isfile(hero_path):
         continue
-    with open(hero_path, encoding='utf-8') as f:
+    with open(hero_path, encoding="utf-8") as f:
         hc = f.read()
-    if 'hero-stats' in hc:
-        print(f'hero content already in {hero_file}')
+    if "hero-stats" in hc:
+        print(f"hero content already in {hero_file}")
         hero_injected = True
         break
-    hc = hc.rstrip() + '\n' + hero_ejs
-    with open(hero_path, 'w', encoding='utf-8') as f:
+    hc = hc.rstrip() + "\n" + hero_ejs
+    with open(hero_path, "w", encoding="utf-8") as f:
         f.write(hc)
-    print(f'Injected hero stats+profile into {hero_file}')
+    print(f"Injected hero stats+profile into {hero_file}")
     hero_injected = True
     break
 if not hero_injected:
-    print('WARNING: could not find hero partial')
+    print("WARNING: could not find hero partial")
 
 # Fixed sidebars: categories (left) + hot posts ranking (right)
 sidebar_ejs = """<% if (site.categories && site.categories.length) { %>
@@ -2007,24 +2223,24 @@ sidebar_ejs = """<% if (site.categories && site.categories.length) { %>
 <%# Per-page view counter is handled by Vercount embed below. %>
 """
 sidebar_done = False
-for root, dirs, files in os.walk(os.path.join(theme_dir, 'layout')):
+for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
     if sidebar_done:
         break
     for fname in files:
-        if not fname.endswith('.ejs'):
+        if not fname.endswith(".ejs"):
             continue
         fpath = os.path.join(root, fname)
-        with open(fpath, encoding='utf-8') as f:
+        with open(fpath, encoding="utf-8") as f:
             c = f.read()
-        if '</body>' in c and 'cat-sidebar' not in c:
-            c = c.replace('</body>', sidebar_ejs + '\n</body>', 1)
-            with open(fpath, 'w', encoding='utf-8') as f:
+        if "</body>" in c and "cat-sidebar" not in c:
+            c = c.replace("</body>", sidebar_ejs + "\n</body>", 1)
+            with open(fpath, "w", encoding="utf-8") as f:
                 f.write(c)
-            print(f'Injected sidebars into {os.path.relpath(fpath, theme_dir)}')
+            print(f"Injected sidebars into {os.path.relpath(fpath, theme_dir)}")
             sidebar_done = True
             break
 if not sidebar_done:
-    print('WARNING: could not inject sidebars')
+    print("WARNING: could not inject sidebars")
 
 
 # --- 6. Footer scripts: busuanzi.pure.mini.js + GoatCounter embed ---
@@ -2051,9 +2267,9 @@ stats_block = r"""<%# busuanzi-scripts-injected %>
 <script src="//gc.zgo.at/count.js" data-goatcounter="https://<%= theme.goatcounter.code %>.goatcounter.com/count" async></script>
 <% } %>"""
 
-footer_path = os.path.join(theme_dir, 'layout', '_partial', 'footer.ejs')
+footer_path = os.path.join(theme_dir, "layout", "_partial", "footer.ejs")
 if os.path.isfile(footer_path):
-    with open(footer_path, encoding='utf-8') as f:
+    with open(footer_path, encoding="utf-8") as f:
         fc = f.read()
 
     # (a) Strip the legacy <div class="busuanzi-footer-count">...</div>
@@ -2063,39 +2279,47 @@ if os.path.isfile(footer_path):
         r'<div class="busuanzi-footer-count"[^>]*>.*?</div>\s*\n?',
         re.DOTALL,
     )
-    fc, legacy_n = legacy_div_re.subn('', fc)
+    fc, legacy_n = legacy_div_re.subn("", fc)
 
     # (b) Migrate the legacy marker to the new one so we don't keep
     # "skipping" the injection logic on re-runs of an old theme tree.
-    fc = fc.replace('busuanzi-footer-injected', 'busuanzi-scripts-injected')
+    fc = fc.replace("busuanzi-footer-injected", "busuanzi-scripts-injected")
 
-    if 'busuanzi-scripts-injected' in fc:
+    if "busuanzi-scripts-injected" in fc:
         if legacy_n:
-            print(f'Stripped {legacy_n} legacy <div class="busuanzi-footer-count"> '
-                  f'from {os.path.relpath(footer_path, theme_dir)}; scripts already in place')
+            print(
+                f'Stripped {legacy_n} legacy <div class="busuanzi-footer-count"> '
+                f"from {os.path.relpath(footer_path, theme_dir)}; scripts already in place"
+            )
         else:
-            print(f'Busuanzi/GoatCounter scripts already present in '
-                  f'{os.path.relpath(footer_path, theme_dir)}')
+            print(
+                f"Busuanzi/GoatCounter scripts already present in "
+                f"{os.path.relpath(footer_path, theme_dir)}"
+            )
         if legacy_n:
-            with open(footer_path, 'w', encoding='utf-8') as f:
+            with open(footer_path, "w", encoding="utf-8") as f:
                 f.write(fc)
     else:
         # Place the script block right after </footer> so it shares the
         # footer slot but stays outside the .copy-right container — the
         # container has its own (different) display, we just need the
         # script tags here.
-        if '</footer>' in fc:
-            fc = fc.replace('</footer>', '</footer>\n' + stats_block, 1)
-            print(f'Injected busuanzi/GoatCounter scripts after </footer> in '
-                  f'{os.path.relpath(footer_path, theme_dir)}')
+        if "</footer>" in fc:
+            fc = fc.replace("</footer>", "</footer>\n" + stats_block, 1)
+            print(
+                f"Injected busuanzi/GoatCounter scripts after </footer> in "
+                f"{os.path.relpath(footer_path, theme_dir)}"
+            )
         else:
-            fc = fc.rstrip() + '\n' + stats_block
-            print(f'Appended busuanzi/GoatCounter scripts at end of '
-                  f'{os.path.relpath(footer_path, theme_dir)} (no </footer> found)')
-        with open(footer_path, 'w', encoding='utf-8') as f:
+            fc = fc.rstrip() + "\n" + stats_block
+            print(
+                f"Appended busuanzi/GoatCounter scripts at end of "
+                f"{os.path.relpath(footer_path, theme_dir)} (no </footer> found)"
+            )
+        with open(footer_path, "w", encoding="utf-8") as f:
             f.write(fc)
 else:
-    print('WARNING: footer.ejs not found at ' + footer_path)
+    print("WARNING: footer.ejs not found at " + footer_path)
 
 
 # --- 7. Per-page busuanzi reading count in post-meta.ejs ---
@@ -2105,35 +2329,37 @@ else:
 # don't load a second script — busuanzi is idempotent but the network
 # round-trip is wasted).  busuanzi keys the page PV by location.path,
 # so this works on the home page, archives, tags, etc. too.
-post_meta_path = os.path.join(theme_dir, 'layout', '_partial', 'post-meta.ejs')
+post_meta_path = os.path.join(theme_dir, "layout", "_partial", "post-meta.ejs")
 if os.path.isfile(post_meta_path):
-    with open(post_meta_path, encoding='utf-8') as f:
+    with open(post_meta_path, encoding="utf-8") as f:
         pmc = f.read()
-    if 'busuanzi-page-pv-injected' in pmc:
-        print('Busuanzi per-page PV already in post-meta.ejs')
+    if "busuanzi-page-pv-injected" in pmc:
+        print("Busuanzi per-page PV already in post-meta.ejs")
     else:
         # Inject right BEFORE the closing </div> of post-meta.ejs so
         # the span sits at the end of the existing meta line.  If the
         # file ends without a </div>, fall back to appending at EOF.
         inject = (
-            '<%# busuanzi-page-pv-injected %>\n'
-            '<% if (theme.siteCounter && theme.siteCounter.enable) { %>\n'
+            "<%# busuanzi-page-pv-injected %>\n"
+            "<% if (theme.siteCounter && theme.siteCounter.enable) { %>\n"
             '&nbsp;<i class="fa fa-eye"></i>&nbsp;阅读:&nbsp;'
             '<span id="busuanzi_value_page_pv">…</span>\n'
-            '<% } %>\n'
+            "<% } %>\n"
         )
-        m = re.search(r'</div>\s*\Z', pmc)
+        m = re.search(r"</div>\s*\Z", pmc)
         if m:
-            pmc = pmc[:m.start()] + inject + pmc[m.start():]
-            with open(post_meta_path, 'w', encoding='utf-8') as f:
+            pmc = pmc[: m.start()] + inject + pmc[m.start() :]
+            with open(post_meta_path, "w", encoding="utf-8") as f:
                 f.write(pmc)
-            print('Inserted busuanzi per-page PV before </div> in post-meta.ejs')
+            print("Inserted busuanzi per-page PV before </div> in post-meta.ejs")
         else:
-            with open(post_meta_path, 'w', encoding='utf-8') as f:
-                f.write(pmc.rstrip() + '\n' + inject)
-            print('Appended busuanzi per-page PV at end of post-meta.ejs (no trailing </div>)')
+            with open(post_meta_path, "w", encoding="utf-8") as f:
+                f.write(pmc.rstrip() + "\n" + inject)
+            print(
+                "Appended busuanzi per-page PV at end of post-meta.ejs (no trailing </div>)"
+            )
 else:
-    print('WARNING: post-meta.ejs not found — per-page PV not wired')
+    print("WARNING: post-meta.ejs not found — per-page PV not wired")
 
 
 # --- 8. Reading-time speed + unit '分钟' (instead of matery's default '分') ---
@@ -2151,62 +2377,70 @@ else:
 # Both edits are idempotent via markers.
 
 # (a) Patch zh-CN.yml
-zh_lang_path = os.path.join(theme_dir, 'languages', 'zh-CN.yml')
+zh_lang_path = os.path.join(theme_dir, "languages", "zh-CN.yml")
 if os.path.isfile(zh_lang_path):
-    with open(zh_lang_path, encoding='utf-8') as f:
+    with open(zh_lang_path, encoding="utf-8") as f:
         zhc = f.read()
-    if 'minutes-fullword-patched' in zhc:
-        print('zh-CN.yml: Minutes already patched to 分钟')
+    if "minutes-fullword-patched" in zhc:
+        print("zh-CN.yml: Minutes already patched to 分钟")
     else:
         # Match `Minutes: 分` with optional whitespace; tolerate both
         # quoted and unquoted forms (Hexo's language YAML is unquoted).
         new_zhc, n = re.subn(
-            r'^Minutes:\s*\S+',
-            'Minutes: 分钟    # minutes-fullword-patched',
+            r"^Minutes:\s*\S+",
+            "Minutes: 分钟    # minutes-fullword-patched",
             zhc,
             flags=re.MULTILINE,
         )
         if n and new_zhc != zhc:
-            with open(zh_lang_path, 'w', encoding='utf-8') as f:
+            with open(zh_lang_path, "w", encoding="utf-8") as f:
                 f.write(new_zhc)
-            print(f'Renamed `Minutes: 分` to `Minutes: 分钟` in '
-                  f'{os.path.relpath(zh_lang_path, theme_dir)}')
+            print(
+                f"Renamed `Minutes: 分` to `Minutes: 分钟` in "
+                f"{os.path.relpath(zh_lang_path, theme_dir)}"
+            )
         else:
-            print(f'No `Minutes:` line found in '
-                  f'{os.path.relpath(zh_lang_path, theme_dir)} (skipping)')
+            print(
+                f"No `Minutes:` line found in "
+                f"{os.path.relpath(zh_lang_path, theme_dir)} (skipping)"
+            )
 else:
-    print(f'WARNING: {zh_lang_path} not found — skipping Minutes unit fix')
+    print(f"WARNING: {zh_lang_path} not found — skipping Minutes unit fix")
 
 # (b) Patch post-detail.ejs
-post_detail_path = os.path.join(theme_dir, 'layout', '_partial', 'post-detail.ejs')
+post_detail_path = os.path.join(theme_dir, "layout", "_partial", "post-detail.ejs")
 if os.path.isfile(post_detail_path):
-    with open(post_detail_path, encoding='utf-8') as f:
+    with open(post_detail_path, encoding="utf-8") as f:
         pdc = f.read()
-    if 'min2read-speed-patched' in pdc:
-        print('post-detail.ejs: min2read() speed already patched')
+    if "min2read-speed-patched" in pdc:
+        print("post-detail.ejs: min2read() speed already patched")
     else:
         # The line we want to replace is exactly:
         #     <%= min2read(page.content) %> <%= __('Minutes') %>
         # We pass {cn: 450, en: 250} to hexo-wordcount's helper for a
         # tighter estimate and add an idempotency marker comment.
-        old_call = '<%= min2read(page.content) %>'
+        old_call = "<%= min2read(page.content) %>"
         new_call = (
-            '<%# min2read-speed-patched: cn=450/en=250 (~1.5x faster '
-            'than hexo-wordcount defaults of 300/160) %>\n'
-            '<%= min2read(page.content, {cn: 450, en: 250}) %>'
+            "<%# min2read-speed-patched: cn=450/en=250 (~1.5x faster "
+            "than hexo-wordcount defaults of 300/160) %>\n"
+            "<%= min2read(page.content, {cn: 450, en: 250}) %>"
         )
         if old_call in pdc:
             pdc = pdc.replace(old_call, new_call, 1)
-            with open(post_detail_path, 'w', encoding='utf-8') as f:
+            with open(post_detail_path, "w", encoding="utf-8") as f:
                 f.write(pdc)
-            print(f'Replaced {old_call!r} with cn/en=450/250 in '
-                  f'{os.path.relpath(post_detail_path, theme_dir)}')
+            print(
+                f"Replaced {old_call!r} with cn/en=450/250 in "
+                f"{os.path.relpath(post_detail_path, theme_dir)}"
+            )
         else:
-            print(f'WARN: did not find {old_call!r} in '
-                  f'{os.path.relpath(post_detail_path, theme_dir)} '
-                  f'(template may have changed upstream)')
+            print(
+                f"WARN: did not find {old_call!r} in "
+                f"{os.path.relpath(post_detail_path, theme_dir)} "
+                f"(template may have changed upstream)"
+            )
 else:
-    print(f'WARNING: {post_detail_path} not found — min2read speed not patched')
+    print(f"WARNING: {post_detail_path} not found — min2read speed not patched")
 
 
 # --- 9. Inject 3D rotating carousel for article listing ---
@@ -2214,81 +2448,81 @@ else:
 # with a 3D rotating carousel that arranges cards in a circle.
 
 # 9a. Ensure CSS and JS files exist under themes/matery/source/
-carousel_css = os.path.join(theme_dir, 'source', 'css', '3d-carousel.css')
-carousel_js = os.path.join(theme_dir, 'source', 'js', '3d-carousel.js')
+carousel_css = os.path.join(theme_dir, "source", "css", "3d-carousel.css")
+carousel_js = os.path.join(theme_dir, "source", "js", "3d-carousel.js")
 
 if not os.path.exists(carousel_css):
-    print(f'WARNING: {carousel_css} not found — 3D carousel CSS missing')
+    print(f"WARNING: {carousel_css} not found — 3D carousel CSS missing")
 if not os.path.exists(carousel_js):
-    print(f'WARNING: {carousel_js} not found — 3D carousel JS missing')
+    print(f"WARNING: {carousel_js} not found — 3D carousel JS missing")
 
 # 9b. Add carousel3d entries to _config.yml libs section
-config_path = os.path.join(theme_dir, '_config.yml')
-with open(config_path, encoding='utf-8') as f:
+config_path = os.path.join(theme_dir, "_config.yml")
+with open(config_path, encoding="utf-8") as f:
     config_content = f.read()
 
 # Add CSS lib entry
-if 'carousel3d:' not in config_content:
+if "carousel3d:" not in config_content:
     config_content = config_content.replace(
-        '    mycss: /css/my.css',
-        '    mycss: /css/my.css\n    carousel3d: /css/3d-carousel.css'
+        "    mycss: /css/my.css",
+        "    mycss: /css/my.css\n    carousel3d: /css/3d-carousel.css",
     )
-    print('Added carousel3d CSS to theme config')
+    print("Added carousel3d CSS to theme config")
 
 # Add JS lib entry
-if 'carousel3d: /js/3d-carousel.js' not in config_content:
+if "carousel3d: /js/3d-carousel.js" not in config_content:
     config_content = config_content.replace(
-        '    matery: /js/matery.js',
-        '    matery: /js/matery.js\n    carousel3d: /js/3d-carousel.js'
+        "    matery: /js/matery.js",
+        "    matery: /js/matery.js\n    carousel3d: /js/3d-carousel.js",
     )
-    print('Added carousel3d JS to theme config')
+    print("Added carousel3d JS to theme config")
 
-with open(config_path, 'w', encoding='utf-8') as f:
+with open(config_path, "w", encoding="utf-8") as f:
     f.write(config_content)
 
 # 9c. Add CSS link in main-style.ejs
-ms_path = os.path.join(theme_dir, 'layout', '_partial', 'main-style.ejs')
-with open(ms_path, encoding='utf-8') as f:
+ms_path = os.path.join(theme_dir, "layout", "_partial", "main-style.ejs")
+with open(ms_path, encoding="utf-8") as f:
     ms_content = f.read()
 
-if 'carousel3d' not in ms_content:
+if "carousel3d" not in ms_content:
     ms_content = ms_content.replace(
         '<link rel="stylesheet" type="text/css" href="<%- theme.jsDelivr.url %><%- url_for(theme.libs.css.mycss) %>">',
-        '<link rel="stylesheet" type="text/css" href="<%- theme.jsDelivr.url %><%- url_for(theme.libs.css.mycss) %>">\n<link rel="stylesheet" type="text/css" href="<%- theme.jsDelivr.url %><%- url_for(theme.libs.css.carousel3d) %>">'
+        '<link rel="stylesheet" type="text/css" href="<%- theme.jsDelivr.url %><%- url_for(theme.libs.css.mycss) %>">\n<link rel="stylesheet" type="text/css" href="<%- theme.jsDelivr.url %><%- url_for(theme.libs.css.carousel3d) %>">',
     )
-    with open(ms_path, 'w', encoding='utf-8') as f:
+    with open(ms_path, "w", encoding="utf-8") as f:
         f.write(ms_content)
-    print('Added 3D carousel CSS link to main-style.ejs')
+    print("Added 3D carousel CSS link to main-style.ejs")
 
 # 9d. Add JS script in layout.ejs
-layout_path = os.path.join(theme_dir, 'layout', 'layout.ejs')
-with open(layout_path, encoding='utf-8') as f:
+layout_path = os.path.join(theme_dir, "layout", "layout.ejs")
+with open(layout_path, encoding="utf-8") as f:
     layout_content = f.read()
 
-if 'carousel3d' not in layout_content:
+if "carousel3d" not in layout_content:
     layout_content = layout_content.replace(
         '<script src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.matery) %>"></script>',
-        '<script src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.matery) %>"></script>\n    <script src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.carousel3d) %>"></script>'
+        '<script src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.matery) %>"></script>\n    <script src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.carousel3d) %>"></script>',
     )
-    with open(layout_path, 'w', encoding='utf-8') as f:
+    with open(layout_path, "w", encoding="utf-8") as f:
         f.write(layout_content)
-    print('Added 3D carousel JS script to layout.ejs')
+    print("Added 3D carousel JS script to layout.ejs")
 
-print('3D carousel injection complete')
+print("3D carousel injection complete")
 
 
 # --- 10. Change fork-me-on-github link to growdu's repo ---
-config_path = os.path.join(theme_dir, '_config.yml')
-with open(config_path, encoding='utf-8') as f:
+config_path = os.path.join(theme_dir, "_config.yml")
+with open(config_path, encoding="utf-8") as f:
     cfg = f.read()
-if 'blinkfox/hexo-theme-matery' in cfg:
+if "blinkfox/hexo-theme-matery" in cfg:
     cfg = cfg.replace(
-        'https://github.com/blinkfox/hexo-theme-matery',
-        'https://github.com/growdu/blog'
+        "https://github.com/blinkfox/hexo-theme-matery",
+        "https://github.com/growdu/blog",
     )
-    with open(config_path, 'w', encoding='utf-8') as f:
+    with open(config_path, "w", encoding="utf-8") as f:
         f.write(cfg)
-    print('Updated githubLink to growdu/blog')
+    print("Updated githubLink to growdu/blog")
 
 
 # --- 11. Disable unused features (tcaptcha, clicklove) and remove masonry ---
@@ -2296,42 +2530,42 @@ if 'blinkfox/hexo-theme-matery' in cfg:
 # masonry.js is no longer needed since we use 3D carousel instead of grid.
 
 # 11a. Disable tcaptcha in matery config
-matery_config = os.path.join(theme_dir, '_config.yml')
-with open(matery_config, encoding='utf-8') as f:
+matery_config = os.path.join(theme_dir, "_config.yml")
+with open(matery_config, encoding="utf-8") as f:
     mc = f.read()
-if 'tcaptcha:\n  enable: true' in mc:
-    mc = mc.replace('tcaptcha:\n  enable: true', 'tcaptcha:\n  enable: false')
-    with open(matery_config, 'w', encoding='utf-8') as f:
+if "tcaptcha:\n  enable: true" in mc:
+    mc = mc.replace("tcaptcha:\n  enable: true", "tcaptcha:\n  enable: false")
+    with open(matery_config, "w", encoding="utf-8") as f:
         f.write(mc)
-    print('Disabled tcaptcha in theme config')
+    print("Disabled tcaptcha in theme config")
 
 # 11b. Disable clicklove in matery config
-if 'clicklove:\n  enable: true' in mc:
-    mc = mc.replace('clicklove:\n  enable: true', 'clicklove:\n  enable: false')
-    with open(matery_config, 'w', encoding='utf-8') as f:
+if "clicklove:\n  enable: true" in mc:
+    mc = mc.replace("clicklove:\n  enable: true", "clicklove:\n  enable: false")
+    with open(matery_config, "w", encoding="utf-8") as f:
         f.write(mc)
-    print('Disabled clicklove in theme config')
+    print("Disabled clicklove in theme config")
 
 # 11c. Remove masonry.js from layout (replaced by 3D carousel)
-layout_path = os.path.join(theme_dir, 'layout', 'layout.ejs')
-with open(layout_path, encoding='utf-8') as f:
+layout_path = os.path.join(theme_dir, "layout", "layout.ejs")
+with open(layout_path, encoding="utf-8") as f:
     lc = f.read()
 masonry_line = '    <script src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.masonry) %>"></script>\n'
 if masonry_line in lc:
-    lc = lc.replace(masonry_line, '')
-    with open(layout_path, 'w', encoding='utf-8') as f:
+    lc = lc.replace(masonry_line, "")
+    with open(layout_path, "w", encoding="utf-8") as f:
         f.write(lc)
-    print('Removed masonry.js from layout')
+    print("Removed masonry.js from layout")
 
 # --- 12. Replace recommend widget with 3D carousel ---
 # Replaces the grid-based recommend widget with the same 3D rotating carousel
 # used for the article listing. Includes prev/next nav buttons.
 
-recommend_path = os.path.join(theme_dir, 'layout', '_widget', 'recommend.ejs')
-with open(recommend_path, encoding='utf-8') as f:
+recommend_path = os.path.join(theme_dir, "layout", "_widget", "recommend.ejs")
+with open(recommend_path, encoding="utf-8") as f:
     recommend_content = f.read()
 
-if 'carousel-3d-wrapper' not in recommend_content:
+if "carousel-3d-wrapper" not in recommend_content:
     new_recommend = """<%
     // get all top posts.
     var topPosts = [];
@@ -2424,20 +2658,20 @@ if 'carousel-3d-wrapper' not in recommend_content:
 </div>
 <% } %>
 """
-    with open(recommend_path, 'w', encoding='utf-8') as f:
+    with open(recommend_path, "w", encoding="utf-8") as f:
         f.write(new_recommend)
-    print('Replaced recommend widget with 3D carousel')
+    print("Replaced recommend widget with 3D carousel")
 else:
-    print('Recommend widget already uses 3D carousel')
+    print("Recommend widget already uses 3D carousel")
 
 # --- 14. Constrain main content width on wide screens to avoid sidebars ---
 # On screens >1400px, fixed sidebars (270px each + 12px gap) appear.
 # Force main.content to stay within the safe zone between the two sidebars.
 
-main_css_marker = '/* MAIN-CONTENT-SAFE-MARGIN */'
-main_css_path = os.path.join(theme_dir, 'source', 'css', 'my.css')
+main_css_marker = "/* MAIN-CONTENT-SAFE-MARGIN */"
+main_css_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.exists(main_css_path):
-    with open(main_css_path, encoding='utf-8') as f:
+    with open(main_css_path, encoding="utf-8") as f:
         mc = f.read()
     if main_css_marker not in mc:
         mc += """
@@ -2454,22 +2688,22 @@ if os.path.exists(main_css_path):
     }
 }
 """
-        with open(main_css_path, 'w', encoding='utf-8') as f:
+        with open(main_css_path, "w", encoding="utf-8") as f:
             f.write(mc)
-        print('Added main-content safe margin CSS')
+        print("Added main-content safe margin CSS")
     else:
-        print('Main-content safe margin CSS already present')
+        print("Main-content safe margin CSS already present")
 else:
-    print('my.css not found')
+    print("my.css not found")
 
 # --- 15. Collapsible sidebars ---
 # Click sidebar title to collapse/expand. Collapsed = thin icon strip (48px).
 # State saved in localStorage. main.content margins adjust accordingly.
 
-collapse_css_marker = '/* COLLAPSIBLE-SIDEBARS */'
-collapse_css_path = os.path.join(theme_dir, 'source', 'css', 'my.css')
+collapse_css_marker = "/* COLLAPSIBLE-SIDEBARS */"
+collapse_css_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.exists(collapse_css_path):
-    with open(collapse_css_path, encoding='utf-8') as f:
+    with open(collapse_css_path, encoding="utf-8") as f:
         cc = f.read()
     if collapse_css_marker not in cc:
         cc += """
@@ -2529,19 +2763,19 @@ if os.path.exists(collapse_css_path):
     }
 }
 """
-        with open(collapse_css_path, 'w', encoding='utf-8') as f:
+        with open(collapse_css_path, "w", encoding="utf-8") as f:
             f.write(cc)
-        print('Added collapsible sidebars CSS')
+        print("Added collapsible sidebars CSS")
     else:
-        print('Collapsible sidebars CSS already present')
+        print("Collapsible sidebars CSS already present")
 else:
-    print('my.css not found')
+    print("my.css not found")
 
 # --- 16. View-all button between recent and all-articles carousel ---
-view_all_marker = '/* VIEW-ALL-BTN */'
-view_all_path = os.path.join(theme_dir, 'source', 'css', 'my.css')
+view_all_marker = "/* VIEW-ALL-BTN */"
+view_all_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.exists(view_all_path):
-    with open(view_all_path, encoding='utf-8') as f:
+    with open(view_all_path, encoding="utf-8") as f:
         va = f.read()
     if view_all_marker not in va:
         va += """
@@ -2574,17 +2808,17 @@ body.dark .view-all-btn {
     background: linear-gradient(135deg, #00bcd4, #009688);
 }
 """
-        with open(view_all_path, 'w', encoding='utf-8') as f:
+        with open(view_all_path, "w", encoding="utf-8") as f:
             f.write(va)
-        print('Added view-all-btn CSS')
+        print("Added view-all-btn CSS")
 else:
-    print('my.css not found')
+    print("my.css not found")
 
 # --- 17. All-posts page header (替代 bg-cover) ---
-all_page_marker = '/* ALL-PAGE-HEADER */'
-all_page_path = os.path.join(theme_dir, 'source', 'css', 'my.css')
+all_page_marker = "/* ALL-PAGE-HEADER */"
+all_page_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.exists(all_page_path):
-    with open(all_page_path, encoding='utf-8') as f:
+    with open(all_page_path, encoding="utf-8") as f:
         ap = f.read()
     if all_page_marker not in ap:
         ap += """
@@ -2630,17 +2864,17 @@ if os.path.exists(all_page_path):
 body.dark .all-page-header h1 { color: #ddd; }
 body.dark .all-page-subtitle { color: #aaa; }
 """
-        with open(all_page_path, 'w', encoding='utf-8') as f:
+        with open(all_page_path, "w", encoding="utf-8") as f:
             f.write(ap)
-        print('Added all-page-header CSS')
+        print("Added all-page-header CSS")
 else:
-    print('my.css not found')
+    print("my.css not found")
 
 # --- 18. Recommended page layout improvements ---
-rec_marker = '/* REC-PAGE-LAYOUT */'
-rec_path = os.path.join(theme_dir, 'source', 'css', 'my.css')
+rec_marker = "/* REC-PAGE-LAYOUT */"
+rec_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.exists(rec_path):
-    with open(rec_path, encoding='utf-8') as f:
+    with open(rec_path, encoding="utf-8") as f:
         rc = f.read()
     if rec_marker not in rc:
         rc += """
@@ -2759,18 +2993,18 @@ main.rec-page {
 }
 
 """
-        with open(rec_path, 'w', encoding='utf-8') as f:
+        with open(rec_path, "w", encoding="utf-8") as f:
             f.write(rc)
-        print('Added rec-page-layout CSS')
+        print("Added rec-page-layout CSS")
 else:
-    print('my.css not found')
+    print("my.css not found")
 
 
 # --- 19. Fixed header/footer colors (unified dark theme) ---
-header_footer_marker = '/* FIXED-HEADER-FOOTER */'
-header_footer_path = os.path.join(theme_dir, 'source', 'css', 'my.css')
+header_footer_marker = "/* FIXED-HEADER-FOOTER */"
+header_footer_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.exists(header_footer_path):
-    with open(header_footer_path, encoding='utf-8') as f:
+    with open(header_footer_path, encoding="utf-8") as f:
         hf = f.read()
     if header_footer_marker not in hf:
         hf += """
@@ -2798,12 +3032,11 @@ footer.footer a:hover {
     color: #fff !important;
 }
 """
-        with open(header_footer_path, 'w', encoding='utf-8') as f:
+        with open(header_footer_path, "w", encoding="utf-8") as f:
             f.write(hf)
-        print('Added fixed header/footer CSS')
+        print("Added fixed header/footer CSS")
 else:
-    print('my.css not found')
-
+    print("my.css not found")
 
 
 # --- 9. Homepage content panel (stats banner + tabbed articles) ---
@@ -2815,31 +3048,31 @@ if os.path.isfile(my_css_path):
     with open(my_css_path, encoding="utf-8") as f:
         _mycss = f.read()
     if home_content_marker in _mycss:
-        print('home-content CSS already present, skipping')
+        print("home-content CSS already present, skipping")
     else:
         with open(my_css_path, "a", encoding="utf-8") as f:
             f.write(hc_css)
-        print('Appended HOME-CONTENT-PANEL CSS to my.css')
+        print("Appended HOME-CONTENT-PANEL CSS to my.css")
 else:
-    print('my.css not found, skipping home-content CSS')
+    print("my.css not found, skipping home-content CSS")
 
 
 # --- 10. Learning path panel (6 curated topic cards) ---
 # Idempotent: skip if marker already in my.css.
 learning_path_marker = "/* LEARNING-PATH-PANEL */"
 my_css_path = os.path.join(theme_dir, "source", "css", "my.css")
-lp_css = '/* LEARNING-PATH-PANEL */\n.learning-path {\n    margin: 48px 0 24px;\n    padding: 32px 0;\n    background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);\n    border-radius: 16px;\n}\nbody.DarkMode .learning-path {\n    background: linear-gradient(135deg, #1a2227 0%, #13191e 100%);\n}\n.section-title {\n    text-align: center;\n    margin-bottom: 36px;\n}\n.section-title h2 {\n    font-size: 28px;\n    font-weight: 800;\n    margin: 0 0 8px;\n    color: #263238;\n    letter-spacing: 0.5px;\n}\n.section-title h2 i {\n    color: #009688;\n    margin-right: 6px;\n}\n.section-subtitle {\n    color: #607d8b;\n    font-size: 14px;\n    margin: 0;\n    letter-spacing: 0.3px;\n}\nbody.DarkMode .section-title h2 { color: #eceff1; }\nbody.DarkMode .section-subtitle { color: #b0bec5; }\n\n.lane-grid {\n    display: grid;\n    grid-template-columns: repeat(3, 1fr);\n    gap: 18px;\n    padding: 0 16px;\n}\n.lane-card {\n    display: flex;\n    flex-direction: column;\n    background: #fff;\n    border-radius: 12px;\n    padding: 22px 20px;\n    text-decoration: none;\n    color: inherit;\n    box-shadow: 0 2px 6px rgba(0,0,0,0.05);\n    transition: transform .18s ease, box-shadow .18s ease;\n    border-top: 4px solid #009688;\n    height: 100%;\n}\n.lane-card:hover {\n    transform: translateY(-4px);\n    box-shadow: 0 10px 24px rgba(0,0,0,0.10);\n    color: inherit;\n}\n.lane-card--db    { border-top-color: #009688; }\n.lane-card--hpn   { border-top-color: #1976d2; }\n.lane-card--dist  { border-top-color: #7b1fa2; }\n.lane-card--ai    { border-top-color: #e91e63; }\n.lane-card--os    { border-top-color: #f57c00; }\n.lane-card--mind  { border-top-color: #388e3c; }\n\n.lane-card__head {\n    display: flex;\n    align-items: center;\n    gap: 12px;\n    margin-bottom: 10px;\n}\n.lane-card__icon {\n    font-size: 26px;\n    color: #009688;\n    width: 36px;\n    height: 36px;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    background: rgba(0,150,136,0.12);\n    border-radius: 8px;\n}\n.lane-card--hpn .lane-card__icon   { color: #1976d2; background: rgba(25,118,210,0.12); }\n.lane-card--dist .lane-card__icon  { color: #7b1fa2; background: rgba(123,31,162,0.12); }\n.lane-card--ai .lane-card__icon    { color: #e91e63; background: rgba(233,30,99,0.12); }\n.lane-card--os .lane-card__icon    { color: #f57c00; background: rgba(245,124,0,0.12); }\n.lane-card--mind .lane-card__icon  { color: #388e3c; background: rgba(56,142,60,0.12); }\n\n.lane-card__title {\n    font-size: 18px;\n    font-weight: 700;\n    margin: 0;\n    color: #263238;\n}\n.lane-card__desc {\n    font-size: 13px;\n    color: #607d8b;\n    line-height: 1.55;\n    margin: 0 0 12px;\n    min-height: 40px;\n}\n.lane-card__posts {\n    list-style: none;\n    padding: 0;\n    margin: 0 0 12px;\n    flex: 1;\n}\n.lane-card__posts li {\n    font-size: 13px;\n    color: #455a64;\n    line-height: 1.6;\n    padding: 4px 0;\n    display: flex;\n    align-items: flex-start;\n    gap: 6px;\n}\n.lane-card__posts li i {\n    color: #b0bec5;\n    font-size: 10px;\n    margin-top: 4px;\n    flex-shrink: 0;\n}\n.lane-card__empty {\n    font-size: 12px;\n    color: #90a4ae;\n    font-style: italic;\n    margin: 12px 0;\n}\n.lane-card__more {\n    font-size: 13px;\n    color: #009688;\n    font-weight: 600;\n    margin-top: 8px;\n}\n.lane-card--hpn .lane-card__more    { color: #1976d2; }\n.lane-card--dist .lane-card__more   { color: #7b1fa2; }\n.lane-card--ai .lane-card__more     { color: #e91e63; }\n.lane-card--os .lane-card__more     { color: #f57c00; }\n.lane-card--mind .lane-card__more   { color: #388e3c; }\n.lane-card__more i { margin-left: 4px; transition: transform .2s; }\n.lane-card:hover .lane-card__more i { transform: translateX(3px); }\n\nbody.DarkMode .lane-card { background: #1e272c; }\nbody.DarkMode .lane-card__title { color: #eceff1; }\nbody.DarkMode .lane-card__desc { color: #b0bec5; }\nbody.DarkMode .lane-card__posts li { color: #cfd8dc; }\n\n@media (max-width: 992px) {\n    .lane-grid { grid-template-columns: repeat(2, 1fr); }\n}\n@media (max-width: 600px) {\n    .lane-grid { grid-template-columns: 1fr; }\n    .section-title h2 { font-size: 22px; }\n    .learning-path { margin: 24px 0 16px; padding: 20px 0; }\n}\n'
+lp_css = "/* LEARNING-PATH-PANEL */\n.learning-path {\n    margin: 48px 0 24px;\n    padding: 32px 0;\n    background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);\n    border-radius: 16px;\n}\nbody.DarkMode .learning-path {\n    background: linear-gradient(135deg, #1a2227 0%, #13191e 100%);\n}\n.section-title {\n    text-align: center;\n    margin-bottom: 36px;\n}\n.section-title h2 {\n    font-size: 28px;\n    font-weight: 800;\n    margin: 0 0 8px;\n    color: #263238;\n    letter-spacing: 0.5px;\n}\n.section-title h2 i {\n    color: #009688;\n    margin-right: 6px;\n}\n.section-subtitle {\n    color: #607d8b;\n    font-size: 14px;\n    margin: 0;\n    letter-spacing: 0.3px;\n}\nbody.DarkMode .section-title h2 { color: #eceff1; }\nbody.DarkMode .section-subtitle { color: #b0bec5; }\n\n.lane-grid {\n    display: grid;\n    grid-template-columns: repeat(3, 1fr);\n    gap: 18px;\n    padding: 0 16px;\n}\n.lane-card {\n    display: flex;\n    flex-direction: column;\n    background: #fff;\n    border-radius: 12px;\n    padding: 22px 20px;\n    text-decoration: none;\n    color: inherit;\n    box-shadow: 0 2px 6px rgba(0,0,0,0.05);\n    transition: transform .18s ease, box-shadow .18s ease;\n    border-top: 4px solid #009688;\n    height: 100%;\n}\n.lane-card:hover {\n    transform: translateY(-4px);\n    box-shadow: 0 10px 24px rgba(0,0,0,0.10);\n    color: inherit;\n}\n.lane-card--db    { border-top-color: #009688; }\n.lane-card--hpn   { border-top-color: #1976d2; }\n.lane-card--dist  { border-top-color: #7b1fa2; }\n.lane-card--ai    { border-top-color: #e91e63; }\n.lane-card--os    { border-top-color: #f57c00; }\n.lane-card--mind  { border-top-color: #388e3c; }\n\n.lane-card__head {\n    display: flex;\n    align-items: center;\n    gap: 12px;\n    margin-bottom: 10px;\n}\n.lane-card__icon {\n    font-size: 26px;\n    color: #009688;\n    width: 36px;\n    height: 36px;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    background: rgba(0,150,136,0.12);\n    border-radius: 8px;\n}\n.lane-card--hpn .lane-card__icon   { color: #1976d2; background: rgba(25,118,210,0.12); }\n.lane-card--dist .lane-card__icon  { color: #7b1fa2; background: rgba(123,31,162,0.12); }\n.lane-card--ai .lane-card__icon    { color: #e91e63; background: rgba(233,30,99,0.12); }\n.lane-card--os .lane-card__icon    { color: #f57c00; background: rgba(245,124,0,0.12); }\n.lane-card--mind .lane-card__icon  { color: #388e3c; background: rgba(56,142,60,0.12); }\n\n.lane-card__title {\n    font-size: 18px;\n    font-weight: 700;\n    margin: 0;\n    color: #263238;\n}\n.lane-card__desc {\n    font-size: 13px;\n    color: #607d8b;\n    line-height: 1.55;\n    margin: 0 0 12px;\n    min-height: 40px;\n}\n.lane-card__posts {\n    list-style: none;\n    padding: 0;\n    margin: 0 0 12px;\n    flex: 1;\n}\n.lane-card__posts li {\n    font-size: 13px;\n    color: #455a64;\n    line-height: 1.6;\n    padding: 4px 0;\n    display: flex;\n    align-items: flex-start;\n    gap: 6px;\n}\n.lane-card__posts li i {\n    color: #b0bec5;\n    font-size: 10px;\n    margin-top: 4px;\n    flex-shrink: 0;\n}\n.lane-card__empty {\n    font-size: 12px;\n    color: #90a4ae;\n    font-style: italic;\n    margin: 12px 0;\n}\n.lane-card__more {\n    font-size: 13px;\n    color: #009688;\n    font-weight: 600;\n    margin-top: 8px;\n}\n.lane-card--hpn .lane-card__more    { color: #1976d2; }\n.lane-card--dist .lane-card__more   { color: #7b1fa2; }\n.lane-card--ai .lane-card__more     { color: #e91e63; }\n.lane-card--os .lane-card__more     { color: #f57c00; }\n.lane-card--mind .lane-card__more   { color: #388e3c; }\n.lane-card__more i { margin-left: 4px; transition: transform .2s; }\n.lane-card:hover .lane-card__more i { transform: translateX(3px); }\n\nbody.DarkMode .lane-card { background: #1e272c; }\nbody.DarkMode .lane-card__title { color: #eceff1; }\nbody.DarkMode .lane-card__desc { color: #b0bec5; }\nbody.DarkMode .lane-card__posts li { color: #cfd8dc; }\n\n@media (max-width: 992px) {\n    .lane-grid { grid-template-columns: repeat(2, 1fr); }\n}\n@media (max-width: 600px) {\n    .lane-grid { grid-template-columns: 1fr; }\n    .section-title h2 { font-size: 22px; }\n    .learning-path { margin: 24px 0 16px; padding: 20px 0; }\n}\n"
 if os.path.isfile(my_css_path):
     with open(my_css_path, encoding="utf-8") as f:
         _mycss = f.read()
     if learning_path_marker in _mycss:
-        print('learning-path CSS already present, skipping')
+        print("learning-path CSS already present, skipping")
     else:
         with open(my_css_path, "a", encoding="utf-8") as f:
             f.write(lp_css)
-        print('Appended LEARNING-PATH-PANEL CSS to my.css')
+        print("Appended LEARNING-PATH-PANEL CSS to my.css")
 else:
-    print('my.css not found, skipping learning-path CSS')
+    print("my.css not found, skipping learning-path CSS")
 
 
 # --- 11. Post TL;DR + sticky action bar (likes / bookmark / share / top) ---
@@ -2851,23 +3084,25 @@ if os.path.isfile(my_css_path):
     with open(my_css_path, encoding="utf-8") as f:
         _mycss = f.read()
     if post_tldr_marker in _mycss:
-        print('post-tldr CSS already present, skipping')
+        print("post-tldr CSS already present, skipping")
     else:
         with open(my_css_path, "a", encoding="utf-8") as f:
             f.write(pt_css)
-        print('Appended POST-TLDR-AND-ACTIONS CSS to my.css')
+        print("Appended POST-TLDR-AND-ACTIONS CSS to my.css")
 else:
-    print('my.css not found, skipping post-tldr CSS')
+    print("my.css not found, skipping post-tldr CSS")
 
 
 # --- 12. Footer subscribe card (RSS / Zhihu / WeChat / GitHub / Email) ---
 # Idempotent: skip if marker already in my.css.
 # Skip the entire block when subscribe-card.ejs partial is not present
 # (the partial was removed in favor of an inline 公众号 chip in footer.ejs).
-subscribe_partial_path = os.path.join(theme_dir, 'layout', '_partial', 'subscribe-card.ejs')
+subscribe_partial_path = os.path.join(
+    theme_dir, "layout", "_partial", "subscribe-card.ejs"
+)
 subscribe_marker = "/* SUBSCRIBE-CARD-FOOTER */"
 my_css_path = os.path.join(theme_dir, "source", "css", "my.css")
-sc_css = '''/* SUBSCRIBE-CARD-FOOTER */
+sc_css = """/* SUBSCRIBE-CARD-FOOTER */
 .subscribe-card {
     max-width: 720px;
     margin: 24px auto 28px;
@@ -2927,20 +3162,20 @@ sc_css = '''/* SUBSCRIBE-CARD-FOOTER */
     .subscribe-card { margin: 16px 12px 20px; padding: 18px 16px; }
     .subscribe-chip { font-size: 12px; padding: 5px 12px; }
 }
-'''
+"""
 if not os.path.isfile(subscribe_partial_path):
-    print('subscribe-card.ejs not present, skipping subscribe-card CSS append')
+    print("subscribe-card.ejs not present, skipping subscribe-card CSS append")
 elif os.path.isfile(my_css_path):
     with open(my_css_path, encoding="utf-8") as f:
         _mycss = f.read()
     if subscribe_marker in _mycss:
-        print('subscribe-card CSS already present, skipping')
+        print("subscribe-card CSS already present, skipping")
     else:
         with open(my_css_path, "a", encoding="utf-8") as f:
             f.write(sc_css)
-        print('Appended SUBSCRIBE-CARD-FOOTER CSS to my.css')
+        print("Appended SUBSCRIBE-CARD-FOOTER CSS to my.css")
 else:
-    print('my.css not found, skipping subscribe-card CSS')
+    print("my.css not found, skipping subscribe-card CSS")
 
 # --- 8. Drop unused vendored libs from themes/matery/source/libs/ ---
 # The vendored theme ships 30+ libs but the live templates only reference
@@ -2955,11 +3190,24 @@ else:
 # `echarts` belongs in the list: the archives page charts (post-charts.ejs,
 # post-calendar.ejs) load /libs/echarts/echarts.min.js and the theme
 # ships no CDN fallback for it.
-THEME_LIBS = os.path.join(theme_dir, 'source', 'libs')
+THEME_LIBS = os.path.join(theme_dir, "source", "libs")
 USED_LIBS = {
-    'animate', 'aos', 'awesome', 'codeBlock', 'echarts', 'instantpage',
-    'jqcloud', 'jquery', 'lightGallery', 'materialize', 'minisearch',
-    'prism', 'scrollprogress', 'tocbot', 'typed', 'share',
+    "animate",
+    "aos",
+    "awesome",
+    "codeBlock",
+    "echarts",
+    "instantpage",
+    "jqcloud",
+    "jquery",
+    "lightGallery",
+    "materialize",
+    "minisearch",
+    "prism",
+    "scrollprogress",
+    "tocbot",
+    "typed",
+    "share",
 }
 if os.path.isdir(THEME_LIBS):
     removed = 0
@@ -2969,7 +3217,7 @@ if os.path.isdir(THEME_LIBS):
             if os.path.isdir(target):
                 shutil.rmtree(target)
                 removed += 1
-                print(f'Removed unused lib: {entry}')
-    print(f'Cleanup: {removed} unused lib dirs removed (kept {len(USED_LIBS)})')
+                print(f"Removed unused lib: {entry}")
+    print(f"Cleanup: {removed} unused lib dirs removed (kept {len(USED_LIBS)})")
 else:
-    print(f'WARNING: {THEME_LIBS} not found, skipping lib cleanup')
+    print(f"WARNING: {THEME_LIBS} not found, skipping lib cleanup")

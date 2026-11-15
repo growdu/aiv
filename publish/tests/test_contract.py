@@ -266,7 +266,8 @@ def test_a_missing_date_is_allowed(tmp_path):
 
 def test_parse_content_date_rejects_a_non_string():
     with pytest.raises(ContractFieldError):
-        parse_content_date(20260727)
+        # 故意传非字符串：类型检查器知道这是错的，运行时也该报错。
+        parse_content_date(20260727)  # type: ignore[arg-type]
 
 
 def test_parse_content_date_rejects_a_malformed_value():
@@ -557,6 +558,7 @@ def test_contract_reads_a_real_calendar_date():
     """publish_on 的日期是真的，不是只长得像。"""
     contract = contract_from_fields({"publish_on": "2026-11-13"})
 
+    assert contract.publish_on is not None
     assert date.fromisoformat(contract.publish_on) == date(2026, 11, 13)
 
 

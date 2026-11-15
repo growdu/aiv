@@ -53,6 +53,9 @@ menu:
   数据库:
     url: /database/
     icon: fa-solid fa-database
+  视频:
+    url: /videos/
+    icon: fa-solid fa-video
   标签:
     url: /tags/
     icon: fa-solid fa-tags

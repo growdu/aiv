@@ -1,3 +1,7 @@
+---
+title: "PostgreSQL 流复制：WalReceiver 与 startup 进程的交互逻辑"
+---
+
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/89809fb51a0d406a8e4ea2626968c763.png)  
 在PostgreSQL流复制过程中，有三个进程协同工作：walsender进程，walreceiver进程和startup进程。其中walsender进程属于主节点的进程，主要用来向备节点发送wal record； walreceiver和startup进程属于备节点进程，wal receiver主要用来接收主端发送来的wal record并写入磁盘上的XLOG文件中，之后startup进程就会对这些wal数据进行replay。三个进程共同协作，完成主备的整个流复制过程。本篇博客主要关注于WalReceiver进程和startup进程之间的交互逻辑。首先看一下这三个进程的调用堆栈，可以更加方便定位所需阅读的代码细节：
 

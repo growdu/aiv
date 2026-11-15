@@ -1,0 +1,4 @@
+# 头条号 adapter（toutiao/toutiao）。
+#
+# 运行时依赖：**零**（标准库 + TOML 能力声明）。
+-r dev.txt

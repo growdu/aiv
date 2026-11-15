@@ -1,3 +1,7 @@
+---
+title: "PostgreSQL 逻辑复制 streaming 与 spill：从 reorderbuffer 到 .changes 文件的全程真相"
+---
+
 # PostgreSQL 逻辑复制 streaming 与 spill：从 reorderbuffer 到 `<subid>-<xid>.changes` 的全程真相
 
 | 编写人 | 编写内容 | 编写时间 |

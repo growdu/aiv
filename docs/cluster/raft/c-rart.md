@@ -1,3 +1,8 @@
+---
+platforms:
+  - toutiao
+---
+
 # c-raft
 
 [![CI Tests](https://github.com/canonical/raft/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/canonical/raft/actions/workflows/build-and-test.yml) [![codecov](https://codecov.io/gh/canonical/raft/branch/master/graph/badge.svg)](https://codecov.io/gh/canonical/raft) [![Documentation Status](https://readthedocs.org/projects/raft/badge/?version=latest)](https://raft.readthedocs.io/en/latest/?badge=latest)

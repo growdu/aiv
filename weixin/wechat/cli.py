@@ -39,6 +39,7 @@ from . import mermaid as mermaid_module
 from . import notify as notify_module
 from . import publish as publish_module
 from . import render as render_module
+from . import snapshot as snapshot_module
 from . import split as split_module
 from . import titles as titles_module
 from . import version as version_module
@@ -480,7 +481,8 @@ def _upload_cover(client, result, args, external_prepared=None, card=None,
         prepared = external_prepared
     else:
         prepared = assets_module.prepare_image(card or DEFAULT_COVER)
-    digest = hashlib.sha1(prepared.data).hexdigest()
+    # 素材缓存的键：本地内容指纹，不是签名（微信不校验它）。
+    digest = hashlib.sha256(prepared.data).hexdigest()
     crop_list = assets_module.cover_crop_list(prepared.width, prepared.height)
     media_id = cache.get(digest) if (cache is not None and use_cache) else None
     if media_id:
@@ -1021,24 +1023,87 @@ def _drop_extra_parts(client, store, post, count: int) -> None:
         store.remove(key)
 
 
+def _write_outbox_snapshot(args, *, status: str, title: str, reason: str,
+                           retryable: bool = False,
+                           published_url: str | None = None) -> bool:
+    """把这一篇的发布状态写进 ``publish/outbox/``。
+
+    **为什么写**：发布层的幂等键是 outbox 里那份快照（规格 §7.1）。
+    微信 adapter 原来把状态写在自己机器上的 ``weixin/out/state.json``，
+    那份文件不入库——换台机器就没人知道这篇发过没有。
+
+    写失败返回 False：快照没落盘就等于这次发布没有凭据，不能假装成功
+    （不变量三：不静默成功）。
+    """
+    path = (snapshot_module.outbox_dir_from_env()
+            / snapshot_module.snapshot_name(args.slug))
+    try:
+        snapshot_module.write_snapshot(
+            path,
+            content_id=args.slug,
+            status=status,
+            title=title,
+            reason=reason,
+            retryable=retryable,
+            published_url=published_url,
+        )
+    except OSError as error:
+        print(f"写 outbox 快照失败: {error}", file=sys.stderr)
+        return False
+    return True
+
+
+def _reject_with_snapshot(args, post, reason: str, *, retryable: bool = False) -> int:
+    """记下失败并返回失败退出码。
+
+    失败也要进 outbox：否则它会一直霸占「最久未发」的位置（规格 §3.3
+    的剔除三类），那一篇就永远排不到。
+    """
+    _write_outbox_snapshot(
+        args, status="failed", title=post.title, reason=reason, retryable=retryable
+    )
+    return EXIT_REJECTED
+
+
+def _record_success_snapshot(args, post, published: bool) -> bool:
+    """幂等键落盘：草稿建成了，状态得进 outbox（规格 §7.1）。
+
+    返回 False 表示快照没写进去——那就不**能**报成功（「成功必须确认过」）。
+    """
+    if published:
+        status = "published"
+        reason = "已建草稿并提交发表"
+    else:
+        status = "drafted"
+        reason = "已进草稿箱，待人工在公众号后台发表"
+    return _write_outbox_snapshot(args, status=status, title=post.title, reason=reason)
+
+
 def cmd_publish(args) -> int:
     post = _resolve_post(args.posts_dir, args.slug)
     if post is None:
-        print("找不到文章: {}".format(args.slug), file=sys.stderr)
+        print(f"找不到文章: {args.slug}", file=sys.stderr)
         return EXIT_NOT_FOUND
 
     eligibility = check_eligibility(post)
     if not eligibility.ok:
         print("文章不合规: {}".format("; ".join(eligibility.reasons)), file=sys.stderr)
-        return EXIT_REJECTED
+        return _reject_with_snapshot(
+            args, post, "文章不合规: " + "; ".join(eligibility.reasons)
+        )
 
     if not args.appid or not args.appsecret:
         print("缺少 WX_APPID / WX_APPSECRET 环境变量", file=sys.stderr)
-        return EXIT_REJECTED
+        return _reject_with_snapshot(
+            args, post, "缺少 WX_APPID / WX_APPSECRET 环境变量（未调接口）",
+            retryable=True,
+        )
 
     if len(args.author) > AUTHOR_LIMIT:
         print("作者 {} 超过上限 {} 字符".format(args.author, AUTHOR_LIMIT), file=sys.stderr)
-        return EXIT_REJECTED
+        return _reject_with_snapshot(
+            args, post, f"作者署名超过上限 {AUTHOR_LIMIT} 字符"
+        )
 
     client = publish_module.WeChatClient(
         args.appid, args.appsecret, base_url=args.api_base)
@@ -1048,7 +1113,7 @@ def cmd_publish(args) -> int:
         drafts = _draft_parts(client, store, post, args)
     except RejectedPost as error:
         print(str(error), file=sys.stderr)
-        return EXIT_REJECTED
+        return _reject_with_snapshot(args, post, f"草稿被拒: {error}")
 
     published = False
     for draft in drafts:
@@ -1072,6 +1137,11 @@ def cmd_publish(args) -> int:
     _notify(args, post.title, sum(draft.content_length for draft in drafts),
             args.source_url.rstrip("/") + post.permalink, drafts[0].state,
             action=_overall_action(drafts), published=published)
+
+    # 幂等键落盘：草稿建成了，状态得进 outbox（规格 §7.1）。
+    # 快照写不进去就**不能**报成功——「成功必须确认过」。
+    if not _record_success_snapshot(args, post, published):
+        return EXIT_API_ERROR
     return EXIT_OK
 
 

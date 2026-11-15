@@ -37,6 +37,10 @@ _FONTS = (
     "/System/Library/Fonts/STHeiti Medium.ttc",
     "/Library/Fonts/Arial Unicode.ttf",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    # Debian/Ubuntu 的 fonts-noto-cjk 装在这两个目录（容器镜像默认走
+    # google-noto-cjk，桌面版发行版走 opentype/noto），两个都留着。
+    "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 )
 
@@ -70,7 +74,8 @@ def _palette(seed: str):
     The hues stay inside the brand's blue-to-violet range, so the
     cards look like one set even though no two are alike.
     """
-    digest = hashlib.sha1(seed.encode("utf-8")).digest()
+    # 配色种子：本地内容指纹，只取第一个字节做色相。
+    digest = hashlib.sha256(seed.encode("utf-8")).digest()
     hue = (195 + digest[0] % 55) / 360.0
     top = colorsys.hls_to_rgb(hue, 0.17, 0.55)
     bottom = colorsys.hls_to_rgb((hue + 0.035) % 1.0, 0.11, 0.30)
@@ -179,7 +184,8 @@ def cover_card(slug: str, title: str, category: str, out_dir: Path, *,
     once and re-used until the title or the category changes.
     """
     text = cover_text(title, part_index, part_total)
-    key = hashlib.sha1(
+    # 卡片文件名里的指纹：本地内容指纹，内容变了就该重画。
+    key = hashlib.sha256(
         "{}|{}|{}|{}|{}".format(
             _CARD_VERSION, slug, title, category, text).encode("utf-8")
     ).hexdigest()[:12]

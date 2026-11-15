@@ -73,7 +73,9 @@ def _compress(image, stem: str, limit_bytes: int, max_width: int):
     """
     if image.width > max_width:
         ratio = max_width / float(image.width)
-        image = image.resize((max_width, max(1, int(image.height * ratio))), Image.LANCZOS)
+        image = image.resize(
+            (max_width, max(1, int(image.height * ratio))), Image.Resampling.LANCZOS
+        )
 
     data = _encode_png(image)
     content_type = "image/png"
@@ -93,7 +95,7 @@ def _compress(image, stem: str, limit_bytes: int, max_width: int):
     while len(data) > limit_bytes and min(image.size) > _MIN_DIMENSION:
         image = image.resize(
             (max(1, int(image.width * 0.75)), max(1, int(image.height * 0.75))),
-            Image.LANCZOS,
+            Image.Resampling.LANCZOS,
         )
         data = _encode_jpeg(image, 60)
 

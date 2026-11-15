@@ -9,6 +9,7 @@ Creates:
 Does NOT modify docs/ — runs in CI on a fresh checkout.
 """
 import os, re, shutil, subprocess, sys, json
+from typing import TypeGuard
 
 # The permalinks this tool emits must carry the mount point the
 # site is served under (`root:` in _config.yml): the primary domain
@@ -519,7 +520,12 @@ def split_fm(content):
     return None, content
 
 
-def has_fm_title(fm):
+def has_fm_title(fm) -> TypeGuard[str]:
+    """front matter 里有没有 title 字段。
+
+    **是 TypeGuard**：调用方写 `if has_fm_title(fm):` 之后，类型检查器
+    就知道 fm 不是 None——否则紧接着的 re.search 得自己再判一遍 None。
+    """
     return fm is not None and bool(re.search(r'^title\s*:', fm, re.MULTILINE))
 
 
@@ -694,11 +700,21 @@ def read_matery_about_config():
     section. Handles comments, quoted strings, multiline `|` blocks, and
     the 0/2/4/6-space indent structure used in _config.matery.yml.
 
-    Returns (profile, my_projects, my_skills) as dicts.
+    Returns (profile, my_projects, my_skills, my_education, my_honors,
+    my_timeline) as dicts.
     """
     config_path = '_config.matery.yml'
     if not os.path.isfile(config_path):
-        return {}, {'enable': False, 'data': {}}, {'enable': False, 'data': {}}
+        # **返回值个数要与末尾那条 return 一致**：调用方解包 6 个，少给一个
+        # 就是 ValueError——配置文件不在时反而把整个构建搞崩。
+        return (
+            {},
+            {'enable': False, 'data': {}},
+            {'enable': False, 'data': {}},
+            {'enable': False, 'data': []},
+            {'enable': False, 'data': []},
+            {'enable': False, 'data': []},
+        )
 
     with open(config_path, encoding='utf-8') as f:
         lines = f.readlines()

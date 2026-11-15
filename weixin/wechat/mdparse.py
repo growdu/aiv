@@ -194,11 +194,15 @@ def parse_inline(text: str) -> list:
         if match.start() > position:
             tokens.append(Text(text[position:match.start()]))
         if match.group("image"):
+            # 外层正则已保证 image 组是完整的图片语法，内层必然匹配得上；
+            # 但 match 可能返回 None，类型检查器认得这一点，所以显式收一下。
             image = _IMAGE_RE.match(match.group("image"))
-            tokens.append(Image(image.group(1), image.group(2)))
+            if image is not None:
+                tokens.append(Image(image.group(1), image.group(2)))
         elif match.group("link"):
             link = _LINK_RE.match(match.group("link"))
-            tokens.append(Link(link.group(2), parse_inline(link.group(1))))
+            if link is not None:
+                tokens.append(Link(link.group(2), parse_inline(link.group(1))))
         elif match.group("code"):
             tokens.append(InlineCode(match.group("code")[1:-1]))
         elif match.group("bold"):

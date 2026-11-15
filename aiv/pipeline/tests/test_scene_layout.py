@@ -151,7 +151,7 @@ def test_no_two_chips_ever_overlap(t):
             a = (first.x, first.y, chip_w, chip_h)
             b = (second.x, second.y, chip_w, chip_h)
             assert _overlap(a, b) == 0, (
-                f"t={t:.3f} 时第 {first.index} 块与第 {second.index} 块重叠了"
+                f"t={t:.3f} 时第 {first.slot} 块与第 {second.slot} 块重叠了"
             )
 
 
@@ -160,8 +160,8 @@ def test_the_spilled_chips_end_up_on_the_disk():
     layout = s04_spill.chip_layout(_chips(), 4, t=1.0)
     disk_x = 1920 * s04_spill.DISK_X_RATIO
     disk_w = 1920 * s04_spill.DISK_W_RATIO
-    spilled = [c for c in layout if c.index < 4]
-    staying = [c for c in layout if c.index >= 4]
+    spilled = [c for c in layout if c.slot < 4]
+    staying = [c for c in layout if c.slot >= 4]
     assert len(spilled) == 4 and len(staying) == 2
     for chip in spilled:
         assert chip.progress == pytest.approx(1.0), "搬走的芯片应当已经落盘"
