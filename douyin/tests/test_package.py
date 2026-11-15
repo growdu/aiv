@@ -8,8 +8,8 @@ import pytest
 from douyin import package
 from pyv import epmeta
 
-FILES = ("video.mp4", "cover.jpg", "title.txt", "description.txt",
-         "topics.txt", "text.txt", "publish.md")
+FILES = ("video.mp4", "cover.jpg", "cover_3x4.jpg", "cover_4x3.jpg",
+         "title.txt", "description.txt", "topics.txt", "text.txt", "publish.md")
 
 
 def _package(meta, video, tmp_path, **kwargs):
@@ -32,11 +32,41 @@ def test_the_video_is_a_symlink_to_the_real_file(meta, video, tmp_path):
 
 
 def test_the_text_file_is_the_whole_field(meta, video, tmp_path):
-    """抖音只有那一个字段——包里给的是拼好的整段，粘上去就对。"""
+    """`text.txt` 是开放平台 API 那**一个** `text` 字段的整段。
+
+    网页后台不是那一个字段——它是标题与描述两个框（2026-11-15 实测），
+    所以整段文案只在切 `api` 档时才发得出去。清单里说清了这一点。
+    """
     result = _package(meta, video, tmp_path)
     text = (result.dir / "text.txt").read_text(encoding="utf-8")
     assert text == "32 核机器，解码只占 1 核\n默认发布端只有一个解码线程，串行处理。\n" \
                    "#PostgreSQL #逻辑复制 #数据库内核"
+
+
+def test_the_checklist_fills_two_fields_not_one(meta, video, tmp_path):
+    """**网页后台是标题与描述两个框。**
+
+    照着开放平台文档把整段 `text` 贴进描述框，标题会在正文里重复一遍——
+    清单得写明「作品标题」填哪、「作品描述」填哪。
+    """
+    result = _package(meta, video, tmp_path)
+    checklist = (result.dir / "publish.md").read_text(encoding="utf-8")
+    assert "「作品标题」" in checklist
+    assert "「作品描述」" in checklist
+    assert "title.txt" in checklist
+    assert "description.txt" in checklist
+    assert "topics.txt" in checklist
+
+
+def test_the_checklist_says_to_save_a_draft_not_to_publish(meta, video, tmp_path):
+    """存草稿的按钮叫**「暂存离开」**，旁边那个「发布」是直接发表。
+
+    清单里点错按钮就是真发出去了——所以按钮名要写出来。
+    """
+    result = _package(meta, video, tmp_path)
+    checklist = (result.dir / "publish.md").read_text(encoding="utf-8")
+    assert "暂存离开" in checklist
+    assert "别点错" in checklist
 
 
 def test_the_checklist_warns_against_adding_contacts(meta, video, tmp_path):
@@ -69,6 +99,50 @@ def test_a_vertical_video_gives_a_vertical_cover(meta, tmp_path, make_video):
     result = _package(meta, video, tmp_path)
     with Image.open(result.dir / "cover.jpg") as cover:
         assert cover.size == (1080, 1920)
+
+
+def test_the_package_has_the_two_cover_slots_the_backend_wants(meta, tmp_path,
+                                                               make_video):
+    """后台要**两张**封面：竖封面 3:4 与横封面 4:3。
+
+    2026-11-15 实测 creator.douyin.com：封面区有两个槽位，分别标着
+    「竖封面3:4」「横封面4:3」，只给一张时后台的「发文助手」提示
+    「横/竖双封面缺失」。这两个比例是后台标在那儿的，不是我们猜的。
+    """
+    from PIL import Image
+
+    video = make_video(tmp_path / "ep01-vertical.mp4", size="1080x1920")
+    result = _package(meta, video, tmp_path)
+    with Image.open(result.dir / "cover_3x4.jpg") as cover:
+        assert cover.size == (1080, 1440)
+        assert cover.size[0] * 4 == cover.size[1] * 3
+    with Image.open(result.dir / "cover_4x3.jpg") as cover:
+        assert cover.size == (1200, 900)
+        assert cover.size[0] * 3 == cover.size[1] * 4
+
+
+def test_the_horizontal_cover_letterboxes_instead_of_cropping(meta, tmp_path,
+                                                              make_video):
+    """横封面是**留白**，不是裁一刀。
+
+    竖版成片（9:16）裁一刀取 4:3 只剩中间一条横带，画面里的字会被
+    拦腰截断——横槽位本来就是给横版视频准备的，竖片填它只能留白。
+    """
+    from PIL import Image
+
+    video = make_video(tmp_path / "ep01-vertical.mp4", size="1080x1920")
+    result = _package(meta, video, tmp_path)
+    with Image.open(result.dir / "cover_4x3.jpg") as cover:
+        # 上下左右都有底色：画面被缩到中间，两侧是留白。
+        assert cover.getpixel((4, 4)) == (255, 255, 255)
+
+
+def test_the_checklist_points_at_both_cover_slots(meta, video, tmp_path):
+    """清单里要写明哪张填哪个槽位。"""
+    result = _package(meta, video, tmp_path)
+    checklist = (result.dir / "publish.md").read_text(encoding="utf-8")
+    assert "cover_3x4.jpg" in checklist
+    assert "cover_4x3.jpg" in checklist
 
 
 def test_the_checklist_says_which_aspect_ratio_it_is(meta, tmp_path, make_video):

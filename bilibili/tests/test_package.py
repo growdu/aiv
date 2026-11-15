@@ -275,6 +275,24 @@ def test_a_changed_video_resets_the_status(meta, video, tmp_path, make_video):
     assert meta_json["published_url"] is None
 
 
+def test_the_checklist_follows_the_state(meta, video, tmp_path):
+    """清单写着「待你上传」而状态是「已发布」，人会**再传一遍**。
+
+    人只看 `publish.md`——它和状态文件说的不是一回事，就是在平台上
+    多出一条重复的作品。状态一变，清单的抬头与状态说明就得跟着变。
+    """
+    out = tmp_path / "out"
+    package.build_package("ep02", meta, video, out)
+    checklist = (out / "ep02" / "publish.md").read_text(encoding="utf-8")
+    assert checklist.startswith("# 待发布：")
+    assert "待你上传" in checklist
+
+    _mark_published(out, "ep02", "https://www.bilibili.com/video/BV1xx411c7mD")
+    checklist = (out / "ep02" / "publish.md").read_text(encoding="utf-8")
+    assert checklist.startswith("# 已发布：")
+    assert "待你上传" not in checklist
+
+
 # --- 快照 --------------------------------------------------------------------
 
 

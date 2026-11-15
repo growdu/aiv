@@ -19,10 +19,19 @@ def _run(args: list[str]) -> subprocess.CompletedProcess:
 
     带着继承来的 PYTHONPATH 跑，测试就是假的：路径一给，`pyv` 自然能找到，
     adapter 挂没挂 `sys.path` 这件事根本没被验到。
+
+    **编码必须两端对齐。** 子进程的 stdout 是按 `PYTHONIOENCODING` 写的
+    （本机是 utf-8），而 `text=True` 的父进程按 `locale.getpreferredencoding`
+    解码（中文 Windows 是 cp936/GBK）——两边对不上，`UnicodeDecodeError`
+    会在读取线程里炸掉，`proc.stdout` 变成 `None`，测试报成
+    「argument of type 'NoneType' is not iterable」，跟被测的东西毫无关系。
+    所以这里**显式**把子进程编码定成 utf-8，父进程也按 utf-8 解。
     """
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    env["PYTHONIOENCODING"] = "utf-8"
     return subprocess.run([sys.executable, "-m", "douyin.cli", *args],
-                          cwd=DOUYIN_DIR, env=env, capture_output=True, text=True)
+                          cwd=DOUYIN_DIR, env=env, capture_output=True,
+                          encoding="utf-8", errors="replace")
 
 
 def test_the_cli_runs_without_pythonpath():
@@ -157,12 +166,19 @@ def test_a_video_that_vanished_gives_an_error_not_a_traceback(tmp_path,
     assert "Traceback" not in err
 
 
-def test_drafted_is_not_an_option():
-    """抖音这一档**没有**草稿档。
+def test_drafted_is_now_an_option():
+    """抖音这一档**有**草稿档了。
 
-    抖音创作者后台的草稿能力没核实过，设一个没验证过的档位，
-    等于给「其实存不下来」发一张通行证（规格 §6.6.1）。
+    2026-11-15 实测：点「暂存离开」之后，平台首页的「作品发布」卡片上出现
+    「继续编辑」，点进去 URL 是 `?enter_from=home_draft`，
+    视频、标题、描述、话题全在原处——草稿能力验掉了，这一档才敢设
+    （规格 §6.6.7）。
+
+    上一版这条测试是**反过来的**：它断言「drafted 不是选项」，
+    理由是「后台草稿能力没核实过，设一个没验证过的档位等于给
+    『其实存不下来』发一张通行证」。现在核实过了，所以反过来。
     """
     proc = _run(["mark", "drafted", "ep01"])
-    assert proc.returncode != 0
-    assert "drafted" not in proc.stdout
+    # 不是「参数不合法」——是这一期压根没有元数据/发布包
+    assert "invalid choice" not in proc.stderr
+    assert proc.returncode == 1

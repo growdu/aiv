@@ -30,14 +30,89 @@ from douyin import assets, contract, snapshot, state
 # 仓库根：douyin/douyin/package.py → douyin/douyin → douyin → 仓库根
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+# 清单里随状态改写的两处：抬头与状态说明。
+#
+# **状态一变，这两处就得跟着变。** 人只看 `publish.md`——
+# 它写着「待你上传」而 `meta.json` 写着「已存草稿」，人就会**再传一遍**，
+# 在平台上多出一条重复的作品。含糊地说状态是发布场景里最贵的一种 bug。
+_STATUS_NOTE_START = "<!-- status-note:start -->"
+_STATUS_NOTE_END = "<!-- status-note:end -->"
+
+# 状态 → 清单抬头的说法
+_STATUS_LABELS = {
+    "packaged": "待发布",
+    "drafted": "已存草稿，待发表",
+    "published": "已发布",
+}
+
+
+def _status_heading(status: str, title: str, episode: str) -> str:
+    label = _STATUS_LABELS.get(status, "待发布")
+    return f"# {label}：{title}（{episode}）"
+
+
+def _status_note(status: str) -> list[str]:
+    """清单末尾的状态说明。措辞跟 `notify` 那一套对齐。"""
+    if status == "drafted":
+        return [
+            "> **已存草稿，待你点发表。** 草稿已经在抖音后台了——"
+            "**这不是「待上传」**，再传一遍会在平台上多出一条重复的作品。",
+        ]
+    if status == "published":
+        return [
+            "> **已发布。** 这一条已经发出去了。",
+        ]
+    return [
+        "> **待你上传。** 这一步没做完之前，状态只能写「待上传」；"
+        "存完草稿再回填成「已存草稿」。",
+    ]
+
+
+def rewrite_status_block(path: Path, status: str) -> None:
+    """把清单里随状态改写的两处改成当前状态。
+
+    `mark published` / `mark drafted` 改了 `meta.json`，清单也得跟着改——
+    否则包里的 `publish.md` 与 `meta.json` 说的不是一回事。
+    """
+    if not path.is_file():
+        return
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        if line.startswith("# ") and "：" in line:
+            # 只换抬头上的状态词，标题与期号原样留着。
+            lines[index] = f"# {_STATUS_LABELS.get(status, '待发布')}：" + \
+                line.split("：", 1)[1]
+            break
+    if _STATUS_NOTE_START in lines and _STATUS_NOTE_END in lines:
+        start = lines.index(_STATUS_NOTE_START)
+        end = lines.index(_STATUS_NOTE_END)
+        lines[start + 1:end] = _status_note(status)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
 
 def repo_relative(path: str | Path, root: str | Path | None = None) -> str:
-    """把路径写成相对仓库根的形式。
+    """把路径写成相对仓库根的形式（**分隔符一律用 `/`**）。
 
     快照要入库。绝对路径换台机器就对不上，还把本机信息带进了库。
+
+    两条规矩：
+
+    1. **分隔符用正斜杠。** 快照是入库的文本，同一个仓库在 Windows 与
+       Linux 上跑出来的内容必须一模一样——反斜杠会让每台机器各写一份，
+       提交上去就成了「谁最后跑谁说了算」。
+    2. **永远不是绝对路径。** 目标不在仓库里（甚至在另一个盘）时，
+       `os.path.relpath` 拿不到相对路径；那就退回到目标所在盘根的相对形式，
+       仍然不带盘符与绝对路径。
     """
     base = Path(root) if root else REPO_ROOT
-    return os.path.relpath(Path(path).resolve(), base.resolve())
+    target = Path(path).resolve()
+    try:
+        relative = os.path.relpath(target, base.resolve())
+    except ValueError:
+        # Windows 跨盘符：两边没有共同祖先，relpath 直接抛。
+        # 退回到目标所在盘的盘根——仍是相对路径，也不带本机盘符。
+        relative = os.path.relpath(target, target.anchor)
+    return Path(relative).as_posix()
 
 
 class PackageError(RuntimeError):
@@ -80,34 +155,83 @@ def _aspect_label(info: preflight.VideoInfo) -> str:
 
 def _checklist(episode: str, copy: contract.DouyinCopy,
                info: preflight.VideoInfo, text: str,
-               warnings: list[str], limits: dict) -> str:
+               warnings: list[str], limits: dict,
+               status: str = "packaged") -> str:
     topics = contract.topics_line(copy.topics)
+    web_title, web_description = contract.web_fields(copy)
     # **上限写能力声明里的那个数**，不写死 1000：写死的话，改了
     # `publish/capabilities/douyin.toml` 的 text_chars，清单还在说 1000——
     # 两处数字打架，人照着清单发，文案却被闸门拦下。
     limit = limits.get("text_chars")
-    limit_text = f"（上限 {limit}）" if isinstance(limit, int) and limit > 0 else ""
+    limit_text = f"，上限 {limit}" if isinstance(limit, int) and limit > 0 else ""
+    title_limit = limits.get("title_chars")
+    title_limit_text = (
+        f"，上限 {title_limit}"
+        if isinstance(title_limit, int) and title_limit > 0 else "")
+    description_limit = limits.get("description_chars")
+    description_limit_text = (
+        f"，编辑上限 {description_limit}"
+        if isinstance(description_limit, int) and description_limit > 0 else "")
     lines = [
-        f"# 待发布：{copy.title}（{episode}）",
+        _status_heading(status, copy.title, episode),
         "",
         "| 项 | 值 |",
         "| --- | --- |",
         f"| 视频 | `video.mp4`（{info.duration:.1f} s，**{_aspect_label(info)}**） |",
-        f"| 标题 | {copy.title}（{len(copy.title)} 字） |",
-        f"| 正文 | {len(copy.description)} 字 |",
+        f"| 作品标题 | {copy.title}（{len(web_title)} 字{title_limit_text}） |",
+        f"| 作品描述 | {len(web_description)} 字{description_limit_text} |",
         f"| 话题 | {topics or '（无）'} |",
-        f"| 整段文案 | {len(text)} 字{limit_text} |",
-        "| 封面 | `cover.jpg`（与成片同比例） |",
+        f"| 整段文案（开放平台 api 档用） | {len(text)} 字{limit_text} |",
+        "| 封面 | 竖封面槽位 `cover_3x4.jpg`；横封面槽位 `cover_4x3.jpg` |",
         "",
-        "## 步骤",
+        "## 步骤（创作者中心 → 作品发布 → 发布视频）",
         "",
-        "- [ ] 打开抖音创作者平台 → 发布视频",
         "- [ ] 上传 `video.mp4`",
-        "- [ ] 粘贴 `text.txt` 的**整段内容**（标题、正文、话题已经拼好了）",
-        "- [ ] 选封面：`cover.jpg`，或直接用平台自动生成的首帧",
-        "- [ ] 发布",
-        "- [ ] 回填链接："
-        f"`python -m douyin.cli mark published {episode} --url \"<链接>\"`",
+        "- [ ] 「作品标题」填 `title.txt` 的内容"
+        f"（**只填这一行**，{len(web_title)} 字{title_limit_text}）",
+        "- [ ] 「作品描述」填 `description.txt` 的内容，再换一行，"
+        "填 `topics.txt` 的内容",
+        "- [ ] 封面：**两个槽位要分别上传两张图**——"
+        "封面弹窗顶部有「设置竖封面 / 设置横封面」两个页签，"
+        "竖封面槽位传 `cover_3x4.jpg`，横封面槽位传 `cover_4x3.jpg`"
+        "（只传一张，后台的「发文助手」会提示「横/竖双封面缺失」；"
+        "两张都传了会变成「封面效果检测通过」）",
+        "- [ ] **点「暂存离开」存草稿**——旁边那个「发布」是直接发表，别点错",
+        "- [ ] 存完**回上传页或首页确认入口还在**："
+        "上传页会弹「你还有上次未发布的视频，是否继续编辑？」，"
+        "首页的作品发布卡片上会出现「继续编辑」"
+        "（辅助提示是「你有一个上次未发布的作品」）；"
+        "点进去看到本条的标题与描述，才算存成功",
+        "- [ ] 回填状态：`python -m douyin.cli mark drafted "
+        f"{episode}`",
+        "- [ ] 真要发表时：从「继续编辑」进去点「发布」，"
+        f"再回填 `python -m douyin.cli mark published {episode} --url \"<链接>\"`",
+        "",
+        "> **抖音的草稿不在「内容管理」里。** 2026-11-15 实测："
+        "内容管理 → 作品的筛选只有「全部 / 已发布 / 审核中 / 未通过」，"
+        "**没有草稿一栏**；上传页（`content/upload`）也没有草稿列表——"
+        "它只有一条「你还有上次未发布的视频，是否继续编辑？」的提示。",
+        "",
+        "> **草稿有两个入口，都要走平台自己给的按钮。** 2026-11-15 实测："
+        "①上传页提示里的「继续编辑」（URL 带 `?enter_from=draft`），"
+        "②首页 → 作品发布卡片 →「继续编辑」（URL 带 `?enter_from=home_draft`）。"
+        "**别直接打开草稿编辑页的 URL**——实测直接开 `?enter_from=draft` "
+        "得到的是**空编辑器**：标题与描述都是空的，视频也没了。",
+        "",
+        "> **草稿会消失，别当保险箱。** 2026-11-15 实测到一次："
+        "中途首页的「继续编辑」入口消失了，"
+        "直接开草稿编辑页 URL 是空的。存完草稿要当场确认入口还在。",
+        "",
+        "> **同时能留几条草稿没实测**，只验过一条。"
+        "要发两条就先发完一条再存下一条。",
+        "",
+        "> **网页后台是标题与描述两个框。** 开放平台 API 那一个 `text` 字段"
+        "（`text.txt`）是切 `api` 档时才用的——整段贴进描述框，"
+        "标题会在正文里重复一遍。",
+        "",
+        "> **话题内嵌在描述里就行。** 描述框里写 `#话题` 会被抖音识别成"
+        "真话题（实测：敲 `#开源` 立刻弹出热度与关联话题），"
+        "不用点「#添加话题」。",
         "",
         "> **文案原样贴，别自己加东西。** 抖音禁站外引流与过度营销——"
         "在文案里加网址、微信号、QQ、电话，都是最常见的限流原因。"
@@ -124,7 +248,9 @@ def _checklist(episode: str, copy: contract.DouyinCopy,
         lines += [f"- ⚠️ {warning}" for warning in warnings]
         lines += [""]
     lines += [
-        "> **待你上传。** 这一步没做完之前，状态只能写「待上传」。",
+        _STATUS_NOTE_START,
+        *_status_note(status),
+        _STATUS_NOTE_END,
         "",
     ]
     return "\n".join(lines)
@@ -248,8 +374,9 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
 
     # 包里该有的东西。**清单、封面、软链一样都不能少**——少了就是
     # 一个发不出去的包，而命令会报「成功」。
-    names = ("video.mp4", "cover.jpg", "title.txt", "description.txt",
-             "topics.txt", "text.txt", "publish.md")
+    names = ("video.mp4", "cover.jpg", "cover_3x4.jpg", "cover_4x3.jpg",
+             "title.txt", "description.txt", "topics.txt", "text.txt",
+             "publish.md")
     files = {name: target / name for name in names}
 
     reused = False
@@ -264,7 +391,7 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
             reused = True
     if not reused:
         target.mkdir(parents=True, exist_ok=True)
-        assets.make_cover(video_path, copy.cover_at, target)
+        assets.make_covers(video_path, copy.cover_at, target)
         link = target / "video.mp4"
         if link.exists() or link.is_symlink():
             link.unlink()
@@ -273,7 +400,7 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
         # 封面重抽一次：包里那张是上一次抽的，而元数据里的取帧点可能改了。
         # 封面与 `meta.json` 记的 `cover_at` 对不上，人按清单选封面就会
         # 选错那一帧（清单说 1.0 秒，包里那张是 3 秒的）。
-        assets.make_cover(video_path, copy.cover_at, target)
+        assets.make_covers(video_path, copy.cover_at, target)
 
     # **文案每次都按当前元数据重写。**
     # 成片没变 ≠ 文案没变：改了标题再重跑，必须出新标题。
@@ -284,9 +411,6 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
         contract.topics_line(copy.topics), encoding="utf-8")
     # text.txt 是平台真正要的那一个字段：标题、正文、话题拼好的整段。
     (target / "text.txt").write_text(text, encoding="utf-8")
-    (target / "publish.md").write_text(
-        _checklist(episode, copy, info, text, warnings, limits),
-        encoding="utf-8")
 
     # 人工回填的发布状态不能被出包抹掉。
     # 成片没变 → 之前发出去的就是这一条，状态保留；
@@ -297,6 +421,12 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
     else:
         status = "packaged"
         published_url = None
+
+    # 清单要按**当前状态**写：复用包的状态可能是「已存草稿」，
+    # 清单还写「待你上传」，人会再传一遍。
+    (target / "publish.md").write_text(
+        _checklist(episode, copy, info, text, warnings, limits, status=status),
+        encoding="utf-8")
 
     (target / "meta.json").write_text(
         json.dumps({
@@ -319,6 +449,7 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
 
     reason = {
         "packaged": "开放平台发布能力需企业主体，已出包待人工上传",
+        "drafted": "已存草稿，待人工发表",
         "published": "人工发布后回填",
     }.get(status, "人工发布后回填")
     outbox = Path(outbox_dir) if outbox_dir else snapshot.OUTBOX_DIR
@@ -347,4 +478,30 @@ def mark_published(target: str | Path, url: str) -> Path:
         json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+    rewrite_status_block(directory / "publish.md", "published")
+    return path
+
+
+def mark_drafted(target: str | Path) -> Path:
+    """回填「已存草稿」：草稿已在抖音后台，等人点发表。
+
+    **和 `published` 是两回事。** 草稿还没发出去，所以 `published_url` 要清掉——
+    留着旧链接会让人以为这条已经发出去了。
+
+    这一档是 **2026-11-15 实测出来的**：点「暂存离开」之后，平台首页的
+    「作品发布」卡片上出现「继续编辑」，点进去 URL 带 `?enter_from=home_draft`，
+    视频与文案都在原处。**不是**拍脑袋设的档位（规格 §6.6.1）。
+    """
+    directory = Path(target)
+    path = directory / "meta.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"发布包不存在：{directory}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["status"] = "drafted"
+    data["published_url"] = None
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    rewrite_status_block(directory / "publish.md", "drafted")
     return path

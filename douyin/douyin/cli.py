@@ -2,6 +2,7 @@
 
     python -m douyin.cli package <期号>
     python -m douyin.cli status <期号>
+    python -m douyin.cli mark drafted <期号>
     python -m douyin.cli mark published <期号> --url <链接>
 """
 from __future__ import annotations
@@ -103,14 +104,15 @@ def cmd_status(args: argparse.Namespace) -> int:
 def cmd_mark(args: argparse.Namespace) -> int:
     """回填状态。
 
-    抖音这一档只有 `published` 一档：抖音创作者后台的草稿能力没核实过，
-    不设一个没验证过的档位（规格 §6.6.1）。
+    两个档：
+    - `drafted`：草稿已存在抖音后台（人工点「暂存离开」后回填）；
+    - `published`：已发表，带公开链接。
 
     **先做完会失败的事，再落状态。** 顺序反了就会留下假的「已发布」：
     状态文件写着已发布、快照也写了链接，而发布包根本不存在——
     下一个人照着快照去找，找不到任何东西。
     """
-    if not args.url:
+    if args.state == "published" and not args.url:
         print("ERROR published 需要 --url（公开链接）", file=sys.stderr)
         return 1
 
@@ -125,7 +127,10 @@ def cmd_mark(args: argparse.Namespace) -> int:
     # 2. 发布包：没有包就没有「发出去的是哪一版」——不许回填
     target = Path(args.out) / args.episode
     try:
-        package.mark_published(target, args.url)
+        if args.state == "published":
+            package.mark_published(target, args.url)
+        else:
+            package.mark_drafted(target)
     except FileNotFoundError as error:
         print(f"ERROR {error}", file=sys.stderr)
         print("      没有发布包就回填不了：先出包，再上传，再回填"
@@ -136,22 +141,32 @@ def cmd_mark(args: argparse.Namespace) -> int:
     # 3. 到这儿才算成了：状态与快照一起落
     store = state.StateStore(Path(args.out) / "state.json")
     current = store.get(args.episode)
-    current.status = "published"
-    current.published_url = args.url
-    reason = "人工发布后回填"
+    current.status = args.state
+    if args.state == "published":
+        current.published_url = args.url
+        reason = "人工发布后回填"
+        published_url = args.url
+        summary = "已回填发布链接"
+    else:
+        # 草稿还没发出去：链接必须清空，
+        # 留着旧链接会让人以为这条已经发出去了。
+        current.published_url = None
+        reason = "已存草稿，待人工发表"
+        published_url = None
+        summary = "已回填草稿状态"
     store.save(args.episode, current)
 
     outbox = Path(args.outbox) if args.outbox else snapshot.OUTBOX_DIR
     snapshot.write_snapshot(
         outbox / f"{args.episode}__douyin.json",
-        episode=args.episode, status="published", title=title,
+        episode=args.episode, status=args.state, title=title,
         # 相对路径：快照要入库，绝对路径换台机器就对不上
-        package_dir=package.repo_relative(target), published_url=args.url,
+        package_dir=package.repo_relative(target), published_url=published_url,
         reason=reason,
     )
-    notify.notify(args.episode, "published", title, str(target),
+    notify.notify(args.episode, args.state, title, str(target),
                   os.environ.get(WEBHOOK_ENV))
-    print(f"OK {args.episode} 已回填发布链接")
+    print(f"OK {args.episode} {summary}")
     return 0
 
 
@@ -174,8 +189,8 @@ def main(argv: list[str] | None = None) -> int:
     p_status.set_defaults(func=cmd_status)
 
     p_mark = sub.add_parser("mark")
-    p_mark.add_argument("state", choices=["published"],
-                        help="published=已发表（要 --url）")
+    p_mark.add_argument("state", choices=["published", "drafted"],
+                        help="published=已发表（要 --url）；drafted=已存草稿，待人工发表")
     p_mark.add_argument("episode")
     p_mark.add_argument("--url", default=None, help="公开链接，published 档必填")
     p_mark.add_argument("--out", default=str(DEFAULT_OUT))

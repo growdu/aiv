@@ -85,12 +85,17 @@ def _the_repo_outbox_stays_untouched():
         import subprocess
 
         probe = subprocess.run(["git", "rev-parse", "--git-dir"],
-                               cwd=REPO_ROOT, capture_output=True, text=True)
+                               cwd=REPO_ROOT, capture_output=True)
         if probe.returncode != 0:
             return None                      # 不在 git 仓库里，跳过这条判据
-        result = subprocess.run(["git", "ls-files", "publish/outbox"],
-                                cwd=REPO_ROOT, capture_output=True, text=True)
-        return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+        # **`-z` 是必须的**：默认的 `git ls-files` 遇到非 ASCII 路径会把它
+        # 写成八进制转义并加引号（"a\346\227\245.json"），拿那个字符串去跟
+        # 文件系统上的真实中文名比对，永远比不上——守卫就成了永远误报的摆设。
+        # `-z` 输出的是 NUL 分隔的原始路径，不转义、不加引号。
+        result = subprocess.run(["git", "ls-files", "-z", "publish/outbox"],
+                                cwd=REPO_ROOT, capture_output=True)
+        raw = result.stdout.decode("utf-8", errors="replace")
+        return {line for line in raw.split("\0") if line.strip()}
 
     before = _on_disk()
     yield

@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import locale
 import os
 import subprocess
 import sys
@@ -250,6 +251,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _decode(raw: bytes | None) -> str:
+    """把子进程的输出解码成文本。
+
+    **不能用 `text=True`。** 那会让父进程按 `locale.getpreferredencoding()`
+    解码：中文 Windows 那是 cp936，而 adapter 输出的是 UTF-8
+    （Linux 上是 UTF-8；Windows 上由 `PYTHONIOENCODING` 定）——
+    两边对不上，出来的就是乱码：「平台接口报错」会变成
+    「骞冲彴鎺ュ彛鎶ラ敊」。而这段文字会被原样写进 outbox 快照的
+    `reason`，**乱码就这样进了库**。
+
+    先按 UTF-8 解；真不是 UTF-8 才退回系统编码。
+    """
+    if not raw:
+        return ""
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw.decode(locale.getpreferredencoding(False), errors="replace")
+
+
 def _config_from_args(args) -> ScheduleConfig:
     """把命令行选项与环境变量合成一份配置。"""
     return resolve_config(
@@ -313,7 +334,6 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
             cwd=str(working_dir),
             env=environment,
             capture_output=True,
-            text=True,
             timeout=timeout,
         )
     except subprocess.TimeoutExpired:
@@ -325,8 +345,8 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
 
     return AdapterResult(
         code=completed.returncode,
-        stdout=completed.stdout or "",
-        stderr=completed.stderr or "",
+        stdout=_decode(completed.stdout),
+        stderr=_decode(completed.stderr),
     )
 
 

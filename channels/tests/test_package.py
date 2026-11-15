@@ -81,13 +81,17 @@ def test_the_snapshot_records_a_relative_package_dir(tmp_path):
     target.mkdir(parents=True)
     relative = package.repo_relative(target)
     assert not Path(relative).is_absolute()
-    assert relative.endswith(os.path.join("out", "ep01"))
+    assert relative.endswith("out/ep01")
 
 
 def test_repo_relative_strips_the_workspace_prefix():
-    """在仓库里出包时，写出来的是 channels/out/<EP> 这种相对形式。"""
+    """在仓库里出包时，写出来的是 channels/out/<EP> 这种相对形式。
+
+    **分隔符用正斜杠**：快照是入库的文本，同一个仓库在 Windows 与 Linux
+    上跑出来的内容必须一模一样——反斜杠会让每台机器各写一份。
+    """
     target = package.REPO_ROOT / "channels" / "out" / "ep01"
-    assert package.repo_relative(target) == os.path.join("channels", "out", "ep01")
+    assert package.repo_relative(target) == "channels/out/ep01"
 
 
 def test_the_package_meta_says_packaged_not_published(meta, video, tmp_path):

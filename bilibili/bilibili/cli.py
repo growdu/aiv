@@ -145,6 +145,8 @@ def cmd_mark(args: argparse.Namespace) -> int:
             # 但包**必须在**：草稿是拿这个包投出去的。
             if not (target / "meta.json").is_file():
                 raise FileNotFoundError(f"发布包不存在：{target}")
+            # 清单要跟着状态改：它还写「待你上传」，人会再传一遍。
+            package.rewrite_status_block(target / "publish.md", args.state)
     except FileNotFoundError as error:
         print(f"ERROR {error}", file=sys.stderr)
         print("      没有发布包就回填不了：先出包，再投稿，再回填"
