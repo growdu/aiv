@@ -19,6 +19,7 @@
 字数区间必须与代码里的常量一致。
 """
 
+import os
 import re
 import shutil
 import subprocess
@@ -95,11 +96,17 @@ def build_corpus(root: Path, drafts) -> None:
 
 def run_sync(root: Path) -> None:
     """Run the repository's sync-hexo.py over the corpus in ``root``."""
+    # **解码必须显式。** `text=True` 会按 `locale.getpreferredencoding()`
+    # 解码（中文 Windows 是 cp936），而子进程输出的是 UTF-8——
+    # 两边对不上就会在读取线程里炸出 UnicodeDecodeError，`stdout` 变 None。
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
     result = subprocess.run(
         [sys.executable, str(SYNC_SCRIPT)],
         cwd=str(root),
         capture_output=True,
-        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
     )
     assert result.returncode == 0, "sync-hexo.py 失败：\n{}\n{}".format(
         result.stdout, result.stderr
