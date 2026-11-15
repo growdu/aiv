@@ -10,6 +10,7 @@
 **两边不许漂**：`publish/tests/test_video_publish_contracts.py` 拿真实的
 storyboard 对照两边结果，规则一改就会红。
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,11 +19,21 @@ from typing import Protocol, Sequence, runtime_checkable
 
 @runtime_checkable
 class SubtitleEventLike(Protocol):
-    """字幕事件：只要有起点、终点与文本。"""
+    """字幕事件：只要有起点、终点与文本。
 
-    start: float
-    end: float
-    text: str
+    属性写成**只读 property** 而不是可写属性：可写属性的 Protocol 是不变的
+    （invariant），frozen dataclass 配不上它；只读 property 让它协变，
+    ``Sequence[SubtitleEvent]`` 才能传给 ``Sequence[SubtitleEventLike]``。
+    """
+
+    @property
+    def start(self) -> float: ...
+
+    @property
+    def end(self) -> float: ...
+
+    @property
+    def text(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -46,19 +57,23 @@ def events_from_storyboard(raw: dict) -> list[SubtitleEvent]:
     """
     events: list[SubtitleEvent] = []
     for item in raw.get("subtitles") or []:
-        events.append(SubtitleEvent(
-            start=float(item["start"]),
-            end=float(item["end"]),
-            text=str(item.get("text", "")),
-        ))
+        events.append(
+            SubtitleEvent(
+                start=float(item["start"]),
+                end=float(item["end"]),
+                text=str(item.get("text", "")),
+            )
+        )
     if events:
         return events
     for scene in raw.get("scenes") or []:
-        events.append(SubtitleEvent(
-            start=float(scene["start"]),
-            end=float(scene["end"]),
-            text=str(scene.get("subtitle", "")),
-        ))
+        events.append(
+            SubtitleEvent(
+                start=float(scene["start"]),
+                end=float(scene["end"]),
+                text=str(scene.get("subtitle", "")),
+            )
+        )
     return events
 
 
@@ -78,9 +93,5 @@ def build_srt(events: Sequence[SubtitleEventLike]) -> str:
     """
     blocks = []
     for index, event in enumerate(events, start=1):
-        blocks.append(
-            f"{index}\n"
-            f"{format_timestamp(event.start)} --> {format_timestamp(event.end)}\n"
-            f"{event.text}\n"
-        )
+        blocks.append(f"{index}\n{format_timestamp(event.start)} --> {format_timestamp(event.end)}\n{event.text}\n")
     return "\n".join(blocks)
