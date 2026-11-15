@@ -5,7 +5,10 @@
     "toutiao",
     "channels",
     "bilibili",
+    "browser",
     "aiv/pipeline"
   ],
+  "venvPath": ".",
+  "venv": ".venv",
   "reportMissingImports": "warning"
 }

@@ -6,6 +6,8 @@ public/
 
 # Dependencies
 node_modules/
+# Python 项目环境（类型检查与本地测试用；依赖清单在 requirements/）
+.venv/
 
 # OS
 .DS_Store
@@ -25,6 +27,9 @@ __pycache__/
 
 # Superpowers scratch: SDD ledgers, task briefs, review packages.
 .superpowers/
+
+# Agent session scratch (pi/Claude session ids) — local bookkeeping only.
+session.txt
 
 # Media assets (audio / video) — never committed, kept on local disk only.
 # A single finished cut is 15~35 MB; 100 episodes would be GB-scale, and a
