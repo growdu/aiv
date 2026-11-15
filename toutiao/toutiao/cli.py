@@ -22,15 +22,17 @@ Two things this module refuses to do quietly:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from .capability import default_capability_path, load_capability
 from .contract import slice_post
 from .mdparse import discover, discover_unsupported, load_post
 from .notify import build_message, send
-from .publish import PackageResult, write_package, write_snapshot
+from .publish import PackageResult, snapshot_name, write_package, write_snapshot
 from .state import StateStore, fingerprint, needs_publish
 
 __all__ = [
@@ -310,6 +312,69 @@ def cmd_publish(args) -> int:
     return code
 
 
+def cmd_mark(args) -> int:
+    """Record that the article went out through the editor.
+
+    The pipeline can package an article but cannot publish it: the account
+    has no open-platform API permission, so publishing is a human action in
+    the editor.  Somebody has to write that down -- otherwise the snapshot
+    keeps saying "待人工上传" for an article that is already live, and the
+    next run reports the wrong state.
+
+    头条号只标 ``published`` 一档：草稿分支（``save=0``）平台一律拒绝
+    （``err_no 7050``，见 docs/02-试点记录.md §R2.F），标"已存草稿"只会是
+    一句假话。
+    """
+    if args.state != "published":
+        print(
+            "头条号只标 published 一档（草稿分支平台一律拒绝）",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
+    if not args.url:
+        print("published 档必须给 --url（公开链接）", file=sys.stderr)
+        return EXIT_USAGE
+
+    post = _resolve_post(args.posts_dir, args.slug)
+    if post is None:
+        print("找不到文章: {}".format(args.slug), file=sys.stderr)
+        return EXIT_USAGE
+
+    path = Path(args.outbox_dir) / snapshot_name(post.slug, "toutiao")
+    if not path.is_file():
+        print(
+            "找不到状态快照：{}（先跑一次 convert）".format(path),
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        print("状态快照读不了：{}".format(error), file=sys.stderr)
+        return EXIT_ERROR
+
+    payload["status"] = "published"
+    payload["published_url"] = args.url
+    payload["reason"] = None
+    payload["updated_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    store = StateStore(args.state_file)
+    state = store.get(post.slug)
+    state.status = "published"
+    state.published_url = args.url
+    store.save(post.slug, state)
+
+    print("标题：{}".format(payload.get("title", "")))
+    print("状态：published")
+    print("公开链接：{}".format(args.url))
+    print("状态快照：{}".format(path))
+    return EXIT_OK
+
+
 def cmd_status(args) -> int:
     """Show the recorded state of every article."""
     store = StateStore(args.state_file)
@@ -378,6 +443,14 @@ def build_parser() -> argparse.ArgumentParser:
                              parents=[_common_parser()])
     publish.add_argument("slug")
     publish.set_defaults(func=cmd_publish)
+
+    mark = sub.add_parser("mark", help="记录人工发表的结果",
+                           parents=[_common_parser()])
+    mark.add_argument("state", choices=["published"],
+                      help="published=已发表（要 --url）")
+    mark.add_argument("slug")
+    mark.add_argument("--url", default=None, help="公开链接，published 档必填")
+    mark.set_defaults(func=cmd_mark)
 
     sub.add_parser("status", help="查看状态",
                    parents=[_common_parser()]).set_defaults(func=cmd_status)

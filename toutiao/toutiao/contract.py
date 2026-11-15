@@ -68,6 +68,11 @@ _INLINE_CODE = re.compile(r"(`+)(.+?)\1", re.DOTALL)
 _LINK = re.compile(r"(?<!!)\[([^\]]*)\]\([^)]*\)")
 _LINK_REFERENCE = re.compile(r"(?<!!)\[([^\]]*)\]\[[^\]]*\]")
 _LINK_DEFINITION = re.compile(r"^\[[^\]]+\]:\s*\S+")
+# A markdown thematic break: a line made of three or more -, * or _.
+# It is markup, not prose -- keeping it would put a literal "---" line into
+# the Toutiao body (and at the very top of the article that reads as a
+# broken document rather than a separator).
+_THEMATIC_BREAK = re.compile(r"^(?:-{3,}|\*{3,}|_{3,})$")
 _CJK = re.compile(r"[\u3000-\u9fff\uff00-\uffef]")
 
 
@@ -267,6 +272,12 @@ def _scan(body: str) -> tuple[list[str], list[str]]:
             continue
 
         if stripped.startswith("|") or stripped.startswith(">"):
+            flush()
+            continue
+
+        if _THEMATIC_BREAK.match(stripped):
+            # 分隔线是标记，不是正文：留下来会在头条正文里出现一行
+            # 字面的 "---"。
             flush()
             continue
 

@@ -447,3 +447,65 @@ def test_the_shared_options_work_before_the_command_name(tmp_path, capsys):
 
 def test_main_without_a_command_is_a_usage_error():
     assert main([]) == EXIT_USAGE
+
+
+# --- mark ----------------------------------------------------------------
+
+
+def test_mark_published_records_the_url_in_the_snapshot_and_the_state(tmp_path):
+    """人工发表之后，账要写对。
+
+    流水线只能出包、不能发表（账号没有开放平台 API 权限），所以文章是人在
+    编辑器里发出去的。发出去之后必须有人把这件事记下来——不然快照会一直
+    说"待人工上传"，而文章其实已经在线上了。
+    """
+    _site(tmp_path)
+    assert main(_args(tmp_path, "convert", "db/demo")) == EXIT_OK
+
+    url = "https://www.toutiao.com/article/7708350584122016298/"
+    code = main(
+        _args(tmp_path, "mark", "published")
+        + ["db/demo", "--url", url]
+    )
+    assert code == EXIT_OK
+
+    outbox = tmp_path / "outbox"
+    snapshots = list(outbox.glob("*.json"))
+    assert len(snapshots) == 1, "快照应当还是那一个"
+    payload = json.loads(snapshots[0].read_text(encoding="utf-8"))
+    assert payload["status"] == "published"
+    assert payload["published_url"] == url
+    assert payload["reason"] is None, "已发布就不该再挂着「待人工上传」的理由"
+
+    store = StateStore(tmp_path / "out" / "state.json")
+    state = store.get("db/demo")
+    assert state.status == "published"
+    assert state.published_url == url
+
+
+def test_mark_published_without_a_url_is_refused(tmp_path):
+    """没有公开链接就不能算"已发布"。"""
+    _site(tmp_path)
+    assert main(_args(tmp_path, "convert", "db/demo")) == EXIT_OK
+
+    code = main(_args(tmp_path, "mark", "published") + ["db/demo"])
+    assert code == EXIT_USAGE
+
+
+def test_mark_without_a_snapshot_is_refused(tmp_path):
+    """没出包就没有快照可改。"""
+    _site(tmp_path)
+    code = main(
+        _args(tmp_path, "mark", "published")
+        + ["db/demo", "--url", "https://www.toutiao.com/article/1/"]
+    )
+    assert code == EXIT_USAGE
+
+
+def test_mark_of_an_unknown_article_is_refused(tmp_path):
+    _site(tmp_path)
+    code = main(
+        _args(tmp_path, "mark", "published")
+        + ["db/nope", "--url", "https://www.toutiao.com/article/1/"]
+    )
+    assert code == EXIT_USAGE

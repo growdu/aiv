@@ -28,10 +28,10 @@
   （详见 [docs/02-试点记录.md](docs/02-试点记录.md) §R2.F）
 - **自动化能到的最远一步（当前）**：产出发布包 + 通知，等人工上传
 - **实现状态**：切片、渲染、出包、幂等状态、通知、命令行**都已实现**
-  （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**372 条用例**。
+  （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**377 条用例**。
   其中 2 条是**语料级回归**——母稿 `source/_posts` 不入库，
-  干净检出里它们是 `skipped`（370 passed / 2 skipped），
-  本地有母稿时才会真跑（372 passed）。
+  干净检出里它们是 `skipped`（375 passed / 2 skipped），
+  本地有母稿时才会真跑（377 passed）。
   逐条任务见 [docs/00-设计.md](docs/00-设计.md)
 
 ## 为什么是「裁」而不是「搬」
@@ -103,11 +103,19 @@ cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli convert 
 # 出包 + 通知（API 权限开通后才是真正的「发布」）
 cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli publish <slug>
 
+# 人工在编辑器里发表之后，把结果记回账（没有公开链接就不算「已发布」）
+cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli mark published <slug> --url <公开链接>
+
 # 查看状态
 cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli status
 ```
 
 退出码：`0` 成功 / `1` 参数或配置错误 / `2` 该篇不合格 / `3` 接口或写盘错误。
+
+`mark` 只标 `published` 一档：草稿分支（`save=0`）平台一律拒绝
+（`err_no 7050`，见 [docs/02-试点记录.md](docs/02-试点记录.md) §R2.F），
+标「已存草稿」只会是一句假话。**这一步不能省**——人工发出去之后不记账，
+快照会一直说「待人工上传」，而文章其实已经在线上了。
 
 `<slug>` 是文章相对 `source/_posts/` 的路径去掉 `.md`，
 例如 `db/postgresql/postgresql-logical-replication-add-guc`。
