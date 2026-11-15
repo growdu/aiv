@@ -75,10 +75,20 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
 
 
 def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
-    """竖版：核阵列在上，两组方块在下。
+    """竖版：核阵列在上，两组压力并排对比，结论收底。
 
-    横版是左右分栏，竖版改成上下堆叠。这个场景没有画面内的说明，
-    所以内容一直排到内容区下沿。
+    横版是左右分栏，竖版改成上下堆叠之后会散成五个互不相干的行——
+    **谁跟谁对比就看不出来**。所以两组压力并排放：一列大事务（一整块），
+    一列小事务高并发（许多小块），底下再来一句结论。
+
+    版式（像素，竖版只有这一档画布）：
+
+    | 块 | 位置 |
+    | --- | --- |
+    | 核阵列 8×4 | 250–662 |
+    | 只用到 1 核（chip） | 700–776 |
+    | 两组压力并排 | 830–1200 |
+    | 结论 | 1290 |
     """
     core_count = int(p["core_count"])
     cols = int(p["core_cols"])
@@ -89,9 +99,9 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
 
     scene_layout.title(ctx, p["title"], w, h)
 
-    # ---- 核阵列 ----
-    cell_w, cell_h = 92, 80
-    gap_x, gap_y = 24, 18
+    # ---- 核阵列：8 列 × 4 行，铺满内容区 ----
+    cell_w, cell_h = 96, 88
+    gap_x, gap_y = 18, 20
     grid_w = cols * cell_w + (cols - 1) * gap_x
     x0 = left + (full_w - grid_w) / 2
     y0 = scene_layout.content_top(h)
@@ -112,22 +122,32 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     ctx.arc(cx, cy, cell_w * (0.70 + 0.06 * pulse), 0, 6.2832)
     ctx.stroke()
 
-    # ---- 只用到一核 ----
-    scene_layout.line(ctx, p["stat"], left, 685, full_w, 44,
+    # ---- 只用到一核：浅橙底的 chip ----
+    rounded_rect(ctx, left, 700, 520, 76, 14, "#FDF0DC")
+    scene_layout.line(ctx, p["stat"], left + 28, 752, 460, 48,
                       COLORS["accent"], bold=True)
 
-    # ---- 大事务：一整块 ----
-    scene_layout.line(ctx, p["big_label"], left, 770, full_w, 44,
+    # ---- 两组压力：并排两列（这才是这个场景要比的东西）----
+    col_w = (full_w - 60) / 2
+    right_x = left + col_w + 60
+    scene_layout.line(ctx, p["big_label"], left, 872, col_w, 46,
                       COLORS["problem"], bold=True)
-    rounded_rect(ctx, left, 800, full_w, 90, 12, COLORS["problem"])
+    scene_layout.line(ctx, p["small_label"], right_x, 872, col_w, 46,
+                      COLORS["problem"], bold=True)
 
-    # ---- 小事务高并发：许多小块 ----
-    scene_layout.line(ctx, p["small_label"], left, 960, full_w, 44,
-                      COLORS["problem"], bold=True)
+    # 大事务：一整块
+    rounded_rect(ctx, left, 906, col_w, 294, 14, COLORS["problem"])
+
+    # 小事务高并发：七个块排成 4 + 3（挤在一行里会探出内容区右缘）
+    block_w = (col_w - 3 * 14) / 4
     for i in range(SMALL_BLOCKS):
-        rounded_rect(ctx, left + i * 136, 995, 118, 88, 8,
+        col = i % 4
+        row = i // 4
+        x = right_x + col * (block_w + 14)
+        y = 906 + row * 150
+        rounded_rect(ctx, x, y, block_w, 130, 10,
                      COLORS["problem"] if i % 2 == 0 else "#F8C489")
 
     # ---- 结论 ----
-    scene_layout.line(ctx, p["conclusion"], left, 1165, full_w, 52,
+    scene_layout.line(ctx, p["conclusion"], left, 1290, full_w, 60,
                       COLORS["primary"], bold=True)
