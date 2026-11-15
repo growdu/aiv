@@ -49,6 +49,7 @@ _MEDIA_PATH_RE = re.compile(r"""(['"])(/(?:medias|libs)/[^'"]*)\1""")
 
 # Cache of config path -> mount point (see site_root below).
 _ROOT_CACHE: dict[str, str] = {}
+_URL_CACHE: dict[str, str] = {}
 
 
 def site_root(config_path: str | None = None) -> str:
@@ -81,6 +82,71 @@ def site_root(config_path: str | None = None) -> str:
         pass
     _ROOT_CACHE[config_path] = root
     return root
+
+
+def site_url(config_path: str | None = None) -> str:
+    """Read the site's own address from ``_config.yml``.
+
+    ``https://growdu.cn`` for the primary domain,
+    ``https://growdu.github.io/blog`` for the Pages mirror (that job
+    rewrites ``url:`` before building).
+
+    Absolute URLs (a feed's ``<enclosure>``, a ``<link>``) need the
+    domain *and* the mount point -- ``config.url`` already carries the
+    mount point, so the two must not be concatenated blindly.
+    """
+    if config_path is None:
+        config_path = os.path.join(REPO_ROOT, '_config.yml')
+    cached = _URL_CACHE.get(config_path)
+    if cached is not None:
+        return cached
+    url = ''
+    try:
+        with open(config_path, encoding='utf-8') as f:
+            for line in f:
+                m = re.match(r'^url:\s*(\S+)\s*$', line)
+                if m:
+                    url = m.group(1).strip().strip('"\'')
+                    break
+    except OSError:
+        pass
+    url = url.rstrip('/')
+    _URL_CACHE[config_path] = url
+    return url
+
+
+def rooted_path(path: str, config_path: str | None = None) -> str:
+    """A site path that carries the mount point.
+
+    ``/feed.xml`` -> ``/feed.xml`` on the primary domain,
+    ``/blog/feed.xml`` on the mirror.
+
+    Use this for links written into Markdown; use :func:`absolute_url`
+    when the domain is needed too (a feed's ``<enclosure>``).
+    """
+    root = site_root(config_path)
+    if not path.startswith('/'):
+        path = '/' + path
+    if not root:
+        return path
+    return root + path
+
+
+def absolute_url(path: str, config_path: str | None = None) -> str:
+    """An absolute URL for a **root-relative** site path.
+
+    ``/medias/podcast/row-lock.mp3`` -> ``https://growdu.cn/medias/podcast/row-lock.mp3``
+
+    The mount point is already inside ``config.url`` on the mirror
+    (``https://growdu.github.io/blog``), so it is **not** added twice --
+    that mistake is the second bug this module exists for.
+    """
+    base = site_url(config_path)
+    if not path.startswith('/'):
+        path = '/' + path
+    if not base:
+        return path
+    return base + path
 
 
 def permalink(date: str, post_path: str, root: str | None = None) -> str:

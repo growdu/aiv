@@ -27,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from site_root import permalink as _permalink  # noqa: E402
+from site_root import rooted_path as _rooted_path  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO_ROOT / "source" / "_data"
@@ -94,6 +95,10 @@ def render(index):
     lines += [
         "{}。一期一条视频，**完整版是站上的长文**——"
         "讲的是公开的上游机制，不涉及任何公司内部信息。".format(CADENCE),
+        "",
+        "- 订阅：[播客 feed]({})（RSS 2.0，每期带旁白音频）".format(
+            _rooted_path("/feed.xml")
+        ),
         "",
     ]
 

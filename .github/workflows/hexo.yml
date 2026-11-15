@@ -99,6 +99,11 @@ jobs:
         # 期号索引 → 系列页（/videos/）。一期一行：期号、钩子、时长、
         # 完整版（母稿页）、平台。
         run: python3 tools/build-series-page.py
+      - name: Build podcast feed
+        # 期号索引 → 播客 feed（/feed.xml）+ 旁白音频的站点副本。
+        # 成片 mp4 不托管，旁白 mp3 托管——RSS 的 <enclosure> 需要
+        # 自己域名下的稳定音频直链。
+        run: python3 tools/build-podcast-feed.py
       - name: Apply theme patches
         run: python3 tools/patch-theme.py
       - name: Copy vendor assets
@@ -375,6 +380,11 @@ jobs:
         # 期号索引 → 系列页（/videos/）。一期一行：期号、钩子、时长、
         # 完整版（母稿页）、平台。
         run: python3 tools/build-series-page.py
+      - name: Build podcast feed
+        # 期号索引 → 播客 feed（/feed.xml）+ 旁白音频的站点副本。
+        # 成片 mp4 不托管，旁白 mp3 托管——RSS 的 <enclosure> 需要
+        # 自己域名下的稳定音频直链。
+        run: python3 tools/build-podcast-feed.py
       - name: Apply theme patches
         run: python3 tools/patch-theme.py
       - name: Copy vendor assets
