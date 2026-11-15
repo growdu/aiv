@@ -94,7 +94,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     count = len(ids)
 
     left = w * scene_layout.MARGIN_X
-    content_w = w * scene_layout.CONTENT_W
+    content_w = scene_layout.content_width(w)
 
     scene_layout.title(ctx, p["title"], w, h, color=COLORS["problem"])
 

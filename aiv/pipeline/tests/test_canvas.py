@@ -268,7 +268,7 @@ def test_the_drawn_text_stays_inside_the_content_width(s):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
     ctx = cairo.Context(surface)
     left = width * scene_layout.MARGIN_X
-    max_width = width * scene_layout.CONTENT_W
+    max_width = scene_layout.content_width(width)
     scene_layout.line(ctx, s, left, 120, max_width, 64, "#2B4C7E")
     cols = _ink_cols(surface, width, height)
     assert cols.size > 0, "字没画出来"
@@ -276,6 +276,31 @@ def test_the_drawn_text_stays_inside_the_content_width(s):
         f"「{s}」画到 x={cols.max()}，越过了内容区右沿 "
         f"{left + max_width:.0f}"
     )
+
+
+def test_the_vertical_content_reserves_the_right_platform_buttons():
+    """竖版内容右缘要留给抖音的点赞/评论/分享栏。
+
+    抖音那一档的按钮栏落在画面右下角，内容压上去就等于没画——
+    这是**工程上的保守取值**，不是平台文档里写明的数字。
+    """
+    width = 1080
+    left = scene_layout.content_left(width)
+    right = scene_layout.content_right(width)
+    assert left == pytest.approx(width * 0.06)
+    assert right == pytest.approx(960, abs=1)
+    assert scene_layout.content_width(width) == pytest.approx(895.2)
+
+
+def test_the_vertical_content_band_reaches_down_to_the_subtitle():
+    """内容区下沿要贴着字幕带上沿（1344），不再停在 1238 留一大片白。
+
+    竖版画面下缘留着 25%–38% 的空白，内容却全挤在上 60%——
+    这就是「内容分散」的由来：能用的地方没用满。
+    """
+    assert scene_layout.content_top(1920) == pytest.approx(250, abs=1)
+    assert scene_layout.content_bottom(1920) == pytest.approx(1344, abs=1)
+    assert scene_layout.content_top(1920) < scene_layout.content_bottom(1920)
 
 
 # --- 品牌片不进竖版 ---------------------------------------------------------

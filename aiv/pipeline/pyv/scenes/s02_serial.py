@@ -60,7 +60,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     接收方——排队这件事从上往下看更清楚。
     """
     left = w * scene_layout.MARGIN_X
-    content_w = w * scene_layout.CONTENT_W
+    content_w = scene_layout.content_width(w)
 
     scene_layout.title(ctx, p["title"], w, h, color=COLORS["problem"])
 

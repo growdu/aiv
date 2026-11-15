@@ -105,7 +105,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     - **字要放得下**：每一行字都过 `scene_layout.line`，放不下就收字号。
     """
     left = w * scene_layout.MARGIN_X
-    max_width = w * scene_layout.CONTENT_W
+    max_width = scene_layout.content_width(w)
 
     scene_layout.title(ctx, p["title"], w, h, size=60)
 

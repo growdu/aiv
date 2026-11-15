@@ -81,7 +81,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     分支并排一行、每个 222 宽，标签字号跟横版同档。
     """
     left = w * scene_layout.MARGIN_X
-    width = w * scene_layout.CONTENT_W
+    width = scene_layout.content_width(w)
     right = left + width
 
     scene_layout.title(ctx, p["title"], w, h)

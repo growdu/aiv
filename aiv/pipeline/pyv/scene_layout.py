@@ -19,17 +19,23 @@
     画面里的说明也跟着抬——两行都在下缘就会绞在一起
     （横版踩过这个坑，见 `tests/test_scene_layout.py`）。
 
+规矩四：**右侧让出平台 UI。**
+    抖音那一档的点赞/评论/分享栏落在画面右下角，内容压上去就等于
+    没画。右边让出 `RAIL_RIGHT`（120px），左边距不变——**窄 55px，
+    换右下角不被挡住**。
+
 **竖版的三个位置**（比例相对画面高度 1920）：
 
 | 位置 | 比例 | 像素 | 说明 |
 | --- | --- | --- | --- |
-| 标题基线 | 0.085 | 163 | 所有场景统一 |
-| 内容区上沿 | 0.125 | 240 | 内容从这里开始 |
-| 内容区下沿 | 0.645 | 1238 | 内容到这里为止 |
+| 标题基线 | 0.075 | 144 | 所有场景统一 |
+| 内容区上沿 | 0.130 | 250 | 内容从这里开始 |
+| 内容区下沿 | 0.700 | 1344 | 内容到这里为止 |
 | 说明基线 | 0.695 | 1334 | 说明的墨迹下沿要高于字幕带 1393 |
 
-这些数字不是随手定的：**说明基线 1334 的墨迹下沿约 1345**，
-而竖版字幕带从 **1393** 开始——中间留 48 px 的余量。
+这些数字不是随手定的：**内容区下沿 1344 与字幕带 1393 之间留 49px**，
+画面内容掉下去就压在字幕上；**右缘 960 与画面边缘 1080 之间是给按钮栏
+预留的 120px**。
 """
 from __future__ import annotations
 
@@ -39,19 +45,25 @@ from pyv import fonts
 from pyv.draw import text
 from pyv.palette import COLORS
 
-#: 竖版的三个位置（比例相对画面高度）
-TITLE_Y = 0.085
-CONTENT_TOP = 0.125
-CONTENT_BOTTOM = 0.645
+#: 竖版的几个位置（比例相对画面高度）
+TITLE_Y = 0.075
+CONTENT_TOP = 0.130
+CONTENT_BOTTOM = 0.700
 CAPTION_Y = 0.695
 
-#: 左右边距与内容区宽度（比例相对画面宽度）。
-#: 横版的内容从 w*0.06 开始，竖版沿用同一个边距，宽度给到 0.88。
+#: 左边距（比例相对画面宽度）。
+#: 横版的内容从 w*0.06 开始，竖版沿用同一个边距。
 MARGIN_X = 0.06
-CONTENT_W = 0.88
+
+#: 右侧平台 UI 预留（像素）。
+#:
+#: **这是工程上的保守取值，不是平台文档里写明的数字**——抖音没有公开
+#: 「安全区」规格。与其等审核时才发现右下角的字被按钮压住，不如自己
+#: 留出一条。横版不用留（横版发的是视频号/B站，不叠平台 UI）。
+RAIL_RIGHT = 120
 
 #: 标题与说明的字号（竖版比横版大一号：手机上看，标题要顶得住）
-TITLE_SIZE = 64
+TITLE_SIZE = 68
 CAPTION_SIZE = 40
 
 #: 字号收小的下限。再小就不是「字」了，宁可让版式重排。
@@ -135,7 +147,7 @@ def title(ctx: cairo.Context, text_value: str, w: int, h: int,
     左对齐而不是居中——竖版的内容是纵向堆叠的，标题跟着内容左边缘
     对齐，整张画面才有一条统一的竖轴。
     """
-    line(ctx, text_value, w * MARGIN_X, h * TITLE_Y, w * CONTENT_W,
+    line(ctx, text_value, w * MARGIN_X, h * TITLE_Y, content_width(w),
          size, color, bold=bold, alpha=alpha)
 
 
@@ -146,18 +158,23 @@ def caption(ctx: cairo.Context, text_value: str, w: int, h: int,
 
     位置在字幕带之上——两行都在下缘会绞在一起（横版踩过）。
     """
-    line(ctx, text_value, w * MARGIN_X, h * CAPTION_Y, w * CONTENT_W,
+    line(ctx, text_value, w * MARGIN_X, h * CAPTION_Y, content_width(w),
          size, color, alpha=alpha)
 
 
 def content_width(w: int) -> float:
-    """内容区的宽度。"""
-    return w * CONTENT_W
+    """内容区的宽度：左边距起，右边让出平台 UI 的按钮栏。"""
+    return w * (1 - MARGIN_X) - RAIL_RIGHT
 
 
 def content_left(w: int) -> float:
     """内容区的左边缘。"""
     return w * MARGIN_X
+
+
+def content_right(w: int) -> float:
+    """内容区的右边缘（平台 UI 预留之前那条线）。"""
+    return content_left(w) + content_width(w)
 
 
 def content_top(h: int) -> float:

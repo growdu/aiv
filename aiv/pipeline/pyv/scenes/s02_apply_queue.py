@@ -104,7 +104,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     active = str(p["active_txn"])
 
     left = w * scene_layout.MARGIN_X
-    content_w = w * scene_layout.CONTENT_W
+    content_w = scene_layout.content_width(w)
     inner = content_w - 80
 
     scene_layout.title(ctx, p["title"], w, h)

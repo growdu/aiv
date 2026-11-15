@@ -150,7 +150,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     bits = [[str(x) for x in pair] for pair in p["bit_labels"]]
 
     left = w * scene_layout.MARGIN_X
-    max_width = w * scene_layout.CONTENT_W
+    max_width = scene_layout.content_width(w)
     center = left + max_width / 2
 
     scene_layout.title(ctx, p["title"], w, h, size=60)

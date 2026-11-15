@@ -223,7 +223,7 @@ def chip_layout_vertical(chips: list[str], spill_count: int, t: float,
     chip_h = h * V_CHIP_H_RATIO
 
     mem_x = w * scene_layout.MARGIN_X
-    mem_w = w * scene_layout.CONTENT_W
+    mem_w = scene_layout.content_width(w)
 
     slots = chip_slots_vertical(
         len(chips),
@@ -336,7 +336,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     """
     chips = [str(x) for x in p["chips"]]
     left = w * scene_layout.MARGIN_X
-    width = w * scene_layout.CONTENT_W
+    width = scene_layout.content_width(w)
 
     scene_layout.title(ctx, p["title"], w, h)
 

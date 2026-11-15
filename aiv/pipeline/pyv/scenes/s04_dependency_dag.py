@@ -106,7 +106,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     edges = [(str(row[0]), str(row[1])) for row in p["edges"]]
 
     left = w * scene_layout.MARGIN_X
-    width = w * scene_layout.CONTENT_W
+    width = scene_layout.content_width(w)
 
     scene_layout.title(ctx, p["title"], w, h)
 

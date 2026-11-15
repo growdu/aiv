@@ -103,7 +103,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     「两边都写同一行」这件事，从相反的方向看更清楚。
     """
     left = w * scene_layout.MARGIN_X
-    content_w = w * scene_layout.CONTENT_W
+    content_w = scene_layout.content_width(w)
 
     scene_layout.title(ctx, p["title"], w, h)
 
