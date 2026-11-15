@@ -100,8 +100,11 @@ jobs:
         # 直接用 runner 的 python3 -m pip（site-guard 那个 job 装 pytest 就是
         # 这么装的，说明 pip 直接可用）。上一版绕道 python3 -m venv，
         # 结果那一步在 runner 上退出码 1、字体没裁成——教训记在这里。
+        # 只依赖 fontTools：runner 上的 brotli 解 woff2 会报 "decoder failed"，
+        # 所以工具改为裁 TTF（fontTools 原生支持），再把 CSS 里的 woff2
+        # 引用摘掉，浏览器于是用裁过的 TTF。
         run: |
-          python3 -m pip install --quiet fonttools brotli \
+          python3 -m pip install --quiet fonttools \
             || echo "::warning::fontTools 装不上，跳过字体裁剪（原字体照常发布）"
           python3 tools/subset-icons.py --public public \
             || echo "::warning::字体裁剪失败，保留原字体（站点不受影响）"
@@ -348,7 +351,7 @@ jobs:
         # 与 growdu.cn 那套 build 同一个裁剪步骤（两边的图标清单一样）。
         # 同样是"失败不阻断"：失败只发一条 ::warning:: 注解。
         run: |
-          python3 -m pip install --quiet fonttools brotli \
+          python3 -m pip install --quiet fonttools \
             || echo "::warning::fontTools 装不上，跳过字体裁剪（原字体照常发布）"
           python3 tools/subset-icons.py --public public \
             || echo "::warning::字体裁剪失败，保留原字体（站点不受影响）"

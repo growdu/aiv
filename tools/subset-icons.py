@@ -144,10 +144,15 @@ def _subset_font(src: Path, dst: Path, codepoints: set[int]) -> None:
     options.flavor = "woff2" if dst.suffix.lower() == ".woff2" else None
 
     font = subset.load_font(str(src), options)
-    subsetter = subset.Subsetter(options=options)
-    subsetter.populate(unicodes=codepoints)
-    subsetter.subset(font)
-    subset.save_font(font, str(dst), options)
+    try:
+        subsetter = subset.Subsetter(options=options)
+        subsetter.populate(unicodes=codepoints)
+        subsetter.subset(font)
+        subset.save_font(font, str(dst), options)
+    finally:
+        # 必须显式关掉：fontTools 默认惰性加载，文件句柄还开着的话，
+        # Windows 上 os.replace 会报 [WinError 5] 拒绝访问。
+        font.close()
 
 
 def _cmap_codepoints(path: Path) -> set[int]:
@@ -167,25 +172,61 @@ def _import_module(name: str):
 
 
 def _fonttools_ready() -> bool:
-    """裁剪要 fontTools（裁 woff2 还要 brotli）。
+    """裁剪要 fontTools。
 
     缺了就明说，而不是让构建以一句看不懂的 ImportError 收场——CI 里这一步
     失败不影响发布，但得让人一眼看出是"没装上"而不是"裁不动"。
+
+    只依赖 fontTools 本身：2026-11-15 实测 runner 上的 brotli 解 woff2 会
+    报 "brotli: decoder failed"，所以这里改为裁 TTF（fontTools 原生支持，
+    不需要 brotli），再把 CSS 里的 woff2 引用摘掉，让浏览器用裁过的 TTF。
     """
-    missing = []
-    for module in ("fontTools", "brotli"):
-        try:
-            _import_module(module)
-        except ImportError:
-            missing.append(module)
-    if missing:
+    try:
+        _import_module("fontTools")
+    except ImportError:
         print(
-            "::warning::字体裁剪跳过：缺少 "
-            + "、".join(missing)
-            + "（CI 里用 pip install fonttools brotli 装）"
+            "::warning::字体裁剪跳过：缺少 fontTools"
+            "（CI 里用 pip install fonttools 装）"
         )
         return False
     return True
+
+
+def _patch_css(css_path: Path, names: list[str]) -> int:
+    """把 @font-face 里指向 woff2 的那一条引用摘掉。
+
+    CSS 的 ``src`` 列表是"按顺序挑第一个支持的格式"，所以浏览器会一直
+    优先用 woff2——只裁 TTF 的话，浏览器还是去下那个完整的大 woff2，省不到
+    任何东西。摘掉之后浏览器才会用裁过的 TTF。
+
+    留着的 woff2 文件本身不删（只是没人引用了）：万一补丁没生效，浏览器拿到
+    的仍然是一个能用的字体，不会变成方块。
+
+    带 ``unicode-range`` 的块不动——那是给 Font Awesome 3/4 时代的老类名
+    准备的兼容块，那些码位本来就不在裁剪范围里，动了它们老图标就废了。
+    """
+    text = css_path.read_text(encoding="utf-8")
+    total = 0
+
+    def strip_woff2(match):
+        nonlocal total
+        block = match.group(0)
+        if "unicode-range" in block:
+            return block
+        for name in names:
+            pattern = re.compile(
+                r"url\(\.\./webfonts/" + re.escape(name) + r"\.woff2\)\s*"
+                r"format\(\"woff2\"\)\s*,\s*"
+            )
+            block, count = pattern.subn("", block)
+            total += count
+        return block
+
+    text = re.sub(r"@font-face\{[^}]*\}", strip_woff2, text)
+    if total:
+        css_path.write_text(text, encoding="utf-8")
+    return total
+
 
 
 def main() -> int:
@@ -271,10 +312,9 @@ def main() -> int:
     if args.dry_run:
         for family, keep in per_family.items():
             name = _FAMILY_FILES[family]
-            for suffix in (".woff2", ".ttf"):
-                path = webfonts / (name + suffix)
-                if path.is_file():
-                    print(f"  [dry-run] {path.name} 保留 {len(keep)} 个码位")
+            path = webfonts / (name + ".ttf")
+            if path.is_file():
+                print(f"  [dry-run] {path.name} 保留 {len(keep)} 个码位")
         return 0
 
     if not _fonttools_ready():
@@ -284,52 +324,56 @@ def main() -> int:
     total_before = 0
     total_after = 0
     staged: list[tuple[Path, Path]] = []
+    subsetted: list[str] = []
     try:
         for family, keep in per_family.items():
             name = _FAMILY_FILES[family]
             if not keep:
                 print(f"  {name}: 没用到，字体文件保持原样")
                 continue
-            for suffix in (".woff2", ".ttf"):
-                src = webfonts / (name + suffix)
-                if not src.is_file():
-                    continue
+            # 只裁 TTF：fontTools 原生支持，不需要 brotli；woff2 的解码在
+            # runner 上出过 "brotli: decoder failed"，不值得为省几 KB 去赌。
+            # CSS 里对应的 woff2 引用会在裁完后摘掉，浏览器于是用裁过的 TTF。
+            src = webfonts / (name + ".ttf")
+            if not src.is_file():
+                continue
 
-                # 裁之前先拿原字体对一遍：码位本来就不在这个字体里，说明字体族
-                # 判错了（brands 的码位被当成 solid 的）。裁剪器会默默补一个
-                # .notdef 字形，裁完 cmap 里也有这个码位了——不提前拦，页面上
-                # 就是个豆腐块。
-                original = _cmap_codepoints(src)
-                missing_in_original = sorted(keep - original)
-                if missing_in_original:
-                    raise RuntimeError(
-                        f"{src.name} 有 {len(missing_in_original)} 个码位本来就不在这个字体里"
-                        f"（例如 {[hex(c) for c in missing_in_original[:5]]}）"
-                        f"——字体族判断错了，裁下去只会得到空白图标"
+            # 裁之前先拿原字体对一遍：码位本来就不在这个字体里，说明字体族
+            # 判错了（brands 的码位被当成 solid 的）。裁剪器会默默补一个
+            # .notdef 字形，裁完 cmap 里也有这个码位了——不提前拦，页面上
+            # 就是个豆腐块。
+            original = _cmap_codepoints(src)
+            missing_in_original = sorted(keep - original)
+            if missing_in_original:
+                raise RuntimeError(
+                    f"{src.name} 有 {len(missing_in_original)} 个码位本来就不在这个字体里"
+                    f"（例如 {[hex(c) for c in missing_in_original[:5]]}）"
+                    f"——字体族判断错了，裁下去只会得到空白图标"
+                )
+
+            tmp = src.with_suffix(src.suffix + ".subset")
+            _subset_font(src, tmp, keep)
+
+            # 自检：裁完的字体里必须真的有每个用到的码位
+            available = _cmap_codepoints(tmp)
+            missing = sorted(keep - available)
+            if missing:
+                raise RuntimeError(
+                    f"{src.name} 裁完还缺 {len(missing)} 个码位"
+                    f"（例如 {[hex(c) for c in missing[:5]]}）"
+                    f"——宁可放弃裁剪，也不要上线空白图标"
                     )
 
-                tmp = src.with_suffix(src.suffix + ".subset")
-                _subset_font(src, tmp, keep)
+            staged.append((src, tmp))
 
-                # 自检：裁完的字体里必须真的有每个用到的码位
-                available = _cmap_codepoints(tmp)
-                missing = sorted(keep - available)
-                if missing:
-                    raise RuntimeError(
-                        f"{src.name} 裁完还缺 {len(missing)} 个码位"
-                        f"（例如 {[hex(c) for c in missing[:5]]}）"
-                        f"——宁可放弃裁剪，也不要上线空白图标"
-                    )
-
-                staged.append((src, tmp))
-
-                #  sanity: 裁完不应该比原来还大（除非只剩一两个字形，
-                # 那时字体头本身的占比就上去了，留着原文件反而更稳）
-                if tmp.stat().st_size >= src.stat().st_size:
-                    raise RuntimeError(
-                        f"{src.name} 裁完没有变小（{src.stat().st_size} -> "
-                        f"{tmp.stat().st_size}），保留原文件"
-                    )
+            #  sanity: 裁完不应该比原来还大（除非只剩一两个字形，
+            # 那时字体头本身的占比就上去了，留着原文件反而更稳）
+            if tmp.stat().st_size >= src.stat().st_size:
+                raise RuntimeError(
+                    f"{src.name} 裁完没有变小（{src.stat().st_size} -> "
+                    f"{tmp.stat().st_size}），保留原文件"
+                )
+            subsetted.append(name)
 
         # 全部裁成功才替换：半套字体（一套裁了、一套没裁）虽然也能跑，
         # 但排查起来很难看出是哪一步出了问题。
@@ -342,6 +386,17 @@ def main() -> int:
             print(
                 f"  {src.name}: {before / 1024:.1f} KB -> {after / 1024:.1f} KB"
                 f"（{len(_cmap_codepoints(src))} 个字形）"
+            )
+
+        # 字体换成裁过的 TTF 之后，CSS 里得把 woff2 那条引用摘掉，否则
+        # 浏览器还是去下完整的大 woff2，等于没裁。woff2 文件本身留着
+        # （没人引用了而已）：万一补丁没生效，浏览器拿到的仍然是一个
+        # 能用的字体，不会变成方块。
+        if subsetted:
+            patched = _patch_css(css_path, subsetted)
+            print(
+                f"  {css_path.name}: 摘掉 {patched} 处 woff2 引用，"
+                "浏览器改用裁过的 TTF"
             )
     except Exception as exc:  # noqa: BLE001 - 构建期要给出可读的失败原因
         for _, tmp in staged:

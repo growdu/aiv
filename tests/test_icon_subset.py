@@ -282,11 +282,20 @@ def test_missing_fonttools_is_reported_not_crashed(monkeypatch, capsys) -> None:
 
 
 def test_the_subset_shrinks_the_font_and_keeps_the_glyphs(tmp_path: Path) -> None:
+    """裁完的字体必须更小，而且用到的码位一个不少。
+
+    需要 fontTools；site-guard 的 CI 只装了 pytest，这项在那边是跳过的
+    （裁剪由 build 那个 job 自己装 fontTools 跑）。
+
+    裁的是 TTF 不是 woff2：2026-11-15 实测 runner 上的 brotli 解 woff2 会
+    报 "brotli: decoder failed"，所以工具改成裁 TTF（fontTools 原生支持），
+    再把 CSS 里的 woff2 引用摘掉。
+    """
     pytest.importorskip("fontTools")
 
     webfonts = tmp_path / "webfonts"
     webfonts.mkdir()
-    for name in ("fa-solid-900.woff2", "fa-brands-400.woff2"):
+    for name in ("fa-solid-900.ttf", "fa-brands-400.ttf"):
         source = THEME / "source" / "libs" / "awesome" / "webfonts" / name
         if not source.is_file():
             pytest.skip(f"仓库里没有 {name}")
@@ -295,28 +304,40 @@ def test_the_subset_shrinks_the_font_and_keeps_the_glyphs(tmp_path: Path) -> Non
     css = FA_CSS.read_text(encoding="utf-8")
     icons, _ = subset_icons._parse_css(css)
 
-    solid = tmp_path / "solid"
-    brands = tmp_path / "brands"
-    (solid / "x").mkdir(parents=True)
-    (brands / "y").mkdir(parents=True)
-    (solid / "x" / "index.html").write_text(
-        '<i class="fas fa-search"></i><i class="fas fa-database"></i>',
-        encoding="utf-8",
-    )
-    (brands / "y" / "index.html").write_text(
-        '<i class="fab fa-github"></i>', encoding="utf-8"
-    )
-
     kept_solid = {icons["fa-search"], icons["fa-database"]}
     kept_brands = {icons["fa-github"]}
 
-    for target, keep in (
-        (webfonts / "fa-solid-900.woff2", kept_solid),
-        (webfonts / "fa-brands-400.woff2", kept_brands),
+    for name, keep in (
+        ("fa-solid-900.ttf", kept_solid),
+        ("fa-brands-400.ttf", kept_brands),
     ):
+        target = webfonts / name
         before = target.stat().st_size
-        subset_icons._subset_font(target, target.with_suffix(".out.woff2"), keep)
-        after = target.with_suffix(".out.woff2").stat().st_size
-        assert after < before, f"{target.name} 裁完没有变小"
-        available = subset_icons._cmap_codepoints(target.with_suffix(".out.woff2"))
-        assert keep <= available, f"{target.name} 裁完缺字形"
+        subset_icons._subset_font(target, target.with_suffix(".out.ttf"), keep)
+        out = target.with_suffix(".out.ttf")
+        after = out.stat().st_size
+        assert after < before, f"{name} 裁完没有变小"
+        available = subset_icons._cmap_codepoints(out)
+        assert keep <= available, f"{name} 裁完缺字形"
+
+
+def test_the_css_stops_pointing_at_the_whole_woff2(tmp_path: Path) -> None:
+    """CSS 里必须摘掉 woff2 那条引用，否则浏览器还是下完整的大字体。
+
+    CSS 的 ``src`` 列表是"按顺序挑第一个支持的格式"——只裁 TTF 而不摘
+    woff2，浏览器照样去下 151 KB 的完整 woff2，等于一点没省。
+    """
+    css = tmp_path / "all.min.css"
+    css.write_text(
+        "@font-face{font-family:\"FA\";src:url(../webfonts/fa-solid-900.woff2) "
+        "format(\"woff2\"),url(../webfonts/fa-solid-900.ttf) format(\"truetype\")}",
+        encoding="utf-8",
+    )
+    patched = subset_icons._patch_css(css, ["fa-solid-900"])
+    assert patched == 1, "应当摘掉一处 woff2 引用"
+    text = css.read_text(encoding="utf-8")
+    assert "fa-solid-900.woff2" not in text, "woff2 引用还在"
+    assert "fa-solid-900.ttf" in text, "ttf 引用被误删了"
+
+
+
