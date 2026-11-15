@@ -31,7 +31,12 @@ from pathlib import Path
 
 from . import PublishKitError
 from .capability import list_capabilities
-from .contract import ContractError, parse_content_date, read_contract
+from .contract import (
+    ContentContract,
+    ContractError,
+    parse_content_date,
+    read_contract,
+)
 
 __all__ = [
     "PUBLISHED_STATUSES",
@@ -219,7 +224,7 @@ class ContentUnit:
     """
 
     content_id: str
-    contract: object
+    contract: ContentContract
     publish_on: date | None
     date: date | None
 
@@ -643,6 +648,22 @@ class ScheduleState:
             week for week, record in self.records.items() if not record.done
         )
 
+    def unfinished_records(self) -> list:
+        """没跑完的周**连同它们的记录**，按周键升序。
+
+        **为什么不给只有周键的版本**：调用方拿着周键还得再查回来才拿得到
+        记录，而那次查询的类型是「记录或 None」——于是每个调用方都得自己
+        再判一次 None。这里直接把记录一起给出，None 就无处可藏。
+        """
+        return sorted(
+            (
+                (week, record)
+                for week, record in self.records.items()
+                if not record.done
+            ),
+            key=lambda pair: pair[0],
+        )
+
     def save(self) -> None:
         """原子写盘。"""
         path = self.path
@@ -760,11 +781,10 @@ def run_weekly(
     handled = set()
 
     # §7.3：优先重试未完成的周，而不是直接选新的一篇。
-    unfinished = state.unfinished_weeks()
+    unfinished = state.unfinished_records()
     if unfinished:
         outcomes = []
-        for key in unfinished:
-            record = state.get(key)
+        for key, record in unfinished:
             ok, said = _publish_to_platforms(
                 config,
                 record.content_id,
