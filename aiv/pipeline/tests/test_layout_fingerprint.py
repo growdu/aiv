@@ -212,6 +212,8 @@ def test_the_layout_fingerprint_matches():
     _need_bundled_font()
     frames = _fixture()["frames"]
     findings: list[str] = []
+    # 每个量各差多少——第一行就要能看出「是哪一类量出的问题」。
+    worst: dict[str, float] = {}
     for episode, segment in _segments():
         module = importlib.import_module(segment.renderer)
         for canvas, width, height in CANVASES:
@@ -226,13 +228,24 @@ def test_the_layout_fingerprint_matches():
                     continue
                 for index, (want, got) in enumerate(zip(expected, actual)):
                     for name, slot, tolerance in CHECKS:
-                        if abs(want[slot] - got[slot]) > tolerance:
+                        diff = abs(want[slot] - got[slot])
+                        if diff > tolerance:
+                            worst[name] = max(worst.get(name, 0.0), diff)
                             findings.append(
                                 f"{key} 第 {index} 个文字的 {name}："
                                 f"{got[slot]:.2f} vs 基准 {want[slot]:.2f}"
-                                f"（差 {abs(want[slot] - got[slot]):.2f}"
-                                f" > {tolerance}）")
-    assert not findings, "布局指纹对不上：\n  " + "\n  ".join(findings[:40])
+                                f"（差 {diff:.2f} > {tolerance}）")
+    # **第一行必须自带诊断信息**：CI 只摘报错的第一行（`grep '^FAILED'`），
+    # 后面那些细节在流水线注解里看不到。差在哪一类量、差多少、差在哪
+    # 一次，都得在这一行里说清楚。
+    breakdown = "、".join(
+        f"{name} 差 {diff:.2f}px" for name, diff in
+        sorted(worst.items(), key=lambda kv: -kv[1])
+    ) or "无"
+    assert not findings, (
+        f"布局指纹对不上：{len(findings)} 项超容差（{breakdown}）\n  "
+        + "\n  ".join(findings[:40])
+    )
 
 
 # ---------------------------------------------------------------- 探针没瞎

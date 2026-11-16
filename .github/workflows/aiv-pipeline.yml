@@ -87,4 +87,17 @@ jobs:
             | while IFS= read -r line; do
                 echo "::error title=pytest 失败::${line}"
               done
+          # **失败详情也要进注解**：只报「FAILED xxx」等于没报——断言的
+          # 细节（「哪一期哪一段差多少」）在日志深处，而工作流日志要管理员
+          # 权限才能下，注解不要。合成一条多行注解（%0A 是换行）。
+          #
+          # awk 里 '%0A' 要当**字符串**拼出来：写成 printf 的格式串会被
+          # 当成转换说明（%0A 不是合法的转换符）。
+          detail=$(awk '/= FAILURES =/{f=1} f && /short test summary info/{exit} f' \
+            /tmp/pytest.log | head -40 \
+            | awk '{gsub(/%/,"%25"); printf "%s", $0; printf "%s", "%0A"}' \
+            | sed 's/%0A$//')
+          if [ -n "${detail}" ]; then
+            echo "::error title=pytest 详情::${detail}"
+          fi
           if grep -qE "^(FAILED|ERROR) " /tmp/pytest.log; then exit 1; fi
