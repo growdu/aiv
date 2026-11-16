@@ -196,10 +196,10 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", metavar="命令")
     commands.required = True
 
-    schedule = commands.add_parser(
-        "schedule", help="定时路径", parents=[common]
+    schedule = commands.add_parser("schedule", help="定时路径", parents=[common])
+    schedule_commands = schedule.add_subparsers(
+        dest="schedule_command", metavar="子命令"
     )
-    schedule_commands = schedule.add_subparsers(dest="schedule_command", metavar="子命令")
     schedule_commands.required = True
 
     weekly = schedule_commands.add_parser(
@@ -242,7 +242,9 @@ def build_parser() -> argparse.ArgumentParser:
             "「已发过」规则剔除。"
         ),
     )
-    publish.add_argument("content_id", help="内容单元 id（相对 source/_posts/ 的路径，去掉 .md）")
+    publish.add_argument(
+        "content_id", help="内容单元 id（相对 source/_posts/ 的路径，去掉 .md）"
+    )
     publish.add_argument("--platform", metavar="id", required=True, help="目标平台 id")
     publish.add_argument(
         "--publish",
@@ -676,7 +678,9 @@ def cmd_schedule_status(args) -> int:
     manual = []
     unknown = []
     done = []
-    for item in sorted(index.records.values(), key=lambda r: (r.platform, r.content_id)):
+    for item in sorted(
+        index.records.values(), key=lambda r: (r.platform, r.content_id)
+    ):
         if item.status in PUBLISHED_STATUSES:
             done.append(item)
         elif item.status == "unknown":
@@ -777,15 +781,19 @@ def cmd_publish(args) -> int:
             break
     if unit is None:
         raise ScheduleConfigError(
-            "找不到内容单元 {!r}（在 {} 里找）".format(args.content_id, config.posts_dir)
+            "找不到内容单元 {!r}（在 {} 里找）".format(
+                args.content_id, config.posts_dir
+            )
         )
 
     capability = _capability_for(config, args.platform)
 
     if not args.publish:
-        print("（预览）会把 {} 发到 {}（{}）。".format(
-            unit.content_id, args.platform, capability.name
-        ))
+        print(
+            "（预览）会把 {} 发到 {}（{}）。".format(
+                unit.content_id, args.platform, capability.name
+            )
+        )
         print("真的发就加上 --publish。")
         print("主动发布不写周键（06 规格 §4.2 规则 3）。")
         return EXIT_OK
