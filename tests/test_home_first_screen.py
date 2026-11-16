@@ -206,15 +206,20 @@ def test_the_featured_entries_point_at_real_posts():
 
     清单是手写的，文章会改名、会删。指着一个不存在的 slug，
     首屏就少一张卡——而构建不会报错。
+
+    对着 ``docs/`` 查，不是 ``source/_posts/``：后者是 gitignore 的构建
+    产物，而 CI 的 site-guard **不跑** sync-hexo.py——在那边查，
+    这条测试就成了「本地绿、CI 红」。
     """
     data = json.loads(FEATURED_JSON.read_text(encoding="utf-8"))
-    posts_root = REPO / "source" / "_posts"
+    docs_root = REPO / "docs"
 
     for group in ("hero", "featured"):
         for slug in data.get(group, []):
-            assert (posts_root / (slug + ".md")).is_file(), (
-                "featured.json 的 {} 指向不存在的文章：{}".format(group, slug)
-            )
+            assert (
+                (docs_root / (slug + ".md")).is_file()
+                or (docs_root / slug / "index.md").is_file()
+            ), "featured.json 的 {} 指向不存在的文章：{}".format(group, slug)
 
 
 def test_the_sync_copies_the_featured_file_into_the_hexo_data_dir():
