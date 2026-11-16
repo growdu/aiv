@@ -21,16 +21,45 @@ from pyv.params import Params
 REQUIRED = ("title", "counter_label", "counter_sub", "counter_bits",
             "counter_value", "txn_ids", "csn_values", "csn_prefix", "caption")
 
-# 取号的间隔（场景进度）：每间隔这么多，进度就多发一个号
+# 取号的间隔（场景进度）：每间隔这么多，进度就多发一个号。
+#
+# **第一笔取号发生在 `CLAIM_STEP` 时刻，不是 0**——`0` 到 `CLAIM_STEP`
+# 这一段留给起始读数，观众才看得见「计数器本来是 100，取了一个号才
+# 变成 101」。早先第一笔取号排在 t=0，起始读数一帧都留不住。
 CLAIM_STEP = 0.15
 
-# **起始读数（`counter_value`）没有出现在画面上。**
-#
-# `counter_reading()` 的序列是「起始值 + 每发一个号之后的新值」，
-# 起始值排在第 0 位；但第一笔取号发生在 t=0（芯片从 t=0 开始淡入），
-# 计数器读数从 t=0 起就已经是发出去的第一个号了——没有留出显示起始
-# 读数的时间窗。序列本身对（`tests/test_scenes.py` 盯着），只是
-# 第 0 位没被画出来。改这个时序会动画面，是另一件事。
+
+def claim_times(count: int) -> list[float]:
+    """每一笔取号发生在场景进度的哪个时刻。
+
+    索引 i 的那笔发生在 `CLAIM_STEP * (i + 1)`——**从 CLAIM_STEP 开始，
+    不是从 0 开始**：0 那个时刻留给起始读数。
+    """
+    return [CLAIM_STEP * (index + 1) for index in range(count)]
+
+
+def issued_count(t: float, count: int) -> int:
+    """到场景进度 `t`，已经发出去几个号。
+
+    0 表示还没人取号——计数器停在起始读数上。
+    """
+    issued = 0
+    for moment in claim_times(count):
+        if t >= moment:
+            issued += 1
+    return issued
+
+
+def reading_alpha(t: float, issued: int) -> float:
+    """读数的透明度：刚跳上去的那个号先暗一下，再亮起来。
+
+    还没取号时（`issued` 为 0）一直是全亮——起始读数不该半明半暗。
+    """
+    if not issued:
+        return 1.0
+    bump = easing.ease_out_cubic(
+        max(0.0, min(1.0, (t - CLAIM_STEP * issued) * 6.0)))
+    return 0.6 + 0.4 * bump
 
 
 def csn_sequence(params=None) -> list[str]:
@@ -72,21 +101,17 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
          COLORS["secondary"], anchor="center")
 
     # 计数器当前读数：谁取到了号，读数就跳到那个号
-    issued = 0
-    for index in range(len(ids)):
-        if t >= CLAIM_STEP * index:
-            issued = index + 1
+    issued = issued_count(t, len(ids))
     reading = readings[issued]
-    bump = easing.ease_out_cubic(
-        max(0.0, min(1.0, (t - CLAIM_STEP * (issued - 1)) * 6.0))) if issued else 1.0
     text(ctx, reading, box_x + box_w / 2, box_y + h * 0.30, 74,
-         COLORS["accent"], anchor="center", bold=True, alpha=0.6 + 0.4 * bump)
+         COLORS["accent"], anchor="center", bold=True,
+         alpha=reading_alpha(t, issued))
 
     # ---- 三个事务依次取号 ----
     for index, (txn_id, value) in enumerate(zip(ids, values)):
         y = h * (0.295 + index * 0.135)
         appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - CLAIM_STEP * index) * 2.6)))
+            max(0.0, min(1.0, (t - CLAIM_STEP * (index + 1)) * 2.6)))
         rounded_rect(ctx, w * 0.44, y, w * 0.135, h * 0.088, 12,
                      COLORS["secondary"], alpha=appear)
         text(ctx, txn_id, w * 0.5075, y + h * 0.059, 38, "#FFFFFF",
@@ -129,16 +154,11 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                       full_w - 60, 32, COLORS["secondary"], anchor="center")
 
     # 计数器当前读数：谁取到了号，读数就跳到那个号
-    issued = 0
-    for index in range(len(ids)):
-        if t >= CLAIM_STEP * index:
-            issued = index + 1
+    issued = issued_count(t, len(ids))
     reading = readings[issued]
-    bump = easing.ease_out_cubic(
-        max(0.0, min(1.0, (t - CLAIM_STEP * (issued - 1)) * 6.0))) if issued else 1.0
     scene_layout.line(ctx, reading, center, box_y + 250, full_w - 60, 88,
-                      COLORS["accent"], bold=True, alpha=0.6 + 0.4 * bump,
-                      anchor="center")
+                      COLORS["accent"], bold=True,
+                      alpha=reading_alpha(t, issued), anchor="center")
 
     # ---- 三笔取号 ----
     spine_x = left + 80
@@ -149,7 +169,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     for index, (txn_id, value) in enumerate(zip(ids, values)):
         chip_y = rows[index]
         appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - CLAIM_STEP * index) * 2.6)))
+            max(0.0, min(1.0, (t - CLAIM_STEP * (index + 1)) * 2.6)))
         # 竖线是一段一段长出来的：还没出现的取号，竖线也不该垂在那儿。
         branch_y = chip_y + chip_h / 2
         spine_top = rows[index - 1] + chip_h / 2 if index else box_y + box_h

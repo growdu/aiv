@@ -8,7 +8,7 @@
       0.9
     ],
     "mascot": "none",
-    "captured_from": "2529926（重抓于本脚本）",
+    "captured_from": "a68c3a4（重抓于本脚本）",
     "font": "AIV Sans CJK SC",
     "platform": "Darwin",
     "segments": 36
@@ -38,8 +38,8 @@
     "csn-total-ordering/s02/pyv.scenes.s02_mixed@0.0": "200e5a873f8ef62771750ca8135ea7d944fb13a01a0bfffc698a5e2c6b0f5193",
     "csn-total-ordering/s02/pyv.scenes.s02_mixed@0.45": "fd1caa3a77fba6cbaa84c737b9d84f6e1845e49cf3c9c62a2bf53232a1e47d82",
     "csn-total-ordering/s02/pyv.scenes.s02_mixed@0.9": "e036183c340ba028e710a61e52d9d2dced5284fadb2be1cdea9da7aa30dfd134",
-    "csn-total-ordering/s03/pyv.scenes.s03_counter@0.0": "cbe7431ac009191a77ef573d588c258f8324ee79f91aed0fcf44e071596c5f06",
-    "csn-total-ordering/s03/pyv.scenes.s03_counter@0.45": "679775f51f31af7da798724e7a25dc8b57b7103d4e51f8f2331df5754ea5e029",
+    "csn-total-ordering/s03/pyv.scenes.s03_counter@0.0": "c32d51ab77edbd86cddfdaaa02ba5308bfbceb209ec841da674c37a84d6eae0c",
+    "csn-total-ordering/s03/pyv.scenes.s03_counter@0.45": "76248f357ffcc356918371a702b1145b5741dbad51c49fecdc9b49c7718f676b",
     "csn-total-ordering/s03/pyv.scenes.s03_counter@0.9": "01f7981611313725e5ed9e274db2401565ff876cc001c074f7a7b426effefc18",
     "csn-total-ordering/s04/pyv.scenes.s04_propagate@0.0": "1ebcdd05952706f8f17de85b2ea933f4dac6f08c847a72b5fae9d5c2b39f4410",
     "csn-total-ordering/s04/pyv.scenes.s04_propagate@0.45": "4833da9b2a82e3de442de02e9b6a57ed991e092f0fb18de3dbe80fbafc2b85b3",
