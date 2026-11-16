@@ -10,19 +10,20 @@ Growdu 专属的两支品牌片：**片头 `Growdu` 字标 + 数据库标语；�
 ```
 brand/
 ├── clips/
-│   ├── growdu_intro_3s_1080p.mp4    片头（2.833s / 68 帧 / 24fps / 时间基 1/24000）
-│   └── growdu_outro_3s_1080p.mp4    片尾（同上）
+│   ├── growdu_intro_3s_1080p.mp4    片头（2.833s / 68 帧 / 24fps / 时间基 1/24000）**入库**
+│   └── growdu_outro_3s_1080p.mp4    片尾（同上）**入库**
 ├── assets/
-│   ├── bg_intro.png                 AI 背景：深蓝数据中心（2720×1536）
-│   ├── bg_outro.png                 AI 背景：蓝调城市天际线（2720×1536）
-│   ├── growdu_pose_thumbsup_nobg.png  小象 · 点赞姿态（2048²，透明底，戴方框眼镜）
-│   └── growdu_pose_wave_nobg.png      小象 · 挥手姿态（2048²，透明底，戴方框眼镜）
+│   ├── bg_intro.png                 AI 背景：深蓝数据中心（16:9）**本机**
+│   ├── bg_outro.png                 AI 背景：蓝调城市天际线（16:9）**本机**
+│   ├── growdu_pose_thumbsup_nobg.png  小象 · 点赞姿态（2048²，透明底，戴方框眼镜）**本机**
+│   └── growdu_pose_wave_nobg.png      小象 · 挥手姿态（2048²，透明底，戴方框眼镜）**本机**
 ├── audio/
-│   ├── voice_intro.mp3 / voice_outro.mp3   旁白（定稿音色）
-│   └── intro_mix.wav / outro_mix.wav       成品音轨（旁白 + 配乐，2.833s）
+│   ├── intro_mix.wav / outro_mix.wav       成品音轨（旁白 + 配乐，2.833s）**入库**
+│   └── voice_intro.mp3 / voice_outro.mp3   旁白（定稿音色）**本机**，需要时重合成
 ├── brand_windows.json                      片头片尾的配乐窗口决定（**入库**）
 └── scripts/
     ├── render_brand.py              渲染两支片（当前唯一入口）
+    ├── generate_backgrounds.py      生成两张 AI 背景（含语义验收）
     ├── generate_poses.py            生成点赞 / 挥手姿态素材（可复现）
     ├── make_audio_brand.py          混音成品音轨
     ├── fix_plates.py                【旧版 8 秒片】底板文字修复
@@ -30,7 +31,11 @@ brand/
     └── render.sh                    【旧版 8 秒片】Ken Burns 渲染
 ```
 
-媒体产物（`clips/`、`assets/`、`audio/`）**不入库**，本机保留；脚本与说明入库。
+**入库的是「出片必需的最小集」，不是全部**：
+
+- `clips/*.mp4` 与 `audio/*_mix.wav` **入库**——`make brand` 要把它们插进
+  契约首尾，缺了成片就没有品牌片（另一台机器 clone 完要能直接出片）；
+- `assets/` 与旁白 mp3 **不入库**，保留本机；需要时跑脚本重新生成。
 
 `brand_windows.json` 是**入库**的：它记的是「片头片尾取曲子的哪一段」这个决定
 （决策入库，音频不入库）。换曲子时重挑一次即可，不用改任何脚本。
@@ -121,6 +126,26 @@ python3 scripts/render_brand.py        # 铭牌盖章 + 渲染片头 + 片尾（
 渲染完会自动核对帧数（`verify_frames`）：帧数不对直接报错，不让问题流到成片。
 片头/片尾时长改 `scripts/render_brand.py` 顶部的 `DURATION` 与 `FRAMES`。
 
+### 源素材没了怎么办
+
+`assets/` 不入库，换机器或者素材丢了，按下面这条链重新生成（每一步都有脚本，
+路线可复现）：
+
+```bash
+cd aiv
+python3 character/scripts/make_white.py        # 白底主形象（从入库的透明底合成）
+cd brand
+python3 scripts/generate_poses.py              # 点赞 / 挥手姿态（眼镜修补 + 抠底 + 盖章）
+python3 scripts/generate_backgrounds.py        # 两张 AI 背景（含语义验收）
+python3 scripts/render_brand.py                # 重渲两支片
+```
+
+每一步都会消耗生成额度（合成与渲染不会），重复执行前先确认是否真的需要重做。
+依赖 `mcode-tools` CLI（先加载 `mcode-tools-master` skill）。
+
+**白底主形象是「合成」出来的，不是重新生成的**——重新生成会让吉祥物形象漂移，
+跟已入库的透明底主形象对不上。
+
 ### 踩过的坑
 
 - **混音阶段不能用 `-shortest`。** AAC 编码器会引入延迟，`-shortest` 会按音频的
@@ -131,9 +156,22 @@ python3 scripts/render_brand.py        # 铭牌盖章 + 渲染片头 + 片尾（
   `render_brand.py` 会自动探测主体包围盒再推导脚底比例。
 - **AI 宽幅背景可能有贯穿全图的拼接缝。** `bg_outro.png` 初版就是左右两场景硬拼。
   羽化只会把缝糊掉，正确做法是用「单一连续空间」的 prompt 重新生成。
+  **别用像素判据找缝**：试过两种都误报——「相邻两列的亮度跳变」把玻璃幕墙的
+  楼边当成了缝（39/255），「宽窗台阶」把走廊尽头的亮光当成了缝（37/255）。
+  「这是不是一整个空间」是**语义问题**，所以 `generate_backgrounds.py` 生成完
+  交给视觉模型问一句，答「有缝」就直接报错——那条才是真判据。
 - **姿态素材戴眼镜要走两步。** 模型给镜框贴白色小铭牌是固定毛病，
   `character/scripts/add_glasses.py` 因此在图生图之后额外做一次局部修补。
-  姿态素材本身的生成入口是 `scripts/generate_poses.py`。
+  姿态素材本身的生成入口是 `scripts/generate_poses.py`（已含这一步）。
+- **模型不一定会画铭牌。** 挥手姿态那一版模型就把胸口的白铭牌省了——画出来是
+  一只胸口只有数据库图标的小象。铭牌是品牌标识，prompt 里得写死「马甲上部
+  必须有一块白色矩形铭牌」，生成后还要目视确认。
+- **品牌片的中文文案必须进内置字体子集。** 仓库内置的字体是按「仓库用到的
+  字符」子集化的，而品牌片是**独立于流水线的一条出字路**——文案一开始没被
+  收进来，重渲后片头胶囊就成了「⊠入数据库 · 分享技术之⊠」（「深」「美」两个字
+  没有字形）。画面照常生成、时长照常对，没有任何报错。现在
+  `scripts/build_font_subset.py` 的画字模块清单里包含 `render_brand.py`，
+  缺字守卫的运行时探针也会真渲一遍片头片尾。
 - **成品音轨必须接进成片，不能只做好放在那儿。** 2026-11-12 踩过：
   motif 的成品音轨（`intro_mix.wav`）做出来了，却没接进成片——
   `brand.py` 当时从品牌片 mp4 里抽音轨，嵌进去的还是切换前的旧 AI 配乐。

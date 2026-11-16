@@ -5,9 +5,16 @@
   brand/assets/growdu_pose_thumbsup_nobg.png   小象 · 点赞姿态（2048²，透明底）
   brand/assets/growdu_pose_wave_nobg.png         小象 · 挥手姿态（2048²，透明底）
 
-参考图是主形象 `character/growdu_character_2k.png`，prompt 只描述姿态差异，
-角色设定（浅蓝灰皮肤 / 深藏蓝马甲 / 琥珀黄数据库图标 / 黑色头戴耳机 /
-深藏蓝方形细边框眼镜）原样继承，不重新发明。
+参考图是主形象 `character/growdu_character_2k.png`（白底），
+prompt 只描述姿态差异，角色设定（浅蓝灰皮肤 / 深藏蓝马甲 / 琥珀黄数据库图标 /
+黑色头戴耳机 / 深藏蓝方形细边框眼镜）原样继承，不重新发明。
+
+白底主形象是由入库的透明底主形象**合成**出来的，不是重新生成的
+（`character/scripts/make_white.py`）——重新生成会让吉祥物形象漂移，
+跟已经入库的素材对不上。
+
+生成出来的图还要走一步**局部修补**（`cleanup_glasses`）：模型戴上方形眼镜后
+有个固定毛病，会在镜框或镜腿上贴一小块白色小铭牌。
 
 铭牌上不写任何字：模型写的中英文会乱码，文字一律由
 `character/scripts/stamp_badge.py` 用真实字体盖上 `growdu`。
@@ -33,7 +40,7 @@ CHARACTER_SCRIPTS = AIV / "character" / "scripts"
 sys.path.insert(0, str(CHARACTER_SCRIPTS))
 
 from _mcode import call, download, upload          # noqa: E402
-from add_glasses import GLASSES_COLOR, GLASSES_STYLE  # noqa: E402
+from add_glasses import (GLASSES_COLOR, GLASSES_STYLE, cleanup_glasses)  # noqa: E402
 from stamp_badge import stamp_badge                # noqa: E402
 
 CHARACTER = AIV / "character" / "growdu_character_2k.png"
@@ -48,7 +55,11 @@ IDENTITY = f"""角色设定与图1逐项保持一致：
 
 COMMON_TAIL = """画面要求：
 - 纯白背景 (#FFFFFF)，主体居中，四周留出充足白边
-- 胸口那块白色矩形铭牌保持**完全空白**，不要写任何文字、字母或符号
+- 马甲**上部**必须有一块**白色矩形铭牌**：横向长方形，约小象一个手掌宽、
+  拇指高，纯白无字，位置在胸口琥珀黄圆柱图标的上方偏右；
+  这块铭牌是品牌标识，**不能省掉**
+- 那块白色矩形铭牌保持**完全空白**，不要写任何文字、字母或符号
+- 眼镜的镜框与镜腿上不要贴任何白色标签、铭牌、贴纸或文字
 - 不要任何文字标签、边框、说明文字
 - 干净的产品级 3D 卡通渲染质感"""
 
@@ -83,7 +94,7 @@ POSES = {
 
 
 def generate(prompt: str, dest: Path) -> None:
-    """生成姿态图 → 抠透明底 → 盖铭牌章。"""
+    """生成姿态图 → 擦镜框杂物 → 抠透明底 → 盖铭牌章。"""
     ref = upload(CHARACTER)
     res = call("connector__matrix__generate_image", {"requests": [{
         "prompt": prompt,
@@ -96,6 +107,12 @@ def generate(prompt: str, dest: Path) -> None:
         raise RuntimeError(f"生成失败：{res}")
     download(items[0]["node_id"], dest)
     print(f"  → {dest}")
+
+    # 擦镜框杂物：模型戴上方形眼镜后有个反复出现的毛病——会在镜框或镜腿上
+    # 贴一小块白色小铭牌（实测写着 growdu）。它既是视觉噪点，又会被铭牌检测
+    # 当成真正的铭牌（它四周全是镜框色）。prompt 里已经禁止了，但模型不听，
+    # 所以图生图之后必须再做一次局部修补（详见 add_glasses.py 的说明）。
+    cleanup_glasses(dest, dest)
 
     bg = call("connector__matrix__remove_image_background",
               {"image_url": upload(dest)})

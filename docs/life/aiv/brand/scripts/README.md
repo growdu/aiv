@@ -10,6 +10,20 @@ python3 scripts/render_brand.py       # 渲染片头 + 片尾到 clips/
 `render_brand.py` 支持 `--intro` / `--outro` 单独渲染；渲染完会核对帧数，
 帧数不对直接报错。
 
+## 源素材的生成入口（消耗生成额度）
+
+`assets/` 不入库，素材没了要重新生成。依赖 `mcode-tools` CLI
+（先加载 `mcode-tools-master` skill），每一步都会消耗生成额度，
+重复执行前先确认是否真的需要重做：
+
+```bash
+python3 ../character/scripts/make_white.py   # 白底主形象（从入库的透明底**合成**，不耗额度）
+python3 scripts/generate_poses.py             # 点赞 / 挥手姿态（眼镜修补 + 抠底 + 盖章）
+python3 scripts/generate_backgrounds.py       # 两张 AI 背景（生成完过语义验收）
+```
+
+三个脚本的分工与踩过的坑见 [`../README.md`](../README.md)。
+
 ## 旧版 8 秒片（已废弃，保留作兜底素材的再生成入口）
 
 ```bash
