@@ -91,18 +91,56 @@ def _home_script() -> str:
 
 # --- 在 node 里跑模板 -------------------------------------------------------
 
+# 一个**自带**的极简 EJS 渲染器。
+#
+# 为什么不用 npm 里的 ejs：site-guard 那条 CI 只装 pytest，**没有
+# node_modules**——契约测试不能依赖仓库里没装的东西（上一版就因为
+# require('ejs') 在 CI 里整条红了）。这个渲染器只用 node 自带的能力，
+# 支持侧栏模板用到的那几个标签：<% %> / <%= %> / <%- %> / <%# %>。
+#
+# 跟真 ejs 对过：同一份模板、同一份数据，渲染结果**逐字节相同**。
 SIDEBAR_HARNESS = r"""
-const ejs = require('ejs');
 const fs = require('fs');
+function renderEjs(tmpl, scope) {
+  var code =
+    'var __out = [];\n' +
+    'function __lit(s){return s;}\n' +
+    'function __esc(s){if(s===null||s===undefined)return "";' +
+    'return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")' +
+    '.replace(/"/g,"&quot;").replace(/\'/g,"&#39;");}\n' +
+    'with (__scope) {\n';
+  var re = /<%([=\-#]?)([\s\S]*?)-?%>/g;
+  var last = 0, m;
+  function lit(text) {
+    if (text) { code += '__out.push(__lit(' + JSON.stringify(text) + '));\n'; }
+  }
+  while ((m = re.exec(tmpl)) !== null) {
+    lit(tmpl.slice(last, m.index));
+    var kind = m[1], body = m[2];
+    if (kind === '#') {
+      // 注释：不输出
+    } else if (kind === '=') {
+      code += '__out.push(__esc(' + body + '));\n';
+    } else if (kind === '-') {
+      code += '__out.push(' + body + ');\n';
+    } else {
+      code += body + '\n';
+    }
+    last = re.lastIndex;
+  }
+  lit(tmpl.slice(last));
+  code += '}\nreturn __out.join("");';
+  return new Function('__scope', code)(scope);
+}
 const tmpl = fs.readFileSync(process.argv[1], 'utf8');
 const spec = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const posts = spec.posts || [];
 const site = {
   posts: {data: posts, length: posts.length},
-  categories: {length: spec.categories || 0},
+  categories: {length: spec.categories || 0, each: function () {}},
   data: spec.data || {},
 };
-const out = ejs.render(tmpl, {
+const out = renderEjs(tmpl, {
   site: site,
   config: {root: '/'},
   url_for: function (p) { return p; },
