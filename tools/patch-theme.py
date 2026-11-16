@@ -181,10 +181,10 @@ inject_css = r"""<meta property="og:title" content="<%= page.title || config.tit
 <meta property="og:type" content="<%= page.layout === 'post' ? 'article' : 'website' %>">
 <meta property="og:url" content="<%- _selfUrl %>">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:description" content="<%= (page.description || config.description || '').replace(/"/g, '&quot;') %>">
+<meta property="og:description" content="<%= page.description || config.description || '' %>">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="<%= page.title || config.title %>">
-<meta name="twitter:description" content="<%= (page.description || config.description || '').replace(/"/g, '&quot;') %>">
+<meta name="twitter:description" content="<%= page.description || config.description || '' %>">
 <% if (page.layout === 'post') { %>
 <meta property="article:author" content="<%= config.author %>">
 <meta property="article:published_time" content="<%- date(page.date, 'YYYY-MM-DD') %>">
