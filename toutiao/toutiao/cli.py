@@ -2,7 +2,9 @@
 
     scan              list the corpus and what can go to Toutiao
     convert <slug>   slice one post and write the publish package
+    convert --all    slice the whole corpus and write every package
     publish <slug>   package it, and upload once the API permission exists
+    mark <state>     record what a human did in the editor
     status            show the recorded state of every article
 
 Every path these commands touch can be pointed somewhere else --
@@ -103,6 +105,10 @@ _STATUS_TEXT = {
     "drafted": "drafted（待人工发表）",
     "published": "published（已发布）",
 }
+
+#: 草稿档在快照里挂的理由。**不能写成「已发布」**：草稿在后台的草稿箱里，
+#: 人点下「确认发布」之前它没有公开链接，站点索引也是按这个理由显示的。
+DRAFTED_REASON = "草稿已在头条号后台的草稿箱里，等人工补图并发表"
 
 
 class _ConfigError(Exception):
@@ -218,6 +224,35 @@ def cmd_scan(args) -> int:
     return EXIT_OK
 
 
+def _package_and_record(args, capability, article, store):
+    """出包、写快照、记状态。
+
+    返回 ``(package, snapshot, state)``。**内容没变时 package 与 snapshot
+    都是 None**：那不是失败，是这一篇已经处理过了（``needs_publish()``
+    说了算）。把「跳过」与「失败」分开，是这一层唯一要小心的地方。
+
+    草稿档（``drafted``）在这一步**不碰**：已经在平台上的草稿，它的快照
+    写的是 ``drafted``；重出包会把那份记录写回 ``packaged``，等于把
+    「草稿已在平台上」从账上抹掉。内容变了才重出包——那时平台上的草稿
+    已经旧了，本来就该重走一遍。
+    """
+    fp = fingerprint(article.body)
+    state = store.get(article.content_id)
+    if not needs_publish(fp, state):
+        return None, None, state
+
+    package = write_package(
+        article, capability, args.out_dir, args.posts_dir, args.source_url
+    )
+    snapshot = write_snapshot(package, args.outbox_dir)
+
+    state.fingerprint = fp
+    state.status = package.status
+    state.package_dir = str(package.package_dir)
+    store.save(article.content_id, state)
+    return package, snapshot, state
+
+
 def _convert(args) -> tuple:
     """Slice one post and write the package.  Returns ``(code, package)``.
 
@@ -235,31 +270,22 @@ def _convert(args) -> tuple:
         print("不能发到头条号：{}".format(result.reason), file=sys.stderr)
         return EXIT_INELIGIBLE, None
 
-    # The fingerprint covers the Toutiao version, not the source post: only
-    # a change in what actually gets published matters here.
-    fp = fingerprint(result.article.body)
     store = StateStore(args.state_file)
-    state = store.get(result.article.content_id)
-    # 状态文件坏掉了：先说出来，再往下走。这一次的空状态不可信。
+    # 先把状态文件读一遍：坏掉的话它这时就被隔离了，下面才报得出来。
+    store.all()
     broken = _report_quarantine(store)
-    if not needs_publish(fp, state):
-        print("内容未变，已有同样的发布包：{}".format(state.updated_at))
-        return EXIT_OK, None
 
     try:
-        package = write_package(
-            result.article, capability, args.out_dir, args.posts_dir, args.source_url
+        package, snapshot, state = _package_and_record(
+            args, capability, result.article, store
         )
     except ValueError as error:
         print("不能发到头条号：{}".format(error), file=sys.stderr)
         return EXIT_INELIGIBLE, None
 
-    snapshot = write_snapshot(package, args.outbox_dir)
-
-    state.fingerprint = fp
-    state.status = package.status
-    state.package_dir = str(package.package_dir)
-    store.save(result.article.content_id, state)
+    if package is None:
+        print("内容未变，已有同样的发布包：{}".format(state.updated_at))
+        return EXIT_OK, None
 
     print("标题：{}".format(package.title))
     print("字数：{} 字符（平台计 {} 字；切片上限 {} 字符）".format(
@@ -277,9 +303,83 @@ def _convert(args) -> tuple:
 
 
 def cmd_convert(args) -> int:
-    """Slice one post and write the package; nothing is uploaded."""
+    """Slice one post (or the whole corpus) and write the package."""
+    if args.all_posts:
+        return cmd_convert_all(args)
+    if not args.slug:
+        print(
+            "convert 要么给一个 slug（convert <slug>），要么给 --all",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
     code, _package = _convert(args)
     return code
+
+
+def cmd_convert_all(args) -> int:
+    """Slice the whole corpus and write every publish package.
+
+    一篇一篇敲 ``convert <slug>`` 在五百多篇的语料上不现实：每篇都要人
+    盯着屏幕上那五行输出。这里跑一遍整个语料，每篇一行，最后一行是账。
+
+    **不合格的那几篇不算失败**：语料里本来就有切不出内容的稿子（正文只剩
+    一段代码那种），它们会被点名，但不会拖垮整批。真的失败（写盘出错、
+    状态文件坏过）才让退出码变成 3 —— 一次运行「成功」却漏了几篇，是这个
+    项目最贵的那种错。
+    """
+    capability = _capability(args.capability)
+    try:
+        posts = discover(args.posts_dir)
+    except FileNotFoundError as error:
+        # 目录不存在：错误消息里已经带了「先跑 tools/sync-hexo.py」的指引。
+        print("扫描失败：{}".format(error), file=sys.stderr)
+        return EXIT_USAGE
+    except ValueError as error:
+        # 母稿坏掉（front matter 没闭合）：消息里带着出错的文件路径。
+        print("扫描失败：{}".format(error), file=sys.stderr)
+        return EXIT_ERROR
+
+    store = StateStore(args.state_file)
+    store.all()
+    broken = _report_quarantine(store)
+
+    packaged = 0
+    skipped = 0
+    ineligible = 0
+    failed = 0
+    for post in posts:
+        result = slice_post(post, capability.limits, args.source_url)
+        if result.article is None:
+            ineligible += 1
+            print("  ✗ {} —— {}".format(post.title, result.reason))
+            continue
+        try:
+            package, _snapshot, _state = _package_and_record(
+                args, capability, result.article, store
+            )
+        except (ValueError, OSError) as error:
+            failed += 1
+            print("  ! {} —— {}".format(result.article.title, error), file=sys.stderr)
+            continue
+        if package is None:
+            skipped += 1
+            print("  · {}（内容未变，跳过）".format(result.article.title))
+            continue
+        packaged += 1
+        print("  ✓ {}".format(package.title))
+
+    print("\n出包 {} 篇；跳过 {}（内容未变）；不合格 {}；失败 {}".format(
+        packaged, skipped, ineligible, failed
+    ))
+    if failed:
+        return EXIT_ERROR
+    if broken:
+        # 状态文件坏过：出包照做了，但这份账不可信。
+        return EXIT_ERROR
+    if packaged == 0 and skipped == 0:
+        # 一篇都没成：不能「成功地什么都没做」。
+        return EXIT_INELIGIBLE
+    return EXIT_OK
 
 
 def cmd_publish(args) -> int:
@@ -313,25 +413,29 @@ def cmd_publish(args) -> int:
 
 
 def cmd_mark(args) -> int:
-    """Record that the article went out through the editor.
+    """Record what a human did in the editor.
 
-    The pipeline can package an article but cannot publish it: the account
-    has no open-platform API permission, so publishing is a human action in
-    the editor.  Somebody has to write that down -- otherwise the snapshot
-    keeps saying "待人工上传" for an article that is already live, and the
-    next run reports the wrong state.
+    Two tiers, and both need a receipt:
 
-    头条号只标 ``published`` 一档：草稿分支（``save=0``）平台一律拒绝
-    （``err_no 7050``，见 docs/02-试点记录.md §R2.F），标"已存草稿"只会是
-    一句假话。
+    - ``drafted``   -- a draft exists on the platform; a human still has to
+      publish it.  The receipt is the platform-side draft id.
+    - ``published`` -- it is out.  The receipt is the public URL.
+
+    **没有凭据就不许说那句话。** 「已存草稿」一旦说错，下一轮就会把它当成
+    没发过再发一遍——发重了比发慢了糟糕得多。
+
+    2026-11-15 实测：草稿档**真的**存在了（``save=0`` 分支从 11-13 的一律
+    7050 变成「保存成功」，见 docs/02-试点记录.md §R4）。在那之前这个档位
+    不存在，``mark`` 只认 ``published``。
     """
-    if args.state != "published":
-        print(
-            "头条号只标 published 一档（草稿分支平台一律拒绝）",
-            file=sys.stderr,
-        )
-        return EXIT_USAGE
-    if not args.url:
+    if args.state == "drafted":
+        if not args.draft_id:
+            print(
+                "drafted 档必须给 --draft-id（平台侧的草稿 id）",
+                file=sys.stderr,
+            )
+            return EXIT_USAGE
+    elif not args.url:
         print("published 档必须给 --url（公开链接）", file=sys.stderr)
         return EXIT_USAGE
 
@@ -353,10 +457,16 @@ def cmd_mark(args) -> int:
         print("状态快照读不了：{}".format(error), file=sys.stderr)
         return EXIT_ERROR
 
-    payload["status"] = "published"
-    payload["published_url"] = args.url
-    payload["reason"] = None
+    payload["status"] = args.state
     payload["updated_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    if args.state == "published":
+        payload["published_url"] = args.url
+        payload["reason"] = None
+    else:
+        # 草稿不是已发布：公开链接必须还是空的。
+        payload["published_url"] = None
+        payload["draft_id"] = args.draft_id
+        payload["reason"] = DRAFTED_REASON
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -364,13 +474,21 @@ def cmd_mark(args) -> int:
 
     store = StateStore(args.state_file)
     state = store.get(post.slug)
-    state.status = "published"
-    state.published_url = args.url
+    state.status = args.state
+    if args.state == "published":
+        state.published_url = args.url
+    else:
+        # 平台侧的 id 记在 object_id：它是「平台上有这篇东西」的凭据。
+        state.object_id = args.draft_id
     store.save(post.slug, state)
 
     print("标题：{}".format(payload.get("title", "")))
-    print("状态：published")
-    print("公开链接：{}".format(args.url))
+    print("状态：{}".format(args.state))
+    if args.state == "published":
+        print("公开链接：{}".format(args.url))
+    else:
+        print("草稿 id：{}".format(args.draft_id))
+        print("草稿在平台后台的「草稿箱」里，等人工发表")
     print("状态快照：{}".format(path))
     return EXIT_OK
 
@@ -436,7 +554,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     convert = sub.add_parser("convert", help="切片并产出发布包（不调接口）",
                              parents=[_common_parser()])
-    convert.add_argument("slug")
+    convert.add_argument("slug", nargs="?",
+                         help="文章在 source/_posts 下的相对路径（去掉 .md）")
+    convert.add_argument("--all", dest="all_posts", action="store_true",
+                         help="把整个语料一次性出包")
     convert.set_defaults(func=cmd_convert)
 
     publish = sub.add_parser("publish", help="产出发布包（API 权限开通后才会真正上传）",
@@ -446,10 +567,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     mark = sub.add_parser("mark", help="记录人工发表的结果",
                            parents=[_common_parser()])
-    mark.add_argument("state", choices=["published"],
-                      help="published=已发表（要 --url）")
+    mark.add_argument("state", choices=["drafted", "published"],
+                      help="drafted=草稿已在平台上（要 --draft-id）；published=已发表（要 --url）")
     mark.add_argument("slug")
     mark.add_argument("--url", default=None, help="公开链接，published 档必填")
+    mark.add_argument("--draft-id", dest="draft_id", default=None,
+                      help="平台侧的草稿 id，drafted 档必填")
     mark.set_defaults(func=cmd_mark)
 
     sub.add_parser("status", help="查看状态",

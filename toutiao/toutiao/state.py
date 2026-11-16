@@ -210,11 +210,16 @@ class StateStore:
 def needs_publish(fp: str, state: PublishState) -> bool:
     """True when the article still has to be packaged or published.
 
-    Only ``packaged`` and ``published`` count as handled: the fingerprint
-    of those decides whether the article may be skipped.  Any other
-    status means the attempt did not get that far, so it has to run
+    Only ``packaged``, ``drafted`` and ``published`` count as handled: the
+    fingerprint of those decides whether the article may be skipped.  Any
+    other status means the attempt did not get that far, so it has to run
     again.
+
+    **``drafted`` 也算处理过了**（2026-11-15 加的）。草稿已经建在平台上了，
+    内容没变时再出一次包，只会把快照从 ``drafted`` 写回 ``packaged``——
+    等于把「草稿已在平台上」从账上抹掉。内容变了才重出包：那时平台上那
+    份草稿已经旧了，本来就该重走一遍。
     """
-    if state.status in ("published", "packaged"):
+    if state.status in ("published", "packaged", "drafted"):
         return state.fingerprint != fp
     return True

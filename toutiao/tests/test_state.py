@@ -96,9 +96,26 @@ def test_needs_publish_is_true_when_the_content_changed():
 
 
 def test_needs_publish_is_true_for_an_unfinished_status():
-    """只有 packaged / published 算「已经处理过」，别的状态都要再发。"""
-    state = PublishState(fingerprint="fp", status="drafted")
+    """没走到「平台上有一份东西」那一步的状态，都要再发。"""
+    state = PublishState(fingerprint="fp", status="failed")
     assert needs_publish("fp", state) is True
+
+
+def test_needs_publish_is_false_for_an_unchanged_draft():
+    """``drafted`` 也算处理过了：草稿已经在平台上了。
+
+    2026-11-15 之前这里断言的是 True —— 那时草稿分支（``save=0``）平台
+    一律拒绝，``drafted`` 这个档位根本不存在。草稿能建起来之后，它就该
+    跟 packaged / published 一样：内容没变就不重出包。
+    """
+    state = PublishState(fingerprint="fp", status="drafted")
+    assert needs_publish("fp", state) is False
+
+
+def test_needs_publish_is_true_when_a_draft_went_stale():
+    """改了正文，平台上的草稿就旧了：要重新出包、重新建草稿。"""
+    state = PublishState(fingerprint="old", status="drafted")
+    assert needs_publish("new", state) is True
 
 
 def test_package_dir_travels_with_the_state(tmp_path):
