@@ -29,13 +29,36 @@ FIXTURES = Path(__file__).parent / "fixtures"
 BASELINE = FIXTURES / "scene_baseline.json"
 
 # 仓库里每一期的契约。结构与文案守卫生效在**每一期**上，
-# 逐像素基准只对默认那一期（基准指纹是按它抓的）。
+# 逐像素基准也覆盖**每一期的每一段**（基准按段抓，不是按模块抓）。
 ALL_CONTRACT_PATHS = sorted(contract_mod.CONTRACTS_DIR.glob("*.json"))
 EPISODES = [path.stem for path in ALL_CONTRACT_PATHS]
 
 # 短于 3 个字符的文案不判：两个汉字的词（"输出"、"并行"）到处都是，
 # 拿它当判据只会天天误报。3 个字起才算「一句具体的文案」。
 MIN_COPY_LENGTH = 3
+
+#: 基准抓取的时刻。抓基准的脚本与这里必须用同一份，否则键对不上。
+BASELINE_TIMES = (0.0, 0.45, 0.9)
+
+
+def _baseline_key(episode: str, segment, t: float) -> str:
+    """基准的键：期号 + 段 id + 渲染器 + 时刻。
+
+    **必须带期号**：`s01_intro` 与 `s06_outro` 六期都在用，而每期的
+    `params` 不同（标题文案各不一样）→ 画面不同 → 哈希不同。只按渲染器
+    存一份，后五期的画面就永远比不到。
+    """
+    return f"{episode}/{segment.id}/{segment.renderer}@{t}"
+
+
+def _expected_baseline_keys(all_contracts) -> set[str]:
+    """六期契约里的每一段 × 每个时刻。"""
+    return {
+        _baseline_key(episode, segment, t)
+        for episode, contract in all_contracts.items()
+        for segment in contract.segments
+        for t in BASELINE_TIMES
+    }
 
 
 @pytest.fixture(scope="module")
@@ -284,23 +307,67 @@ def baseline_frames():
     return data["frames"]
 
 
-def test_contract_driven_rendering_is_pixel_identical(contract, monkeypatch, baseline_frames):
+def test_contract_driven_rendering_is_pixel_identical(all_contracts, monkeypatch,
+                                                      baseline_frames):
     """契约化之后，画面必须与改造前一模一样。
 
     基准指纹是「文案还写死在场景代码里」时抓的。把文案搬进契约最容易出的
     事故就是顺手把画面也改了——而画面变了不会有任何报错，只有逐像素比对能发现。
+
+    **覆盖六期每一段**：基准按段抓，键带期号与段 id。
     """
     _without_mascot(monkeypatch)
     baseline = baseline_frames
-    for segment in contract.segments:
-        for t in (0.0, 0.45, 0.9):
-            key = f"{segment.renderer}@{t}"
-            assert key in baseline, f"基准里没有 {key}"
-            actual = _scene_frame_hash(segment.renderer, segment.params, t)
-            assert actual == baseline[key], f"{key} 的画面变了：文案搬进契约不该动到画面"
+    for episode, contract in all_contracts.items():
+        for segment in contract.segments:
+            for t in BASELINE_TIMES:
+                key = _baseline_key(episode, segment, t)
+                assert key in baseline, f"基准里没有 {key}"
+                actual = _scene_frame_hash(segment.renderer, segment.params, t)
+                assert actual == baseline[key], f"{key} 的画面变了：文案搬进契约不该动到画面"
 
 
-def test_pixel_baseline_excludes_local_mascot_asset(contract, monkeypatch, baseline_frames):
+def test_the_baseline_covers_every_segment(all_contracts):
+    """基准必须覆盖六期契约里的每一段——少一段就有一段画面没人守。
+
+    这条**不依赖字体**：基准里有没有某一段是文件内容的事，与当前机器
+    用哪款字体无关。所以它直接读 fixture，不走会 skip 的 `baseline_frames`。
+    """
+    data = json.loads(BASELINE.read_text(encoding="utf-8"))
+    actual = set(data["frames"])
+    expected = _expected_baseline_keys(all_contracts)
+    assert actual == expected, (
+        f"基准覆盖对不上：缺 {sorted(expected - actual)[:5]}；"
+        f"多 {sorted(actual - expected)[:5]}"
+    )
+
+
+def test_the_baseline_covers_every_scene_module(all_contracts):
+    """基准里的渲染器集合必须等于目录里的场景模块集合。
+
+    照 `tests/test_scene_overlap.py::test_every_scene_module_is_covered`
+    的写法：集合相等，不是子集。新加一个模块却没进任何一期契约，
+    基准就扫不到它——守卫覆盖不到的那部分，坏了也不会红。
+    """
+    data = json.loads(BASELINE.read_text(encoding="utf-8"))
+    # 基准里的渲染器是 `pyv.scenes.s01_intro`，目录侧是文件名 `s01_intro`
+    # ——取最后一段对齐。
+    in_baseline = {
+        key.split("/")[2].split("@")[0].rsplit(".", 1)[-1] for key in data["frames"]
+    }
+    scenes_dir = Path(contract_mod.__file__).parent / "scenes"
+    on_disk = {
+        path.stem for path in scenes_dir.glob("*.py")
+        if path.stem != "__init__"
+    }
+    assert in_baseline == on_disk, (
+        f"基准没盖住全部场景模块：目录有基准没有 {sorted(on_disk - in_baseline)}；"
+        f"基准有目录没有 {sorted(in_baseline - on_disk)}"
+    )
+
+
+def test_pixel_baseline_excludes_local_mascot_asset(contract, all_contracts,
+                                                     monkeypatch, baseline_frames):
     """基准指纹里不含本机的形象素材。
 
     基准必须与形象素材无关：素材一改（重新生成形象）基准就红，等于把测试
@@ -311,14 +378,18 @@ def test_pixel_baseline_excludes_local_mascot_asset(contract, monkeypatch, basel
 
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
     assert baseline["capture"]["mascot"] == "none", "基准必须是在不画形象时抓的"
-    assert baseline["capture"]["times"] == [0.0, 0.45, 0.9]
-    assert len(baseline["frames"]) == 18, "6 个场景 × 3 个时间点"
+    assert baseline["capture"]["times"] == list(BASELINE_TIMES)
+    # 条数由契约推导：加期不用改这里，但漏抓会红。
+    assert len(baseline["frames"]) == len(_expected_baseline_keys(all_contracts)), (
+        "基准的帧数必须等于六期契约的段数 × 时刻数"
+    )
 
     # 主工作区里形象素材是在的：有它也必须对得上「不画形象」的基准，
     # 说明素材确实没进比较。
     if not character.STATIC_IMAGE.is_file():
         pytest.skip("本机没有形象素材，这条前提无从验证")
     _without_mascot(monkeypatch)
-    params = next(s.params for s in contract.segments if s.renderer == "pyv.scenes.s01_intro")
-    key = "pyv.scenes.s01_intro@0.45"
-    assert _scene_frame_hash("pyv.scenes.s01_intro", params, 0.45) == baseline_frames[key]
+    segment = next(s for s in contract.segments
+                   if s.renderer == "pyv.scenes.s01_intro")
+    key = _baseline_key(contract.episode, segment, 0.45)
+    assert _scene_frame_hash("pyv.scenes.s01_intro", segment.params, 0.45) == baseline_frames[key]
