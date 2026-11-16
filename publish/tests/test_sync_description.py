@@ -141,6 +141,49 @@ def test_the_history_prefix_is_stripped():
     )
 
 
+def test_a_full_stop_after_the_prefix_is_stripped():
+    """「初稿。」也是履历前缀——9 篇文章的摘要第一眼是「初稿。」。
+
+    读者看到「初稿。」会以为文章没写完。
+    """
+    module = load_sync_module()
+
+    header = ["编写人", "编写内容", "编写时间"]
+    rows = [["growdu", "初稿。从 PostgreSQL 18 源码出发，把目录快照讲清楚", "2026-11-11"]]
+
+    assert module.edit_history_description(header, rows) == (
+        "从 PostgreSQL 18 源码出发，把目录快照讲清楚"
+    )
+
+
+def test_a_prefix_followed_by_a_plus_is_stripped():
+    """「初稿 + 第十二节增补：……」也算履历前缀。"""
+    module = load_sync_module()
+
+    header = ["编写人", "编写内容", "编写时间"]
+    rows = [["growdu", "初稿 + 第十二节增补：补充 ReorderBuffer 视角", "2026-11-11"]]
+
+    assert module.edit_history_description(header, rows) == (
+        "第十二节增补：补充 ReorderBuffer 视角"
+    )
+
+
+def test_the_description_is_plain_text():
+    """摘要要能直接进 meta / 卡片 / RSS——裸 markdown 标记到那里是字面量。
+
+    ``**PostgreSQL 目录快照**`` 显示在 OG 描述里就是「**PostgreSQL
+    目录快照**」，不是加粗。
+    """
+    module = load_sync_module()
+
+    header = ["编写人", "编写内容", "编写时间"]
+    rows = [["growdu", "初稿，把 **PostgreSQL 目录快照** 和 `pg_class` 讲清楚", "2023-02-23"]]
+
+    desc = module.edit_history_description(header, rows)
+
+    assert desc == "把 PostgreSQL 目录快照 和 pg_class 讲清楚"
+
+
 def test_a_table_that_only_says_draft_yields_no_description():
     """光秃秃一个「初稿」不是摘要——宁可没有，别把「初稿」写成 description。"""
     module = load_sync_module()
@@ -185,6 +228,73 @@ def test_a_table_without_a_content_column_yields_no_description():
     rows = [["growdu", "2026-10-26", "matery 主题 + mermaid 10.9.8"]]
 
     assert module.edit_history_description(header, rows) is None
+
+
+def test_a_table_written_by_修改人_is_stripped_too():
+    """有的作者写的是「修改人 | 修改内容 | 修改时间」——那也是编辑履历表。
+
+    这三篇的「修改内容」列是「文档初稿」这类空话，所以**不抽摘要**，
+    但表得剥掉——留在正文里，它的 meta description 就还是表格残骸。
+    """
+    module = load_sync_module()
+
+    text = (
+        "正文。\n\n"
+        "| 修改人 | 修改内容 | 修改时间 |\n"
+        "| --- | --- | --- |\n"
+        "| growdu | 文档初稿 | 2024-05-06 |\n\n"
+        "后文。\n"
+    )
+
+    clean, desc = module.extract_edit_history(text)
+
+    assert "修改人" not in clean
+    assert "后文。" in clean
+    assert desc is None
+
+
+def test_no_edit_history_table_is_left_in_the_real_docs():
+    """真实语料里凡是履历表，剥完之后都不该还在。
+
+    这条比 ``find_edit_history_tables`` 更宽：它按**表头长相**找，不信
+    抽取器自己的判断——抽取器认出来了却没剥掉（或者压根没认出来），
+    都在这里现形。
+    """
+    module = load_sync_module()
+
+    for path in real_docs_files():
+        text = path.read_text(encoding="utf-8")
+        if not re.search(r"^\|\s*(编写人|修改人|编辑人)\s*\|", text, re.M):
+            continue
+        clean, _ = module.extract_edit_history(text)
+        assert not re.search(r"^\|\s*(编写人|修改人|编辑人)\s*\|", clean, re.M), path
+
+
+def test_the_description_survives_the_content_contract():
+    """生成的 description 必须过得了内容契约的长度上限。
+
+    **病根**：契约层用自己的小解析器读 front matter
+    （``publish/publishkit/contract.py`` 的 ``_unquote``），它剥外层引号
+    但**不反转义**——于是 ``\\"`` 在那里算 2 个字符。sync 按未转义的长度
+    封顶 150，契约按转义后的长度封顶 150：每多一个引号就多 2。
+    4 篇文章因此在 CI 上违规（``tools/check-content-contract.py`` 退出 1）。
+
+    这条测试用**契约层自己的解析器**判长度——两边口径必须一致。
+    """
+    from publishkit import parse_front_matter, validate_fields
+
+    module = load_sync_module()
+
+    for path in real_docs_files():
+        text = path.read_text(encoding="utf-8")
+        for header, rows in module.find_edit_history_tables(text):
+            desc = module.edit_history_description(header, rows)
+            if desc is None:
+                continue
+            line = 'description: "{}"\n'.format(module.yaml_escape(desc))
+            fields, _ = parse_front_matter("---\n" + line + "---\n")
+            violations = validate_fields(fields)
+            assert not violations, "{}：{}".format(path, violations)
 
 
 # --- 集成：真的跑一遍 sync-hexo.py ---------------------------------------

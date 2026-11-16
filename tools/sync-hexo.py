@@ -1457,22 +1457,33 @@ def copy_images():
                 shutil.copy2(src, dst)
 
 
-#: 编辑履历表：表头第一格是「编写人」。这样的表是站点自己的编辑记录，不是
-#: 文章内容——留在正文里会污染三处摘要：``<meta name="description">``、
-#: 首页卡片摘要（smart_summary）、RSS 的 ``<summary>``。全站 97 张。
-EDIT_HISTORY_FIRST_CELL = "编写人"
+#: 编辑履历表：这样的表是站点自己的编辑记录，不是文章内容——留在正文里
+#: 会污染三处摘要：``<meta name="description">``、首页卡片摘要
+#: （smart_summary）、RSS 的 ``<summary>``。全站 97 张。
+#:
+#: 表头第一格的取值：「编写人」是最常见的写法，也有 3 篇写的是「修改人」。
+#: （要「第一格」而不是「任意一格」：正文里提到「编写人」这三个字的表格
+#: 比比皆是——重构方案.md 里就有一张。）
+EDIT_HISTORY_FIRST_CELLS = ("编写人", "修改人", "编辑人")
 
-#: 履历表里装着「这篇文章是什么」的那一列。
+#: 履历表里装着「这篇文章是什么」的那一列。别的列名（「修改内容」）不抽
+#: 摘要——那几列装的是「文档初稿」这类空话，不是文章摘要。
 EDIT_HISTORY_CONTENT_CELL = "编写内容"
 
-#: 履历前缀：「初稿，」「修订：」说的是「这次改了什么」，不是「文章是什么」。
-#: 摘要是给读者看这篇文章是什么的——前缀得去掉，剩下的才是素材。
+#: 履历前缀：「初稿，」「初稿。」「修订：」说的是「这次改了什么」，不是
+#: 「文章是什么」。摘要是给读者看这篇文章是什么的——前缀得去掉。
 #:
 #: 关键词后面必须跟着分隔符（或到此为止）才算前缀：「补充完善解决方案」里的
 #: 「补充」是正文，不是履历前缀。
 HISTORY_PREFIX_RE = re.compile(
-    r"^\s*(初稿|修订|校验|校对|更新|整理|补充)\s*(?:[：:，,、]\s*|$)"
+    r"^\s*(初稿|修订|校验|校对|更新|整理|补充)\s*(?:[：:，,。；;！!？?+]\s*|$)"
 )
+
+#: 摘要里的 markdown 标记。摘要要进 meta / 卡片 / RSS——那里的 markdown
+#: 标记不会被渲染，是字面量（「**PostgreSQL 目录快照**」显示成带星号的）。
+MD_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+MD_CODE_RE = re.compile(r"`([^`]+)`")
+MD_ITALIC_RE = re.compile(r"(?<![\*\w])\*([^*\s][^*]*?)\*(?!\w)")
 
 #: description 的契约上限（publish/spec/00-架构设计.md §4.1）。
 DESCRIPTION_LIMIT = 150
@@ -1504,16 +1515,15 @@ def find_edit_history_tables(text):
     """Every editing-history table in ``text``.
 
     Returns a list of ``(header_cells, data_rows)``.  A table qualifies
-    when its **first** header cell is 「编写人」——那是站点自己的编辑履历，
-    不是文章内容。（要「第一格」而不是「任意一格」：正文里提到「编写人」
-    这三个字的表格比比皆是。）
+    when its **first** header cell names the editor（「编写人」/「修改人」/
+    「编辑人」）——那是站点自己的编辑履历，不是文章内容。
     """
     lines = text.split("\n")
     tables = []
     i = 0
     while i < len(lines):
         cells = _table_cells(lines[i])
-        if cells and cells[0] == EDIT_HISTORY_FIRST_CELL:
+        if cells and cells[0] in EDIT_HISTORY_FIRST_CELLS:
             sep = _table_cells(lines[i + 1]) if i + 1 < len(lines) else None
             if sep and _is_separator_row(sep):
                 rows = []
@@ -1531,13 +1541,43 @@ def find_edit_history_tables(text):
     return tables
 
 
+def _plain_text(text):
+    """A markdown fragment → plain text.
+
+    The summary lands in ``<meta name="description">``, in the card
+    summaries, in the OG/Twitter cards and in the RSS ``<summary>`` —
+    none of which render markdown, so ``**粗体**`` shows up as literal
+    asterisks.
+    """
+    text = MD_BOLD_RE.sub(r"\1", text)
+    text = MD_CODE_RE.sub(r"\1", text)
+    text = MD_ITALIC_RE.sub(r"\1", text)
+    return text
+
+
+def _fit_description(text, limit=DESCRIPTION_LIMIT):
+    """Cut to the contract's limit — measured on the **escaped** form.
+
+    The contract layer reads front matter with its own tiny parser
+    (``publish/publishkit/contract.py``), which strips the quotes but does
+    **not** unescape: ``\\"`` counts as two characters there.  Cap the
+    escaped form and the semantic form is bounded by the same number —
+    both readings of 「≤150 字」 hold.
+    """
+    if len(yaml_escape(text)) <= limit:
+        return text
+    while text and len(yaml_escape(text + "…")) > limit:
+        text = text[:-1]
+    return text.rstrip() + "…"
+
+
 def edit_history_description(header, rows):
     """The one-line summary an editing-history table carries (or ``None``).
 
     Takes the last non-empty 「编写内容」 cell—the table may hold one row
     per revision, and the last row is the most recent one—strips the
-    revision prefix, collapses whitespace, and cuts to the contract's
-    150 characters.
+    revision prefix, flattens the markdown, collapses whitespace, and cuts
+    to the contract's 150 characters.
 
     A cell that only says 「初稿」 is not a summary: it yields ``None``
     rather than a description of 「初稿」.
@@ -1556,9 +1596,8 @@ def edit_history_description(header, rows):
     if not text:
         return None
     text = re.sub(r"\s+", " ", text)
-    if len(text) > DESCRIPTION_LIMIT:
-        text = text[: DESCRIPTION_LIMIT - 1].rstrip() + "…"
-    return text
+    text = _plain_text(text)
+    return _fit_description(text)
 
 
 def extract_edit_history(body):
@@ -1581,7 +1620,7 @@ def extract_edit_history(body):
     i = 0
     while i < len(lines):
         cells = _table_cells(lines[i])
-        if cells and cells[0] == EDIT_HISTORY_FIRST_CELL:
+        if cells and cells[0] in EDIT_HISTORY_FIRST_CELLS:
             sep = _table_cells(lines[i + 1]) if i + 1 < len(lines) else None
             if sep and _is_separator_row(sep):
                 i += 2
