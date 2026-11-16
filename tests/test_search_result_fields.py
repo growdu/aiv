@@ -63,7 +63,7 @@ const DOCS = [
         title: 'PostgreSQL 数据库',
         url: '/2024/01/01/db/postgresql/',
         content: '<p>正文里提到 WAL 与事务。</p>',
-        categories: ['数据库'],
+        categories: ['数据库', 'PostgreSQL'],
         tags: ['数据库', 'PostgreSQL']
     }
 ];
@@ -168,7 +168,11 @@ def test_search_rendering_survives_a_string_field():
     html = payload["html"]
 
     assert "PostgreSQL 数据库" in html, html
-    assert "数据库" in html, html
+    # 分类与标签是**数组**，渲染时要用 ' · ' 连接——这一条断的是「分隔符
+    # 还在不在」。只断言「数据库」三个字是废的：标题里就有这三个字，
+    # 分类整个没渲染出来它也照样过。
+    assert '<span class="search-result-meta">数据库 · PostgreSQL</span>' in html, html
+    assert "数据库 · PostgreSQL" in html, html
     assert "is not a function" not in result.stderr, result.stderr
 
 
@@ -180,7 +184,7 @@ def test_search_rendering_survives_a_post_without_categories():
     守卫写成只认字符串，那样的文章就会重新变成空白结果。
     """
     script = HARNESS.replace(
-        "categories: ['数据库'],\n        tags: ['数据库', 'PostgreSQL']",
+        "categories: ['数据库', 'PostgreSQL'],\n        tags: ['数据库', 'PostgreSQL']",
         "categories: [],\n        tags: []",
     )
     result = run_node(script, SEARCH_EJS, MINISEARCH_JS)
