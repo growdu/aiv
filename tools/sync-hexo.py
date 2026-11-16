@@ -2003,18 +2003,26 @@ fetch('/recent-posts.json').then(function(r){return r.json();}).then(function(po
             slug = parts[-1].replace(".md", "").replace(".html", "")
             if not slug or slug.startswith("_index") or cat in META_CATS:
                 continue
+            # 文章在站点里的相对路径（去掉扩展名）。站点的 permalink 是
+            # /:year/:month/:day/:title/，:title 就是这个路径——**整条**，
+            # 不是首尾两段：只拿 {cat}/{slug} 拼的话，db/nested/deep.md
+            # 会被拼成 /db/deep/，中间那层掉了。
+            post_path = os.path.splitext(rel)[0]
             tm = _re.search(r'^title:\s*["\']?([^"\'\n]+)["\']?', txt, _re.M)
             dm = _re.search(r"^date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})", txt, _re.M)
             top_m = _re.search(r"^top:\s*([0-9]+)", txt, _re.M)
             title = tm.group(1).strip() if tm else slug
             date_str = dm.group(1) if dm else "1970-01-01"
             top_n = int(top_m.group(1)) if top_m else 0
-            scored.append((top_n, date_str, cat, slug, title))
+            scored.append((top_n, date_str, cat, post_path, title))
         scored.sort(key=lambda x: (-x[0], -int(x[1].replace("-", ""))))
         recent = []
-        for _t, _d, c, s, t in scored[:6]:
-            url = ("/" + s + "/") if not c else ("/" + c + "/" + s + "/")
-            recent.append({"title": t, "url": url, "cat": c or s})
+        for _t, _d, c, p, t in scored[:6]:
+            # 用 site_root.permalink：日期段、完整路径、挂载点前缀都在里面，
+            # 一份拼法管到底（404 页的链接之前是手拼的，形态与站点真实
+            # permalink 不一致，每一条都是死链）。
+            url = _permalink(_d, p)
+            recent.append({"title": t, "url": url, "cat": c or p.rsplit("/", 1)[-1]})
         if recent:
             recent_path = os.path.join(SRC, "recent-posts.json")
             with open(recent_path, "w", encoding="utf-8") as f:
