@@ -89,7 +89,9 @@ make EP=row-lock nobrand NOBADGE=1        # 用无铭牌素材重出片
    （`growdu` 可能变成 `giowdu`、`grawdu`），所以生成后统一跑一遍
    `stamp_badge.py`：自动定位铭牌（按「被深藏蓝马甲围住的那块白」，
    不硬编码坐标）→ 刷成纯白 → 用当前字体写上 `growdu`（字体族名由
-   `pipeline/pyv/fonts.py` 跨平台解析：macOS `PingFang SC`，Linux `Noto Sans CJK SC`）。
+   `pipeline/pyv/fonts.py` 跨平台解析：默认是仓库内置的 `AIV Sans CJK SC`，
+   粗体用**真的 Bold 字形**——只装常规字重的话各后端会各自合成粗体，
+   两台机器合出来的不一样）。
    文字来源从「模型碰运气」变成「代码确定」。
 
    这与 `brand/scripts/fix_plates.py` 是同一类问题的同一套解法：所有文字都用

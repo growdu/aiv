@@ -141,10 +141,11 @@ def ease_in_out(t: float) -> float:
 def text(ctx, s: str, x: float, y: float, size: float, color,
          anchor: str = "left", bold: bool = False, alpha: float = 1.0) -> None:
     ctx.set_source_rgba(color[0], color[1], color[2], alpha)
-    ctx.select_font_face(
-        FONT, cairo.FONT_SLANT_NORMAL,
-        cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL,
-    )
+    # **走 fonts.select_font**：它顺带把 hinting 关掉——开着 hinting 时
+    # Linux 的 FreeType 会把轮廓吸附到像素网格、度量取整，Linux 上渲出来
+    # 的品牌片跟 macOS 就不一样了。macOS 的 CoreText 本身不做 hinting，
+    # 所以这一步在 macOS 上是空操作。
+    fonts.select_font(ctx, FONT, bold=bold)
     ctx.set_font_size(size)
     width = ctx.text_extents(s).width
     if anchor == "center":
@@ -262,7 +263,7 @@ def render_intro_frame(t: float, bg: Image.Image,
     # 胶囊标签：深色底 + 亮蓝边，保证在深背景上清晰可读
     cap = ease_out((t - 0.42) / 0.40)
     cap_text = INTRO_CAPTION
-    ctx.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+    fonts.select_font(ctx, FONT, bold=True)
     ctx.set_font_size(42)
     cap_w = ctx.text_extents(cap_text).width
     pad = 38
@@ -336,7 +337,7 @@ def render_outro_frame(t: float, bg: Image.Image,
     items = ["growdu.cn", "订阅关注", "点赞支持"]
     delays = [0.00, 0.07, 0.14]
     gap = 22
-    ctx.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+    fonts.select_font(ctx, FONT, bold=True)
     ctx.set_font_size(36)
     widths = [ctx.text_extents(t).width + 70 for t in items]
     cap_x = tx

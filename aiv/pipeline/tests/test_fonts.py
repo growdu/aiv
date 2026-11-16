@@ -12,6 +12,7 @@ from pyv import fonts
 
 PIPELINE_DIR = Path(__file__).resolve().parent.parent
 PYV_DIR = PIPELINE_DIR / "pyv"
+AIV_ROOT = PIPELINE_DIR.parent
 
 
 @pytest.fixture(autouse=True)
@@ -91,9 +92,33 @@ def test_palette_delegates_to_fonts(monkeypatch):
 
 
 def _source_files() -> list[Path]:
-    """要扫的源码：流水线与脚本，不含 tests（测试自己会提到这些路径）。"""
+    """**流水线**的源码：管线与脚本，不含 tests（测试自己会提到这些路径）。
+
+    「不许硬编码 macOS 字体」那两条只扫这里——它们守的是**渲染管线**。
+    素材脚本（`brand/`、`character/`）是另一回事：它们把字画进**已入库的
+    素材**，不是每次出片都跑；`brand/scripts/fix_plates.py` 甚至走的是
+    ffmpeg + 字体文件（带 Linux 退路），跟 cairo 的族名解析不是一回事。
+    """
     out = []
     for directory in (PYV_DIR, PIPELINE_DIR / "scripts"):
+        if not directory.is_dir():
+            continue
+        out.extend(sorted(directory.rglob("*.py")))
+    return out
+
+
+def _drawing_files() -> list[Path]:
+    """**所有用 cairo 画字的地方**：流水线 + 素材脚本。
+
+    「选字体必须走 `fonts.select_font`」那条扫这里——**凡是用 cairo
+    画字的代码**，都要关掉 hinting，否则 Linux 上量出来的宽度跟 macOS
+    对不上（素材脚本也一样：它们把字画进已入库的素材，跨机不一致就等于
+    「同一份素材在两台机器上长得不一样」）。
+    """
+    out = []
+    for directory in (PYV_DIR, PIPELINE_DIR / "scripts",
+                      AIV_ROOT / "character" / "scripts",
+                      AIV_ROOT / "brand" / "scripts"):
         if not directory.is_dir():
             continue
         out.extend(sorted(directory.rglob("*.py")))
@@ -108,7 +133,7 @@ def test_no_render_module_hardcodes_pingfang():
             continue          # 候选表本身当然要提这个名字
         source = path.read_text(encoding="utf-8")
         if re.search(r'"PingFang SC"|\'PingFang SC\'', source):
-            offenders.append(str(path.relative_to(PIPELINE_DIR)))
+            offenders.append(str(path.relative_to(AIV_ROOT)))
     assert offenders == []
 
 
@@ -120,7 +145,7 @@ def test_no_module_hardcodes_apple_font_paths():
         if path.name == "fonts.py":
             continue
         if pattern.search(path.read_text(encoding="utf-8")):
-            offenders.append(str(path.relative_to(PIPELINE_DIR)))
+            offenders.append(str(path.relative_to(AIV_ROOT)))
     assert offenders == []
 
 
@@ -173,11 +198,15 @@ def test_every_font_selection_goes_through_the_helper():
 
     判据是**结构性**的（不许绕过那个入口），不是「某段文字的宽度必须
     等于多少」——后者会被合法例外打脸。
+
+    **扫的是所有用 cairo 画字的地方**（流水线 + 素材脚本）——素材脚本
+    把字画进已入库的素材，跨机不一致就等于「同一份素材在两台机器上
+    长得不一样」。
     """
     offenders = []
-    for path in _source_files():
-        relative = path.relative_to(PIPELINE_DIR).as_posix()
-        if relative == "pyv/fonts.py":
+    for path in _drawing_files():
+        relative = path.relative_to(AIV_ROOT).as_posix()
+        if relative == "pipeline/pyv/fonts.py":
             continue          # 那个入口本身当然要调 select_font_face
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
