@@ -9,7 +9,7 @@ Creates:
 Does NOT modify docs/ — runs in CI on a fresh checkout.
 """
 
-import os, re, shutil, subprocess, sys, json
+import os, re, shutil, subprocess, sys, json, glob
 from typing import TypeGuard
 
 # The permalinks this tool emits must carry the mount point the
@@ -1729,6 +1729,63 @@ def write_category_redirects():
     return written
 
 
+#: 不算文章的目录：站点自己的元文档（攻略、工具说明、页面集合）。
+META_CATS = ("blog", "tools", "page")
+
+
+def collect_index_posts(posts_root, meta_cats=META_CATS):
+    """Scan ``source/_posts`` and return one record per article.
+
+    每条记录::
+
+        {"title": ..., "url": ..., "cat": ..., "date": "YYYY-MM-DD", "top": int}
+
+    ``url`` 是站点**真实**的 permalink——日期段 + 完整路径 + 挂载点前缀，
+    由 ``site_root.permalink`` 一处拼出来。404 页的「最近发布」与它的
+    搜索索引都从这里出，两个地方不许各拼各的。
+
+    跳过 ``_index`` 与元文档目录（``blog/`` / ``tools/`` / ``page/``）——
+    它们不是文章。
+    """
+    records = []
+    if not os.path.isdir(posts_root):
+        return records
+
+    for fp in glob.glob(os.path.join(posts_root, "**", "*.md"), recursive=True):
+        try:
+            with open(fp, encoding="utf-8") as f:
+                txt = f.read(4000)
+        except OSError:
+            continue
+        rel = os.path.relpath(fp, posts_root).replace("\\", "/")
+        parts = rel.split("/")
+        cat = parts[0] if len(parts) > 1 else ""
+        slug = parts[-1].replace(".md", "").replace(".html", "")
+        if not slug or slug.startswith("_index") or cat in meta_cats:
+            continue
+        # 文章在站点里的相对路径（去掉扩展名）。站点的 permalink 是
+        # /:year/:month/:day/:title/，:title 就是这个路径——**整条**，
+        # 不是首尾两段：只拿 {cat}/{slug} 拼的话，db/nested/deep.md
+        # 会被拼成 /db/deep/，中间那层掉了。
+        post_path = os.path.splitext(rel)[0]
+        tm = re.search(r'^title:\s*["\']?([^"\'\n]+)["\']?', txt, re.M)
+        dm = re.search(r"^date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})", txt, re.M)
+        top_m = re.search(r"^top:\s*([0-9]+)", txt, re.M)
+        title = tm.group(1).strip() if tm else slug
+        date_str = dm.group(1) if dm else "1970-01-01"
+        top_n = int(top_m.group(1)) if top_m else 0
+        records.append(
+            {
+                "title": title,
+                "url": _permalink(date_str, post_path),
+                "cat": cat or post_path.rsplit("/", 1)[-1],
+                "date": date_str,
+                "top": top_n,
+            }
+        )
+    return records
+
+
 def main():
     # Preserve custom pages (source/all/, source/recommended/) across regeneration
     import tempfile
@@ -1930,50 +1987,75 @@ footer a:hover{color:var(--c1)}
 </footer>
 </div>
 <script>
-// 1) Search submit -> redirect to a Google site: search if no inline index,
-//    otherwise push to history with q for a client-side filter.
+// 1) 站内搜索：用**精简索引**（title / url / cat）做标题匹配。
+//
+//    原来这里 fetch 的是 /search.xml —— 站点里根本没有这个文件
+//    （hexo-generator-searchdb 出的是 search.json），于是这个 fetch 永远
+//    失败，永远跳 Google，国内不可用：等于 404 页没有搜索。
+//
+//    也不直接用 search.json：那是 13.5 MB 的全文索引。让一个「页面不存在」
+//    的页面下载 13.5 MB 才能搜一个词，等于把「搜索等于没有」换成「搜索慢到
+//    等于没有」。全文搜索在首页（那里有 MiniSearch 索引）。
 (function(){
   var form = document.getElementById('search-form');
   var input = document.getElementById('q');
   if (!form) return;
+  var index = null;      // 精简索引，懒加载一次就留着
+  var searched = false;  // 搜过就别让「最近发布」把结果冲掉
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
+    });
+  }
+
+  function loadIndex(){
+    if (index) return Promise.resolve(index);
+    return fetch('/search-lite.json').then(function(r){return r.json();}).then(function(d){
+      index = Array.isArray(d) ? d : [];
+      return index;
+    });
+  }
+
   form.addEventListener('submit', function(e){
     e.preventDefault();
     var q = (input.value || '').trim();
     if (!q) { input.focus(); return; }
-    // Inline index (preferred): fetch /search.xml, filter, show modal.
-    fetch('/search.xml').then(function(r){return r.text();}).then(function(xml){
-      var doc = new DOMParser().parseFromString(xml, 'text/xml');
-      var entries = [].slice.call(doc.querySelectorAll('entry'));
-      var hits = entries.filter(function(en){
-        return (en.querySelector('title') || {}).textContent.indexOf(q) >= 0;
+    searched = true;
+    var list = document.getElementById('recent-list');
+    var divider = document.querySelector('.divider');
+    loadIndex().then(function(posts){
+      var needle = q.toLowerCase();
+      var hits = posts.filter(function(p){
+        var t = String(p.title || '').toLowerCase();
+        var c = String(p.cat || '').toLowerCase();
+        return t.indexOf(needle) >= 0 || c.indexOf(needle) >= 0;
       }).slice(0, 10);
       if (hits.length) {
-        var list = document.getElementById('recent-list');
-        list.innerHTML = hits.map(function(en){
-          var t = en.querySelector('title').textContent;
-          var u = en.querySelector('url').textContent;
-          return '<li><a href="'+u+'"><span class="title">'+t+'</span></a></li>';
+        list.innerHTML = hits.map(function(p){
+          return '<li><a href="'+esc(p.url)+'"><span class="title">'+esc(p.title)+'</span><span class="cat">'+esc(p.cat)+'</span></a></li>';
         }).join('');
-        document.querySelector('.divider').textContent = '搜索结果 ('+hits.length+')';
+        if (divider) divider.textContent = '搜索结果 ('+hits.length+')';
       } else {
-        document.getElementById('recent-list').innerHTML = '<li style="text-align:center;color:var(--muted);padding:14px 0">没有匹配，换个词试试</li>';
-        document.querySelector('.divider').textContent = '搜索结果';
+        list.innerHTML = '<li style="text-align:center;color:var(--muted);padding:14px 0">没有匹配。换个词试试，或者 <a href="https://www.google.com/search?q='+encodeURIComponent(q+' site:growdu.cn')+'" target="_blank" rel="noopener">用搜索引擎找</a></li>';
+        if (divider) divider.textContent = '搜索结果';
       }
     }).catch(function(){
-      // Fallback: Google site search
+      // 索引都拿不到：至少把 Google 兜底给出去
       window.location.href = 'https://www.google.com/search?q='+encodeURIComponent(q+' site:growdu.cn');
     });
   });
-})();
 
-// 2) Render recent posts from a pre-built JSON written by sync-hexo.py
-fetch('/recent-posts.json').then(function(r){return r.json();}).then(function(posts){
-  if (!Array.isArray(posts) || !posts.length) return;
-  var html = posts.map(function(p){
-    return '<li><a href="'+p.url+'"><span class="title">'+p.title+'</span><span class="cat">'+p.cat+'</span></a></li>';
-  }).join('');
-  document.getElementById('recent-list').innerHTML = html;
-}).catch(function(){});
+  // 2) Render recent posts from a pre-built JSON written by sync-hexo.py
+  fetch('/recent-posts.json').then(function(r){return r.json();}).then(function(posts){
+    if (!Array.isArray(posts) || !posts.length) return;
+    if (searched) return;
+    var html = posts.map(function(p){
+      return '<li><a href="'+esc(p.url)+'"><span class="title">'+esc(p.title)+'</span><span class="cat">'+esc(p.cat)+'</span></a></li>';
+    }).join('');
+    document.getElementById('recent-list').innerHTML = html;
+  }).catch(function(){});
+})();
 </script>
 </body>
 </html>""")
@@ -1983,51 +2065,38 @@ fetch('/recent-posts.json').then(function(r){return r.json();}).then(function(po
     # Recent posts JSON: consumed by the 404 page.
     # Source: source/_posts/**/*.md, sorted by `top` desc then `date` desc.
     # Skips `blog/` meta-docs and any path starting with `_index`.
-    # (json is already imported at module level)
-    import glob as _glob
-    import re as _re
-
     posts_root = os.path.join(SRC, "_posts")
-    META_CATS = ("blog", "tools", "page")  # skip meta-doc categories
-    if os.path.isdir(posts_root):
-        scored = []
-        for fp in _glob.glob(os.path.join(posts_root, "**", "*.md"), recursive=True):
-            try:
-                with open(fp, encoding="utf-8") as f:
-                    txt = f.read(4000)
-            except OSError:
-                continue
-            rel = os.path.relpath(fp, posts_root).replace("\\", "/")
-            parts = rel.split("/")
-            cat = parts[0] if len(parts) > 1 else ""
-            slug = parts[-1].replace(".md", "").replace(".html", "")
-            if not slug or slug.startswith("_index") or cat in META_CATS:
-                continue
-            # 文章在站点里的相对路径（去掉扩展名）。站点的 permalink 是
-            # /:year/:month/:day/:title/，:title 就是这个路径——**整条**，
-            # 不是首尾两段：只拿 {cat}/{slug} 拼的话，db/nested/deep.md
-            # 会被拼成 /db/deep/，中间那层掉了。
-            post_path = os.path.splitext(rel)[0]
-            tm = _re.search(r'^title:\s*["\']?([^"\'\n]+)["\']?', txt, _re.M)
-            dm = _re.search(r"^date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})", txt, _re.M)
-            top_m = _re.search(r"^top:\s*([0-9]+)", txt, _re.M)
-            title = tm.group(1).strip() if tm else slug
-            date_str = dm.group(1) if dm else "1970-01-01"
-            top_n = int(top_m.group(1)) if top_m else 0
-            scored.append((top_n, date_str, cat, post_path, title))
-        scored.sort(key=lambda x: (-x[0], -int(x[1].replace("-", ""))))
-        recent = []
-        for _t, _d, c, p, t in scored[:6]:
-            # 用 site_root.permalink：日期段、完整路径、挂载点前缀都在里面，
-            # 一份拼法管到底（404 页的链接之前是手拼的，形态与站点真实
-            # permalink 不一致，每一条都是死链）。
-            url = _permalink(_d, p)
-            recent.append({"title": t, "url": url, "cat": c or p.rsplit("/", 1)[-1]})
-        if recent:
-            recent_path = os.path.join(SRC, "recent-posts.json")
-            with open(recent_path, "w", encoding="utf-8") as f:
-                json.dump(recent, f, ensure_ascii=False, indent=2)
-            print("Wrote recent-posts.json (%d items)" % len(recent))
+    records = collect_index_posts(posts_root)
+
+    # 404 页的「最近发布」：编辑推荐在前，其余按时间。
+    scored = sorted(
+        records, key=lambda r: (-r["top"], -int(r["date"].replace("-", "")))
+    )
+    recent = [
+        {"title": r["title"], "url": r["url"], "cat": r["cat"]} for r in scored[:6]
+    ]
+    if recent:
+        recent_path = os.path.join(SRC, "recent-posts.json")
+        with open(recent_path, "w", encoding="utf-8") as f:
+            json.dump(recent, f, ensure_ascii=False, indent=2)
+        print("Wrote recent-posts.json (%d items)" % len(recent))
+
+    # 404 页的搜索索引：**精简**版——每篇只有 title / url / cat。
+    #
+    # 不用站点的全文索引（search.json，13.5 MB）：让一个「页面不存在」的
+    # 页面下载 13.5 MB 才能搜一个词，是把「搜索等于没有」换成「搜索慢到
+    # 等于没有」。这里只匹配标题，几十 KB 就能下完。
+    #
+    # 全文搜索在首页（那里有 MiniSearch 索引）。
+    lite = [
+        {"title": r["title"], "url": r["url"], "cat": r["cat"]}
+        for r in sorted(records, key=lambda r: r["date"], reverse=True)
+    ]
+    if lite:
+        lite_path = os.path.join(SRC, "search-lite.json")
+        with open(lite_path, "w", encoding="utf-8") as f:
+            json.dump(lite, f, ensure_ascii=False, separators=(",", ":"))
+        print("Wrote search-lite.json (%d items)" % len(lite))
     # Database landing page
     database_data = collect_database_posts(section_titles, cascade_map)
     create_database_landing_page(database_data)
