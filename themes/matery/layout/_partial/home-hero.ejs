@@ -38,6 +38,14 @@
     <p class="home-hero__eyebrow"><%= config.subtitle %></p>
     <h1 class="home-hero__lead"><%= config.description %></h1>
 
+    <div class="home-hero__search">
+      <label class="home-hero__search-label" for="homeSearch">站内搜索</label>
+      <input type="search" id="homeSearch" class="home-hero__search-input"
+             placeholder="按标题或分类搜索…" autocomplete="off" spellcheck="false" />
+      <ul class="home-hero__search-results" id="homeSearchResults" hidden></ul>
+      <p class="home-hero__search-hint">按标题搜索 · 全文搜索用顶部导航</p>
+    </div>
+
     <div class="home-hero__badges"><%
   var heroBadges = [
     { label: 'PostgreSQL',       icon: 'fas fa-database',   cat: 'PostgreSQL' },
@@ -102,3 +110,73 @@
     <% } %>
   </div>
 </section>
+
+<%# 首屏搜索：抓 /search-lite.json（78KB 的精简索引），不是 search.json
+    （13.5MB 全文索引，第一次击键就是 4.2MB 的下载）。
+
+    只匹配标题和分类——首屏不是全文搜索的地方，全文搜索在顶部导航里。
+    tests/test_home_search_box.py 守着这几条。 %>
+<!-- HOME-SEARCH -->
+<script>
+(function(){
+  var input = document.getElementById('homeSearch');
+  var list = document.getElementById('homeSearchResults');
+  if (!input || !list) return;
+
+  var index = null;
+  var timer = null;
+  var MAX = 8;
+
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+    });
+  };
+
+  var loadIndex = function () {
+    if (index) return Promise.resolve(index);
+    return fetch('/search-lite.json')
+      .then(function (r) { return r.json(); })
+      .then(function (d) { index = Array.isArray(d) ? d : []; return index; })
+      .catch(function () { index = []; return index; });
+  };
+
+  var render = function (q) {
+    if (!q) { list.innerHTML = ''; list.hidden = true; return; }
+    loadIndex().then(function (posts) {
+      var needle = q.toLowerCase();
+      var hits = posts.filter(function (p) {
+        var t = String(p.title || '').toLowerCase();
+        var c = String(p.cat || '').toLowerCase();
+        return t.indexOf(needle) >= 0 || c.indexOf(needle) >= 0;
+      }).slice(0, MAX);
+      if (!hits.length) {
+        list.innerHTML = '<li class="home-hero__search-empty">没有匹配的文章</li>';
+        list.hidden = false;
+        return;
+      }
+      list.innerHTML = hits.map(function (p) {
+        return '<li><a href="' + esc(p.url) + '">' +
+          '<span class="home-hero__search-title">' + esc(p.title) + '</span>' +
+          '<span class="home-hero__search-cat">' + esc(p.cat) + '</span>' +
+          '</a></li>';
+      }).join('');
+      list.hidden = false;
+    });
+  };
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    var q = (input.value || '').trim();
+    // 200ms 防抖：每敲一个字母都过滤一遍 527 条，是白花的力气。
+    timer = setTimeout(function () { render(q); }, 200);
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var first = list.querySelector('a');
+    if (first) window.location.href = first.getAttribute('href');
+  });
+})();
+</script>
