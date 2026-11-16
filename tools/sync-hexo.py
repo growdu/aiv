@@ -2333,6 +2333,22 @@ footer a:hover{color:var(--c1)}
         with open(lite_path, "w", encoding="utf-8") as f:
             json.dump(lite, f, ensure_ascii=False, separators=(",", ":"))
         print("Wrote search-lite.json (%d items)" % len(lite))
+
+    # 首页首屏的策展清单（3 篇代表作 + 6 篇编辑推荐）。
+    #
+    # 真相在仓库根的 data/featured.json —— 作者改那个文件就能换首屏，
+    # 不用去改模板。source/ 是 gitignore 的，所以必须复制到
+    # source/_data/，hexo 才会把它挂到 site.data.featured 上。
+    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _featured_src = os.path.join(_repo_root, "data", "featured.json")
+    if os.path.isfile(_featured_src):
+        _featured_dir = os.path.join(SRC, "_data")
+        os.makedirs(_featured_dir, exist_ok=True)
+        shutil.copyfile(_featured_src, os.path.join(_featured_dir, "featured.json"))
+        print("Copied data/featured.json -> source/_data/featured.json")
+    else:
+        print("WARNING: data/featured.json not found — 首页首屏将没有代表作")
+
     # Database landing page
     database_data = collect_database_posts(section_titles, cascade_map)
     create_database_landing_page(database_data)
