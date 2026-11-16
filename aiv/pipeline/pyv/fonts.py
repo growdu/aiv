@@ -38,11 +38,23 @@ FONT_ENV = "AIV_FONT_FAMILY"
 #: **必须唯一**：跟系统里任何字体重名，fontconfig 就会在两份之间二选一，
 #: 机器之间就不一致了。子集由 `scripts/build_font_subset.py` 生成
 #: （上游 Noto Sans CJK SC，SIL OFL 1.1，允许随软件分发）。
+#:
+#: **两个字重共用这一个族名**：Regular 与 Bold 是同一个族的两面，
+#: 操作系统靠 name ID 1（族名）相同、ID 2（子族名）不同把它们认成
+#: 一族。族名分开的话，`select_font_face(family, ..., BOLD)` 在两个
+#: 平台上挑到的就不是同一个字体。
 BUNDLED_FAMILY = "AIV Sans CJK SC"
 
 #: 内置字体文件在仓库里的位置。
-BUNDLED_PATH = (Path(__file__).resolve().parents[1] / "assets" / "fonts"
-                 / "AIVSansCJKSC-Regular.otf")
+#:
+#: **两个字重都要在**：只装 Regular 的时候，cairo 会**合成**粗体——
+#: CoreText 合成一套、FreeType 合成另一套。实测（2026-11-16）：同一段
+#: 粗体文字，两个后端量出来的轮廓包围盒差 **3.14px**。合成粗体是各
+#: 后端自己的做法，不是字体文件的性质。
+BUNDLED_DIR = Path(__file__).resolve().parents[1] / "assets" / "fonts"
+BUNDLED_REGULAR_PATH = BUNDLED_DIR / "AIVSansCJKSC-Regular.otf"
+BUNDLED_BOLD_PATH = BUNDLED_DIR / "AIVSansCJKSC-Bold.otf"
+BUNDLED_PATHS = (BUNDLED_REGULAR_PATH, BUNDLED_BOLD_PATH)
 
 INSTALL_HINT = (
     "装一套中文字体：\n"
@@ -147,7 +159,7 @@ def _all_candidates() -> list[FontCandidate]:
     不是首选。
     """
     candidates: list[FontCandidate] = [
-        FontCandidate(str(BUNDLED_PATH), BUNDLED_FAMILY,
+        FontCandidate(str(BUNDLED_REGULAR_PATH), BUNDLED_FAMILY,
                       "AIV Sans CJK SC（仓库内置子集）"),
     ]
     candidates.extend(MACOS_CANDIDATES)
@@ -181,7 +193,7 @@ def _resolved_width(family: str, sample: str = "并行解码") -> float:
 
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1)
     ctx = cairo.Context(surface)
-    ctx.select_font_face(family, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    select_font(ctx, family)
     ctx.set_font_size(40)
     return ctx.text_extents(sample).width
 
@@ -196,6 +208,40 @@ def family_resolves(family: str) -> bool:
         return abs(_resolved_width(family) - fallback) > 0.5
     except Exception:
         return False
+
+
+def bold_face_resolves(family: str | None = None) -> bool:
+    """粗体用的是**真的 Bold 字形**，还是后端**合成**出来的。
+
+    **怎么判**：看步进。**合成粗体不改步进**——CoreText 与 FreeType
+    合成出来的字形轮廓不一样，但步进都还是原来那个 Regular 的步进。
+    所以：
+
+    - 粗体的步进 == 常规的步进 → 用的是合成粗体；
+    - 粗体的步进 != 常规的步进 → 用的是真的 Bold 字形。
+
+    实测（Noto Sans CJK SC）：Bold 的 'A' 是 641/1000 em，Regular 的是
+    608/1000 em——差得开，一眼就能分辨。
+
+    **为什么要在意**：合成粗体是**各后端自己的做法**，两个平台合成出来
+    的不一样（实测轮廓包围盒差 3.14px）。于是「几何只由字体文件决定」
+    这条前提在粗体上不成立，跨机版式就对不上。
+    """
+    cairo = _cairo()
+
+    face = family if family else font_family()
+    try:
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 100)
+        ctx = cairo.Context(surface)
+        select_font(ctx, face, bold=False)
+        ctx.set_font_size(44)
+        regular = ctx.text_extents("A").x_advance
+        select_font(ctx, face, bold=True)
+        ctx.set_font_size(44)
+        bold = ctx.text_extents("A").x_advance
+    except Exception:
+        return False
+    return abs(bold - regular) > 0.5
 
 
 def _fc_chinese_families() -> list[str]:
@@ -266,6 +312,44 @@ def font_family() -> str:
     return resolve_font().family
 
 
+def select_font(ctx, family: str | None = None, *, bold: bool = False) -> None:
+    """把 ctx 的字体设成**要画/要量的那一个**，并且**关掉 hinting**。
+
+    **所有地方都必须走这个函数**——直接调 `ctx.select_font_face` 的地方
+    一律视为 bug（有守卫盯着，见 `tests/test_fonts.py`）。
+    理由是下面这段：
+
+    **hinting 会让「几何」不再是字体文件的性质。** cairo 在 Linux 上走
+    FreeType，默认**开着** autohinter：轮廓点被吸附到像素网格，度量被
+    取整。于是「步进宽度」「墨迹宽度」这些本该只由字体文件决定的量，
+    在 Linux 上变成了「字体文件 × 栅格化后端」的产物。
+
+    实测（2026-11-16，Linux / FreeType vs macOS / CoreText，同一份字体
+    文件）：开着 hinting 时，一行字的步进能差 **68px**——因为墨迹宽度
+    被取整，`fit_size` 收出来的字号跟着差 3.2px，整条轮廓再整体缩放。
+    关掉之后，步进与轮廓包围盒逐项相等。
+
+    **关掉 hinting 对 macOS 是空操作**：CoreText 后端本来就不做 hinting
+    （实测同一段文字在开/关两种设置下量出来的 advance、墨迹宽、轮廓
+    包围盒**逐项相等**）——所以单是这一项，既有的像素基准不用重录。
+
+    `family` 不给就用当前解析到的族名；给了就用那个（墨迹测量有时要
+    量一个别的族）。
+    """
+    cairo = _cairo()
+
+    options = cairo.FontOptions()
+    options.set_hint_style(cairo.HINT_STYLE_NONE)
+    options.set_hint_metrics(cairo.HINT_METRICS_OFF)
+    ctx.set_font_options(options)
+
+    ctx.select_font_face(
+        family if family else font_family(),
+        cairo.FONT_SLANT_NORMAL,
+        cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL,
+    )
+
+
 def assert_font_available() -> None:
     """字体不可用时立即失败，避免跨机渲染出豆腐块。"""
     font = resolve_font()
@@ -286,8 +370,7 @@ def missing_glyph(ch: str) -> bool:
     def pixels(text: str) -> bytes:
         surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 80, 80)
         ctx = cairo.Context(surface)
-        ctx.select_font_face(font_family(), cairo.FONT_SLANT_NORMAL,
-                             cairo.FONT_WEIGHT_NORMAL)
+        select_font(ctx)
         ctx.set_font_size(40)
         ctx.set_source_rgb(0, 0, 0)
         ctx.move_to(4, 40)

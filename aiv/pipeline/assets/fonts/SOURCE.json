@@ -1,13 +1,28 @@
 {
   "family": "AIV Sans CJK SC",
-  "postscript_name": "AIVSansCJKSC-Regular",
   "license": "SIL Open Font License 1.1",
   "license_url": "https://github.com/notofonts/noto-cjk/blob/Sans2.004/LICENSE",
-  "upstream": "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@Sans2.004/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
   "version": "2.004",
-  "sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b",
-  "subset_sha256": "ce7071479e03abd33f8d70bdd7346f369605b5bb25cf96081e34c527a46003a0",
-  "subset_bytes": 318356,
   "chars": 759,
-  "note": "按仓库实际用到的字符子集化。**字符集由 `scripts/build_font_subset.py` 从仓库自动提取**，不手工维护——`tests/test_font_subset.py` 独立复算一遍，对不上就红。\n上游钉在 2.004：Debian/Ubuntu 的 fonts-noto-cjk 就是这个版本，系统字体与内置子集的字形一致。"
+  "faces": [
+    {
+      "style": "Regular",
+      "file": "AIVSansCJKSC-Regular.otf",
+      "postscript_name": "AIVSansCJKSC-Regular",
+      "upstream": "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@Sans2.004/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+      "sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b",
+      "subset_sha256": "ce7071479e03abd33f8d70bdd7346f369605b5bb25cf96081e34c527a46003a0",
+      "subset_bytes": 318356
+    },
+    {
+      "style": "Bold",
+      "file": "AIVSansCJKSC-Bold.otf",
+      "postscript_name": "AIVSansCJKSC-Bold",
+      "upstream": "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@Sans2.004/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Bold.otf",
+      "sha256": "b5f0d1a190a7f9b43c310a8850630af12553df32c4c050543f9059732d9b4c0a",
+      "subset_sha256": "2155a3bd4791782053995d2bc2cb0056ec2d653d28ed504e907b77fb23899b3f",
+      "subset_bytes": 326208
+    }
+  ],
+  "note": "按仓库实际用到的字符子集化。**字符集由 `scripts/build_font_subset.py` 从仓库自动提取**，不手工维护——`tests/test_font_subset.py` 独立复算一遍，对不上就红。\n上游钉在 2.004：Debian/Ubuntu 的 fonts-noto-cjk 就是这个版本，系统字体与内置子集的字形一致。\n**两个字重都是真的字形**：只装 Regular 的话，cairo 会用各后端自己的办法合成粗体，两个后端合成出来的不一样（实测轮廓差 3.14px）。"
 }

@@ -127,9 +127,7 @@ def draw_event(ctx: cairo.Context, text: str, style: SubtitleStyle,
     line_gap = BURN_LINE_GAP * scale
     outline = max(0.6, BURN_OUTLINE * scale)
 
-    ctx.select_font_face(
-        fonts.font_family(), cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL
-    )
+    fonts.select_font(ctx)
     ctx.set_font_size(font_size)
     descent = ctx.font_extents()[1]  # pycairo 返回 (ascent, descent, height, ...)
     line_height = font_size + line_gap

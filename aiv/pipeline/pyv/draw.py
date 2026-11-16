@@ -62,11 +62,7 @@ def text(ctx: cairo.Context, s: str, x: float, y: float, size: float,
          alpha: float = 1.0) -> None:
     """绘制一行文字，anchor 取 left / center / right。"""
     _set_source(ctx, color, alpha)
-    ctx.select_font_face(
-        fonts.font_family(),
-        cairo.FONT_SLANT_NORMAL,
-        cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL,
-    )
+    fonts.select_font(ctx, bold=bold)
     ctx.set_font_size(size)
     width = ctx.text_extents(s).width
     if anchor == "center":
@@ -78,5 +74,11 @@ def text(ctx: cairo.Context, s: str, x: float, y: float, size: float,
 
 
 def text_width(ctx: cairo.Context, s: str, size: float) -> float:
+    """量一行字的宽度。
+
+    **也要走 `fonts.select_font`**：不选字体的话，量的是 ctx 上「上一个」
+    字体，而且 hinting 没关——在 Linux 上量出来的宽度会跟 macOS 对不上。
+    """
+    fonts.select_font(ctx)
     ctx.set_font_size(size)
     return ctx.text_extents(s).width

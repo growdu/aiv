@@ -1,6 +1,7 @@
 """字体解析的守卫：跨平台挑字体，且渲染代码不再硬编码 macOS 字体。"""
 from __future__ import annotations
 
+import ast
 import os
 import re
 from pathlib import Path
@@ -133,3 +134,100 @@ def test_missing_glyph_detects_a_character_the_font_lacks():
 
 def test_font_family_matches_resolved_font():
     assert fonts.font_family() == fonts.resolve_font().family
+
+
+# ------------------------------------------------- 几何只由字体文件决定
+#
+# **跨机版式一致的前提**：步进宽度、墨迹宽度这些量，必须是**字体文件
+# 的性质**，不能掺进「栅格化后端」的因素。cairo 在 Linux 上走 FreeType，
+# 默认开着 autohinter——轮廓吸附像素网格、度量取整——掺进来的就是它。
+
+
+def test_the_helper_turns_hinting_off():
+    """`fonts.select_font` 必须把 hinting 关掉。
+
+    开着 hinting 时，Linux 量出来的步进跟 macOS 能差 **68px**（实测，
+    2026-11-16）：墨迹宽度被取整，`fit_size` 收出来的字号跟着差 3.2px，
+    整条轮廓再整体缩放。关掉之后两边逐项相等。
+    """
+    cairo = pytest.importorskip("cairo")
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 10, 10)
+    ctx = cairo.Context(surface)
+    fonts.select_font(ctx)
+    options = ctx.get_font_options()
+    assert options.get_hint_style() == cairo.HINT_STYLE_NONE, (
+        "hinting 还开着——Linux 上量出来的宽度会跟 macOS 对不上"
+    )
+    assert options.get_hint_metrics() == cairo.HINT_METRICS_OFF, (
+        "度量还在取整——Linux 上量出来的步进会跟 macOS 对不上"
+    )
+
+
+def test_every_font_selection_goes_through_the_helper():
+    """**除了 `pyv/fonts.py`，不许有地方直接调 `ctx.select_font_face`。**
+
+    **为什么**：关 hinting 的开关跟「选哪款字体」是**同一个动作**
+    （`fonts.select_font` 两件一起做）。少走一处，那处的度量就又是
+    「字体文件 × 栅格化后端」的产物——跨机对不上，而且**静默**地对不上：
+    画面照常出，只有跨机指纹守卫会红，而那要等到 CI 上才发现。
+
+    判据是**结构性**的（不许绕过那个入口），不是「某段文字的宽度必须
+    等于多少」——后者会被合法例外打脸。
+    """
+    offenders = []
+    for path in _source_files():
+        relative = path.relative_to(PIPELINE_DIR).as_posix()
+        if relative == "pyv/fonts.py":
+            continue          # 那个入口本身当然要调 select_font_face
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if isinstance(func, ast.Attribute) and func.attr == "select_font_face":
+                offenders.append(f"{relative}:{node.lineno}")
+    assert offenders == [], (
+        "这些地方直接选了字体，没走 fonts.select_font——hinting 没关，"
+        "跨机版式就对不上：\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_the_measured_advance_comes_from_the_font_file():
+    """cairo 量出来的步进，必须等于**从字体文件 hmtx 算出来的**步进。
+
+    **独立复算**：一边用 cairo 量，一边用 fontTools 读字体的 hmtx——
+    两套办法各写一份、互不引用。开了 hinting 时 Linux 的度量被取整，
+    这两条就对不上；用的字体不对（解析到了别的族）也对不上。
+
+    这条比「跟 macOS 抓的基准比」更硬：它不依赖任何一份基准，
+    在**每台机器上**都成立。
+    """
+    fontTools = pytest.importorskip("fontTools.ttLib")
+    cairo = pytest.importorskip("cairo")
+
+    if not fonts.BUNDLED_REGULAR_PATH.is_file():
+        pytest.skip(f"内置字体不在仓库里：{fonts.BUNDLED_REGULAR_PATH}")
+
+    # 从字体文件里取一个汉字的字形步进。
+    font = fontTools.TTFont(str(fonts.BUNDLED_REGULAR_PATH))
+    units_per_em = font["head"].unitsPerEm
+    hmtx = font["hmtx"]
+    cmap = font.getBestCmap()
+    char = next(
+        (ch for ch in "取号顺序" if ord(ch) in cmap), None)
+    if char is None:
+        pytest.skip("内置字体里没有用来测量的汉字")
+    advance_units = hmtx[cmap[ord(char)]][0]
+    expected = advance_units * 60.0 / units_per_em
+
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 100)
+    ctx = cairo.Context(surface)
+    fonts.select_font(ctx, fonts.BUNDLED_FAMILY)
+    ctx.set_font_size(60)
+    actual = ctx.text_extents(char).x_advance
+
+    assert abs(actual - expected) < 0.01, (
+        f"「{char}」的步进 cairo 量出 {actual:.4f}，"
+        f"字体文件里是 {expected:.4f}（{advance_units}/{units_per_em} em）——"
+        f"差 {abs(actual - expected):.4f}px：hinting 没关，或用的不是内置字体"
+    )

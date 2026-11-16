@@ -210,20 +210,28 @@ def _check_bundled_font() -> Check:
     **这是「跨机版式一致」的前提**：两台机器用同一份字体文件，
     步进宽度与 `fit_size` 的收字号结果才一致。没装就用系统字体，
     画面照样能出——但跨机的像素/版式就没有保证了。
+
+    **粗体也要认得**：只认得常规字重的话，cairo 会**合成**粗体，
+    而合成是各后端自己的做法——两个平台合成出来的不一样（实测轮廓
+    包围盒差 3.14px），跨机版式照样对不上。
     """
     from pyv import fonts
 
-    bundled = fonts.BUNDLED_PATH.is_file()
+    bundled = all(path.is_file() for path in fonts.BUNDLED_PATHS)
     resolved = fonts.family_resolves(fonts.BUNDLED_FAMILY)
-    if resolved:
-        note = f"已就位（{fonts.BUNDLED_FAMILY}）"
+    bold = fonts.bold_face_resolves()
+    if resolved and bold:
+        note = f"已就位（{fonts.BUNDLED_FAMILY}，含粗体）"
+    elif resolved:
+        note = "常规字重认得，但**粗体没认到**——cairo 会合成粗体，跨机版式对不上"
     elif bundled:
         note = "在仓库里但没装进 OS 的字体目录"
     else:
         note = "仓库里没有这份子集"
     return Check(
-        "环境", "内置字体", INFO if resolved else WARNING, resolved,
-        note, fix="" if resolved else
+        "环境", "内置字体", INFO if (resolved and bold) else WARNING,
+        resolved and bold,
+        note, fix="" if (resolved and bold) else
         "cd aiv/pipeline && python3 scripts/install_font.py",
     )
 

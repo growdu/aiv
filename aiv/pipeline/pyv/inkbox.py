@@ -33,7 +33,7 @@ def _render(text: str, x: float, baseline: float, size: float,
     cairo = _cairo()
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
     ctx = cairo.Context(surface)
-    ctx.select_font_face(font or fonts.font_family())
+    fonts.select_font(ctx, font)
     ctx.set_font_size(size)
     ctx.move_to(x, baseline)
     ctx.show_text(text)

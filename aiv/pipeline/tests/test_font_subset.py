@@ -43,7 +43,14 @@ from pyv import fonts
 AIV_ROOT = Path(__file__).resolve().parents[2]
 FONT_DIR = AIV_ROOT / "pipeline" / "assets" / "fonts"
 MANIFEST = FONT_DIR / "SOURCE.json"
-SUBSET = FONT_DIR / "AIVSansCJKSC-Regular.otf"
+
+#: 内置字体的两面。**两个字重都要有**——只装常规字重的话，cairo 会
+#: **合成**粗体，而合成是各后端自己的做法，两个平台合成出来的不一样
+#: （实测轮廓包围盒差 3.14px），跨机版式照样对不上。
+SUBSETS = {
+    "Regular": FONT_DIR / "AIVSansCJKSC-Regular.otf",
+    "Bold": FONT_DIR / "AIVSansCJKSC-Bold.otf",
+}
 
 #: 常用中英标点——画面上会用到，但不一定出现在任何一份数据里。
 EXTRA_PUNCTUATION = "　·—…、。《》「」『』（）：；？！，－×÷±≤≥≠→←↑↓∵∴√∞°′″¥$%#@&*"
@@ -260,17 +267,18 @@ def _manifest() -> dict:
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
 
 
-def _cmap() -> dict:
+def _cmap(style: str) -> dict:
     from fontTools.ttLib import TTFont
 
-    return TTFont(str(SUBSET)).getBestCmap()
+    return TTFont(str(SUBSETS[style])).getBestCmap()
 
 
 # ---------------------------------------------------------------- 存在与来源
 
 
 def test_the_bundled_font_is_present():
-    assert SUBSET.is_file(), f"内置字体不在：{SUBSET}"
+    for style, path in SUBSETS.items():
+        assert path.is_file(), f"内置字体（{style}）不在：{path}"
     assert MANIFEST.is_file(), f"字体出处台账不在：{MANIFEST}"
 
 
@@ -279,9 +287,13 @@ def test_the_manifest_pins_the_upstream_source():
     data = _manifest()
     assert data["family"] == fonts.BUNDLED_FAMILY
     assert data["license"] == "SIL Open Font License 1.1"
-    assert re.fullmatch(r"[0-9a-f]{64}", data["sha256"])
-    assert data["upstream"].startswith("https://")
     assert data["version"]
+
+    styles = [face["style"] for face in data["faces"]]
+    assert styles == ["Regular", "Bold"], f"台账里的字重不对：{styles}"
+    for face in data["faces"]:
+        assert re.fullmatch(r"[0-9a-f]{64}", face["sha256"]), face
+        assert face["upstream"].startswith("https://"), face
 
 
 def test_the_subset_file_matches_the_recorded_hash():
@@ -289,8 +301,42 @@ def test_the_subset_file_matches_the_recorded_hash():
 
     有这一条，手改台账里的 `chars` 之类的字段也没用——文件对不上。
     """
-    assert _sha256(SUBSET) == _manifest()["subset_sha256"], (
-        "子集文件与台账对不上——重跑 scripts/build_font_subset.py"
+    for face in _manifest()["faces"]:
+        path = FONT_DIR / face["file"]
+        assert path.is_file(), f"台账里记的文件不在：{path}"
+        assert _sha256(path) == face["subset_sha256"], (
+            f"子集文件 {face['file']} 与台账对不上——"
+            f"重跑 scripts/build_font_subset.py"
+        )
+
+
+def test_both_weights_are_really_different_faces():
+    """两个字重必须是**两份不同的真字形**，不能是同一份。
+
+    粗体字形跟常规字形长得一样，等于没装粗体——而 cairo 会**合成**
+    一份来顶，跨机版式就又对不上了（实测轮廓差 3.14px）。
+
+    判据用**轮廓包围盒**：两个字重的 'A' 墨迹范围必然不同；
+    合成粗体是在常规字形上「加粗」，包围盒会变，但步进不变——
+    所以这里比轮廓，不比步进。
+    """
+    cairo = pytest.importorskip("cairo")
+    from pyv import fonts as fonts_mod
+
+    extents = {}
+    for style in ("Regular", "Bold"):
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 100)
+        ctx = cairo.Context(surface)
+        fonts_mod.select_font(
+            ctx, fonts_mod.BUNDLED_FAMILY, bold=(style == "Bold"))
+        ctx.set_font_size(44)
+        ctx.new_path()
+        ctx.move_to(0, 60)
+        ctx.text_path("A")
+        extents[style] = ctx.path_extents()
+        ctx.new_path()
+    assert extents["Regular"] != extents["Bold"], (
+        "两个字重的轮廓一模一样——粗体没装上，cairo 只能合成"
     )
 
 
@@ -301,14 +347,15 @@ def test_the_subset_covers_every_character_we_draw():
     """**缺字就红**（静态）：新一期加了新字而没重跑子集脚本 → CI 红。
 
     没有这条守卫，手工维护的字符集必然漂；有了它，字符集只能是
-    脚本算出来的。
+    脚本算出来的。**两个字重都要查**——少一个是豆腐块。
     """
-    cmap = _cmap()
-    missing = sorted(ch for ch in _repo_chars() if ord(ch) not in cmap)
-    assert not missing, (
-        f"内置字体缺 {len(missing)} 个字：{missing[:20]}——"
-        f"跑 scripts/build_font_subset.py 重生成子集"
-    )
+    for style in SUBSETS:
+        cmap = _cmap(style)
+        missing = sorted(ch for ch in _repo_chars() if ord(ch) not in cmap)
+        assert not missing, (
+            f"内置字体（{style}）缺 {len(missing)} 个字：{missing[:20]}——"
+            f"跑 scripts/build_font_subset.py 重生成子集"
+        )
 
 
 def test_the_subset_covers_every_character_the_scenes_actually_draw():
@@ -319,13 +366,14 @@ def test_the_subset_covers_every_character_the_scenes_actually_draw():
     也没被静态提取扫到。这条不看源码：**把 36 个视觉段真画一遍**，
     把画出去的字收齐，再核对子集盖不盖得住。
     """
-    cmap = _cmap()
     drawn = _drawn_chars()
-    missing = sorted(ch for ch in drawn if ord(ch) not in cmap)
-    assert not missing, (
-        f"场景画出了 {len(missing)} 个内置字体里没有的字：{missing[:20]}——"
-        f"跑 scripts/build_font_subset.py 重生成子集"
-    )
+    for style in SUBSETS:
+        cmap = _cmap(style)
+        missing = sorted(ch for ch in drawn if ord(ch) not in cmap)
+        assert not missing, (
+            f"场景画出了 {len(missing)} 个内置字体（{style}）里没有的字："
+            f"{missing[:20]}——跑 scripts/build_font_subset.py 重生成子集"
+        )
 
 
 def test_the_runtime_probe_actually_sees_the_text():
@@ -379,8 +427,9 @@ def test_every_visual_segment_is_covered_by_the_runtime_probe():
 
 def test_the_subset_is_small():
     """子集的意义在于小。超了说明提取范围写宽了。"""
-    size = SUBSET.stat().st_size
-    assert size < 2 * 1024 * 1024, f"子集 {size} 字节，太大了"
+    for style, path in SUBSETS.items():
+        size = path.stat().st_size
+        assert size < 2 * 1024 * 1024, f"子集（{style}）{size} 字节，太大了"
 
 
 def test_the_bundled_family_name_is_unique():

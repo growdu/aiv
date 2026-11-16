@@ -236,15 +236,15 @@ MIN_SIZE = 20.0
 def _select_face(ctx: cairo.Context, bold: bool) -> None:
     """把 ctx 的字体族设成**画的时候真正用的那一个**。
 
-    `draw.text` 画之前会自己 `select_font_face(fonts.font_family(), ...)`，
-    所以量宽度必须用同一个族与同一个字重——量出来的宽度要和画出来的
-    宽度一致，否则「收字号」就是在跟一个假的宽度较劲。
+    `draw.text` 画之前会自己 `fonts.select_font(...)`，所以量宽度必须用
+    同一个族与同一个字重——量出来的宽度要和画出来的宽度一致，否则
+    「收字号」就是在跟一个假的宽度较劲。
+
+    **走 `fonts.select_font` 而不是直接 `ctx.select_font_face`**：那边
+    顺带把 hinting 关掉，量出来的宽度才是「只由字体文件决定」的宽度
+    （见 `pyv/fonts.py` 里的说明）。
     """
-    ctx.select_font_face(
-        fonts.font_family(),
-        cairo.FONT_SLANT_NORMAL,
-        cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL,
-    )
+    fonts.select_font(ctx, bold=bold)
 
 
 def _ink_extent(ctx: cairo.Context, s: str, size: float,

@@ -69,6 +69,45 @@ def _iou(a: np.ndarray, b: np.ndarray) -> float:
     return float((a & b).sum()) / float(union)
 
 
+#: 正确候选与次优候选之间的**绝对差**要超过这个数。
+#:
+#: **为什么用绝对差，不用比值**：比值会被笔画粗细牵着走。实测
+#: （2026-11-16，铭牌 23px）：
+#:
+#: | 字体 | growdu | 次优(grawdu) | 比值 | 绝对差 |
+#: | --- | --- | --- | --- | --- |
+#: | 合成粗体（只有 Regular 时 cairo 合成的那份） | 0.957 | 0.596 | 1.61 | 0.361 |
+#: | 真粗体（内置的 Bold 字形） | 0.937 | 0.807 | 1.16 | 0.130 |
+#:
+#: 真粗体笔画更粗，跟错字的重叠更多，次优分数被抬上去——**比值从 1.61
+#: 掉到 1.16**，但两个候选的**差距**仍有 0.130，而且真粗体肉眼更清楚
+#: （笔画实、字形正）。拿比值当判据，等于让「笔画粗细」决定守卫松紧。
+#:
+#: 阈值取 0.10：实测 0.130 留约 23% 余量；而**盖错字**时这个差是
+#: **负的**（正确候选掉到 0.807、错字升到 0.937），差一大截。
+READABILITY_GAP = 0.10
+
+
+def _assert_reads_growdu(scores: dict) -> None:
+    """铭牌上的字必须读作 growdu。
+
+    三条判据：
+    1. **正确候选得分最高**——本质判据；
+    2. **正确候选几乎完全吻合**（> 0.85）——说明就是这串字，不是碰巧像；
+    3. **正确候选明显优于次优**（绝对差 > `READABILITY_GAP`）。
+    """
+    best = max(scores, key=scores.get)
+    assert best == "growdu", f"铭牌上写的不是 growdu：{scores}"
+    assert scores["growdu"] > 0.85, scores
+    # gr0wdu 不参与差距比较：o 和 0 在这个字号下肉眼就分不清，
+    # 拿它当判据只会让测试变成噪声。真正要排除的是字母顺序/字形错误。
+    runner_up = max(scores["grawdu"], scores["giowdu"])
+    gap = scores["growdu"] - runner_up
+    assert gap > READABILITY_GAP, (
+        f"growdu 只比次优候选高 {gap:.3f}（阈值 {READABILITY_GAP}）：{scores}"
+    )
+
+
 def test_find_badge_locates_the_white_rectangle():
     """铭牌 = 被深藏蓝马甲围住的那块白，必须能自动定位。"""
     module = _module()
@@ -270,12 +309,35 @@ def test_stamp_writes_the_word_growdu(tmp_path):
             candidate, badge.size, badge.origin, x1 - x0, y1 - y0
         )
         scores[candidate] = _iou(ink, mask > 128)
-    assert max(scores, key=scores.get) == "growdu", scores
-    assert scores["growdu"] > 0.85, scores
-    # gr0wdu 不参与差距比较：PingFang 的 o 和 0 在这个字号下肉眼都分不清，
-    # 拿它当判据只会让测试变成噪声。真正要排除的是字母顺序/字形错误。
-    runner_up = max(scores["grawdu"], scores["giowdu"])
-    assert scores["growdu"] > 1.3 * runner_up, scores
+    _assert_reads_growdu(scores)
+
+
+def test_the_readability_guard_rejects_a_misstamped_badge(tmp_path):
+    """**守卫自己得会红**：盖成 grawdu 的时候，它必须报出来。
+
+    守卫是「盖对了」才绿的——那它可能只是一段永远绿的代码。这里把
+    **盖错字的墨迹**喂给判据，正确候选的分数掉到次优之下、差距变负，
+    判据必须拒绝。
+    """
+    module = _module()
+    path = tmp_path / "character.png"
+    _fixture().save(path)
+
+    badge = module.stamp_badge(path)
+    assert badge is not None
+
+    width = badge.box[2] - badge.box[0]
+    height = badge.box[3] - badge.box[1]
+    wrong = module.render_text_mask(
+        "grawdu", badge.size, badge.origin, width, height) > 128
+
+    scores = {}
+    for candidate in ("growdu", "grawdu", "giowdu", "gr0wdu"):
+        mask = module.render_text_mask(
+            candidate, badge.size, badge.origin, width, height) > 128
+        scores[candidate] = _iou(wrong, mask)
+    with pytest.raises(AssertionError):
+        _assert_reads_growdu(scores)
 
 
 def test_stamp_is_idempotent(tmp_path):
