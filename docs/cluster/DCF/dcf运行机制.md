@@ -1,3 +1,6 @@
+---
+description: "dcf通过stream的概念来运行分布式协议，每个stream是一个完整的分布式实例。 每个stream可以由多个节点组成。"
+---
 # dcf运行机制
 
 dcf通过stream的概念来运行分布式协议，每个stream是一个完整的分布式实例。

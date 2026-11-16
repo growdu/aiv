@@ -1,3 +1,6 @@
+---
+description: "当前数据库使用babelfish插件（bbf）来支持sqlserver模式，bbf采用双端口的设计： 即数据库在启动时会监听多个端口，一般是pg原生的端口和tsql端口，比如5432和1433."
+---
 # sqlserver模式逻辑复制支持ddl
 
 ## 背景现状

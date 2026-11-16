@@ -1,3 +1,6 @@
+---
+description: "用 code-server 在容器里搭建 PostgreSQL 的远程调试环境。"
+---
 # code-server调试postgresql
 
 ## 搭建环境

@@ -1,3 +1,6 @@
+---
+description: "2024 年开始，\"AI 数据库\"成为新热点：Qdrant、Milvus、Weaviate、Pinecone 这些专用向量数据库 vs PG + pgvector 的\"一库多用\"模型，争论不下。"
+---
 # pgvector 深度解析：从 ANN 索引到 RAG 时代的向量数据库核心
 
 | 编写人 | 编写内容 | 编写时间 |

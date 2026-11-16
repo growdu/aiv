@@ -1,3 +1,6 @@
+---
+description: "cpub对外网口1接入数据包，经mac层转发到cpub对内网口2，经mac层转发到cpua对内网口1进行业务逻辑处理。在cpub上未进行业务处理，在cpub上报文仅到达mac层。"
+---
 # fatsup cpu间转发测试报告
 
 ![](./vpp_image/cpua2cpub_fwd.png)

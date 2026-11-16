@@ -14,6 +14,7 @@ tags:
   - TAP
   - Isolation Test
   - pg_regress
+description: "PG 的测试框架是 分层 的,各有侧重:"
 ---
 
 # Injection Point 与 PG 测试框架集成实战:从 Makefile 到 .spec 完整链路

@@ -1,3 +1,6 @@
+---
+description: "使用zookeeper搭建主备集群，要求实现如下功能："
+---
 # zookeeper主备集群demo
 
 使用zookeeper搭建主备集群，要求实现如下功能：

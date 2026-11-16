@@ -1,3 +1,6 @@
+---
+description: "对于客户端来说，通过库-->表-->sql的方式操作数据。"
+---
 # postgresql基本操作与基本对象
 
 - postgresql是一个C/S架构的大型软件，提供数据存储索引和查询的功能。postgresql分为客户端和服务端，客户端叫作psql，或者其他语言基于odbc，jdbc，libpq开发的客户端程序，服务端叫作postgres，需要监听ip和端口，通过tcp网络协议与客户端进行通信。

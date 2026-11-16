@@ -1,3 +1,6 @@
+---
+description: "在 Windows 7 中，您可以通过修改注册表来指定 Samba 服务器的端口。"
+---
 # samba服务深度定制
 
 ## 修改smaba服务默认端口

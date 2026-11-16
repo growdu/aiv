@@ -1,3 +1,6 @@
+---
+description: "rte_ring是dpdk内部提供的一种无锁队列实现。"
+---
 # dpdk无锁队列实现
 
 rte_ring是dpdk内部提供的一种无锁队列实现。

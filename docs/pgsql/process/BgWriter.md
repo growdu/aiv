@@ -1,3 +1,6 @@
+---
+description: "Bgwriter是一个Background Writer进程的简称，Bgwriter会定时将缓存中一些已经更改的数据(脏缓冲区)写入到磁盘。"
+---
 # BgWriter
 
 Bgwriter是一个Background Writer进程的简称，Bgwriter会定时将缓存中一些已经更改的数据(脏缓冲区)写入到磁盘。

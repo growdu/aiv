@@ -12,6 +12,7 @@ tags:
   - Committer
 categories:
   - 数据库
+description: "先定义 \"资深\"——不要被 \"老员工 / 工龄 10 年\" 等同。"
 ---
 
 

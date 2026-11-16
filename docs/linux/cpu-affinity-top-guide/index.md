@@ -14,6 +14,7 @@ tags:
   - cpuset
   - top
   - 性能分析
+description: "Linux CFS(Completely Fair Scheduler)在多核系统上默认自由调度:"
 ---
 
 # Linux CPU 绑核与 top 详解:从原理到实战

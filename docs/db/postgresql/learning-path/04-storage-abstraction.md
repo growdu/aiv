@@ -1,3 +1,6 @@
+---
+description: "理论上，backend 可以直接 open() / read() / write() 关系文件。但 PG 把这层抽出来有三点好处："
+---
 # 04 存储抽象层 SMGR
 
 > 目标：理解 PG 在“OS 文件系统”和“表/索引页面”之间插的一层抽象（Storage Manager），以及默认实现磁碟版（md.c）。**这一层是 PG 与其它 DBMS 在工程上差异最大的一处**——比 InnoDB 的 `fil_system` 还更“裸露”。

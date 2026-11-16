@@ -1,3 +1,6 @@
+---
+description: "PG + DuckDB 是 2024 年最热的\"hybrid OLTP/OLAP\"组合——MotherDuck / Hydra 联合开发的 pg_duckdb 让 PG 进程内嵌 DuckDB 列存引擎，对外提供统一 SQL。"
+---
 # pg_duckdb 深度解析：从 OLTP 到 OLAP hybrid query 的 DuckDB 内嵌扩展
 
 | 编写人 | 编写内容 | 编写时间 |

@@ -1,3 +1,6 @@
+---
+description: "scl保持多版本gcc兼容，并支持切换gcc版本进行编译。"
+---
 # fastupkni功能测试
 
 ## x86

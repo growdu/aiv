@@ -1,3 +1,6 @@
+---
+description: "PG 10+ 是 linear hash（按 bucket 顺序扩展）："
+---
 # 10 进阶特性
 
 > 目标：把前面 9 章没覆盖的访问方法与执行层高级特性收口：其他 access method（hash/gist/gin/spgist/brin）、并行执行、分区、FDW、JIT、logical replication。这一章不要求每项精通，但需要知道“这些都怎么入手”。

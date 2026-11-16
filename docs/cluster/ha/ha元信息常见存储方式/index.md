@@ -1,3 +1,6 @@
+---
+description: "mysql MHA(Master High Availability)是mysql高可用一套相对成熟的解决方案。MHA 由 MHA 管理器和 MHA 节点组成。"
+---
 # ha元信息常见存储方式
 
 |ha产品|高可用架构|元信息存储方式|

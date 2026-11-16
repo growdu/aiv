@@ -1,5 +1,6 @@
 ---
 title: "PostgreSQL Background Worker 全解：从 RegisterBackgroundWorker 到 4 类逻辑复制 worker"
+description: "BackgroundWorker 是 PostgreSQL 中所有非 client 进程的统一抽象——逻辑复制的 launcher / apply worker / tablesync worker、流复制的 walsender、自动 vacuum、并行查询 worker、autovacuum l…"
 ---
 
 # PostgreSQL Background Worker 全解：从 `RegisterBackgroundWorker` 到逻辑复制 4 类 worker 的全生命周期

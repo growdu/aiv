@@ -1,3 +1,6 @@
+---
+description: "Elasticsearch connector for Search UI is currently in technical preview status. It is not ready for production use. 适用于搜索 UI 的 Elasticsearch 连接器目前处于技…"
+---
 Elasticsearch connector for Search UI is currently in technical preview status. It is not ready for production use.  
 适用于搜索 UI 的 Elasticsearch 连接器目前处于技术预览状态。它尚未准备好用于生产。
 

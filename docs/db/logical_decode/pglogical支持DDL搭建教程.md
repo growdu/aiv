@@ -1,3 +1,6 @@
+---
+description: "使用如下命令初始化数据库："
+---
 # pglogical支持DDL搭建
 
 ## 编译数据库和pglogical插件

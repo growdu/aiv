@@ -1,3 +1,6 @@
+---
+description: "当前corosync仲裁方式qnetd的现状如下："
+---
 # corosync共享多仲裁方案设计
 
 ## 需求背景

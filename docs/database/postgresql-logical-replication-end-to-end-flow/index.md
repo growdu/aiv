@@ -36,6 +36,7 @@ episode_repro:
   - "SELECT pid, usename, application_name, client_addr, state, sent_lsn, write_lsn, flush_lsn, replay_lsn, sync_priority, sync_state FROM pg_stat_replication WHERE application_name LIKE 'sub_%';"
   - "SELECT subname, pid, relid, received_lsn, last_msg_send_time, last_msg_receipt_time, latest_end_lsn, latest_end_time FROM pg_stat_subscription WHERE subname = 'sub_users';"
   - "$ pg_waldump -p pg_wal -s 0/1B000000 -e 0/1C000000 | head -20"
+description: "本文很长，推荐读法："
 ---
 
 # PostgreSQL 逻辑复制全链路：以一个真实事务为例，从 `INSERT` 到 `apply` 的源码级旅程

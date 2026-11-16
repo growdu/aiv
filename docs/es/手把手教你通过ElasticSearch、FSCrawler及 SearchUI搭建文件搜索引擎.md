@@ -1,3 +1,6 @@
+---
+description: "用 ElasticSearch、FSCrawler 和 SearchUI 搭建文件搜索引擎：从需求分析到运行测试的完整步骤。"
+---
 ### 手把手教你通过ElasticSearch、FSCrawler及 SearchUI搭建文件搜索引擎
 
 ©著作权归作者所有：来自51CTO博客作者zhuhuix的原创作品，请联系作者获取转载授权，否则将追究法律责任

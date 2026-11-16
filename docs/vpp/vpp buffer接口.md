@@ -1,3 +1,6 @@
+---
+description: "VPP 的 buffer 接口：vlib_buffer_t 的结构，为什么用 union 以及 cacheline 对齐是怎么回事。"
+---
 # vpp buffer接口
 
 ## buffer

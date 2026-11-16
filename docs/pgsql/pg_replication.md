@@ -1,3 +1,6 @@
+---
+description: "逻辑复制是将数据重新执行一次insert、update或delete。逻辑复制则允许在数据层面复制，并在安全性上提供更细粒度的控制。"
+---
 # pg_replication
 
 ## 基本概念

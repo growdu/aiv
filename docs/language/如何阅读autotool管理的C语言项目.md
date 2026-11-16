@@ -1,3 +1,6 @@
+---
+description: "autotool管理C语言项目的流程请参考autoconf使用."
+---
 # 如何阅读autotool管理的C语言项目
 
 ## autotool基础

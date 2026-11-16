@@ -17,6 +17,7 @@ tags:
   - HVMCC
   - SnapBuild
   - reorderbuffer
+description: "PostgreSQL 逻辑复制的 catalog 改动如何影响可见性判定，以及 xmin/xmax 是怎么推进的——一篇源码级的全景分析。"
 ---
 
 > 之前几篇([end-to-end 全流程](../postgresql-logical-replication-end-to-end/index.md)、[LSN 推进全景](../postgresql-logical-replication-lsn-flow/index.md)、[snapbuild.c 全函数拆解](../postgresql-snapbuild-deep-dive/index.md)、[SnapBuildFindSnapshot 状态机](../postgresql-snapbuild-find-snapshot-deep-dive/index.md))虽然覆盖了入口、状态机和 LSN 推进,但对**catalog 改动如何从 WAL 一路透传到订阅端的可见性判定**这一条核心链路解释得不够细致。本文专门补这一段:

@@ -1,3 +1,6 @@
+---
+description: "当前openclaw（龙虾）比较火，但是配置比较复杂，可以先安装claude进行体验。"
+---
 # claude安装教程
 
 ## 安装claude

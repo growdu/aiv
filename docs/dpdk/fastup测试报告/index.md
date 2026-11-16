@@ -1,3 +1,6 @@
+---
+description: "需要使用专门的交叉工具编译，交叉编译工具文件为fsl-qoriq-glibc-x86_64-fsl-toolchain-aarch64-toolchain-2.5.sh，使用如下命令安装："
+---
 # shofastup测试
 
 ## 编译打包

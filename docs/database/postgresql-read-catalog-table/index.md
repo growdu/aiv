@@ -1,3 +1,6 @@
+---
+description: "PostgreSQL 内核开发中最常见的任务之一是：\"在某段 C 代码里读一张表（多半是 catalog 表）的几行 tuple\"。这听起来简单，实际上涉及事务控制、MVCC 快照、relation cache、catalog cache、AM 抽象、heap scan、buffer pin、…"
+---
 # PostgreSQL 内核开发：读取一张表的 9 步标准流程与缓存全景
 
 | 编写人 | 编写内容 | 编写时间 |

@@ -1,3 +1,6 @@
+---
+description: "常用 git 命令速查：add、commit、push、pull、checkout、branch、tag 的日常用法。"
+---
 # git opreation
 
 ``

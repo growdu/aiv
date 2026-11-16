@@ -18,6 +18,7 @@ tags:
   - walsender
   - MVCC
   - 源码分析
+description: "逻辑复制的本质是:把 publisher 的 WAL 字节流,通过一系列\"翻译\",变成订阅者能直接 apply 的 SQL 操作流。翻译过程涉及 6 层协作。"
 ---
 
 # PostgreSQL 逻辑复制端到端深度拆解:从 WAL 字节到订阅者 apply 的全链路源码分析

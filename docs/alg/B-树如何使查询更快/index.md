@@ -1,3 +1,6 @@
+---
+description: "本文翻译自How does B-tree make your queries fast?,部分内容翻译可能不准确，请以原文为准。"
+---
 # B-树如何使查询更快
 
 本文翻译自[How does B-tree make your queries fast?](https://blog.allegro.tech/2023/11/how-does-btree-make-your-queries-fast.html),部分内容翻译可能不准确，请以原文为准。

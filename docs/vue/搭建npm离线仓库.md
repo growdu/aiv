@@ -1,3 +1,6 @@
+---
+description: "要在离线环境下使用 Docker 和 Verdaccio 搭建私有的 npm 镜像仓库，你可以按照以下步骤进行操作："
+---
 # 搭建npm离线仓库
 
 要在离线环境下使用 Docker 和 Verdaccio 搭建私有的 npm 镜像仓库，你可以按照以下步骤进行操作：

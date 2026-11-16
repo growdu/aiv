@@ -16,6 +16,7 @@ tags:
   - snapbuild
   - 源码分析
   - Logical Decoding
+description: "CREATE_REPLICATION_SLOT 在 PostgreSQL 中有 两条完全不同的代码路径,使用场景截然不同:"
 ---
 
 # PostgreSQL CREATE_REPLICATION_SLOT 端到端源码分析:从 SQL 到 snapbuild 状态机的完整链路(每个函数每个参数)

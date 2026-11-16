@@ -1,3 +1,6 @@
+---
+description: "Path MTU 简述：PMTU 是什么、PMTU 发现机制怎么工作，以及它对报文传输（尤其是 GRE 隧道叠加）的影响。"
+---
 发表于 2017-12-19 更新于 2019-04-17 分类于 [c](http://sunyongfeng.com/categories/c/) 评论数： [0 Comments](http://sunyongfeng.com/201712/networks/path_mtu.html#comments)
 
 Path MTU 简述。

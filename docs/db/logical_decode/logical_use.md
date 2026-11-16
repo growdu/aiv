@@ -1,3 +1,6 @@
+---
+description: "本文通过实际操作演示 PostgreSQL 15 逻辑复制的完整流程，重点展示： - WAL（Write-Ahead Logging）日志的生成与解析 - LSN（Log Sequence Number）的推进机制 - 事务（Transaction）与 WAL 的关系 - 快照（Snapshot）…"
+---
 # PostgreSQL 15 逻辑复制操作流程详解
 
 ## 概述

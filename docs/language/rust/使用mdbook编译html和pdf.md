@@ -1,3 +1,6 @@
+---
+description: "往book.toml里添加如下内容："
+---
 # 使用mdbook编译html和pdf
 
 ```shell

@@ -1,3 +1,6 @@
+---
+description: "DPDK 的 pktgen 怎么用：拉源码、按 x86 与 arm64-dpaa2 两套环境编译，以及把脚本和二进制部署到目标板子。"
+---
 # pktgen
 
 - 编译环境

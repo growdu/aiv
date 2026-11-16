@@ -1,3 +1,6 @@
+---
+description: "VideoFlow Studio 的概要设计：十一个微服务如何划分，数据模型、Provider 架构、Workflow DSL、协作与调度、权限和可观测性怎么设计。"
+---
 # VideoFlow Studio 概要设计
 
 版本：V1.0

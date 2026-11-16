@@ -1,3 +1,6 @@
+---
+description: "docker-compose.yaml配置文件如下："
+---
 # docker搭建Postgresql主备集群
 
 ## 搭建主库

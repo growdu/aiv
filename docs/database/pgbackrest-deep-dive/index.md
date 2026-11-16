@@ -1,3 +1,6 @@
+---
+description: "PG 自带 pg_basebackup + pg_dump 能解决 70% 的备份需求。剩下 30%（增量备份 + 并行恢复 + 加密 + S3 + 监控）要靠 pgBackRest——它是 PG 备份领域事实标准，Crunchy Data / EDB / AWS RDS 都用它。"
+---
 # pgBackRest 深度解析：从 pg_basebackup 到企业级备份恢复的 Go 实现
 
 | 编写人 | 编写内容 | 编写时间 |

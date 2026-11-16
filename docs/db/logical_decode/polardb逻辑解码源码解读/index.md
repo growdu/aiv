@@ -1,3 +1,6 @@
+---
+description: "在原生的pg中，逻辑复制只会解析wal日志，而DDL语句是不会生成可解析的逻辑WAL。"
+---
 # polardb逻辑解码
 
 ## 结论

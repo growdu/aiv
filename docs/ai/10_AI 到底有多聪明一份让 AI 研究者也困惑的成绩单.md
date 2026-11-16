@@ -1,3 +1,6 @@
+---
+description: "上一章我们拆开了 AI 的黑箱，得到了一个核心结论：AI 是超级模式匹配器。 但这个结论到底有多大的解释力？先做一个测试。"
+---
 # AI 到底有多聪明？——一份让 AI 研究者也困惑的成绩单
 
 > 来源: [https://wmyskxz.cn/wiki/whats_ai/9/](https://wmyskxz.cn/wiki/whats_ai/9/)

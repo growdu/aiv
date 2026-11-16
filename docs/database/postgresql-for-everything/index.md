@@ -1,3 +1,6 @@
+---
+description: "\"宇宙的终极答案不是 42，而是 PostgreSQL。\""
+---
 # PostgreSQL 万能论：为什么一家公司可以用它替代 Kafka、Redis、Elastic 与 ClickHouse
 
 | 编写人 | 编写内容 | 编写时间 |

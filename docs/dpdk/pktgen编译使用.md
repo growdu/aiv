@@ -1,3 +1,6 @@
+---
+description: "pktgen 的编译步骤：x86 与 arm 两条交叉编译链路的环境变量与 make config 用法。"
+---
 # pktgen编译使用
 
 ## 编译

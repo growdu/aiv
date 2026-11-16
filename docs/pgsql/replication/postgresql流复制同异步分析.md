@@ -1,3 +1,6 @@
+---
+description: "postgresql流复制主要是四个进程的交互。"
+---
 # postgresql流复制同异步分析
 
 postgresql流复制主要是四个进程的交互。

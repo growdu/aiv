@@ -14,6 +14,7 @@ tags:
   - 源码分析
   - 函数级参考
   - 函数速查表
+description: "为能读懂本文: - 看完 postgresql-reorder-buffer-code-analysis 这篇 1321 行架构综述,可以建立顶层心智模型 - SnapshotData、pairingheap、HTAB、Slab、GenerationMemoryContext、dlist_*、dc…"
 ---
 
 

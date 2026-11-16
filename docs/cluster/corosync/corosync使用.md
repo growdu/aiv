@@ -1,3 +1,6 @@
+---
+description: "corosync编译依赖libqb和kronosnet。"
+---
 # corosync使用
 
 ## 编译

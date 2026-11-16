@@ -1,3 +1,6 @@
+---
+description: "主要源码路径： - ~/cwork/postgresql/src/include/catalog/pg_publication.h - ~/cwork/postgresql/src/backend/catalog/pg_publication.c - ~/cwork/postgresql/src/…"
+---
 # PostgreSQL 逻辑复制：`publish_via_partition_root` 的完整行为分析
 
 | 编写人 | 编写内容 | 编写时间 |

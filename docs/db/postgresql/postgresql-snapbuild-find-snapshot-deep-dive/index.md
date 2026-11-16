@@ -15,6 +15,7 @@ tags:
   - 状态机
   - 逻辑复制
   - 源码分析
+description: "由 LogStandbySnapshot()(standby.c:1282)周期生成: - bgwriter 周期 15s(默认) - checkpointer 在 CHECKPOINT 之前 - SnapBuildWaitSnapshot 等老 xid 结束后主动调一次"
 ---
 
 # PostgreSQL SnapBuildFindSnapshot 深度拆解:每条状态转换路径的具体 WAL 日志与前提条件

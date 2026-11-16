@@ -1,3 +1,6 @@
+---
+description: "在 macOS 上用 Homebrew 安装 MySQL 8.4：安装、安全初始化和后台服务启动。"
+---
 # 安装mysql
 
 ```shell

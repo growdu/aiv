@@ -1,3 +1,6 @@
+---
+description: "上一篇我们搞清楚了一件事：Prompt Engineering 不是玄学，而是给 AI 更精准的上下文，让它的模式匹配更精准。"
+---
 # 怎么跟AI协作不翻车——AI说的话你该信几分
 
 > 来源: [https://wmyskxz.cn/wiki/whats_ai/14/](https://wmyskxz.cn/wiki/whats_ai/14/)

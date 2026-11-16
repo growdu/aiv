@@ -1,3 +1,6 @@
+---
+description: "选择haproxy来实现。"
+---
 # postgresql “伪双写”
 
 ## 结论

@@ -1,3 +1,6 @@
+---
+description: "使用 OpenTelemetry 实现 Trace + Metrics + Logs → Tempo + Prometheus + Loki → Grafana的全链路可观测平台。"
+---
 # postgresql 可视化观测平台
 
 使用 `OpenTelemetry` 实现 `Trace + Metrics + Logs → Tempo + Prometheus + Loki → Grafana`的全链路可观测平台。

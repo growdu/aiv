@@ -1,3 +1,6 @@
+---
+description: "打开终端敲一行 pg_ctl start，几秒后看到 database system is ready to accept connections。这几秒钟里，一台进程工厂刚刚开业："
+---
 # 从 `postgres` 二进制到生产级守护 —— PostgreSQL 最外层模块与启动全流程拆解
 
 | 编写人 | 编写内容 | 编写时间 |

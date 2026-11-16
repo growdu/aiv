@@ -1,3 +1,6 @@
+---
+description: "开发中遇到的零碎问题与解法汇总，比如 git status 里中文文件名乱码怎么解决。"
+---
 # faq汇总
 
 - vscode git status 中文乱码

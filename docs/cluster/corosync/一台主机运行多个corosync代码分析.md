@@ -1,3 +1,6 @@
+---
+description: "corosync当前设计为一台机器只能运行一个corosyc实例，无法部署多个，是由如下两个部分决定的："
+---
 # 一台主机运行多个corosync代码分析
 
 corosync当前设计为一台机器只能运行一个corosyc实例，无法部署多个，是由如下两个部分决定的：

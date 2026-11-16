@@ -14,6 +14,7 @@ tags:
   - 源码分析
   - Streaming
   - Parallel Apply
+description: "applyparallelworker.c 表面上是一个 1646 行的文件,但里面同时承载了 两套截然不同的角色:"
 ---
 
 # applyparallelworker.c 之 LA 端源码深度解析:Leader Apply Worker 的指挥中枢

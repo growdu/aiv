@@ -1,3 +1,6 @@
+---
+description: "修改vite.config.js,修改如下所示，添加server的host和port。"
+---
 # vue项目开发流程
 
 ## 环境配置

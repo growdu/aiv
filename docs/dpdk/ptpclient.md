@@ -1,3 +1,6 @@
+---
+description: "ptpclient 的功能边界：目前实现了哪些 PTP 能力，以及基站设备侧和完整功能各自要求什么。"
+---
 # ptpclient
 
 ## 功能实现

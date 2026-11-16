@@ -41,6 +41,7 @@ episode_repro:
   - "SELECT * FROM users WHERE id = 1 FOR UPDATE SKIP LOCKED;"
   - "SELECT * FROM pg_locks WHERE locktype IN ('tuple', 'transactionid');"
   - "UPDATE users SET name = 'X' WHERE id = 1;"
+description: "PostgreSQL 用 MVCC（Multi-Version Concurrency Control）解决读-写冲突："
 ---
 
 

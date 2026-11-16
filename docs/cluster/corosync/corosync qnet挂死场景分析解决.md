@@ -1,3 +1,6 @@
+---
+description: "qnet挂死场景的矛盾点："
+---
 # corosync qnet挂死场景分析解决
 
 qnet挂死场景的矛盾点：

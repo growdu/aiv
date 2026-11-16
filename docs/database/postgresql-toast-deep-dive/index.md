@@ -12,6 +12,7 @@ tags:
   - chunk
 categories:
   - 数据库
+description: "PostgreSQL 的 Heap Page 默认 8KB（BLCKSZ）。一个 tuple 必须完整 fit 在单个 page 内。但变长字段（varlena：text / varchar / bytea / jsonb / array / numeric）理论上无大小限制。"
 ---
 
 

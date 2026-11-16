@@ -1,3 +1,6 @@
+---
+description: "那么可以设计一套 “最小侵入内核”的实现方案。我按 接口层 → catalog → WAL → decoding → apply worker → 执行DDL 的完整链路讲清楚。"
+---
 # pg15逻辑复制支持DDL
 
 如果你的目标是：

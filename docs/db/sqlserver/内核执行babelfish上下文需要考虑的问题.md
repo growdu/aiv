@@ -1,3 +1,6 @@
+---
+description: "SQL Server 和 PG 本身在数据库架构层面 schema 的含义就不一致："
+---
 # 内核执行 Babelfish 上下文需要考虑的问题
 
 ## 概述

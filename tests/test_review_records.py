@@ -101,9 +101,23 @@ CI_LIKE_GIT_ENV = {
 CHILD_MARKER = "REVIEW_RECORDS_CONTRACT_CHILD"
 
 
+#: ``review/`` 下**不是**审校记录的文件。
+#:
+#: 审校记录是「一篇一记录」，格式由 ``review/README.md`` 的模板定死；
+#: 但这个目录里本来就有几样别的东西——索引（INDEX.md）、规范（specs/）、
+#: 计划（plans/）、范围划分（scope/）。它们都不是记录，所以这条豁免名单
+#: 一直在长。
+#:
+#: ``description-drafts.md`` 是 2026-11-16 阶段 1 新加的：它是
+#: ``tools/draft-descriptions.py`` 起草的文章摘要的**复核表**，交给作者过目用，
+#: 不是「对某一篇文章的审校记录」——没有原文路径、没有审校状态、也不进
+#: INDEX.md 的进度表。把它算成记录，等于逼它长成一副记录的样子。
+NON_RECORD_FILES = ("README.md", "INDEX.md", "description-drafts.md")
+
+
 def record_files() -> list[Path]:
     return sorted(p for p in REVIEW_ROOT.rglob("*.md")
-                  if p.name not in ("README.md", "INDEX.md")
+                  if p.name not in NON_RECORD_FILES
                   and "specs" not in p.parts and "plans" not in p.parts
                   and "scope" not in p.parts)
 

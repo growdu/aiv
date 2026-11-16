@@ -1,3 +1,6 @@
+---
+description: "上一篇结尾，我留了一个矛盾："
+---
 # 为什么 AI 能赢世界冠军，却开不好车？——一条藏在所有 AI 背后的分界线
 
 > 来源: [https://wmyskxz.cn/wiki/whats_ai/11/](https://wmyskxz.cn/wiki/whats_ai/11/)

@@ -11,6 +11,7 @@ tags:
   - 缓存
 categories:
   - 数据库
+description: "先看一段看起来平平无奇、但每个 PG 内核开发者都踩过的代码："
 ---
 
 # PostgreSQL 目录快照源码级深度拆解：系统表读取的 MVCC 真相与失效机制

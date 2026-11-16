@@ -1,3 +1,6 @@
+---
+description: "主要源码路径： - ~/cwork/postgresql/src/backend/replication/pgoutput/pgoutput.c - ~/cwork/postgresql/src/backend/replication/logical/proto.c - ~/cwork/postg…"
+---
 # PostgreSQL 逻辑复制下分区表的 INSERT：从 publisher 到 leaf 的完整时序
 
 | 编写人 | 编写内容 | 编写时间 |

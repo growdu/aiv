@@ -1,3 +1,6 @@
+---
+description: "基于对PolarDB源码和PostgreSQL LogLogicalMessage 机制的分析，以下是DDL自动传输的实现原理详解："
+---
 基于对PolarDB源码和PostgreSQL LogLogicalMessage 机制的分析，以下是DDL自动传输的实现原理详解：                         
                                                                                                                         
   1. LogLogicalMessage核心机制回顾                                                         

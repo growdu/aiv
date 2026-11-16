@@ -1,3 +1,6 @@
+---
+description: "vpp加载时会读取startup.conf的配置，fastgtpu的配置如下："
+---
 # fastgtpu配置及cli说明文档
 
 ## 配置

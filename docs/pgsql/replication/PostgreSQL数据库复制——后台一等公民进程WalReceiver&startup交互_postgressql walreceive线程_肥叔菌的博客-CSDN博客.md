@@ -1,5 +1,6 @@
 ---
 title: "PostgreSQL 流复制：WalReceiver 与 startup 进程的交互逻辑"
+description: "walsender进程是用来发送WAL日志记录的，执行顺序如下："
 ---
 
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/89809fb51a0d406a8e4ea2626968c763.png)  

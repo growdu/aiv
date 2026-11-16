@@ -1,3 +1,6 @@
+---
+description: "openGauss 的搭建记录：不用 om 工具安装，以及 DCF 集群的 iplist、端口和数据目录怎么配。"
+---
 ```
 iplist：
    192.168.11.121

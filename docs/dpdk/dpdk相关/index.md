@@ -1,3 +1,6 @@
+---
+description: "DPDK全称为Date planedevelopment kit，是一个用来进行包数据处理加速的软件库"
+---
 # dpdk相关
 
 ## dpdk特点

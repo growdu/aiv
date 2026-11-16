@@ -1,3 +1,6 @@
+---
+description: "当前 PostgreSQL Logical Replication 仅支持 DML 同步。"
+---
 # 逻辑解码ddl replay支持sqlserver模式
 
 # 1. 设计背景

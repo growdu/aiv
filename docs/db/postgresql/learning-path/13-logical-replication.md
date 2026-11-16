@@ -1,3 +1,6 @@
+---
+description: "物理复制的限制（见 12.11）让逻辑复制成为必然： - 跨大版本：物理格式不兼容（pg_upgrade 也不支持跨多版本）；逻辑只关心 row data - 表级粒度：只想复制某些表 - 异构数据：要把变化同步到 Kafka / Redis / Snowflake - 双向同步：多写模型（log…"
+---
 # 13 逻辑复制深入
 
 > 目标：吃透 PG 的 logical replication 全套机制——logical decoding、ReorderBuffer、output plugin、publication/subscription、initial sync、conflict handling、walsummarizer。**这是 PG 实现跨大版本、跨表、跨粒度复制的核心能力**。

@@ -1,3 +1,6 @@
+---
+description: "整个 buffer pool 用 hash 表 LookupBufHash(tag) -> buf_id 找到候选 buffer，hash 表在 buf_table.c 里。"
+---
 # 05 缓冲区管理
 
 > 目标：掌握 PostgreSQL shared buffer pool 的实现——`BufferDesc` 元数据、hash 索引、clock-sweep 替换策略、AIO 集成、lock 与 pin 的差别。**这一章是“存储引擎内核”最关键的章节**。

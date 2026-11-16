@@ -58,6 +58,7 @@ episode_repro:
   - "SELECT pg_get_committed_csn(xid); -- 通过 CSNLog 反查"
   - "SELECT * FROM pg_stat_replication;"
   - "SELECT * FROM pg_stat_subscription;"
+description: "CommitSeqNo 是 openGauss 在 src/include/c.h:528 定义的核心类型:"
 ---
 
 # openGauss 通过 CSN 保证全序的源码级深度分析:从 nextCommitSeqNo 原子计数到订阅端 CSN 校验

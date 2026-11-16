@@ -1,3 +1,6 @@
+---
+description: "RAFT中将节点状态分为："
+---
 # c-raft分布式存储方案
 
 ## raft协议详解

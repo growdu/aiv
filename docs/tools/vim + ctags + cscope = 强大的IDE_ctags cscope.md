@@ -1,3 +1,6 @@
+---
+description: "vim 的最大痛点在于它就是文本编辑器，难以实现函数/变量的跳转。但有了 ctags 和 cscope 这两个插件，它就能实现非常方便的函数/变量跳转以及查找功能。"
+---
 ### vim + ctags + cscope = 强大的IDE
 
 -   [1.看代码需求的功能](https://blog.csdn.net/weixin_42910064/article/details/113522043#1_10)

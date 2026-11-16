@@ -1,3 +1,6 @@
+---
+description: "每个数据页面的修改，必须在写盘前先写 WAL。原因： - crash recovery：磁盘 page 可能落后于内存 page - 流复制：standby 通过 replay WAL 跟上 primary - 时间旅行 / PITR：基础是 WAL 流"
+---
 # 09 WAL 与恢复
 
 > 目标：吃透 PG 的 Write-Ahead Logging 子系统——XLogRecord 结构、rmgr 注册表、redo/undo、checkpoint、recovery、流复制。**这是与 InnoDB redo log 最常被拿来对照的部分**。
