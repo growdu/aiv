@@ -24,6 +24,14 @@ REQUIRED = ("title", "counter_label", "counter_sub", "counter_bits",
 # 取号的间隔（场景进度）：每间隔这么多，进度就多发一个号
 CLAIM_STEP = 0.15
 
+# **起始读数（`counter_value`）没有出现在画面上。**
+#
+# `counter_reading()` 的序列是「起始值 + 每发一个号之后的新值」，
+# 起始值排在第 0 位；但第一笔取号发生在 t=0（芯片从 t=0 开始淡入），
+# 计数器读数从 t=0 起就已经是发出去的第一个号了——没有留出显示起始
+# 读数的时间窗。序列本身对（`tests/test_scenes.py` 盯着），只是
+# 第 0 位没被画出来。改这个时序会动画面，是另一件事。
+
 
 def csn_sequence(params=None) -> list[str]:
     """发出去的号，必须严格递增。"""

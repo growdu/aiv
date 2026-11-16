@@ -41,6 +41,10 @@ jobs:
             ffmpeg fontconfig fonts-noto-cjk make \
             python3-cairo python3-numpy python3-pil python3-scipy python3-pytest
           fc-cache -f
+          # `fonts-noto-cjk` 是**兜底**——内置子集装不上时的退路。
+          # 主力是仓库里那份 `AIV Sans CJK SC`（下一步装）：
+          # 跨机版式一致靠的是「两台机器用同一个字体文件」，
+          # 系统字体只是「没装内置字体时也能出片」的保险。
 
       - name: 确认 Python 依赖可用
         run: |
