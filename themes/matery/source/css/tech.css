@@ -1,0 +1,196 @@
+/* tech.css -----------------------------------------------------------------
+   首页首屏（.home-hero）的样式。
+
+   为什么单独开一个文件：
+   docs/blog/重构方案.md §5.4 规定新样式只放这里，不再往 tools/patch-theme.py
+   里塞 CSS —— patcher 注入的样式没法 review、没法单测，出错时也看不出是谁写的。
+
+   硬约束（tests/test_home_first_screen.py 会检查）：
+     .home-hero 不得使用 100vh / min-height:100vh。
+     首屏全屏 = 内容还是全在折线以下，等于只把风景照换了个内容而已。
+   ------------------------------------------------------------------------- */
+
+.home-hero {
+  --tech-accent: #0b7285;
+  --tech-accent-soft: rgba(11, 114, 133, .09);
+  --tech-ink: #1f2933;
+  --tech-muted: #5b6670;
+  --tech-rule: rgba(31, 41, 51, .14);
+  --tech-card: #ffffff;
+  --tech-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular,
+    Menlo, Consolas, "Liberation Mono", monospace;
+
+  position: relative;
+  /* 88px 顶部留白：navbar 是 fixed 的（navbar-fixed，高 64px），
+     不留这一段的话首屏第一行会被导航条压住。 */
+  padding: 88px 0 48px;
+  color: var(--tech-ink);
+  background-color: #fbfcfd;
+  background-image:
+    linear-gradient(180deg, var(--tech-accent-soft) 0%, rgba(11, 114, 133, 0) 220px),
+    repeating-linear-gradient(
+      90deg,
+      rgba(31, 41, 51, .035) 0 1px,
+      rgba(31, 41, 51, 0) 1px 48px
+    );
+  border-bottom: 1px solid var(--tech-rule);
+}
+
+.home-hero .container {
+  position: relative;
+  max-width: 1080px;
+}
+
+.home-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-family: var(--tech-mono);
+  font-size: 13px;
+  letter-spacing: .12em;
+  color: var(--tech-accent);
+}
+
+.home-hero__eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--tech-accent);
+}
+
+.home-hero__lead {
+  max-width: 780px;
+  margin: 0;
+  font-size: clamp(1.15rem, 2.2vw, 1.55rem);
+  font-weight: 500;
+  line-height: 1.75;
+  letter-spacing: .01em;
+  color: var(--tech-ink);
+}
+
+/* 徽章与打字机由 tools/patch-theme.py 注入 —— 那些规则是给「照片背景上的白字」
+   写的，这里改成浅底深字，否则在这个浅色首屏上根本看不见。 */
+.home-hero .hero-badge {
+  background: rgba(11, 114, 133, .08);
+  color: var(--tech-accent);
+  border: 1px solid rgba(11, 114, 133, .22);
+  text-shadow: none;
+}
+
+.home-hero .hero-badge:hover,
+.home-hero .hero-badge:focus-visible {
+  background: rgba(11, 114, 133, .16);
+}
+
+.home-hero .hero-typing {
+  color: var(--tech-muted);
+  font-family: var(--tech-mono);
+  font-size: 13.5px;
+  text-shadow: none;
+}
+
+.home-hero__badges {
+  margin: 22px 0 0;
+}
+
+/* --- 三篇代表作 ---------------------------------------------------------- */
+
+.home-hero__featured {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 34px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-hero__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px 20px;
+  background: var(--tech-card);
+  border: 1px solid var(--tech-rule);
+  border-top: 2px solid var(--tech-accent);
+  border-radius: 3px;
+  text-decoration: none;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.home-hero__card:hover,
+.home-hero__card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--tech-accent);
+  box-shadow: 0 8px 24px rgba(31, 41, 51, .09);
+}
+
+.home-hero__card-cat {
+  font-family: var(--tech-mono);
+  font-size: 11.5px;
+  letter-spacing: .08em;
+  color: var(--tech-accent);
+}
+
+.home-hero__card-title {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--tech-ink);
+}
+
+.home-hero__card-date {
+  margin-top: auto;
+  font-family: var(--tech-mono);
+  font-size: 12px;
+  color: var(--tech-muted);
+}
+
+/* --- 响应式 -------------------------------------------------------------- */
+
+@media (max-width: 992px) {
+  .home-hero {
+    padding: 44px 0 36px;
+  }
+
+  .home-hero__featured {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 26px;
+  }
+}
+
+@media (max-width: 600px) {
+  .home-hero__lead {
+    font-size: 1.02rem;
+    line-height: 1.7;
+  }
+}
+
+/* --- 夜间模式 ------------------------------------------------------------ */
+
+body.DarkMode .home-hero {
+  --tech-accent: #66c2d0;
+  --tech-accent-soft: rgba(102, 194, 208, .1);
+  --tech-ink: #dfe6ea;
+  --tech-muted: #9fb0b8;
+  --tech-rule: rgba(223, 230, 234, .16);
+  --tech-card: #1c2226;
+  background-color: #15191c;
+}
+
+body.DarkMode .home-hero .hero-badge {
+  background: rgba(102, 194, 208, .12);
+  color: var(--tech-accent);
+  border-color: rgba(102, 194, 208, .3);
+}
+
+body.DarkMode .home-hero .hero-typing {
+  color: var(--tech-muted);
+}
+
+body.DarkMode .home-hero__card:hover,
+body.DarkMode .home-hero__card:focus-visible {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}

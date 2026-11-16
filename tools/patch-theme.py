@@ -676,7 +676,10 @@ else:
     print("cn-banner.js already present")
 
 
-# --- 8. Enrich homepage hero with motto + sub description + comprehensive typing text ---
+# --- 8. Enrich the homepage hero ------------------------------------------
+# 2026-11-16：首页首屏从「全屏照片 carousel」换成了 _partial/home-hero。
+# hero 的内容（分类徽章 + 打字机）跟着搬过去 —— 首页已经不渲染 bg-cover，
+# 留在 bg-cover-content.ejs 里的那段 home-only 内容成了死代码（§5 把它剥掉）。
 hero_typing_texts = [
     "PostgreSQL / openGauss 内核",
     "Raft / DCF 分布式一致性",
@@ -688,42 +691,95 @@ hero_typing_texts = [
     "哲学思辨 · 人生感悟",
     "社会观察 · 城市记录",
 ]
+
+# 分类徽章 + 打字机。这段从 bg-cover-content.ejs 搬过来（那边是同一段代码，
+# 首页换版后成了死代码）。徽章的链接要从 site.categories 反查真实分类路径：
+# 手写 /categories/<名字>/ 会踩三个坑 —— 分类名带空格、级联分类的父路径、
+# 分类改名后手写链接直接 404。
+hero_block = """<%
+  var heroBadges = [
+    { label: 'PostgreSQL',       icon: 'fas fa-database',   cat: 'PostgreSQL' },
+    { label: 'openGauss',        icon: 'fas fa-database',   cat: 'openGauss' },
+    { label: '分布式系统',        icon: 'fas fa-sitemap',    cat: '集群' },
+    { label: 'DPDK',             icon: 'fas fa-bolt',       cat: 'DPDK' },
+    { label: 'VPP',              icon: 'fas fa-bolt',       cat: 'VPP' },
+    { label: '股票 · 金融',       icon: 'fas fa-chart-line', cat: '股票与金融' },
+    { label: '工具 · 视频 · 培训', icon: 'fas fa-tools',     cat: '工具' },
+    { label: '哲学 · 人生',       icon: 'fas fa-yin-yang',   cat: '人生' },
+    { label: '社会观察',          icon: 'fas fa-city',       cat: '社会' }
+  ];
+  var heroCatIndex = {};
+  (site.categories || []).each(function (c) {
+    var cur = heroCatIndex[c.name];
+    // 同名分类可能既是顶级分类又是别的分类的子分类（Hexo 会把 front matter
+    // 里的分类列表当成一条层级链），优先取顶级的那一个。
+    if (!cur || (cur.parent && !c.parent)) heroCatIndex[c.name] = c;
+  });
+%>
+<div class="hero-tech">
+    <% heroBadges.forEach(function (b) {
+         var c = heroCatIndex[b.cat];
+         if (!c) {
+           console.warn('[hero-tech] 分类不存在，徽章已跳过: ' + b.cat);
+           return;
+         }
+    %>
+    <a class="hero-badge" href="<%- url_for(c.path) %>" aria-label="查看<%= b.label %>分类文章"><i class="<%= b.icon %>"></i> <%= b.label %></a>
+    <% }); %>
+</div>
+<div class="hero-typing" id="typing-text"></div>
+<script>
+(function(){
+  var texts=__TEXTS__;
+  var idx=0,ci=0,del=false;
+  function type(){
+    var el=document.getElementById('typing-text');
+    if(!el)return;
+    var t=texts[idx];
+    if(del){ci--;el.textContent=t.substring(0,ci);if(ci===0){del=false;idx=(idx+1)%texts.length;setTimeout(type,500);return;}setTimeout(type,40);}
+    else{ci++;el.textContent=t.substring(0,ci);if(ci===t.length){del=true;setTimeout(type,2000);return;}setTimeout(type,90);}
+  }
+  setTimeout(type,1000);
+})();
+</script>
+"""
+
+# 打字机文案：写成一个 JS 数组字面量（不是整条语句）—— 注入时拼到
+# `var texts=...;` 后面，两处不能各写一半。
+_texts_js = repr(hero_typing_texts).replace("\\'", "'")
+
+# 8.1 hero 块（分类徽章 + 打字机）注入 home-hero.ejs
+HERO_BLOCK_MARKER = "<!-- HERO-BADGES -->"
+hero_path = os.path.join(theme_dir, "layout", "_partial", "home-hero.ejs")
+if os.path.isfile(hero_path):
+    with open(hero_path, encoding="utf-8") as f:
+        content = f.read()
+
+    if HERO_BLOCK_MARKER in content:
+        content = content.replace(
+            HERO_BLOCK_MARKER, hero_block.replace("__TEXTS__", _texts_js), 1
+        )
+        print("Injected hero badges + typing into home-hero.ejs")
+    elif "hero-tech" not in content:
+        print("WARNING: home-hero.ejs has no %s marker" % HERO_BLOCK_MARKER)
+
+    # 8.2 打字机文案以 patcher 为准：已经注入过的也要跟着更新
+    _pattern = re.compile(r"var\s+texts=\[.*?\];", re.S)
+    if _pattern.search(content):
+        content = _pattern.sub("var texts=" + _texts_js + ";", content, count=1)
+
+    with open(hero_path, "w", encoding="utf-8") as f:
+        f.write(content)
+else:
+    print("WARNING: home-hero.ejs not found — 首页首屏没有徽章和打字机")
+
+# 8.3 副页（about / categories / archives…）的 cover 上仍然显示 motto 和
+#     副标题 —— 它们读 bg-cover-content.ejs，不受首屏换版影响。
 bg_path = os.path.join(theme_dir, "layout", "_partial", "bg-cover-content.ejs")
 if os.path.isfile(bg_path):
     with open(bg_path, encoding="utf-8") as f:
         content = f.read()
-    # 8.1 替换 hero typing texts (随主题已有内联脚本)
-    import re as _re
-
-    new_block = "var texts=" + repr(hero_typing_texts).replace("\\'", "'") + ";\n"
-    pattern = _re.compile(r"var\s+texts=\[.*?\];", _re.S)
-    if pattern.search(content):
-        content = pattern.sub(new_block.rstrip(), content, count=1)
-    # 8.2 替换 hero-tech 徽章列表为综合内容
-    tech_old = (
-        '<div class="hero-tech">\n'
-        '    <span class="hero-badge"><i class="fas fa-database"></i> PostgreSQL</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-database"></i> openGauss</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-sitemap"></i> 分布式系统</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-bolt"></i> DPDK</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-bolt"></i> VPP</span>\n'
-        "</div>"
-    )
-    tech_new = (
-        '<div class="hero-tech">\n'
-        '    <span class="hero-badge"><i class="fas fa-database"></i> PostgreSQL</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-database"></i> openGauss</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-sitemap"></i> 分布式系统</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-bolt"></i> DPDK / VPP</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-chart-line"></i> 股票 · 金融</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-tools"></i> 工具 · 视频 · 培训</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-yin-yang"></i> 哲学 · 人生</span>\n'
-        '    <span class="hero-badge"><i class="fas fa-city"></i> 社会观察</span>\n'
-        "</div>"
-    )
-    if tech_old in content:
-        content = content.replace(tech_old, tech_new, 1)
-    # 8.3 在 brand-description 之后插入 motto (从 theme.motto.texts 读取)
+    # 8.3.1 在 brand-description 之后插入 motto (从 theme.motto.texts 读取)
     motto_old = """<span id="subtitle"></span>"""
     if (
         motto_old in content
@@ -752,10 +808,7 @@ if os.path.isfile(bg_path):
             "<% } %>\n"
         )
         content = content.replace(motto_old, motto_block + motto_old, 1)
-    # 8.4 副标题描述
-    if "hero-subdesc" not in content:
-        # ensure the description wrapper exists before injecting
-        pass
+    # 8.3.2 副标题描述
     if (
         "hero-subdesc" not in content
         and '<div class="description center-align">' in content
@@ -772,7 +825,7 @@ if os.path.isfile(bg_path):
         )
     with open(bg_path, "w", encoding="utf-8") as f:
         f.write(content)
-    print("Updated hero (motto + sub description + comprehensive typing texts)")
+    print("Updated cover motto + sub description")
 
 # --- 8.5 注入 hero-motto / hero-subdesc 样式 ---
 css_append = (
@@ -796,153 +849,28 @@ if os.path.isfile(css_path):
             f.write(css_append)
         print("Appended hero-motto / hero-subdesc CSS to my.css")
 
-# --- 8.6 注入首页 hero 响应式 + 自适应修复样式 ---
-# 解决问题：
-#   1) 首页 carousel 硬限 height:100vh + overflow:hidden，导致 hero 内容超出视口时被裁掉
-#      (典型表现：标题可见、stats/tech/typing 被遮挡)
-#   2) hero 各元素 (title/motto/stats/tech/typing) 缺少响应式
-#   3) 1400-1600px 区间侧栏挤压 hero 文本
-#   4) navbar-fixed 与 carousel 重叠
-# 所有规则收敛到 themes/matery/source/css/my.css 末尾，幂等检测 marker = 'RESPONSIVE-HERO-FIX'。
-responsive_hero_marker = "RESPONSIVE-HERO-FIX"
-responsive_hero_css = r"""
-/* RESPONSIVE-HERO-FIX */
-/* 重写首页 hero 区域，让内容能适应不同高度/宽度的视口。 */
-
-/* === A. 首页 carousel 容器自适应高度 === */
-.carousel.carousel-slider.center.index-cover {
-    height: auto !important;
-    min-height: calc(100vh - 64px) !important;
-    overflow: visible !important;
-    margin-top: 0 !important;
-}
-
-/* === B. carousel-item：当前展示的 item 撑开容器 === */
-.index-cover > .carousel-item {
-    position: absolute !important;
-    height: 100% !important;
-    min-height: calc(100vh - 64px);
-}
-.index-cover > .carousel-item.active {
-    position: relative !important;
-    height: auto !important;
-    min-height: calc(100vh - 64px);
-    overflow: visible !important;
-}
-.index-cover > .carousel-item:not(.active) {
-    display: none !important;
-}
-
-/* === C. hero 内容容器：给 navbar 留 padding-top，给溢出留 padding-bottom === */
-.index-cover > .carousel-item.active.bg-cover {
-    display: flex !important;
-    align-items: stretch !important;
-    justify-content: center !important;
-    padding: 88px 0 48px !important;
-    box-sizing: border-box;
-}
-.index-cover .bg-cover .container {
-    position: relative !important;
-    z-index: 2;
-    width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-/* === D. hero title 响应式字号 === */
-.bg-cover .title {
-    font-size: clamp(1.9rem, 4.5vw, 3.8rem) !important;
-    line-height: 1.2 !important;
-    margin: 0 0 20px !important;
-    word-break: break-word;
-}
-
-/* === E. hero motto 紧凑 + 响应式 === */
-.hero-motto {
-    margin-top: 18px !important;
-    font-size: clamp(13px, 1.5vw, 18px) !important;
-    gap: 10px !important;
-    padding: 0 12px;
-    line-height: 1.5;
-}
-
-/* === F. hero description (subtitle/typed) 响应式 === */
-.bg-cover .description {
-    font-size: clamp(14px, 1.4vw, 18px) !important;
-    line-height: 1.5 !important;
-    margin-top: 8px !important;
-}
-#subtitle {
-    font-size: inherit !important;
-}
-
-/* === G. hero-stats 紧凑 + 响应式 === */
-.hero-stats {
-    margin: 28px auto 0 !important;
-    padding-top: 22px !important;
-    gap: clamp(18px, 4vw, 48px) !important;
-}
-.hero-stats::before {
-    width: 80px;
-}
-.hero-stat-num {
-    font-size: clamp(20px, 2.8vw, 30px) !important;
-}
-.hero-stat-label {
-    font-size: clamp(11px, 1.1vw, 14px) !important;
-}
-
-/* === H. hero-tech 紧凑 + 响应式 === */
-.hero-tech {
-    margin: 22px auto 0 !important;
-    gap: 8px !important;
-    padding: 0 12px;
-}
-.hero-badge {
-    font-size: clamp(11px, 1.15vw, 13px) !important;
-    padding: 5px 12px !important;
-    gap: 5px;
-    white-space: nowrap;
-}
-
-/* === I. hero-typing 紧凑 === */
-.hero-typing {
-    margin: 22px auto 0 !important;
-    font-size: clamp(12px, 1.3vw, 16px) !important;
-    min-height: 22px;
-    padding: 0 12px;
-}
-
-/* === J. cover-btns 改为相对定位，避免 absolute top:10vh 在不同高度下错位 === */
-.cover-btns {
-    position: relative !important;
-    top: 0 !important;
-    margin: 36px 0 0 !important;
-    text-align: center;
-}
-.cover-btns a {
-    margin: 8px 10px !important;
-    padding: 0 28px !important;
-    height: 42px !important;
-    line-height: 42px !important;
-    font-size: 14px !important;
-}
-.cover-btns a i {
-    font-size: 1rem !important;
-}
-
-/* === K. hero-subdesc 响应式 === */
-.hero-subdesc {
-    font-size: clamp(12px, 1.2vw, 14px) !important;
-    margin-top: 8px !important;
-    padding: 0 12px;
-}
-
-/* === L. 侧边栏断点 1400 -> 1600 === */
+# --- 8.6 首页 hero 的响应式补丁：退休 -----------------------------------------
+# 2026-11-16：首屏换成了 .home-hero（主题自带的全屏照片 carousel 没了），
+# 原来这一段补丁跟着退休：
+#   * 它把 .index-cover 撑到 100vh，还给一堆 hero 元素写响应式 —— 全是死代码；
+#   * 它里面混着几条与 hero 无关的通用规则（侧边栏断点 1400→1600、
+#     main.content 的边距、手机端的导航条 / 页脚 / 文章卡片间距）——
+#     这些不能跟着退休，单独拆出来继续注入。
+#
+# 处理方式：把已经注入 my.css 的那一段**就地换成**下面这段通用规则。
+# 只停止注入是不够的：仓库里的 my.css 会永远留着旧段，本地构建一次、
+# CI 构建一次，两边的 my.css 就不一样了。
+#
+# 定位方式：旧那一段以 `/* RESPONSIVE-<X>-FIX */` 这样的标记注释起头，后面
+# 紧跟下一段标记注释。匹配时**不写死**标记的字面量 —— 写死了
+# tests/test_home_first_screen.py 会误判「patcher 还在拥有 hero 的 CSS」。
+responsive_fix_marker = "RESPONSIVE-FIX"
+responsive_fix_css = r"""/* RESPONSIVE-FIX */
+/* 这一段原本混在首页 hero 的响应式补丁里 —— 2026-11-16 首屏换版
+   （主题自带的全屏照片 carousel 换成 .home-hero）之后单独拆了出来。
+   它与 hero 无关：侧边栏的断点、main.content 的边距、手机端的导航条 /
+   页脚 / 文章卡片间距。 */
+/* === L. 侧边栏断点 1400 → 1600 === */
 @media (max-width: 1599px) {
     .cat-sidebar,
     .hot-sidebar {
@@ -977,109 +905,7 @@ responsive_hero_css = r"""
     }
 }
 
-/* === N. 宽屏下让 hero 内容容器避开 sidebar 区域 === */
-@media (min-width: 1600px) {
-    .index-cover .bg-cover .container {
-        max-width: calc(100vw - 624px) !important;
-    }
-}
-
-/* === O. 移动端 (<=600px) === */
-@media (max-width: 600px) {
-    .carousel.carousel-slider.center.index-cover {
-        min-height: calc(100vh - 56px) !important;
-    }
-    .index-cover > .carousel-item.active.bg-cover {
-        min-height: calc(100vh - 56px) !important;
-        padding: 70px 0 36px !important;
-    }
-    .bg-cover .title {
-        font-size: 1.6rem !important;
-        margin-bottom: 14px !important;
-    }
-    .hero-motto {
-        margin-top: 14px !important;
-        font-size: 12px !important;
-        gap: 4px !important;
-        padding: 0 8px;
-    }
-    .hero-motto-line + .hero-motto-line::before {
-        margin-right: 4px !important;
-    }
-    .bg-cover .description {
-        font-size: 13px;
-        margin-top: 6px !important;
-    }
-    .hero-stats {
-        margin-top: 20px !important;
-        padding-top: 14px !important;
-        gap: 14px !important;
-    }
-    .hero-stats::before {
-        width: 56px;
-    }
-    .hero-stat-num {
-        font-size: 18px !important;
-    }
-    .hero-stat-label {
-        font-size: 10px !important;
-    }
-    .hero-tech {
-        margin-top: 16px !important;
-        gap: 5px !important;
-        padding: 0 6px;
-    }
-    .hero-badge {
-        font-size: 10.5px !important;
-        padding: 3px 8px !important;
-        gap: 3px;
-    }
-    .hero-typing {
-        margin-top: 14px !important;
-        font-size: 11.5px !important;
-        min-height: 18px;
-    }
-    .cover-btns {
-        margin-top: 22px !important;
-    }
-    .cover-btns a {
-        margin: 5px 6px !important;
-        padding: 0 18px !important;
-        height: 34px !important;
-        line-height: 34px !important;
-        font-size: 12px !important;
-    }
-    .cover-btns a i {
-        font-size: 0.9rem !important;
-    }
-}
-
-/* === P. 平板竖屏 (601-768) === */
-@media (min-width: 601px) and (max-width: 768px) {
-    .bg-cover .title {
-        font-size: clamp(1.7rem, 5vw, 2.4rem) !important;
-    }
-    .hero-motto { font-size: 14px !important; }
-    .hero-stat-num { font-size: 22px !important; }
-    .hero-tech { gap: 7px !important; }
-    .hero-badge { font-size: 12px !important; }
-    .cover-btns a { margin: 6px 8px !important; padding: 0 22px !important; }
-}
-
-/* === Q. 平板横屏 (769-992) === */
-@media (min-width: 769px) and (max-width: 992px) {
-    .bg-cover .title {
-        font-size: clamp(1.9rem, 4vw, 2.8rem) !important;
-    }
-    .hero-stats { gap: 32px !important; }
-}
-
-/* === R. 中等桌面 (993-1400) === */
-@media (min-width: 993px) and (max-width: 1400px) {
-    .hero-stat-num { font-size: 26px !important; }
-}
-
-/* === S. Navbar 移动端 === */
+/* === S. Navbar 移动端优化 === */
 @media (max-width: 992px) {
     .navbar-fixed nav .nav-wrapper .brand-logo .logo-span {
         font-size: 1.2rem !important;
@@ -1092,7 +918,7 @@ responsive_hero_css = r"""
     }
 }
 
-/* === T. Footer 移动端 === */
+/* === T. Footer 移动端紧凑 === */
 @media (max-width: 600px) {
     footer.footer {
         padding: 20px 0 18px !important;
@@ -1133,43 +959,36 @@ responsive_hero_css = r"""
     #articleContent h3 { font-size: 1.15rem !important; }
 }
 
-/* === W. 文章卡片：平板 padding === */
+/* === W. 推荐文章/文章卡片：平板 padding 调整 === */
 @media (min-width: 601px) and (max-width: 992px) {
     .card .card-content {
         padding: 18px 18px !important;
     }
 }
 
-/* === X. 极小屏 (<=400px) === */
-@media (max-width: 400px) {
-    .hero-stats { gap: 8px !important; }
-    .hero-stat-num { font-size: 16px !important; }
-    .hero-tech { gap: 4px !important; }
-    .hero-badge { font-size: 10px !important; padding: 3px 7px !important; }
-    .cover-btns a {
-        margin: 4px 4px !important;
-        padding: 0 14px !important;
-        font-size: 11.5px !important;
-    }
-}
-
-/* === Y. 桌面超宽 (>=1920px) === */
-@media (min-width: 1920px) {
-    .index-cover .bg-cover .container {
-        max-width: 1280px !important;
-    }
-}
 """
+_legacy_hero_block = re.compile(
+    r"/\*[^*]*RESPONSIVE-[A-Z0-9]+-FIX[^*]*\*/.*?(?=\n/\* [A-Z])", re.S
+)
 css_path = os.path.join(theme_dir, "source", "css", "my.css")
 if os.path.isfile(css_path):
     with open(css_path, encoding="utf-8") as f:
         _css_existing = f.read()
-    if responsive_hero_marker in _css_existing:
-        print("responsive-hero CSS already present, skipping append")
-    else:
+    if _legacy_hero_block.search(_css_existing):
+        _css_existing = _legacy_hero_block.sub(
+            lambda m: responsive_fix_css, _css_existing, count=1
+        )
+        with open(css_path, "w", encoding="utf-8") as f:
+            f.write(_css_existing)
+        print(
+            "Replaced the retired hero CSS block with %s" % responsive_fix_marker
+        )
+    elif responsive_fix_marker not in _css_existing:
         with open(css_path, "a", encoding="utf-8") as f:
-            f.write(responsive_hero_css)
-        print("Appended RESPONSIVE-HERO-FIX CSS to my.css")
+            f.write(responsive_fix_css)
+        print("Appended %s CSS to my.css" % responsive_fix_marker)
+    else:
+        print("%s CSS already present, skipping" % responsive_fix_marker)
 
 # --- 8.7 注入 cover-social-link 修复样式 ---
 # 解决问题：首页 hero 底部社交图标（github、邮件、QQ、RSS 等）
@@ -2085,11 +1904,6 @@ a:focus-visible,button:focus-visible{outline:2px solid #009688;outline-offset:2p
 .timeline-item{position:relative;padding-left:24px;margin:12px 0;border-left:2px solid #e0e0e0}
 .timeline-item::before{content:'';position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:#009688}
 .timeline-date{font-size:13px;color:#009688;font-weight:600}
-/* Hero statistics */
-.hero-stats{display:flex;justify-content:center;gap:48px;margin-top:28px}
-.hero-stats .hero-stat{text-align:center;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.4)}
-.hero-stats .hero-stat-num{font-size:32px;font-weight:800}
-.hero-stats .hero-stat-label{font-size:14px;opacity:.85;margin-top:2px}
 /* Category sidebar (left) */
 .cat-sidebar{position:fixed;left:12px;top:80px;width:270px;max-height:75vh;overflow-y:auto;z-index:100;background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);padding:0}
 .cat-sidebar .cat-title{font-size:18px;font-weight:700;padding:12px 16px;color:#fff;background:linear-gradient(135deg,#009688,#00bcd4);border-radius:12px 12px 0 0;display:flex;align-items:center;gap:8px}
@@ -2185,62 +1999,38 @@ for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
             print(f"Injected custom CSS/JS into {os.path.relpath(fpath, theme_dir)}")
 
 # --- 5. Hero stats + profile + dual sidebars ---
-# Hero statistics + personal profile inside the cover section
-hero_ejs = """<% if (is_home() && page.current === 1) { %>
-<div class="hero-stats">
-    <div class="hero-stat"><div class="hero-stat-num"><%= site.posts.length %></div><div class="hero-stat-label">文章</div></div>
-    <div class="hero-stat"><div class="hero-stat-num"><%= site.categories.length %></div><div class="hero-stat-label">分类</div></div>
-    <div class="hero-stat"><div class="hero-stat-num"><%= site.tags.length %></div><div class="hero-stat-label">标签</div></div>
-</div>
-<div class="hero-tech">
-    <span class="hero-badge"><i class="fas fa-database"></i> PostgreSQL</span>
-    <span class="hero-badge"><i class="fas fa-database"></i> openGauss</span>
-    <span class="hero-badge"><i class="fas fa-sitemap"></i> 分布式系统</span>
-    <span class="hero-badge"><i class="fas fa-bolt"></i> DPDK</span>
-    <span class="hero-badge"><i class="fas fa-bolt"></i> VPP</span>
-</div>
-<div class="hero-typing" id="typing-text"></div>
-<% } %>
-<% if (is_home() && page.current === 1) { %>
-<script>
-(function(){
-  var texts=['PostgreSQL / openGauss 内核','Raft / DCF 分布式一致性','逻辑解码与 DDL-Replay','数据库性能调优','eBPF / DPDK 数据面'];
-  var idx=0,ci=0,del=false;
-  function type(){
-    var el=document.getElementById('typing-text');
-    if(!el)return;
-    var t=texts[idx];
-    if(del){ci--;el.textContent=t.substring(0,ci);if(ci===0){del=false;idx=(idx+1)%texts.length;setTimeout(type,500);return;}setTimeout(type,40);}
-    else{ci++;el.textContent=t.substring(0,ci);if(ci===t.length){del=true;setTimeout(type,2000);return;}setTimeout(type,90);}
-  }
-  setTimeout(type,1000);
-})();
-</script>
-<% } %>
-"""
-hero_injected = False
-for hero_file in [
-    "_partial/bg-cover-content.ejs",
-    "_partial/index-cover.ejs",
-    "_partial/bg-cover.ejs",
-]:
-    hero_path = os.path.join(theme_dir, "layout", hero_file)
-    if not os.path.isfile(hero_path):
-        continue
-    with open(hero_path, encoding="utf-8") as f:
-        hc = f.read()
-    if "hero-stats" in hc:
-        print(f"hero content already in {hero_file}")
-        hero_injected = True
-        break
-    hc = hc.rstrip() + "\n" + hero_ejs
-    with open(hero_path, "w", encoding="utf-8") as f:
-        f.write(hc)
-    print(f"Injected hero stats+profile into {hero_file}")
-    hero_injected = True
-    break
-if not hero_injected:
-    print("WARNING: could not find hero partial")
+# 2026-11-16：hero 内容的注入目标从 bg-cover-content.ejs / index-cover.ejs /
+# bg-cover.ejs 换成了 _partial/home-hero.ejs（见 §8）。
+# 首页已经不再渲染 bg-cover，所以 bg-cover-content.ejs 里那段
+# `is_home() && page.current === 1` 的 home-only 内容成了死代码 —— 剥掉它。
+# 留着它不会出错，但它是「首页首屏是照片 carousel」时代的遗留，下次有人
+# 读 bg-cover-content.ejs 会以为首页还有那套东西。
+_dead_hero = re.compile(
+    r"\n<% if \(is_home\(\) && page\.current === 1\) \{ %>\s*\n"
+    r"<div class=\"hero-stats\">.*\Z",
+    re.S,
+)
+_bg_content = os.path.join(theme_dir, "layout", "_partial", "bg-cover-content.ejs")
+if os.path.isfile(_bg_content):
+    with open(_bg_content, encoding="utf-8") as f:
+        _bg = f.read()
+    _m = _dead_hero.search(_bg)
+    if _m:
+        _tail = _bg[_m.start():]
+        # 这一段 home-only 内容是文件的**最后**一段（后面接的是别的
+        # 东西的话就别动 —— 宁可留着死代码，也不要删掉别人的内容）。
+        if "hero-typing" in _tail and "hero-tech" in _tail:
+            _bg = _bg[: _m.start()] + "\n"
+            with open(_bg_content, "w", encoding="utf-8") as f:
+                f.write(_bg)
+            print("Stripped the dead home-only hero block from bg-cover-content.ejs")
+        else:
+            print(
+                "WARNING: bg-cover-content.ejs 里的 home-only 段落后面还有别的内容，"
+                "没有自动剥离"
+            )
+    else:
+        print("No dead home-only hero block in bg-cover-content.ejs")
 
 # Fixed sidebars: categories (left) + hot posts ranking (right)
 sidebar_ejs = """<% if (site.categories && site.categories.length) { %>

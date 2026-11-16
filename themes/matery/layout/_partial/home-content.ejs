@@ -1,13 +1,15 @@
 <%/*
-  Homepage content panel — sits beneath the bg-cover carousel.
-  Two stacked sections:
-  1. Stats banner   (4 cards: 文章数 / 字数 / 站龄 / 评论数)
+  Homepage content panel — the first screen and everything under it.
+  Three stacked sections:
+  0. Home hero     (定位句 + 三篇代表作) —— 必须在统计条之前
+  1. Stats banner  (4 cards: 文章数 / 字数 / 站龄 / 评论数)
   2. Tabbed articles (推荐 / 热门 / 最新 + 查看全部)
 
   Render only on the very first page of the home paginator so the
   /page/2/ /page/3/ pseudo-pages stay clean.
 */%>
 <% if (is_home() && page.current === 1) { %>
+<%- partial('_partial/home-hero') %>
 <%
   // Compute site stats from site.posts (no comment count available at build time).
   var postCount = site.posts.length;
