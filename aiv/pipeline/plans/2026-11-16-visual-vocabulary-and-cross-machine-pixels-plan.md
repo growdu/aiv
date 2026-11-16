@@ -57,7 +57,7 @@
   键格式从 `<renderer>@<t>` 变 `<episode>/<segment_id>/<renderer>@<t>`。
 - 消费：Task 2 的迁移等价性、Task 3 的重录。
 
-- [ ] **Step 1：先写失败的测试**
+- [x] **Step 1：先写失败的测试**
 
 改 `aiv/pipeline/tests/test_contract.py`：
 
@@ -148,7 +148,7 @@ def test_contract_driven_rendering_is_pixel_identical(all_contracts, monkeypatch
 assert len(baseline["frames"]) == len(_expected_baseline_keys(all_contracts))
 ```
 
-- [ ] **Step 2：跑测试确认它红**
+- [x] **Step 2：跑测试确认它红**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/test_contract.py -q
@@ -157,7 +157,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_contract.py -q
 预期：FAIL——`test_the_baseline_covers_every_segment` 报「缺 …」（基准只有 18 条，
 期望 108 条）。
 
-- [ ] **Step 3：改抓基准脚本**
+- [x] **Step 3：改抓基准脚本**
 
 改 `aiv/pipeline/scripts/capture_scene_baseline.py`：
 
@@ -201,7 +201,7 @@ def frame_key(episode: str, segment, t: float) -> str:
             print(f"  {key}  {frames[key][:16]}")
 ```
 
-- [ ] **Step 4：重录基准**
+- [x] **Step 4：重录基准**
 
 ```bash
 cd aiv/pipeline && python3 scripts/capture_scene_baseline.py
@@ -209,7 +209,7 @@ cd aiv/pipeline && python3 scripts/capture_scene_baseline.py
 
 预期输出末行：`已写入 …（108 帧）`。
 
-- [ ] **Step 5：跑测试确认它绿**
+- [x] **Step 5：跑测试确认它绿**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/test_contract.py -q
@@ -217,7 +217,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_contract.py -q
 
 预期：全绿。
 
-- [ ] **Step 6：全量测试**
+- [x] **Step 6：全量测试**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/ -q
@@ -225,7 +225,7 @@ cd aiv/pipeline && python3 -m pytest tests/ -q
 
 预期：`1000 passed, 15 skipped`（条数会变，因为多了两条测试）。
 
-- [ ] **Step 7：提交**
+- [x] **Step 7：提交**
 
 ```bash
 git add aiv/pipeline/scripts/capture_scene_baseline.py \
@@ -246,7 +246,7 @@ s01_intro 与 s06_outro 六期都在用，每期 params 不同、画面不同，
 以后加期不用改断言，但漏抓会红。"
 ```
 
-- [ ] **Step 8：隔离 worktree 验这笔 commit 自身**
+- [x] **Step 8：隔离 worktree 验这笔 commit 自身**
 
 ```bash
 git worktree add --detach /tmp/aiv-verify-task1 HEAD
@@ -316,7 +316,7 @@ def arrow_v(ctx, x, y1, y2, *, color: str, width: float = 8.0, head: float = 24.
 def arrow_h(ctx, y, x1, x2, *, color: str, width: float = 8.0, head: float = 24.0) -> None: ...
 ```
 
-- [ ] **Step 1：先写失败的测试（组件层）**
+- [x] **Step 1：先写失败的测试（组件层）**
 
 新建 `aiv/pipeline/tests/test_components.py`：
 
@@ -411,7 +411,7 @@ def test_components_do_not_hardcode_contract_copy():
             )
 ```
 
-- [ ] **Step 2：跑测试确认它红**
+- [x] **Step 2：跑测试确认它红**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/test_components.py -q
@@ -419,7 +419,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_components.py -q
 
 预期：FAIL——`ModuleNotFoundError: No module named 'pyv.components'`。
 
-- [ ] **Step 3：写 `pyv/layout.py`**
+- [x] **Step 3：写 `pyv/layout.py`**
 
 新建文件，类与两个实例按上面「接口」段的签名写。**取值必须精确等于现状**：
 
@@ -432,7 +432,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_components.py -q
 左对齐、x = `w * MARGIN_X`、基线 `h * TITLE_Y`、最大宽 `content_width(w)`、
 字号 `TITLE_SIZE`、bold。
 
-- [ ] **Step 4：跑测试确认 layout 的常量与现状一致**
+- [x] **Step 4：跑测试确认 layout 的常量与现状一致**
 
 新建 `aiv/pipeline/tests/test_layout.py`：
 
@@ -476,7 +476,7 @@ def test_horizontal_geometry_is_unchanged():
     assert layout.H.content_width(1920) == pytest.approx(1920 * 0.94)
 ```
 
-- [ ] **Step 5：写 `pyv/components.py`**
+- [x] **Step 5：写 `pyv/components.py`**
 
 新建文件，按「接口」段的签名实现。约束：
 
@@ -486,7 +486,7 @@ def test_horizontal_geometry_is_unchanged():
 - `block()` 的标签基线：`by + bh/2 + label_size * 0.35`（居中时），
   左边距 `bw * 0.09`（与迁移场景现状一致，迁移时按现状校准）。
 
-- [ ] **Step 6：跑组件测试确认它绿**
+- [x] **Step 6：跑组件测试确认它绿**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/test_components.py tests/test_layout.py -q
@@ -494,14 +494,14 @@ cd aiv/pipeline && python3 -m pytest tests/test_components.py tests/test_layout.
 
 预期：全绿。
 
-- [ ] **Step 7：把 `scene_layout.py` 改成兼容层**
+- [x] **Step 7：把 `scene_layout.py` 改成兼容层**
 
 保留现有公开名字（`TITLE_Y` / `CONTENT_TOP` / `CONTENT_BOTTOM` / `MARGIN_X` /
 `RAIL_RIGHT` / `TITLE_SIZE` / `MIN_SIZE` / `fit_size` / `line` / `title` /
 `content_*`），实现转发到 `layout.V` 与 `pyv.scene_layout` 现有的 `fit_size`。
 **转发必须逐字保持现有行为**——26 个未迁移的场景还在用它。
 
-- [ ] **Step 8：迁三个代表场景（像素必须不变）**
+- [x] **Step 8：迁三个代表场景（像素必须不变）**
 
 按顺序迁，每迁一个立刻跑基准：
 
@@ -527,7 +527,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_contract.py -q
 
 迁移过程中若发现组件 API 表达不了某个形状 → **加组件，不要在场景里手画**。
 
-- [ ] **Step 9：跑全量测试**
+- [x] **Step 9：跑全量测试**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/ -q
@@ -535,7 +535,7 @@ cd aiv/pipeline && python3 -m pytest tests/ -q
 
 预期：全绿，**且基准一条没红**。
 
-- [ ] **Step 10：提交**
+- [x] **Step 10：提交**
 
 ```bash
 git add aiv/pipeline/pyv/layout.py aiv/pipeline/pyv/components.py \
@@ -559,7 +559,7 @@ matrix / arrow_v / arrow_h。组件只画一个东西，位置由调用方给，
 坐标、字号、颜色、字重、圆角半径一个都没改。"
 ```
 
-- [ ] **Step 11：隔离 worktree 验这笔 commit 自身**
+- [x] **Step 11：隔离 worktree 验这笔 commit 自身**
 
 ```bash
 git worktree add --detach /tmp/aiv-verify-task2 HEAD
@@ -579,7 +579,7 @@ git worktree remove /tmp/aiv-verify-task2
   `pyv/fonts.BUNDLED_PATH`（指向 `aiv/pipeline/assets/fonts/AIVSansCJKSC-Regular.otf`）。
 - `pyv/doctor.py`：多一条「内置字体」的检查项。
 
-- [ ] **Step 1：先写失败的测试**
+- [x] **Step 1：先写失败的测试**
 
 新建 `aiv/pipeline/tests/test_font_subset.py`：
 
@@ -678,7 +678,7 @@ def test_the_subset_is_small():
     assert size < 2 * 1024 * 1024, f"子集 {size} 字节，太大了"
 ```
 
-- [ ] **Step 2：跑测试确认它红**
+- [x] **Step 2：跑测试确认它红**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/test_font_subset.py -q
@@ -686,7 +686,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_font_subset.py -q
 
 预期：FAIL——`内置字体不在`。
 
-- [ ] **Step 3：写子集生成脚本**
+- [x] **Step 3：写子集生成脚本**
 
 新建 `aiv/pipeline/scripts/build_font_subset.py`：
 
@@ -713,7 +713,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_font_subset.py -q
 }
 ```
 
-- [ ] **Step 4：跑脚本生成子集**
+- [x] **Step 4：跑脚本生成子集**
 
 ```bash
 cd aiv/pipeline && python3 scripts/build_font_subset.py
@@ -721,7 +721,7 @@ cd aiv/pipeline && python3 scripts/build_font_subset.py
 
 预期：打印子集字节数（约 632KB）与字符数。
 
-- [ ] **Step 5：跑测试确认它绿**
+- [x] **Step 5：跑测试确认它绿**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/test_font_subset.py -q
@@ -729,7 +729,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_font_subset.py -q
 
 预期：全绿。
 
-- [ ] **Step 6：写安装脚本**
+- [x] **Step 6：写安装脚本**
 
 新建 `aiv/pipeline/scripts/install_font.py`：
 
@@ -750,19 +750,19 @@ cd aiv/pipeline && python3 -m pytest tests/test_font_subset.py -q
 """
 ```
 
-- [ ] **Step 7：改 `pyv/fonts.py`**
+- [x] **Step 7：改 `pyv/fonts.py`**
 
 - 新增常量 `BUNDLED_FAMILY = "AIV Sans CJK SC"`、
   `BUNDLED_PATH = Path(__file__).resolve().parents[1] / "assets" / "fonts" / "AIVSansCJKSC-Regular.otf"`。
 - 候选顺序：`AIV_FONT_FAMILY` → 内置 → PingFang → Noto / 思源 → fontconfig。
 - 候选的 `family_resolves()` 判定保持不变（用文本宽度与 `.notdef` 比对）。
 
-- [ ] **Step 8：改 `pyv/doctor.py`**
+- [x] **Step 8：改 `pyv/doctor.py`**
 
 多一条检查项「内置字体」：能解析到 `AIV Sans CJK SC` → 报「已就位」；
 不能 → 报「未安装」并给出 `python3 scripts/install_font.py` 这条修复命令。
 
-- [ ] **Step 9：改 `tests/test_assets_are_tracked.py`**
+- [x] **Step 9：改 `tests/test_assets_are_tracked.py`**
 
 把内置字体加进 `REQUIRED_ASSETS`：
 
@@ -773,7 +773,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_font_subset.py -q
 ⚠ `test_no_tracked_media_outside_the_allowlist` 的媒体后缀表里**没有** `.otf`，
 所以字体不会被它拦下——但要确认它确实被 git 跟踪（由 `test_required_asset_is_tracked` 保证）。
 
-- [ ] **Step 10：重录基准（换了字体，画面必然变）**
+- [x] **Step 10：重录基准（换了字体，画面必然变）**
 
 ```bash
 cd aiv/pipeline && python3 scripts/capture_scene_baseline.py
@@ -787,14 +787,14 @@ cd aiv/pipeline && python3 scripts/install_font.py
 
 预期：`capture.font` 变成 `AIV Sans CJK SC`，108 帧全部重抓。
 
-- [ ] **Step 11：改文档**
+- [x] **Step 11：改文档**
 
 - `aiv/上机指南.md` §三：字体那一节改成「两台机器用同一份内置字体」，
   删掉「像素不同、逐像素基准跳过」的说法。
 - `aiv/形象与音色规范.md` §1.3：同样更新。
 - `aiv/README.md`「跑一遍」那节：加一句装字体的步骤。
 
-- [ ] **Step 12：跑全量测试**
+- [x] **Step 12：跑全量测试**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/ -q
@@ -802,7 +802,7 @@ cd aiv/pipeline && python3 -m pytest tests/ -q
 
 预期：全绿。
 
-- [ ] **Step 13：提交**
+- [x] **Step 13：提交**
 
 ```bash
 git add aiv/pipeline/assets/fonts/ aiv/pipeline/pyv/fonts.py \
@@ -831,7 +831,7 @@ Noto Sans CJK SC（SIL OFL 1.1，可随软件分发）按仓库实际用到的 1
 成片内容一字不变，像素与历史成片不同。"
 ```
 
-- [ ] **Step 14：隔离 worktree 验这笔 commit 自身**
+- [x] **Step 14：隔离 worktree 验这笔 commit 自身**
 
 ```bash
 git worktree add --detach /tmp/aiv-verify-task3 HEAD
@@ -852,7 +852,7 @@ git worktree remove /tmp/aiv-verify-task3
 - 新增 `aiv/pipeline/tests/fixtures/layout_fingerprint.json`
 - 新增 `aiv/pipeline/tests/test_layout_fingerprint.py`
 
-- [ ] **Step 1：先写失败的测试**
+- [x] **Step 1：先写失败的测试**
 
 新建 `aiv/pipeline/tests/test_layout_fingerprint.py`：
 
@@ -1019,7 +1019,7 @@ def test_the_layout_fingerprint_matches(monkeypatch):
     assert not findings, "布局指纹对不上：\n  " + "\n  ".join(findings[:40])
 ```
 
-- [ ] **Step 2：跑测试确认它红**
+- [x] **Step 2：跑测试确认它红**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/test_layout_fingerprint.py -q
@@ -1027,7 +1027,7 @@ cd aiv/pipeline && python3 -m pytest tests/test_layout_fingerprint.py -q
 
 预期：FAIL——fixture 不存在。
 
-- [ ] **Step 3：写采集脚本**
+- [x] **Step 3：写采集脚本**
 
 新建 `aiv/pipeline/scripts/capture_layout_fingerprint.py`：
 
@@ -1036,11 +1036,11 @@ cd aiv/pipeline && python3 -m pytest tests/test_layout_fingerprint.py -q
 - 遍历六期契约 × 2 画幅 × 5 时刻。
 - 写 `tests/fixtures/layout_fingerprint.json`。
 
-- [ ] **Step 4：写比对逻辑**
+- [x] **Step 4：写比对逻辑**
 
 逐项按容差判；任何一项超容差就红，报出是哪一期哪一段哪个量差多少。
 
-- [ ] **Step 5：跑测试确认它绿**
+- [x] **Step 5：跑测试确认它绿**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/test_layout_fingerprint.py -q
@@ -1048,21 +1048,21 @@ cd aiv/pipeline && python3 -m pytest tests/test_layout_fingerprint.py -q
 
 预期：全绿。
 
-- [ ] **Step 6：验证它真的会红（注入缺陷）**
+- [x] **Step 6：验证它真的会红（注入缺陷）**
 
 改一个场景里的一个字号（比如 `s03_cores` 里的某个字号 +1），
 跑测试 → 必须红；改回来 → 必须绿。
 
 **没验过这条的守卫不算写完。**
 
-- [ ] **Step 7：改 CI**
+- [x] **Step 7：改 CI**
 
 `.github/workflows/aiv-pipeline.yml`：
 
 - 装上内置字体（`python3 scripts/install_font.py` + `fc-cache -f`）；
 - `fonts-noto-cjk` 降级为兜底（保留但不作为主力）。
 
-- [ ] **Step 8：跑全量测试并提交**
+- [x] **Step 8：跑全量测试并提交**
 
 ```bash
 cd aiv/pipeline && python3 -m pytest tests/ -q
@@ -1083,7 +1083,7 @@ CoreText 与 FreeType 的步进差 ≤0.45px，取 1.0px 余量。
 CI 装上内置字体，让 Linux 上的布局指纹与 macOS 同字体、同步进。"
 ```
 
-- [ ] **Step 9：隔离 worktree 验这笔 commit 自身**
+- [x] **Step 9：隔离 worktree 验这笔 commit 自身**
 
 ```bash
 git worktree add --detach /tmp/aiv-verify-task4 HEAD
@@ -1095,9 +1095,9 @@ git worktree remove /tmp/aiv-verify-task4
 
 ## 收尾
 
-- [ ] 全量测试通过（主工作区 + 隔离 worktree）
-- [ ] `aiv/README.md` 与 `aiv/上机指南.md` 的说法与新状态一致
-- [ ] 五笔提交各自在干净检出上绿（逐笔验过）
+- [x] 全量测试通过（主工作区 + 隔离 worktree）
+- [x] `aiv/README.md` 与 `aiv/上机指南.md` 的说法与新状态一致
+- [x] 五笔提交各自在干净检出上绿（逐笔验过）
 
 ## 不做什么（重申）
 
