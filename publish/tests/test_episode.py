@@ -610,13 +610,17 @@ def test_the_sync_script_lists_every_episode_field():
 
     这一层**不许** import 契约层（有测试盯着），所以两份清单各写一份
     字面量，一致性靠这两条测试钉住。
+
+    断言**与引号风格无关**：仓库跑 ruff format，字符串字面量的引号会被
+    统一成双引号——写死单引号的断言会在一次纯格式化之后突然变红，
+    而它本来要守的是「字段在不在白名单里」。
     """
     source = SYNC_SCRIPT.read_text(encoding="utf-8")
 
     for field in EPISODE_SCALAR_FIELDS + EPISODE_LIST_FIELDS:
-        assert "'{}'".format(field) in source, (
-            "sync-hexo.py 的白名单里没有 {}".format(field)
-        )
+        assert (
+            "'{}'".format(field) in source or '"{}"'.format(field) in source
+        ), "sync-hexo.py 的白名单里没有 {}".format(field)
 
 
 def test_the_two_passthrough_lists_agree():
