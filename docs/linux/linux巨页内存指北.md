@@ -1,3 +1,6 @@
+---
+description: "巨页的实现，涉及到两个模块：hugetlb和hugetlbfs。"
+---
 # linux巨页内存指北
 
 巨页的实现，涉及到两个模块：hugetlb和hugetlbfs。

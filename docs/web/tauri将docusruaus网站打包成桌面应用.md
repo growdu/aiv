@@ -1,3 +1,6 @@
+---
+description: "tauri可以将vue、react等打包成桌面应用"
+---
 # tauri将docusruaus网站打包成桌面应用
 
 ## tauri

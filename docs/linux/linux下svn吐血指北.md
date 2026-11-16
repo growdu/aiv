@@ -1,3 +1,6 @@
+---
+description: "在 Linux 上用 svn 的踩坑记录：安装、配置默认编辑器为 vim，以及日常使用里那些容易出错的地方。"
+---
 # linux下svn吐血指北
 
 <font color ="red">如非必要，请用git！如非必要，请用git！如非必要，请用git！</font>

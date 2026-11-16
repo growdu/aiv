@@ -1,3 +1,6 @@
+---
+description: "用 gdb 跟踪 pg_ctl 启停 PostgreSQL 的过程：fork 出来的子进程里发生了什么。"
+---
 # pg_ctl
 
 ## 启动

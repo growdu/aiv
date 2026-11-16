@@ -1,3 +1,6 @@
+---
+description: "NBT 协议（NetBIOS over TCP/IP）是一种用于在 TCP/IP 网络上实现 NetBIOS 服务的协议。 NBT使用137（UDP）、138（UDP）和139（TCP）来实现基于TCP/IP的NETBIOS网际互联。 而139端口的作用就是获得NETBIOS/SMB服务（即Net…"
+---
 # windows的139、445端口到底在做什么
 
 ## 139端口

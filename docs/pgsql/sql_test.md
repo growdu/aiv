@@ -1,3 +1,6 @@
+---
+description: "TPC(事务处理性能委员会：Transaction Processing Performance Council)，是由数 10 家会员公司创建的非盈利组织，总部设在美国。TPC 的主要成员是计算机软硬件厂家，其主要成员包括 IBM，HP，Oracle，Microsoft 等。TPC 的功能是制定…"
+---
 # sql_test
 
 TPC(事务处理性能委员会：Transaction Processing Performance Council)，是由数 10 家会员公司创建的非盈利组织，总部设在美国。TPC 的主要成员是计算机软硬件厂家，其主要成员包括 IBM，HP，Oracle，Microsoft 等。TPC 的功能是制定商务应用标准程序（Benchmark）的标准规范，性能和价格度量，并管理测试结果的发布。TPC 不给出基准测试程序的代码，而只给出基准程序的标准规范。任何厂家或其它测试者都可以根据规范，最优的构造自己的系统。TPC 已经推出的基准程序包括：TPC-A，TPC-B，TPC-C，TPC-D，TPC-E，TPC-W。

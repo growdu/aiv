@@ -1,3 +1,6 @@
+---
+description: "postgresql数据库在启动之前需要先初始化数据库目录，创建目录文件和模板。"
+---
 # postgresql 启动流程
 
 ## initdb

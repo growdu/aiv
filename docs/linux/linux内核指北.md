@@ -1,3 +1,6 @@
+---
+description: "Linux 内核相关资料的索引（内容还在整理）。"
+---
 # linux内核指北
 
 # reference

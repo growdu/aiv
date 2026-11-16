@@ -1,3 +1,6 @@
+---
+description: "zookeeper是用java语言编写的分布式集群，我们可以基于zookeeper搭建分布式应用。通常zookeeper作为服务器运行，分布式应用需要使用客户端API与zookeeper进行通信。"
+---
 # zookeeperC语言API编程指南
 
 zookeeper是用java语言编写的分布式集群，我们可以基于zookeeper搭建分布式应用。通常zookeeper作为服务器运行，分布式应用需要使用客户端API与zookeeper进行通信。

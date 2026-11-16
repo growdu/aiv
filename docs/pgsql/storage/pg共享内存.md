@@ -1,3 +1,6 @@
+---
+description: "PostgreSQL 共享内存：PGShmemHeader 的结构，以及共享内存段的创建与切分。"
+---
 # pg共享内存
 
 ## 基本数据结构

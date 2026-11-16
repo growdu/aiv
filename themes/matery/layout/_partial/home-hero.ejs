@@ -1,0 +1,182 @@
+<%#
+  首页首屏 —— 一句定位 + 三篇代表作。
+
+  为什么不再用主题自带的 `index-cover`：那是一张全屏照片 carousel，
+  把统计条、学习路径和文章列表全推到折线以下，第一眼只看到一张风景照。
+  （tests/test_home_first_screen.py 守着这一条）
+
+  三块内容：
+    1. 定位句 —— 读 `config.description`（站点配置里那一句具体的说明），
+       不在模板里硬编码，改配置时不会两处对不上。
+    2. 分类徽章 + 打字机 —— 由 tools/patch-theme.py 注入到下面的徽章占位处，
+       徽章的链接要从 `site.categories` 反查真实分类路径，不能手写。
+    3. 三篇代表作 —— 清单在仓库根的 `data/featured.json`（作者可维护），
+       经 sync 复制到 `source/_data/`，这里通过 `site.data.featured` 读取。
+%>
+<%
+  var _heroData = (site.data && site.data.featured) || {};
+  var _heroSlugs = _heroData.hero || [];
+
+  // 文章的 permalink 形如 2026/08/18/db/postgresql/learning-path/03-query-pipeline/
+  // —— **没有前导斜杠**（url_for 之后才有）。清单里写的是 <相对路径>，
+  // 所以这里把日期段剥掉再匹配。
+  var _slugOf = function (p) {
+    var m = String((p && p.path) || '').match(/\d{4}\/\d{2}\/\d{2}\/(.+)$/);
+    return m ? m[1].replace(/\/+$/, '') : '';
+  };
+  var _bySlug = {};
+  site.posts.forEach(function (p) { _bySlug[_slugOf(p)] = p; });
+
+  var _heroPosts = [];
+  _heroSlugs.forEach(function (s) {
+    var p = _bySlug[s];
+    if (p) _heroPosts.push(p);
+  });
+%>
+<section class="home-hero" data-aos="fade-up">
+  <div class="container">
+    <p class="home-hero__eyebrow"><%= config.subtitle %></p>
+    <h1 class="home-hero__lead"><%= config.description %></h1>
+
+    <div class="home-hero__search">
+      <label class="home-hero__search-label" for="homeSearch">站内搜索</label>
+      <input type="search" id="homeSearch" class="home-hero__search-input"
+             placeholder="按标题或分类搜索…" autocomplete="off" spellcheck="false" />
+      <ul class="home-hero__search-results" id="homeSearchResults" hidden></ul>
+      <p class="home-hero__search-hint">按标题搜索 · 全文搜索用顶部导航</p>
+    </div>
+
+    <div class="home-hero__badges"><%
+  var heroBadges = [
+    { label: 'PostgreSQL',       icon: 'fas fa-database',   cat: 'PostgreSQL' },
+    { label: 'openGauss',        icon: 'fas fa-database',   cat: 'openGauss' },
+    { label: '分布式系统',        icon: 'fas fa-sitemap',    cat: '集群' },
+    { label: 'DPDK',             icon: 'fas fa-bolt',       cat: 'DPDK' },
+    { label: 'VPP',              icon: 'fas fa-bolt',       cat: 'VPP' },
+    { label: '股票 · 金融',       icon: 'fas fa-chart-line', cat: '股票与金融' },
+    { label: '工具 · 视频 · 培训', icon: 'fas fa-tools',     cat: '工具' },
+    { label: '哲学 · 人生',       icon: 'fas fa-yin-yang',   cat: '人生' },
+    { label: '社会观察',          icon: 'fas fa-city',       cat: '社会' }
+  ];
+  var heroCatIndex = {};
+  (site.categories || []).each(function (c) {
+    var cur = heroCatIndex[c.name];
+    // 同名分类可能既是顶级分类又是别的分类的子分类（Hexo 会把 front matter
+    // 里的分类列表当成一条层级链），优先取顶级的那一个。
+    if (!cur || (cur.parent && !c.parent)) heroCatIndex[c.name] = c;
+  });
+%>
+<div class="hero-tech">
+    <% heroBadges.forEach(function (b) {
+         var c = heroCatIndex[b.cat];
+         if (!c) {
+           console.warn('[hero-tech] 分类不存在，徽章已跳过: ' + b.cat);
+           return;
+         }
+    %>
+    <a class="hero-badge" href="<%- url_for(c.path) %>" aria-label="查看<%= b.label %>分类文章"><i class="<%= b.icon %>"></i> <%= b.label %></a>
+    <% }); %>
+</div>
+<div class="hero-typing" id="typing-text"></div>
+<script>
+(function(){
+  var texts=['PostgreSQL / openGauss 内核', 'Raft / DCF 分布式一致性', '逻辑解码与 DDL Replay', '数据库性能调优', 'eBPF / DPDK 数据面', '工具 / 视频 / 培训', '股票与金融观察', '哲学思辨 · 人生感悟', '社会观察 · 城市记录'];
+  var idx=0,ci=0,del=false;
+  function type(){
+    var el=document.getElementById('typing-text');
+    if(!el)return;
+    var t=texts[idx];
+    if(del){ci--;el.textContent=t.substring(0,ci);if(ci===0){del=false;idx=(idx+1)%texts.length;setTimeout(type,500);return;}setTimeout(type,40);}
+    else{ci++;el.textContent=t.substring(0,ci);if(ci===t.length){del=true;setTimeout(type,2000);return;}setTimeout(type,90);}
+  }
+  setTimeout(type,1000);
+})();
+</script>
+</div>
+
+    <% if (_heroPosts.length) { %>
+    <nav class="home-hero__featured" aria-label="代表作">
+      <% _heroPosts.forEach(function (post) {
+           var _cats = (post.categories && post.categories.data) || [];
+           var _cat = _cats.length ? _cats[0].name : '';
+      %>
+      <a class="home-hero__card" href="<%- url_for(post.path) %>">
+        <span class="home-hero__card-cat"><%= _cat %></span>
+        <span class="home-hero__card-title"><%= post.title %></span>
+        <span class="home-hero__card-date"><%= post.date ? post.date.format('YYYY-MM-DD') : '' %></span>
+      </a>
+      <% }); %>
+    </nav>
+    <% } %>
+  </div>
+</section>
+
+<%# 首屏搜索：抓 /search-lite.json（78KB 的精简索引），不是 search.json
+    （13.5MB 全文索引，第一次击键就是 4.2MB 的下载）。
+
+    只匹配标题和分类——首屏不是全文搜索的地方，全文搜索在顶部导航里。
+    tests/test_home_search_box.py 守着这几条。 %>
+<!-- HOME-SEARCH -->
+<script>
+(function(){
+  var input = document.getElementById('homeSearch');
+  var list = document.getElementById('homeSearchResults');
+  if (!input || !list) return;
+
+  var index = null;
+  var timer = null;
+  var MAX = 8;
+
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+    });
+  };
+
+  var loadIndex = function () {
+    if (index) return Promise.resolve(index);
+    return fetch('/search-lite.json')
+      .then(function (r) { return r.json(); })
+      .then(function (d) { index = Array.isArray(d) ? d : []; return index; })
+      .catch(function () { index = []; return index; });
+  };
+
+  var render = function (q) {
+    if (!q) { list.innerHTML = ''; list.hidden = true; return; }
+    loadIndex().then(function (posts) {
+      var needle = q.toLowerCase();
+      var hits = posts.filter(function (p) {
+        var t = String(p.title || '').toLowerCase();
+        var c = String(p.cat || '').toLowerCase();
+        return t.indexOf(needle) >= 0 || c.indexOf(needle) >= 0;
+      }).slice(0, MAX);
+      if (!hits.length) {
+        list.innerHTML = '<li class="home-hero__search-empty">没有匹配的文章</li>';
+        list.hidden = false;
+        return;
+      }
+      list.innerHTML = hits.map(function (p) {
+        return '<li><a href="' + esc(p.url) + '">' +
+          '<span class="home-hero__search-title">' + esc(p.title) + '</span>' +
+          '<span class="home-hero__search-cat">' + esc(p.cat) + '</span>' +
+          '</a></li>';
+      }).join('');
+      list.hidden = false;
+    });
+  };
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    var q = (input.value || '').trim();
+    // 200ms 防抖：每敲一个字母都过滤一遍 527 条，是白花的力气。
+    timer = setTimeout(function () { render(q); }, 200);
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var first = list.querySelector('a');
+    if (first) window.location.href = first.getAttribute('href');
+  });
+})();
+</script>

@@ -1,3 +1,6 @@
+---
+description: "Oracle Site Guard 是一个数据保护解决方案，用于实现数据中心级别的灾难恢复和故障转移。它可以保护 Oracle 数据库、应用服务器、中间件以及整个操作系统。"
+---
 # oracle_site_guard详解
 
 ## oracle site guard是什么

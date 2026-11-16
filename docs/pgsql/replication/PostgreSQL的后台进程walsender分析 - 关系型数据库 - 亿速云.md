@@ -1,3 +1,6 @@
+---
+description: "这篇文章主要介绍“PostgreSQL的后台进程walsender分析”，在日常操作中，相信很多人在PostgreSQL的后台进程walsender分析问题上存在疑惑，小编查阅了各式资料，整理出简单好用的操作方法，希望对大家解答”PostgreSQL的后台进程walsender分析”的疑惑有所帮助…"
+---
 这篇文章主要介绍“PostgreSQL的后台进程walsender分析”，在日常操作中，相信很多人在PostgreSQL的后台进程walsender分析问题上存在疑惑，小编查阅了各式资料，整理出简单好用的操作方法，希望对大家解答”PostgreSQL的后台进程walsender分析”的疑惑有所帮助！接下来，请跟着小编一起来学习吧！
 
 该进程实质上是streaming replication环境中master节点上普通的backend进程,在standby节点启动时,standby节点向master发送连接请求,master节点的postmaster进程接收到请求后,启动该进程与standby节点的walreceiver进程建立通讯连接,用于传输WAL Record.  

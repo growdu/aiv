@@ -1,3 +1,6 @@
+---
+description: "otlp，全称是opentelemetry protocol，主要用于可观测性领域。（trace、metrics、logs）"
+---
 # otlp
 
 otlp，全称是opentelemetry protocol，主要用于可观测性领域。（trace、metrics、logs）

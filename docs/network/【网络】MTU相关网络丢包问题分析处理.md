@@ -1,3 +1,6 @@
+---
+description: "MTU 与 MSS 的概念辨析，以及线上遇到 MTU 导致的网络丢包问题该怎么分析和处理。"
+---
 ## 【网络】MTU相关网络丢包问题分析处理
 
 [![](https://cdn2.jianshu.io/assets/default_avatar/1-04bbeead395d74921af6a4e8214b4f61.jpg)](https://www.jianshu.com/u/e65f29d9cfe1)

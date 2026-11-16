@@ -1,3 +1,6 @@
+---
+description: "仓库偶尔会出现 xxx.md 和 xxx.html 两个同主题、不同表达形式的源文件（一个 markdown 版、一个带丰富排版的 HTML 版）。本文说明 sync-hexo.py 处理这种情况的约定，为什么必须遵守，以及怎么做。"
+---
 # 同名文章：HTML 与 MD 版本管理
 
 仓库偶尔会出现 `xxx.md` 和 `xxx.html` 两个同主题、不同表达形式的源文件（一个 markdown 版、一个带丰富排版的 HTML 版）。本文说明 `sync-hexo.py` 处理这种情况的约定，**为什么必须**遵守，以及怎么做。

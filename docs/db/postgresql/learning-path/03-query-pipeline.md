@@ -1,3 +1,6 @@
+---
+description: "src/backend/tcop/postgres.c:exec_simple_query(const char *query_string) 是简单查询协议（Q 消息）的入口。流程："
+---
 # 03 查询管线全景
 
 > 目标：从 backend 收到一条 query 字节那一刻起，逐函数跟踪到执行器出口。理解 **解析 → 重写 → 优化 → 执行** 四阶段的产物（`RawStmt` / `Query` / `PlannedStmt` / `PlanState`）。

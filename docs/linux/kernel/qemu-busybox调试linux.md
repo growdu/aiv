@@ -1,3 +1,6 @@
+---
+description: "用 QEMU 和 BusyBox 搭建 Linux 内核的调试环境：下载源码、编译内核、启动调试。"
+---
 # qemu-busybox调试linux
 
 ## 编译内核

@@ -1,3 +1,6 @@
+---
+description: "pg在将数据写入磁盘时才会进行checksum的计算写入。"
+---
 # pg_checksum
 
 pg在将数据写入磁盘时才会进行checksum的计算写入。

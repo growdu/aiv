@@ -1,3 +1,6 @@
+---
+description: "OpenTelemetry（简称 OTel） 是一个开源的可观测性（Observability）标准与工具集，用于统一采集、传输和导出应用的 Trace（链路追踪）、Metric（指标）、Log（日志） 数据。"
+---
 # opentelemetry详解
 
 OpenTelemetry（简称 OTel） 是一个开源的可观测性（Observability）标准与工具集，用于统一采集、传输和导出应用的 Trace（链路追踪）、Metric（指标）、Log（日志） 数据。

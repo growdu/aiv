@@ -11,6 +11,7 @@ tags:
   - 并行 apply
   - 接口文档
   - TWPA
+description: "本文档定义 TWPA(Transaction Window Parallel Apply,事务窗口并行 Apply) 用户可见的接口规范,包括:"
 ---
 
 # 逻辑复制并行 Apply — 用户接口文档

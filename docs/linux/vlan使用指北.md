@@ -1,3 +1,6 @@
+---
+description: "vlan详细内容请参考博客。"
+---
 # vlan使用指北
 
 vlan详细内容请参考[博客](https://blog.csdn.net/qq_38265137/article/details/80390759)。

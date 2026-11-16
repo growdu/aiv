@@ -2016,6 +2016,30 @@ def collect_index_posts(posts_root, meta_cats=META_CATS):
     return records
 
 
+def copy_view_counts_snapshot(src_dir=None, repo_root=None):
+    """把仓库根的 data/view-counts.json 复制到 source/_data/。
+
+    hexo 只把 ``source/_data/`` 里的 json 挂到 ``site.data`` 上（键名是
+    文件名去掉后缀，即 ``view-counts``）。不复制的话，模板里的
+    ``site.data['view-counts']`` 永远是 undefined，侧栏与首页那个 tab
+    拿不到任何真实阅读量。
+
+    源文件不在就返回 None——快照是**可选**的，缺了不该把整次同步带崩。
+    """
+    if src_dir is None:
+        src_dir = SRC
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    src = os.path.join(repo_root, "data", "view-counts.json")
+    if not os.path.isfile(src):
+        return None
+    dest_dir = os.path.join(src_dir, "_data")
+    os.makedirs(dest_dir, exist_ok=True)
+    dest = os.path.join(dest_dir, "view-counts.json")
+    shutil.copyfile(src, dest)
+    return dest
+
+
 def main():
     # Preserve custom pages (source/all/, source/recommended/) across regeneration
     import tempfile
@@ -2333,6 +2357,34 @@ footer a:hover{color:var(--c1)}
         with open(lite_path, "w", encoding="utf-8") as f:
             json.dump(lite, f, ensure_ascii=False, separators=(",", ":"))
         print("Wrote search-lite.json (%d items)" % len(lite))
+
+    # 首页首屏的策展清单（3 篇代表作 + 6 篇编辑推荐）。
+    #
+    # 真相在仓库根的 data/featured.json —— 作者改那个文件就能换首屏，
+    # 不用去改模板。source/ 是 gitignore 的，所以必须复制到
+    # source/_data/，hexo 才会把它挂到 site.data.featured 上。
+    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _featured_src = os.path.join(_repo_root, "data", "featured.json")
+    if os.path.isfile(_featured_src):
+        _featured_dir = os.path.join(SRC, "_data")
+        os.makedirs(_featured_dir, exist_ok=True)
+        shutil.copyfile(_featured_src, os.path.join(_featured_dir, "featured.json"))
+        print("Copied data/featured.json -> source/_data/featured.json")
+    else:
+        print("WARNING: data/featured.json not found — 首页首屏将没有代表作")
+
+    # 真实阅读量快照（GoatCounter 的 PV）。
+    #
+    # 真相在仓库根的 data/view-counts.json —— tools/fetch-view-counts.py
+    # 抓的。跟 featured.json 同一个道理：source/ 是 gitignore 的，
+    # 必须复制到 source/_data/，hexo 才会把它挂到 site.data 上
+    # （键名是 'view-counts'，模板里读 site.data['view-counts']）。
+    _vc_dest = copy_view_counts_snapshot()
+    if _vc_dest:
+        print("Copied data/view-counts.json -> %s" % _vc_dest)
+    else:
+        print("WARNING: data/view-counts.json not found — 侧栏不显示阅读量")
+
     # Database landing page
     database_data = collect_database_posts(section_titles, cascade_map)
     create_database_landing_page(database_data)

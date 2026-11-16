@@ -1,3 +1,6 @@
+---
+description: "openGauss DCF 源码阅读笔记：从 main 到 dcf_start、init_main_threads 的启动流程梳理。"
+---
 # openguass dcf源码阅读
 
 ## 启动流程

@@ -1,3 +1,6 @@
+---
+description: "pg提供了扩展机制可以在不动postgresql源代码的情况下，增强postgresql的一些功能。"
+---
 # pg扩展开发
 
 pg提供了扩展机制可以在不动[postgresql](https://so.csdn.net/so/search?q=postgresql&spm=1001.2101.3001.7020)源代码的情况下，增强postgresql的一些功能。

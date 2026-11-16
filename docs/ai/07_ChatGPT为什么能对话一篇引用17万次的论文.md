@@ -1,3 +1,6 @@
+---
+description: "2017 年，Google 的一个团队发表了一篇论文。"
+---
 # ChatGPT为什么能对话——一篇引用17万次的论文
 
 > 来源: [https://wmyskxz.cn/wiki/whats_ai/6/](https://wmyskxz.cn/wiki/whats_ai/6/)

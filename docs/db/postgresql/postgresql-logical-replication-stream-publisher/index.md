@@ -14,6 +14,7 @@ tags:
   - Reorder Buffer
   - pgoutput
   - 流式协议
+description: "源码位置:src/backend/utils/misc/guc_tables.c:2604,src/include/replication/reorderbuffer.h:27。"
 ---
 
 # PostgreSQL 18 流式逻辑复制发布端深度解析:从 logical_decoding_work_mem 到 stream_commit 的完整链路

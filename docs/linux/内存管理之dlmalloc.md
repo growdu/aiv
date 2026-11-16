@@ -1,3 +1,6 @@
+---
+description: "内存管理之 dlmalloc：allocator 与系统堆的关系，以及一块内存从申请到映射上物理页的全过程。"
+---
 # 内存管理之dlmalloc
 
 ## 基础知识

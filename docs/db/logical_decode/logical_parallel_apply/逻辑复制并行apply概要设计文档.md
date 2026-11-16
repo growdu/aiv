@@ -11,6 +11,7 @@ tags:
   - 并行 apply
   - 概要设计
   - TWPA
+description: "定义 TWPA(Transaction Window Parallel Apply)的总体架构、核心数据流、组件交互与状态机。本文不展开:"
 ---
 
 # 事务窗口并行 Apply(TWPA)概要设计文档

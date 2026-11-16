@@ -1,3 +1,6 @@
+---
+description: "Protocol Buffers (protobuf) 是Google开发的一种高效的数据序列化格式，常被用于RPC（远程过程调用）系统中。"
+---
 # protobuf实现rpc
 
 Protocol Buffers (protobuf) 是Google开发的一种高效的数据序列化格式，常被用于RPC（远程过程调用）系统中。

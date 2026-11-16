@@ -1,3 +1,6 @@
+---
+description: "docusaurus是一个基于markdown的现代化文档框架，可以基于makrdown编写产品的手册并发布。"
+---
 # docusaurus文档编译为pdf
 
 docusaurus是一个基于markdown的现代化文档框架，可以基于makrdown编写产品的手册并发布。

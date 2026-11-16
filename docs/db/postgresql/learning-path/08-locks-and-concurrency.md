@@ -1,3 +1,6 @@
+---
+description: "src/backend/access/transam/xact.c 维护一个当前 backend 的 MyXactFlags 和状态："
+---
 # 08 事务、锁与并发
 
 > 目标：把 PG 的“事务子系统”吃透：xact 状态机、Snapshot、clog/subtrans、lmgr 的表/页/元组三级锁、lwlock、SSI 实现。**这是“资深内核开发”与“会用 PG”的分水岭**。

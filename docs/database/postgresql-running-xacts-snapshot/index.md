@@ -1,3 +1,6 @@
+---
+description: "逻辑复制里最容易出 bug 的事不是 decode（pgoutput 已经写得相当稳定），也不是 apply（无脑 INSERT/UPDATE/DELETE），而是 snapshot 怎么从 WAL 里\"长\"出来——也就是 RUNNING_XACTS + SnapBuild 状态机 + xmi…"
+---
 # PostgreSQL 逻辑复制里 `RUNNING_XACTS` 写入机制与快照 `xmin / xmax / xip` 的演化：源码级深度拆解
 
 | 编写人 | 编写内容 | 编写时间 |

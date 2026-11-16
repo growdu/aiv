@@ -1,3 +1,6 @@
+---
+description: "corosync-qdevice 源码阅读笔记：网络投票算法、消息类型与 qnetd 仲裁的注册流程。"
+---
 # corosync-qdevice源码阅读
 
 ```c

@@ -1,3 +1,6 @@
+---
+description: "growdu 的编程之路：从 C 语言、数学建模竞赛，到阅读、文本自动化提取、DPDK/VPP 和分布式系统。"
+---
 # 编程之路
 
 关于growdu本人。

@@ -1,3 +1,6 @@
+---
+description: "将如下配置文件添加到postgresql.conf,"
+---
 # haproxy使用extern-check支持伪双写配置验证
 
 ## 部署数据库

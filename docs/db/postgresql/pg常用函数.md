@@ -1,3 +1,6 @@
+---
+description: "在 PostgreSQL 扩展开发中，DefineCustom*Variable 系列函数用于 注册自定义 GUC（Grand Unified Configuration）参数。"
+---
 # pg常用函数
 
 ## DefineCustom*Variable

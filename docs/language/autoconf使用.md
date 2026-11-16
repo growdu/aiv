@@ -1,3 +1,6 @@
+---
+description: "使用autoconf的最终目的是生成能够根据不同系统生成Makefile的configure文件，一般情况下我们需要准备如下内容："
+---
 # autoconf使用
 
 ## 简介

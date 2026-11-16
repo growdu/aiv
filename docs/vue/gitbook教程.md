@@ -1,3 +1,6 @@
+---
+description: "即将graceful-fs更新到最新。请参考Stack Overflow."
+---
 # gitbook教程
 
 ## 下载gitbook

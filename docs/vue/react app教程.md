@@ -1,3 +1,6 @@
+---
+description: "安装chrome dev tools插件，然后npm start，再按f5或者运行中开始调试。"
+---
 # react app教程
 
 ## 环境准备

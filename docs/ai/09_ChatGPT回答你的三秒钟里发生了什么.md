@@ -1,3 +1,6 @@
+---
+description: "如果你从第 1 篇读到这里，恭喜——你现在对 AI 的理解，已经超过了绝大多数人。"
+---
 # ChatGPT回答你的三秒钟里，发生了什么？
 
 > 来源: [https://wmyskxz.cn/wiki/whats_ai/8/](https://wmyskxz.cn/wiki/whats_ai/8/)

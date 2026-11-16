@@ -1,3 +1,6 @@
+---
+description: "$RANDOM 和 uuid 有什么区别：一个生成 0 到 32767 的随机整数，一个保证分布式系统里的全局唯一。"
+---
 # linux下RANDOM和uuid的区别
 
 ## RANDOM

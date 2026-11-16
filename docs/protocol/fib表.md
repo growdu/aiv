@@ -1,3 +1,6 @@
+---
+description: "fib（forward info base）转发表。"
+---
 # fib表
 
 fib（forward info base）转发表。

@@ -416,11 +416,6 @@ footer.footer a:hover {
 @media (max-width:600px){.cn-region-banner__text{font-size:12px;}.cn-region-banner__btn{padding:5px 10px;font-size:12px;}}
 /* hero motto */
 .hero-motto{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:48px auto 0;max-width:760px;font-size:18px;letter-spacing:.05em;font-weight:600;color:#fff;}
-.hero-stats{margin:96px auto 0;display:flex;justify-content:center;gap:36px;flex-wrap:wrap;position:relative;padding-top:36px;}
-.hero-stats::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:96px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);}
-.hero-stat{display:flex;flex-direction:column;align-items:center;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.4);}
-.hero-stat-num{font-size:28px;font-weight:700;letter-spacing:.02em;}
-.hero-stat-label{font-size:12px;opacity:.85;margin-top:4px;letter-spacing:.08em;}
 .hero-tech{margin:56px auto 0;display:flex;justify-content:center;gap:10px;flex-wrap:nowrap;max-width:1100px;padding:0 16px;}
 .hero-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.12);backdrop-filter:blur(6px);color:#fff;font-size:13px;letter-spacing:.04em;text-decoration:none;transition:background .25s ease,transform .25s ease;}
 .hero-badge:hover,.hero-badge:focus-visible{background:rgba(255,255,255,.22);transform:translateY(-1px);}
@@ -433,154 +428,12 @@ footer.footer a:hover {
 @media (max-width:600px){.bg-cover .title{display:flex;justify-content:center;text-align:center !important;width:100%;white-space:normal;}.hero-motto{font-size:14px;gap:8px;}.hero-motto-line{white-space:normal;}.hero-motto-line + .hero-motto-line::before{margin-right:8px;}}
 
 
-/* RESPONSIVE-HERO-FIX */
-/* 重写首页 hero 区域，让内容能适应不同高度/宽度的视口，并修复以下问题：
-   1) .index-cover { height:100vh } + .carousel { overflow:hidden } 导致 hero 内容
-      (title + motto + typed + stats + tech + typing + 按钮) 总高度超过视口时被裁掉，
-      进而出现"首页文字被遮挡"。
-   2) hero 各元素（title/motto/stats/tech/typing）完全没有响应式，在不同字号下错位。
-   3) 侧边栏在 1400-1600px 之间开始挤压主内容，但首页 carousel 不在 main.content 内，
-      导致首页 hero 文本被 cat/hot sidebar 遮挡。
-   4) navbar-fixed (64px) 与 carousel 内容重叠。 */
 
-/* === A. 首页 carousel 容器自适应高度 === */
-.carousel.carousel-slider.center.index-cover {
-    height: auto !important;
-    min-height: calc(100vh - 64px) !important;
-    overflow: visible !important;
-    margin-top: 0 !important;
-}
-
-/* === B. carousel-item：当前展示的 item 撑开容器 === */
-.index-cover > .carousel-item {
-    position: absolute !important;
-    height: 100% !important;
-    min-height: calc(100vh - 64px);
-}
-.index-cover > .carousel-item.active {
-    position: relative !important;
-    height: auto !important;
-    min-height: calc(100vh - 64px);
-    overflow: visible !important;
-}
-.index-cover > .carousel-item:not(.active) {
-    display: none !important;
-}
-
-/* === C. hero 内容容器：给 navbar 留 padding-top，给溢出留 padding-bottom === */
-.index-cover > .carousel-item.active.bg-cover {
-    display: flex !important;
-    align-items: stretch !important;
-    justify-content: center !important;
-    padding: 88px 0 48px !important;
-    box-sizing: border-box;
-}
-.index-cover .bg-cover .container {
-    position: relative !important;
-    z-index: 2;
-    width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-/* === D. hero title 响应式字号 + 减小 margin === */
-.bg-cover .title {
-    font-size: clamp(1.9rem, 4.5vw, 3.8rem) !important;
-    line-height: 1.2 !important;
-    margin: 0 0 20px !important;
-    word-break: break-word;
-    display: flex;
-    justify-content: center;
-    text-align: center !important;
-    width: 100%;
-    white-space: nowrap;
-}
-
-/* === E. hero motto 紧凑 + 响应式 === */
-.hero-motto {
-    margin-top: 18px !important;
-    font-size: clamp(13px, 1.5vw, 18px) !important;
-    gap: 10px !important;
-    padding: 0 12px;
-    line-height: 1.5;
-}
-
-/* === F. hero description (subtitle/typed) 响应式 === */
-.bg-cover .description {
-    font-size: clamp(14px, 1.4vw, 18px) !important;
-    line-height: 1.5 !important;
-    margin-top: 8px !important;
-}
-#subtitle {
-    font-size: inherit !important;
-}
-
-/* === G. hero-stats 紧凑 + 响应式 === */
-.hero-stats {
-    margin: 28px auto 0 !important;
-    padding-top: 22px !important;
-    gap: clamp(18px, 4vw, 48px) !important;
-}
-.hero-stats::before {
-    width: 80px;
-}
-.hero-stat-num {
-    font-size: clamp(20px, 2.8vw, 30px) !important;
-}
-.hero-stat-label {
-    font-size: clamp(11px, 1.1vw, 14px) !important;
-}
-
-/* === H. hero-tech 紧凑 + 响应式 === */
-.hero-tech {
-    margin: 22px auto 0 !important;
-    gap: 8px !important;
-    padding: 0 12px;
-}
-.hero-badge {
-    font-size: clamp(11px, 1.15vw, 13px) !important;
-    padding: 5px 12px !important;
-    gap: 5px;
-    white-space: nowrap;
-}
-
-/* === I. hero-typing 紧凑 === */
-.hero-typing {
-    margin: 22px auto 0 !important;
-    font-size: clamp(12px, 1.3vw, 16px) !important;
-    min-height: 22px;
-    padding: 0 12px;
-}
-
-/* === J. cover-btns 改为相对定位，避免 absolute top:10vh 在不同高度下错位 === */
-.cover-btns {
-    position: relative !important;
-    top: 0 !important;
-    margin: 36px 0 0 !important;
-    text-align: center;
-}
-.cover-btns a {
-    margin: 8px 10px !important;
-    padding: 0 28px !important;
-    height: 42px !important;
-    line-height: 42px !important;
-    font-size: 14px !important;
-}
-.cover-btns a i {
-    font-size: 1rem !important;
-}
-
-/* === K. hero-subdesc 响应式 === */
-.hero-subdesc {
-    font-size: clamp(12px, 1.2vw, 14px) !important;
-    margin-top: 8px !important;
-    padding: 0 12px;
-}
-
+/* RESPONSIVE-FIX */
+/* 这一段原本混在首页 hero 的响应式补丁里 —— 2026-11-16 首屏换版
+   （主题自带的全屏照片 carousel 换成 .home-hero）之后单独拆了出来。
+   它与 hero 无关：侧边栏的断点、main.content 的边距、手机端的导航条 /
+   页脚 / 文章卡片间距。 */
 /* === L. 侧边栏断点 1400 → 1600 === */
 @media (max-width: 1599px) {
     .cat-sidebar,
@@ -614,109 +467,6 @@ footer.footer a:hover {
         margin-right: 0 !important;
         max-width: none !important;
     }
-}
-
-/* === N. 宽屏下让 hero 内容容器避开 sidebar 区域 === */
-@media (min-width: 1600px) {
-    .index-cover .bg-cover .container {
-        max-width: calc(100vw - 624px) !important;
-    }
-}
-
-/* === O. 移动端 (<=600px) 进一步强化 === */
-@media (max-width: 600px) {
-    .carousel.carousel-slider.center.index-cover {
-        min-height: calc(100vh - 56px) !important;
-    }
-    .index-cover > .carousel-item.active.bg-cover {
-        min-height: calc(100vh - 56px) !important;
-        padding: 70px 0 36px !important;
-    }
-    .bg-cover .title {
-        font-size: 1.6rem !important;
-        margin-bottom: 14px !important;
-    }
-    .hero-motto {
-        margin-top: 14px !important;
-        font-size: 12px !important;
-        gap: 4px !important;
-        padding: 0 8px;
-    }
-    .hero-motto-line + .hero-motto-line::before {
-        margin-right: 4px !important;
-    }
-    .bg-cover .description {
-        font-size: 13px;
-        margin-top: 6px !important;
-    }
-    .hero-stats {
-        margin-top: 20px !important;
-        padding-top: 14px !important;
-        gap: 14px !important;
-    }
-    .hero-stats::before {
-        width: 56px;
-    }
-    .hero-stat-num {
-        font-size: 18px !important;
-    }
-    .hero-stat-label {
-        font-size: 10px !important;
-    }
-    .hero-tech {
-        margin-top: 16px !important;
-        flex-wrap: wrap;
-        gap: 5px !important;
-        padding: 0 6px;
-    }
-    .hero-badge {
-        font-size: 10.5px !important;
-        padding: 3px 8px !important;
-        gap: 3px;
-    }
-    .hero-typing {
-        margin-top: 14px !important;
-        font-size: 11.5px !important;
-        min-height: 18px;
-    }
-    .cover-btns {
-        margin-top: 22px !important;
-    }
-    .cover-btns a {
-        margin: 5px 6px !important;
-        padding: 0 18px !important;
-        height: 34px !important;
-        line-height: 34px !important;
-        font-size: 12px !important;
-    }
-    .cover-btns a i {
-        font-size: 0.9rem !important;
-    }
-}
-
-/* === P. 平板竖屏 (601-768) === */
-@media (min-width: 601px) and (max-width: 768px) {
-    .bg-cover .title {
-        font-size: clamp(1.7rem, 5vw, 2.4rem) !important;
-    }
-    .hero-motto { font-size: 14px !important; }
-    .hero-stat-num { font-size: 22px !important; }
-    .hero-tech { gap: 7px !important; }
-    .hero-badge { font-size: 12px !important; }
-    .cover-btns a { margin: 6px 8px !important; padding: 0 22px !important; }
-}
-
-/* === Q. 平板横屏 (769-992) === */
-@media (min-width: 769px) and (max-width: 992px) {
-    .bg-cover .title {
-        font-size: clamp(1.9rem, 4vw, 2.8rem) !important;
-    }
-    .hero-stats { gap: 32px !important; }
-}
-
-/* === R. 中等桌面 (993-1400) === */
-@media (min-width: 993px) and (max-width: 1400px) {
-    .hero-stat-num { font-size: 26px !important; }
 }
 
 /* === S. Navbar 移动端优化 === */
@@ -777,35 +527,6 @@ footer.footer a:hover {
 @media (min-width: 601px) and (max-width: 992px) {
     .card .card-content {
         padding: 18px 18px !important;
-    }
-}
-
-/* === X. 极小屏 (<=400px) 进一步压缩 === */
-@media (max-width: 400px) {
-    .hero-stats {
-        gap: 8px !important;
-    }
-    .hero-stat-num {
-        font-size: 16px !important;
-    }
-    .hero-tech {
-        gap: 4px !important;
-    }
-    .hero-badge {
-        font-size: 10px !important;
-        padding: 3px 7px !important;
-    }
-    .cover-btns a {
-        margin: 4px 4px !important;
-        padding: 0 14px !important;
-        font-size: 11.5px !important;
-    }
-}
-
-/* === Y. 桌面超宽 (>=1920px) 视觉优化 === */
-@media (min-width: 1920px) {
-    .index-cover .bg-cover .container {
-        max-width: 1280px !important;
     }
 }
 

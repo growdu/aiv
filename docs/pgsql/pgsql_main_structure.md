@@ -1,3 +1,6 @@
+---
+description: "pgsql采用C/S架构（客户端/服务端）模式。应用层通过INET或者Unix Socket利用既定的协议与数据库服务器进行通信。"
+---
 # pgsql架构
 
 ## 整体模式

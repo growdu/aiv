@@ -9,6 +9,7 @@ tags:
   - mihomo
   - 代理
   - 网络
+description: "Clash 是一个基于 Go 实现的代理客户端，凭借规则分流、YAML 配置、TUN 模式、relay（链式代理）等特性，长期是代理工具的事实标准。原始 Clash 项目自 2023 年作者删库后，社区分叉出三个主流分支："
 ---
 
 # Clash Meta(mihomo)客户端全平台安装与订阅配置教程

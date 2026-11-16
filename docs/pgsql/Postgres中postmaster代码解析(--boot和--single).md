@@ -1,3 +1,6 @@
+---
+description: "之前我的一些文章都是在说Postgres的一些查询相关的代码。但是对于Postgres服务端是如何启动，后台进程是如何加载，服务端在哪里以及如何监听客户端的连接都没有一个清晰的逻辑。那么今天我来说说Postgres中的postmaster模块的代码，试着解答这些问题。"
+---
 之前我的一些文章都是在说Postgres的一些查询相关的代码。但是对于Postgres服务端是如何启动，后台进程是如何加载，服务端在哪里以及如何监听客户端的连接都没有一个清晰的逻辑。那么今天我来说说Postgres中的**postmaster**模块的代码，试着解答这些问题。
 
 在正式讨论之前，我先说一下，代码主要涉及的是postgres源码的src/backend目录下的main，postmaster以及tcop模块。

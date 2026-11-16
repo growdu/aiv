@@ -1,3 +1,6 @@
+---
+description: "New Bing 使用教程：下载 Edge Dev、修改默认搜索引擎，让新版 Bing 的 AI 搜索在国内也能用。"
+---
 # newbing使用教程
 
 | 修改人          | 修改内容 | 修改时间       |

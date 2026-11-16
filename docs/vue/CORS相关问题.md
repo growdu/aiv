@@ -1,3 +1,6 @@
+---
+description: "CORS 是什么、为什么会报错，以及跨域请求该怎么处理。"
+---
 ## 前言
 
 -   CORS (Cross-Origin Resource Sharing) 是每个网页开发者早晚都会遇到的问题。当你阅读这篇文章时，你很有可能正在处理一个CORS错误。本文，我将告诉你CORS是什么，以及**如何处理CORS错误**。

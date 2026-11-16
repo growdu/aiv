@@ -23,6 +23,7 @@ episode_repro:
   - "CREATE TABLE orders_us PARTITION OF orders FOR VALUES IN ('US');"
   - "ALTER TABLE orders DETACH PARTITION orders_us CONCURRENTLY;"
   - "SELECT pg_emit_logical_ddl('pub1', 'CREATE VIEW public.v1 AS SELECT * FROM public.t1');"
+description: "我先给你看一个会让你半夜被报警叫醒的场景："
 ---
 
 # PostgreSQL 逻辑复制支持 DDL 之后：DDL 与 DML 的时序难题（重点：分区表）

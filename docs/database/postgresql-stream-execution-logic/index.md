@@ -10,6 +10,7 @@ tags:
   - 复制
 categories:
   - 数据库
+description: "普通（非流式）逻辑复制的复制单位是事务："
 ---
 
 # PostgreSQL 逻辑复制 Stream 执行逻辑源码级拆解：从 reorderbuffer 触发到订阅端落盘回放

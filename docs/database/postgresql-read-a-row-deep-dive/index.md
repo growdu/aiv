@@ -11,6 +11,7 @@ tags:
   - 执行器
 categories:
   - 数据库
+description: "想象你在一家极简的图书馆。规则很怪："
 ---
 
 # PostgreSQL 读一行数据源码级深度拆解：MVCC 在每个环节的落点

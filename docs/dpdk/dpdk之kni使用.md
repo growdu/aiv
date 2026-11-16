@@ -1,3 +1,6 @@
+---
+description: "和igb uio模块一样，kni模块分成内核以及用户态代码，内核模块在编译出来之后为rte_kni.ko，首先插入内核，dpdk提供了一个用户态的例子。首先看下kni内核模块代码,在kni_misc.c中，ko代码入口为"
+---
 # dpdk之kni使用
 
 ## 什么是kni

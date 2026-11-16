@@ -1,3 +1,6 @@
+---
+description: "在linux要设置容器或者其他虚拟机独立ip，需要如下步骤："
+---
 # docker设置容器独立ip（linux下虚拟机设置独立ip）
 
 在linux要设置容器或者其他虚拟机独立ip，需要如下步骤：

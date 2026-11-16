@@ -1,3 +1,6 @@
+---
+description: "pg_stat_statements 是 PG 8.0 (2005) 进入 contrib 的官方统计扩展，到现在仍是 99% PG 监控工具的\"数据源\"。它是 PG 自己的\"slow query log + 性能数据采集\"。"
+---
 # pg_stat_statements 深度解析：从 query hash 到 pg_stat_* 生态的查询统计扩展
 
 | 编写人 | 编写内容 | 编写时间 |

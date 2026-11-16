@@ -1,3 +1,6 @@
+---
+description: "不管你最终用 PostgreSQL 还是 SQL Server，分区的根本动机都一样：单表太大带来的连锁反应。"
+---
 # PostgreSQL vs SQL Server 分区表实战：步骤、场景与差异对比
 
 | 编写人 | 编写内容 | 编写时间 |

@@ -1,3 +1,6 @@
+---
+description: "dpdk作为vpp的一个插件，主要用来从网卡收发包。"
+---
 # vpp与dpdk的关系
 
 dpdk作为vpp的一个插件，主要用来从网卡收发包。

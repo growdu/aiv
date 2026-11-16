@@ -1,3 +1,6 @@
+---
+description: "openGauss 的升级机制：集群配置文件 cluster_config.xml 里都有哪些参数。"
+---
 # openguass 升级机制
 
 # 配置文件

@@ -1,3 +1,6 @@
+---
+description: "dcf收到消息处理函数如下："
+---
 # openguass dcf启动详解
 
 - 先启动walreceiver

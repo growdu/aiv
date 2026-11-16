@@ -1,6 +1,7 @@
 ---
 platforms:
   - toutiao
+description: "raft协议的完全异步C语言实现。"
 ---
 
 # c-raft

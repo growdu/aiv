@@ -1,3 +1,6 @@
+---
+description: "可以看到本机未开启core dump。执行如下命令开启，并且不限制core文件大小。"
+---
 # linux生成coredump
 
 ## 修改ulimit

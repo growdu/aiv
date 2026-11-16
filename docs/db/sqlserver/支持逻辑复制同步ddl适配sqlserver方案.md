@@ -1,3 +1,6 @@
+---
+description: "Babelfish 是 PostgreSQL 的一个扩展，通过双端口设计支持 SQL Server 协议："
+---
 # 支持逻辑复制同步 DDL 适配 SQL Server 方案
 
 ## 背景

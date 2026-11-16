@@ -1,3 +1,6 @@
+---
+description: "使用docusaurus编写文档时，docusaurus仅支持编译成网页，在编译成pdf时需要做一些特殊处理。"
+---
 # docusaurus自定义渲染内容
 
 使用docusaurus编写文档时，docusaurus仅支持编译成网页，在编译成pdf时需要做一些特殊处理。

@@ -1,3 +1,6 @@
+---
+description: "首先需要安装 uv 工具： 1. 在 Linux/macOS 上安装"
+---
 # uv管理python
 
 ## 安装 uv

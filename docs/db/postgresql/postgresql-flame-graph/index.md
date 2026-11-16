@@ -13,6 +13,7 @@ tags:
   - flame graph
   - perf
   - 源码分析
+description: "性能问题五花八门 ——\"慢\"可能意味着完全不同的东西。先把\"性能\"分清楚:"
 ---
 
 # PostgreSQL 逻辑复制性能分析:火焰图实战

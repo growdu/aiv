@@ -14,6 +14,7 @@ tags:
   - MultiXact
   - heap_lock_tuple
   - MVCC
+description: "和其他数据库(InnoDB 的 record lock)不同,PG 的行锁不是一个独立的数据结构,而是建立在 MVCC 多版本之上的\"乐观锁\":"
 ---
 
 # PostgreSQL 行锁机制深度解析:从 MVCC 到多级锁的完整链路

@@ -1,5 +1,6 @@
 ---
 title: "PostgreSQL 逻辑复制 streaming 与 spill：从 reorderbuffer 到 .changes 文件的全程真相"
+description: "\"我的 pg_replslot/<slot>/ 目录下堆了 500 多万个 .spill 文件，磁盘快炸了；监控看到 streaming=on/parallel 已经开了，我以为 streaming 就是流式，就不会 spill。\""
 ---
 
 # PostgreSQL 逻辑复制 streaming 与 spill：从 reorderbuffer 到 `<subid>-<xid>.changes` 的全程真相

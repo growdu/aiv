@@ -1,3 +1,6 @@
+---
+description: "问题原因：逻辑复制同步DDL在sqlserver模式下不支持分区表同步，根本原因为分区表创建依赖于Partition Function 、Partition Scheme，但这两个语句不走PG标准的执行流程（ProcessUtility），无法被捕获。"
+---
 # 逻辑复制适配sqlserver模式分区表问题分析
 
 问题原因：逻辑复制同步DDL在sqlserver模式下不支持分区表同步，根本原因为分区表创建依赖于Partition Function 、Partition Scheme，但这两个语句不走PG标准的执行流程（ProcessUtility），无法被捕获。

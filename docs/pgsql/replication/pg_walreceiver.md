@@ -1,3 +1,6 @@
+---
+description: "wal_receiver整体流程由三层循环组成，第一层循环使用launch机制，第二层和第三层则使用for(;;)实现。"
+---
 # pg_walreceiver
 
 ## 启动流程

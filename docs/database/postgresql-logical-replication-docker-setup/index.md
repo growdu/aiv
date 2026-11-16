@@ -1,3 +1,6 @@
+---
+description: "PostgreSQL 的逻辑复制（Logical Replication）自 10.0 起成为内核能力，基于 发布（Publication）/ 订阅（Subscription） 模型，把发布端表的 WAL 解码为逻辑变更（pgoutput 插件），由订阅端 apply worker 回放。"
+---
 # PostgreSQL 逻辑复制集群搭建指北：基于 Docker 的 publisher + subscriber 一键拉起
 
 | 编写人 | 编写内容 | 编写时间 |

@@ -1,3 +1,6 @@
+---
+description: "PostgreSQL 自 16 起把构建系统从 autotools 迁到了 Meson + Ninja。如果你还在用 ./configure && make，新版本会直接劝退——configure 文件已经没了。这一篇把\"用 Meson 把 PostgreSQL 17/18 源码变成可用二进制、…"
+---
 # 用 Meson 编译 PostgreSQL：从配置到回归测试的完整命令清单
 
 | 编写人 | 编写内容 | 编写时间 |

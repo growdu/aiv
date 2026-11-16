@@ -1,3 +1,6 @@
+---
+description: "把 PG 变成\"分布式 OLTP\"是 14 年来业界最大野心之一。Citus 用 PG 扩展的方式实现了分布式——不 fork 内核、不重写 parser、不破坏 SQL 兼容性，只是把 SQL 通过 plan / execute 路由到 worker 节点。"
+---
 # Citus 深度解析：从分布式 SQL 到列存扩展的 PG 集群引擎
 
 | 编写人 | 编写内容 | 编写时间 |

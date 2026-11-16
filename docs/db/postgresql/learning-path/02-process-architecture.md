@@ -1,3 +1,6 @@
+---
+description: "入口：src/backend/main/main.c:main()。"
+---
 # 02 进程架构与生命周期
 
 > 目标：理解“一个客户端连接 = 一个 backend 进程”的进程模型，掌握 postmaster 如何 fork / signal 整个家族，以及每个子进程的工作。

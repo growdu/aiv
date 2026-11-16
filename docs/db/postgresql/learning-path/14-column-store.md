@@ -1,3 +1,6 @@
+---
+description: "PG 的设计目标是 通用 OLTP： - 单条 SQL 经常涉及多列 - 高并发更新 - MVCC per-tuple"
+---
 # 14 列存与 cstore_fdw
 
 > 目标：搞清楚 OLTP 的行存与 OLAP 的列存的本质差异，了解 PG 原生为啥是行存、cstore_fdw / parquet_fdw / Hydra 怎么实现列存、PG 17/18 列存方向。**这是面试常被问、也是存储引擎内核最常被重构的方向之一**。

@@ -1,3 +1,6 @@
+---
+description: "检查pg是否安装，主要看pg_config在不在$PATH下面。"
+---
 # repmgr搭建集群
 
 ## 编译

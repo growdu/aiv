@@ -1,3 +1,6 @@
+---
+description: "在 Kali Linux 上搭建 Docker 的过程记录：更新软件源、安装 Docker 并验证是否成功。"
+---
 # [kali](https://so.csdn.net/so/search?q=kali&spm=1001.2101.3001.7020)搭建docker
 
 ## 更新kali源

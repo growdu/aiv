@@ -12,6 +12,7 @@ tags:
   - streaming
   - 源码分析
   - applyparallelworker
+description: "PG 16 引入的 streaming=parallel 选项允许单个大事务在 apply 阶段被切分为多个 stream,并行地由多个 worker 进程同时处理,极大加速大事务的同步延迟。"
 ---
 
 # PostgreSQL 逻辑复制 Apply Parallel Worker 运行机制深度解析

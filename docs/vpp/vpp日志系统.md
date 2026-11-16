@@ -1,3 +1,6 @@
+---
+description: "在dpdk插件中可以使用vpp封装的dpdk日志打印接口："
+---
 # vpp日志系统
 
 ## vpp日志接口

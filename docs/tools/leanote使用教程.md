@@ -1,3 +1,6 @@
+---
+description: "leanote的特点就是简约、免费、开源、支持 Markdown 语法，支持程序代码高亮、笔记历史记录、支持笔记分享协作、将笔记发布成博客等功能。"
+---
 # leanote使用教程
 
 ## leanote

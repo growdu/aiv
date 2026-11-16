@@ -1,3 +1,6 @@
+---
+description: "CREATE SUBSCRIPTION 那一长串 WITH (...) 参数，每个都对应 pg_subscription 系统表里的一列，背后是 apply worker 一段真实的代码分支。"
+---
 # PostgreSQL 逻辑复制订阅参数全解：从 run_as_owner 到 disable_on_error
 
 | 编写人 | 编写内容 | 编写时间 |

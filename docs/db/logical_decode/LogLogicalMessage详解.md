@@ -1,3 +1,6 @@
+---
+description: "本文面向需要理解 PostgreSQL 逻辑复制/逻辑解码链路的开发人员，解释 LogLogicalMessage 的定位、内部实现、设计初衷和工程使用方式。"
+---
 
 # PostgreSQL `LogLogicalMessage` 
 

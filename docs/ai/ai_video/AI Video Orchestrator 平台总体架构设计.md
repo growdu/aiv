@@ -1,3 +1,6 @@
+---
+description: "VideoFlow Studio 是面向个人创作者、MCN机构、短剧团队、影视公司的一站式 AI 影视协同创作平台。"
+---
 # VideoFlow Studio 总体架构设计
 
 版本：V1.0

@@ -1,3 +1,6 @@
+---
+description: "PTP（Precision Time Protocol）精确时间协议，由IEEE1588规定，用于同步网络中两台机器的时间。1558使用延时-请求测量机制达到主从时间同步。"
+---
 # linux ptp指北
 
 ## ptp是什么

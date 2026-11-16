@@ -1,3 +1,6 @@
+---
+description: "fastgtpu作为vpp的一个插件，只能被动收包，无法主动发包，需对其进行发包适配。"
+---
 # fastgtpu发包测试说明文档
 
 # 背景

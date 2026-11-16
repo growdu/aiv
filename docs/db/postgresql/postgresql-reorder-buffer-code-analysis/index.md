@@ -14,6 +14,7 @@ tags:
   - 源码分析
   - 事务重组
   - Streaming
+description: "PostgreSQL 的逻辑复制链路:"
 ---
 
 # reorderbuffer.c 源码深度解析:PostgreSQL 逻辑复制的"事务重组引擎"

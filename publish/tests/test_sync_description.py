@@ -28,6 +28,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SYNC_SCRIPT = REPO_ROOT / "tools" / "sync-hexo.py"
+DRAFT_SCRIPT = REPO_ROOT / "tools" / "draft-descriptions.py"
 DOCS = REPO_ROOT / "docs"
 
 #: publish/spec/00-架构设计.md §4.1：description ≤ 150 字。
@@ -388,3 +389,99 @@ def test_a_description_written_by_hand_is_not_overwritten(tmp_path):
 
     assert 'description: "我自己写的摘要"' in post, post
     assert post.count("description:") == 1, post
+
+
+# --- 阶段 1 的 Task 5：摘要改成「这篇文章是什么」 ---------------------------
+
+
+def load_draft_module():
+    """Load ``tools/draft-descriptions.py`` as a module."""
+    spec = importlib.util.spec_from_file_location("draft_descriptions", DRAFT_SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _unquote(raw: str) -> str:
+    """front matter 里的值 → 语义值。
+
+    ``_fm_scalar`` 原样带回值（**带引号**）：``"PG 里\\"一张表\\"……"``。
+    要拿它跟契约层比长度，就得先剥外层引号、再反转义——否则会**转义两次**：
+    ``\\"`` 变成 ``\\\\"``，长度凭空多出 2 个字符，150 字的摘要被误判成 154。
+
+    契约层（``publish/publishkit/contract.py`` 的 ``_unquote``）剥外层引号
+    但**不反转义**——所以它量的就是转义后的长度。这两边必须对齐。
+    """
+    value = raw.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        value = value[1:-1]
+    return value.replace('\\"', '"').replace("\\\\", "\\")
+
+
+def effective_description(module, sync_module, text):
+    """这篇文章**最终**会用哪一句摘要。
+
+    front matter 里写了 description 的以源为准（sync 不覆盖）；
+    没写的，起草工具从正文里抽第一段真正的段落。
+    """
+    fm, body = sync_module.split_fm(text)
+    if fm is not None:
+        raw = sync_module._fm_scalar(fm, "description")
+        if raw:
+            return _unquote(raw)
+    return module.draft_description(body)
+
+
+def test_the_description_is_not_an_editing_history_sentence():
+    """摘要**不以履历前缀开头**。
+
+    这条直接盯着阶段 0 遗留的那个问题：履历表的「编写内容」列说的是
+    「这次改了什么」（「初稿，补充完善解决方案」「理顺结构与定位，修正
+    错误写法」），不是「这篇文章是什么」。前缀没去掉，读者在卡片上读到的
+    就是一句编辑记录。
+    """
+    module = load_draft_module()
+    sync_module = load_sync_module()
+
+    checked = 0
+    for path in real_docs_files():
+        text = path.read_text(encoding="utf-8")
+        desc = effective_description(module, sync_module, text)
+        if not desc:
+            continue
+        checked += 1
+        assert not sync_module.HISTORY_PREFIX_RE.match(desc), (
+            "{}：摘要还带着履历前缀——{}".format(path, desc)
+        )
+
+    assert checked >= 50, "只检查了 {} 篇的摘要，比预期少太多".format(checked)
+
+
+def test_a_drafted_description_fits_the_contract_limit():
+    """起草的摘要也要过得了契约的长度上限（150 字）。
+
+    按**契约层自己的解析器**判长度——它剥外层引号但不反转义，两边口径
+    必须一致（和上面那条 ``test_the_description_survives_the_content_contract``
+    同一个道理）。
+    """
+    from publishkit import parse_front_matter, validate_fields
+
+    module = load_draft_module()
+    sync_module = load_sync_module()
+
+    checked = 0
+    for path in real_docs_files():
+        text = path.read_text(encoding="utf-8")
+        desc = effective_description(module, sync_module, text)
+        if not desc:
+            continue
+        checked += 1
+        assert len(desc) <= DESCRIPTION_LIMIT, (
+            "{}：摘要有 {} 字，超了契约上限 {}".format(path, len(desc), DESCRIPTION_LIMIT)
+        )
+        line = 'description: "{}"\n'.format(sync_module.yaml_escape(desc))
+        fields, _ = parse_front_matter("---\n" + line + "---\n")
+        violations = validate_fields(fields)
+        assert not violations, "{}：{}".format(path, violations)
+
+    assert checked >= 50, "只检查了 {} 篇的摘要，比预期少太多".format(checked)

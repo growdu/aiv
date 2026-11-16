@@ -1,3 +1,6 @@
+---
+description: "PG 的 IndexTuple 是 按需长度，根据 key 个数和大小决定。INDEXTUPLE_SIZE / index_deform_tuple 负责序列化与反序列化。"
+---
 # 07 B-Tree 索引
 
 > 目标：从页面布局到搜索 / 插入 / 分裂 / 删除 / WAL 全流程吃透 PG 的 B-Tree 实现。PG 13+ 引入的 **deduplication** 是重点。

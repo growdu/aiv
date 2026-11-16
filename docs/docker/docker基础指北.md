@@ -1,3 +1,6 @@
+---
+description: "docker的实现主要依赖于linux内核提供的如下功能："
+---
 # docker基础指北
 
 docker的实现主要依赖于linux内核提供的如下功能：

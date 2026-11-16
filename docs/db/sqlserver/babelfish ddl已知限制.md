@@ -1,3 +1,6 @@
+---
+description: "本文档汇总 Babelfish 插件在 SQL Server 模式下使用逻辑复制 DDL 自动同步时的已知限制，并按客户使用影响给出分级和建议做法。"
+---
 # Babelfish DDL 同步已知限制与客户使用建议
 
 本文档汇总 Babelfish 插件在 SQL Server 模式下使用逻辑复制 DDL 自动同步时的已知限制，并按客户使用影响给出分级和建议做法。

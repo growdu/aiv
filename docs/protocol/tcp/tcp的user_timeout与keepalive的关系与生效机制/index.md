@@ -1,3 +1,6 @@
+---
+description: "当tcp流中有数据交互时，tcp流不会进入keepalive，此时的超时主要受tcp_user_timeout影响。数据包被发送后未接收到ACK确认的达到tcp_user_timeout时会断开连接。tcp_user_timeout以毫秒为单位，例如设置为10000时，代表如果发送出去的数据包在十…"
+---
 # tcp_user_timeout与keepalive的关系与生效机制
 
 ## 仅开启tcp_user_timeout

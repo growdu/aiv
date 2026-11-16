@@ -1,3 +1,6 @@
+---
+description: "需对每一台zookeeper集群节点做如下操作："
+---
 # zookeeper使用说明文档
 
 ## 安装部署

@@ -19,6 +19,7 @@ episode_repro:
   - "ALTER SUBSCRIPTION sub_orders ADD TABLE orders; -- 父表"
   - "SHOW max_logical_replication_workers; -- 调整"
   - "SELECT pid, type, subid, relid, state FROM pg_stat_activity WHERE backend_type LIKE '%logical%' OR query LIKE '%logical%' ORDER BY pid;"
+description: "主要源码路径： - ~/cwork/postgresql/src/backend/replication/logical/launcher.c - ~/cwork/postgresql/src/backend/replication/logical/worker.c - ~/cwork/postg…"
 ---
 
 # PostgreSQL 逻辑复制的 Worker 模型：一个 apply worker 撑全场，分区表也一样

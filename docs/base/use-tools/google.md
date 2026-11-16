@@ -1,3 +1,6 @@
+---
+description: "Google 浏览器扩展清单：油猴、广告拦截、二维码、右键搜索、octotree 等等，每一条是什么用途。"
+---
 # google extension
 
 |name|description|
