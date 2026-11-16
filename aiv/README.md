@@ -86,6 +86,7 @@ make topics       # python -m pyv.cli topics check
 
 ```bash
 cd aiv/pipeline
+python3 scripts/install_font.py   # 装内置字体（两台机器用同一份，跨机版式一致）
 make doctor      # 环境自检：这台机器缺什么、怎么补（换机器先跑这个）
 make test        # 全量测试
 make persona     # 按《人格规范》检查口播稿

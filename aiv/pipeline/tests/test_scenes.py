@@ -249,6 +249,83 @@ def test_s03_counter_reading_starts_before_the_first_number():
     assert readings[1:] == [str(v) for v in params["csn_values"]]
 
 
+def _drawn_texts(monkeypatch, module, params, t, width, height):
+    """渲染一帧，返回这一帧画出去的文字。
+
+    场景模块在导入时把 `draw.text` 绑成了自己的属性，竖版还多走一层
+    `scene_layout.line`（它调的是 `scene_layout` 自己的 `text`）——
+    两处都要拦。
+    """
+    from pyv import scene_layout
+
+    original = module.text
+    drawn: list[str] = []
+
+    def spy(ctx, s, *args, **kwargs):
+        drawn.append(s)
+        return original(ctx, s, *args, **kwargs)
+
+    monkeypatch.setattr(module, "text", spy)
+    monkeypatch.setattr(scene_layout, "text", spy)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+    ctx = cairo.Context(surface)
+    module.render(ctx, t, width, height, params)
+    return drawn
+
+
+@pytest.mark.parametrize("canvas", [(1920, 1080), (1080, 1920)],
+                         ids=["横版", "竖版"])
+def test_s03_counter_shows_the_initial_reading_before_the_first_claim(
+        monkeypatch, canvas):
+    """**起始读数要真的在画面上**——第一笔取号之前，计数器停在那儿。
+
+    **行为上的判据**：把场景渲染出来，看画出去的字。
+
+    早先第一笔取号排在 t=0，起始读数一帧都留不住——
+    `counter_reading()` 的第 0 位永远不出现，「计数器本来是 100」
+    这件事观众根本看不到。序列本身对（上面那条测试盯着），缺的是
+    **让第 0 位露个脸的时间窗**。
+    """
+    import pyv.scenes.s03_counter as s03
+
+    params = _ep02_params("pyv.scenes.s03_counter")
+    width, height = canvas
+    initial = str(params["counter_value"])
+    first = str(params["csn_values"][0])
+
+    # 第一笔取号之前：起始读数在画面上，第一个号还不在
+    drawn = _drawn_texts(monkeypatch, s03, params, 0.0, width, height)
+    assert initial in drawn, (
+        f"起始读数 {initial} 没出现在画面上——第一笔取号太早了，"
+        f"起始值一帧都留不住"
+    )
+    assert first not in drawn, (
+        f"第一笔取号之前画面上不该有 {first}"
+    )
+
+    # 第一笔取号那一刻：起始读数让位给发出去的那个号
+    drawn_after = _drawn_texts(
+        monkeypatch, s03, params, s03.claim_times(len(params["txn_ids"]))[0],
+        width, height)
+    assert first in drawn_after, f"取号之后画面上该有 {first}"
+    assert initial not in drawn_after, (
+        f"取号之后起始读数 {initial} 该让位了"
+    )
+
+
+def test_s03_counter_claims_do_not_start_at_zero():
+    """第一笔取号不能排在 t=0——那一段是留给起始读数的。"""
+    import pyv.scenes.s03_counter as s03
+
+    moments = s03.claim_times(3)
+    assert moments[0] > 0, "第一笔取号排在 0，起始读数没有时间窗"
+    assert moments == sorted(moments), "取号时刻必须递增"
+    assert s03.issued_count(0.0, 3) == 0
+    assert s03.issued_count(moments[0] - 0.001, 3) == 0
+    assert s03.issued_count(moments[0], 3) == 1
+    assert s03.issued_count(moments[-1], 3) == 3
+
+
 def test_s05_layers_has_six_layers():
     import pyv.scenes.s05_layers as s05
 

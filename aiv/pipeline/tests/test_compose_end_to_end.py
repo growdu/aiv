@@ -32,6 +32,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from pyv import align
 from pyv import compose as compose_mod
 from pyv import episodes, fonts
 from pyv.timeline import (
@@ -52,8 +53,16 @@ DURATION = 3.0
 
 # 字幕用一个别处不会出现的颜色：背景是白的，场景画的是深蓝块，
 # 只有字幕会用洋红。这样「画面里确实有字幕」才能被像素判定认出来。
-SUBTITLE_TEXT = "端到端合成冒烟"
 SUBTITLE_FILL = "#FF00FF"
+
+# 字幕文本取**真实字幕稿里的第一行**。
+#
+# **不用测试自造的文案**（「端到端合成冒烟」那种）：那些字不在生产
+# 字符集里，于是内置字体的字形守卫（`tests/test_font_subset.py`）
+# 管不到生产上真正会出现的字——守卫看着绿，缺字照样漏过去。
+# 而且自造文案一改，就得回头重生成子集。
+SUBTITLE_TEXT = align.parse_subtitle_table(
+    AIV_ROOT / "字幕-并行解码.md")[0]
 
 
 def _probe(path):

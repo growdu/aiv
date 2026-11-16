@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "db/postgresql/postgresql-injection-points-test-framework",
+  "draft_id": "7708375065724862995",
+  "package_dir": "toutiao/out/db-postgresql-postgresql-injection-points-test-framework",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "Injection Point 与 PG 测试框架集成实战",
+  "updated_at": "2026-11-15T20:43:46+08:00"
+}

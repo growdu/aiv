@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "cluster/corosync/corosync-down网卡仍处于多数派",
+  "draft_id": "7708375409389208100",
+  "package_dir": "toutiao/out/cluster-corosync-corosync-down网卡仍处于多数派",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "corosync down网卡仍处于多数派问题分析",
+  "updated_at": "2026-11-15T20:43:37+08:00"
+}

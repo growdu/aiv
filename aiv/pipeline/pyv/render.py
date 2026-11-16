@@ -14,8 +14,17 @@ from pyv.timeline import Scene, Storyboard
 
 
 # 只有这些模块会改变画面内容，改动它们才需要重渲染
+#
+# **漏登记一个的症状是「改了它，画面没变」**：片段因为「比渲染输入新」
+# 被当成没过期直接复用，而且**没有任何报错**——改版式的人只会看到
+# 「我明明改了，怎么还是老的」。
+#
+# 新增一层版式（`layout.py`、`components.py`）时漏登记过一次。
+# `tests/test_render_integration.py` 现在独立扫一遍源码核对这份清单，
+# 漏了会红。
 RENDER_INPUT_MODULES = (
-    "character.py", "draw.py", "easing.py", "palette.py",
+    "character.py", "components.py", "draw.py", "easing.py", "fonts.py",
+    "layout.py", "palette.py", "params.py", "render.py", "scene_layout.py",
     "subtitle.py", "timeline.py",
 )
 

@@ -28,16 +28,32 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
 # 环境变量：显式指定字体族名（CI、特殊机器用）
 FONT_ENV = "AIV_FONT_FAMILY"
 
+#: 内置字体的族名。
+#:
+#: **必须唯一**：跟系统里任何字体重名，fontconfig 就会在两份之间二选一，
+#: 机器之间就不一致了。子集由 `scripts/build_font_subset.py` 生成
+#: （上游 Noto Sans CJK SC，SIL OFL 1.1，允许随软件分发）。
+BUNDLED_FAMILY = "AIV Sans CJK SC"
+
+#: 内置字体文件在仓库里的位置。
+BUNDLED_PATH = (Path(__file__).resolve().parents[1] / "assets" / "fonts"
+                 / "AIVSansCJKSC-Regular.otf")
+
 INSTALL_HINT = (
-    "Debian/Ubuntu: sudo apt-get install -y fonts-noto-cjk\n"
+    "装一套中文字体：\n"
+    "  内置字体（推荐：两台机器用同一份，跨机版式一致）：\n"
+    "    cd aiv/pipeline && python3 scripts/install_font.py\n"
+    "  Debian/Ubuntu: sudo apt-get install -y fonts-noto-cjk\n"
     "  Fedora/RHEL:  sudo dnf install google-noto-sans-cjk-fonts\n"
     "  Arch:         sudo pacman -S noto-fonts-cjk\n"
     "  或自带字体：把 NotoSansCJK-Regular.ttc 放进 "
     "~/.local/share/fonts/ 后跑 fc-cache -f"
+    "\n也可以用 " + FONT_ENV + "=<族名> 显式指定字体族。"
 )
 
 # 探测不到字形时的探针字符（Unicode 私有区，字体一般没有）
@@ -123,8 +139,18 @@ def _expand(patterns: tuple[str, ...]) -> list[str]:
 
 
 def _all_candidates() -> list[FontCandidate]:
-    """所有候选，按优先级排：macOS 优先（画面与历史版本一致），再 Linux。"""
-    candidates: list[FontCandidate] = list(MACOS_CANDIDATES)
+    """所有候选，按优先级排。
+
+    **仓库内置的子集排第一**：两台机器装同一份字体文件，跨机的
+    步进宽度与收字号结果才一致（实测同一份文件下 CoreText 与 FreeType
+    的步进差 ≤ 0.45px）。没装内置字体就落到系统字体上——那是退路，
+    不是首选。
+    """
+    candidates: list[FontCandidate] = [
+        FontCandidate(str(BUNDLED_PATH), BUNDLED_FAMILY,
+                      "AIV Sans CJK SC（仓库内置子集）"),
+    ]
+    candidates.extend(MACOS_CANDIDATES)
     candidates.extend(
         FontCandidate(path, "PingFang SC", "PingFang SC（macOS 可下载资产）")
         for path in _expand((MACOS_ASSET_GLOB,))
@@ -204,11 +230,18 @@ def resolve_font() -> ResolvedFont:
                             family_resolves(env))
 
     for candidate in _all_candidates():
-        if os.path.exists(candidate.path):
-            return ResolvedFont(
-                candidate.family, candidate.path, candidate.label,
-                family_resolves(candidate.family),
-            )
+        if not os.path.exists(candidate.path):
+            continue
+        # **文件在 ≠ cairo 认得**：内置字体躺在仓库里，但没装进 OS 的
+        # 字体目录，cairo 照样找不到它（macOS 走 CoreText，不认
+        # fontconfig 目录）。认不得就接着找下一个候选——
+        # 早先这里是「第一个存在的文件就赢」，于是内置字体明明还没装，
+        # 整条渲染链却直接报「找不到中文字体」，连系统的 Noto 都用不上。
+        if not family_resolves(candidate.family):
+            continue
+        return ResolvedFont(
+            candidate.family, candidate.path, candidate.label, True,
+        )
 
     # fontconfig 兜底：先问已知族名，再问系统里任何一款支持中文的字体
     tried: list[str] = []

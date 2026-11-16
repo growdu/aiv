@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -26,9 +27,11 @@ from pathlib import Path
 import cairo
 
 PIPELINE_ROOT = Path(__file__).resolve().parents[1]
+AIV_ROOT = PIPELINE_ROOT.parent
 sys.path.insert(0, str(PIPELINE_ROOT))
 
 from pyv import contract as contract_mod  # noqa: E402
+from pyv import episodes as episodes_mod  # noqa: E402
 from pyv import fonts  # noqa: E402
 from pyv.palette import COLORS, hex_to_rgb  # noqa: E402
 
@@ -43,8 +46,29 @@ NOTE = (
     "对整帧字节取 sha256；形象以 character.Mascot._load 强制降级为 none。"
     "**基准绑在字体上**——capture.font 记着抓的时候用的字体族名，"
     "换字体后这条基准不适用于当前机器，测试会跳过并说明原因。"
+    "**按段存，不按模块存**——同一个渲染器在不同期用的 params 不同，"
+    "画面不同、哈希不同；键是 期号/段 id/渲染器@时刻。"
     "重抓脚本：pipeline/scripts/capture_scene_baseline.py"
 )
+
+
+def _all_segments():
+    """六期契约里的全部视觉段。
+
+    **按段抓，不按模块抓。** 同一个渲染器在不同期用的 `params` 不同
+    （`s01_intro` 与 `s06_outro` 六期都在用，每期的标题文案各不一样），
+    画面就不同、哈希就不同——只按渲染器存一份，后五期的画面永远比不到。
+    """
+    for episode in episodes_mod.EPISODE_ORDER:
+        contract = contract_mod.load_contract(
+            AIV_ROOT / "contracts" / f"{episode}.json")
+        for segment in contract.segments:
+            yield episode, segment
+
+
+def frame_key(episode: str, segment, t: float) -> str:
+    """基准的键：期号 + 段 id + 渲染器 + 时刻。"""
+    return f"{episode}/{segment.id}/{segment.renderer}@{t}"
 
 
 def _without_mascot() -> None:
@@ -80,11 +104,10 @@ def _captured_from() -> str:
 
 def main() -> None:
     _without_mascot()
-    contract = contract_mod.load_contract()
     frames: dict[str, str] = {}
-    for segment in contract.segments:
+    for episode, segment in _all_segments():
         for t in TIMES:
-            key = f"{segment.renderer}@{t}"
+            key = frame_key(episode, segment, t)
             frames[key] = frame_hash(segment.renderer, segment.params, t)
             print(f"  {key}  {frames[key][:16]}")
 
@@ -98,6 +121,14 @@ def main() -> None:
             # 基准**绑在字体上**：换一款字体，同一段文字的像素就不同。
             # 记下来，测试才知道什么时候这条基准不适用于当前机器。
             "font": fonts.font_family(),
+            # 基准**也绑在平台上**：macOS 的 cairo 走 CoreText，Linux 走
+            # FreeType，栅格化不同 → 同一个字体、同一段文字，像素仍然不同。
+            # 跨平台比像素是拿噪声当信号，所以**平台不同就跳过**——
+            # 跨机的版式由 `tests/test_layout_fingerprint.py` 守。
+            "platform": platform.system(),
+            # 覆盖了多少段——条数由六期契约推导，加期不用改这里，
+            # 但漏抓会红（`tests/test_contract.py` 里有覆盖声称的守卫）。
+            "segments": sum(1 for _ in _all_segments()),
         },
         "frames": frames,
     }

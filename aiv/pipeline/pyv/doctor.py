@@ -204,12 +204,37 @@ def _check_episodes() -> list[Check]:
     return checks
 
 
+def _check_bundled_font() -> Check:
+    """仓库内置的字体子集装没装。
+
+    **这是「跨机版式一致」的前提**：两台机器用同一份字体文件，
+    步进宽度与 `fit_size` 的收字号结果才一致。没装就用系统字体，
+    画面照样能出——但跨机的像素/版式就没有保证了。
+    """
+    from pyv import fonts
+
+    bundled = fonts.BUNDLED_PATH.is_file()
+    resolved = fonts.family_resolves(fonts.BUNDLED_FAMILY)
+    if resolved:
+        note = f"已就位（{fonts.BUNDLED_FAMILY}）"
+    elif bundled:
+        note = "在仓库里但没装进 OS 的字体目录"
+    else:
+        note = "仓库里没有这份子集"
+    return Check(
+        "环境", "内置字体", INFO if resolved else WARNING, resolved,
+        note, fix="" if resolved else
+        "cd aiv/pipeline && python3 scripts/install_font.py",
+    )
+
+
 def run_checks() -> list[Check]:
     """跑完全部自检，返回结论列表。"""
     checks: list[Check] = [_check_python()]
     checks.extend(_check_imports())
     checks.extend(_check_ffmpeg())
     checks.append(_check_font())
+    checks.append(_check_bundled_font())
     checks.extend(_check_episodes())
     checks.extend(_check_assets())
     checks.extend(_check_narrations())

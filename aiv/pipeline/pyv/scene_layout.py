@@ -1,30 +1,21 @@
-"""竖版（1080×1920）的共用版式件。
+"""竖版（1080×1920）的版式件——现在是 `pyv.layout` 的兼容层。
 
-横版与竖版不是同一张画面旋转过来的：横版是「左右分栏」，竖版是
-「上下堆叠」。所以每个场景模块各有一份竖版画法，但**共用的规矩**
-只有一份——各模块各写各的版式，规矩不许各写各的。
+**这个文件为什么还在**：26 个场景模块里有 23 个还没迁到新版式层，
+它们 `from pyv import scene_layout` 之后用的是这里的 `title` / `line` /
+`content_*`。与其一次改 23 个文件（改动面大、风险高），不如让这里
+**转发**到 `layout.V`——常量与行为一字不差，场景一个字都不用动。
 
-规矩一：**字号不缩，框变宽。**
-    竖版画布只有 1080 宽，横版是 1920。同一档字号（30、38、58……）
-    在竖版里相对画面更大——手机上看，文字要顶得住。相应地，框要
-    占满宽度，元素改成纵向堆叠。
+**真正的规矩在 `pyv/layout.py`**：两个画幅（横版 H / 竖版 V）的版式常量
+与绘制入口都在那里，这里只是竖版那一档的旧名字。
 
-规矩二：**字要放得下。**
-    竖版的框比横版窄一半，同一句话放不下是常态。统一用 `fit_size()`
-    收字号——**宁可字小一点，也不能出框**：出框的标题在手机上就是
-    「被裁掉半个字」，而这种事在渲染图上一眼看不出来（画面照样生成）。
+**竖版的四条规矩**（见 `layout.V`）：
 
-规矩三：**底部只留字幕。**
-    竖版不再画说明行——底部那一行是字幕的位置：说明行与字幕讲的是
-    同一句话（csn/s02 的说明「按时间戳排，并不可靠」对应的字幕是
-    「并发提交 时间顺序不可靠」），两行叠在下面只会互相干扰；
-    s02 的字幕甚至和标题一字不差。
-    **横版的说明行保留**——横版底部没有字幕，也没有平台 UI。
-
-规矩四：**右侧让出平台 UI。**
-    抖音那一档的点赞/评论/分享栏落在画面右下角，内容压上去就等于
-    没画。右边让出 `RAIL_RIGHT`（120px），左边距不变——**窄 55px，
-    换右下角不被挡住**。
+| 规矩 | 说明 |
+| --- | --- |
+| 字号不缩，框变宽 | 竖版画布只有 1080 宽，同一档字号相对画面更大 |
+| 字要放得下 | 每行字都过一遍 `fit_size`——宁可字小一点，也不能出框 |
+| 底部只留字幕 | 竖版不画说明行（说明行与字幕讲的是同一句话） |
+| 右侧让出平台 UI | 右边让出 120px 的点赞/评论/分享栏 |
 
 **竖版的三个位置**（比例相对画面高度 1920）：
 
@@ -33,107 +24,54 @@
 | 标题基线 | 0.075 | 144 | 所有场景统一 |
 | 内容区上沿 | 0.130 | 250 | 内容从这里开始 |
 | 内容区下沿 | 0.700 | 1344 | 内容到这里为止 |
+| 字幕带 | — | 1393 | 字幕烧在这里 |
 
-这些数字不是随手定的：**内容区下沿 1344 与字幕带 1393 之间留 49px**，
-画面内容掉下去就压在字幕上；**右缘 960 与画面边缘 1080 之间是给按钮栏
-预留的 120px**。
+**这些数字不是随手定的**：内容区下沿 1344 与字幕带 1393 之间留 49px，
+画面内容掉下去就压在字幕上；右缘 960 与画面边缘 1080 之间是给按钮栏
+预留的 120px。
+
+**绘制调用走 `draw.<函数>` 的模块属性访问**（不是 `from pyv.draw import text`），
+这样 `tests/test_scene_overlap.py` 给 `draw.text` 打桩才拦得住。
 """
 from __future__ import annotations
 
 import cairo
 
-from pyv import fonts
-from pyv.draw import text
+from pyv import draw
+from pyv import layout
 from pyv.palette import COLORS
 
-#: 竖版的几个位置（比例相对画面高度）
-TITLE_Y = 0.075
-CONTENT_TOP = 0.130
-CONTENT_BOTTOM = 0.700
+# ---- 常量：从 layout.V 取，值一字不差 --------------------------------------
 
-#: 左边距（比例相对画面宽度）。
-#: 横版的内容从 w*0.06 开始，竖版沿用同一个边距。
-MARGIN_X = 0.06
+MARGIN_X = layout.V.MARGIN_X
+TITLE_Y = layout.V.TITLE_Y
+TITLE_SIZE = layout.V.TITLE_SIZE
+CONTENT_TOP = layout.V.CONTENT_TOP
+CONTENT_BOTTOM = layout.V.CONTENT_BOTTOM
+RAIL_RIGHT = layout.V.RAIL_RIGHT
+MIN_SIZE = layout.MIN_SIZE
 
-#: 右侧平台 UI 预留（像素）。
+#: `draw.text` 的别名。
 #:
-#: **这是工程上的保守取值，不是平台文档里写明的数字**——抖音没有公开
-#: 「安全区」规格。与其等审核时才发现右下角的字被按钮压住，不如自己
-#: 留出一条。横版不用留（横版发的是视频号/B站，不叠平台 UI）。
-RAIL_RIGHT = 120
-
-#: 标题的字号（竖版比横版大一号：手机上看，标题要顶得住）
-TITLE_SIZE = 68
-
-#: 字号收小的下限。再小就不是「字」了，宁可让版式重排。
-MIN_SIZE = 20.0
+#: **这个属性必须留着**：`tests/test_scene_overlap.py` 靠给
+#: `scene_layout.text` 打桩来记录画面上画过的字。少了它，守卫会在
+#: 补桩那一步直接报错——宁可报错，也不要悄悄变成「什么都看不见」。
+text = draw.text
 
 
-def _select_face(ctx: cairo.Context, bold: bool) -> None:
-    """把 ctx 的字体族设成**画的时候真正用的那一个**。
-
-    `draw.text` 画之前会自己 `select_font_face(fonts.font_family(), ...)`，
-    所以量宽度必须用同一个族与同一个字重——量出来的宽度要和画出来的
-    宽度一致，否则「收字号」就是在跟一个假的宽度较劲。
-    """
-    ctx.select_font_face(
-        fonts.font_family(),
-        cairo.FONT_SLANT_NORMAL,
-        cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL,
-    )
-
-
-def _ink_extent(ctx: cairo.Context, s: str, size: float,
-                bold: bool) -> float:
-    """从落笔点算起，这行字的墨迹右沿有多远。
-
-    **量的是墨迹右沿，不是步进宽度。** cairo 的 `text_extents().width`
-    是墨迹包围盒的宽，`x_bearing` 是从落笔点到最左墨迹的距离——
-    两者相加才是墨迹真正占到的右沿（实测中文左边距约 2 px）。
-    少算这一截，字就会画出框外几个像素。
-    """
-    _select_face(ctx, bold)
-    ctx.set_font_size(size)
-    ext = ctx.text_extents(s)
-    return ext.x_bearing + ext.width
+# ---- 入口：转发到 layout.V -----------------------------------------------
 
 
 def fit_size(ctx: cairo.Context, s: str, max_width: float, size: float,
              floor: float = MIN_SIZE, bold: bool = False) -> float:
-    """把字号往下收，直到这行字放得进 `max_width`。
-
-    **宁可字小一点，也不能出框。** 出框的标题在手机上就是「被裁掉
-    半个字」，而渲染图上一眼看不出来——画面照样生成、时长照样对。
-
-    **测量前必须先选定字体族**（见 `_select_face`）：cairo 的 toy API
-    默认族是 sans，没有中文字形，量中文只能量到 .notdef 的宽度——
-    实测只有真实宽度的 63%。拿这个宽度去收字号，中文标题就会被判成
-    「放得下」，实际画出去却是出框的。
-
-    **要迭代，不能只缩一次。** 字体 hinting 会把每个字的步进宽度取整，
-    所以「宽度正比于字号」只是近似：缩一次之后量出来仍可能超几个像素。
-    所以收完再量一次，直到真的放下。
-    """
-    if not s or size <= floor:
-        return floor
-    for _ in range(4):
-        extent = _ink_extent(ctx, s, size, bold)
-        if extent <= max_width or extent <= 0:
-            break
-        size = max(floor, size * max_width / extent)
-        if size <= floor:
-            break
-    return size
+    """把字号往下收，直到这行字放得进 `max_width`。"""
+    return layout.fit_size(ctx, s, max_width, size, floor=floor, bold=bold)
 
 
 def line(ctx: cairo.Context, s: str, x: float, y: float, max_width: float,
          size: float, color: str, bold: bool = False, alpha: float = 1.0,
          anchor: str = "left") -> None:
-    """一行字：放不下就收字号。
-
-    这是竖版最常用的入口——竖版的框比横版窄一半，**每一行字都要
-    过一遍 `fit_size`**。
-    """
+    """一行字：放不下就收字号。"""
     fitted = fit_size(ctx, s, max_width, size, bold=bold)
     text(ctx, s, x, y, fitted, color, anchor=anchor, bold=bold, alpha=alpha)
 
@@ -141,35 +79,31 @@ def line(ctx: cairo.Context, s: str, x: float, y: float, max_width: float,
 def title(ctx: cairo.Context, text_value: str, w: int, h: int,
           size: float = TITLE_SIZE, color: str = COLORS["primary"],
           bold: bool = True, alpha: float = 1.0) -> None:
-    """竖版的标题：左对齐，与横版一样从边距起排。
-
-    左对齐而不是居中——竖版的内容是纵向堆叠的，标题跟着内容左边缘
-    对齐，整张画面才有一条统一的竖轴。
-    """
+    """竖版的标题：左对齐，与横版一样从边距起排。"""
     line(ctx, text_value, w * MARGIN_X, h * TITLE_Y, content_width(w),
          size, color, bold=bold, alpha=alpha)
 
 
 def content_width(w: int) -> float:
     """内容区的宽度：左边距起，右边让出平台 UI 的按钮栏。"""
-    return w * (1 - MARGIN_X) - RAIL_RIGHT
+    return layout.V.content_width(w)
 
 
 def content_left(w: int) -> float:
     """内容区的左边缘。"""
-    return w * MARGIN_X
+    return layout.V.content_left(w)
 
 
 def content_right(w: int) -> float:
     """内容区的右边缘（平台 UI 预留之前那条线）。"""
-    return content_left(w) + content_width(w)
+    return layout.V.content_right(w)
 
 
 def content_top(h: int) -> float:
     """内容区的上沿。"""
-    return h * CONTENT_TOP
+    return layout.V.content_top_px(h)
 
 
 def content_bottom(h: int) -> float:
     """内容区的下沿。"""
-    return h * CONTENT_BOTTOM
+    return layout.V.content_bottom_px(h)

@@ -27,6 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
+from pyv import align
 from pyv import compose as compose_mod
 from pyv import episodes
 from pyv import fonts
@@ -51,8 +52,15 @@ DURATION = 3.0
 
 #: 字幕用一个别处不会出现的颜色：背景是白的，场景画的是深蓝块，
 #: 只有字幕会用洋红。这样「画面里确实有字幕」才能被像素判定认出来。
-SUBTITLE_TEXT = "竖版端到端冒烟"
 SUBTITLE_FILL = "#FF00FF"
+
+#: 字幕文本取**真实字幕稿里的第一行**。
+#:
+#: **不用测试自造的文案**（「竖版端到端冒烟」那种）：那些字不在生产
+#: 字符集里，内置字体的字形守卫（`tests/test_font_subset.py`）管不到
+#: 生产上真正会出现的字——守卫看着绿，缺字照样漏过去。
+SUBTITLE_TEXT = align.parse_subtitle_table(
+    AIV_ROOT / "字幕-并行解码.md")[0]
 
 #: 平台 UI 区的高度（画面下缘这一段会被抖音自己的控件盖住）。
 #: 字幕的墨迹一个像素都不许掉进去。

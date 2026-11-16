@@ -40,6 +40,10 @@ REQUIRED_ASSETS = {
     "aiv/brand/audio/outro_mix.wav": "片尾成品音轨",
     "aiv/music/tracks/series-bed-01.wav": "正文铺底 BGM",
     "aiv/music/tracks/series-motif-01.wav": "片头片尾闭环的 motif",
+    # 内置字体子集：两台机器用同一份文件，跨机的版式（步进宽度、
+    # 收字号结果）才一致。没装就退到系统字体，画面照样能出，
+    # 但跨机就不保证一致了。
+    "aiv/pipeline/assets/fonts/AIVSansCJKSC-Regular.otf": "内置中文字体（渲染必需）",
 }
 
 #: 备用素材：入库了，但**不是**默认出片必需的（缺了照样能出片）。
@@ -113,7 +117,7 @@ def test_product_directory_has_no_tracked_files(directory):
 def test_no_tracked_media_outside_the_allowlist():
     """入库的媒体文件只有白名单里那些。"""
     result = _git("ls-files", "aiv")
-    media_suffixes = (".mp3", ".mp4", ".wav", ".png", ".jpg", ".jpeg")
+    media_suffixes = (".mp3", ".mp4", ".wav", ".png", ".jpg", ".jpeg", ".otf")
     allowed = set(REQUIRED_ASSETS) | set(OPTIONAL_ASSETS)
     unexpected = [
         path for path in result.stdout.splitlines()

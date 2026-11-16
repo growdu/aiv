@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "db/logical_decode/LogLogicalMessage详解",
+  "draft_id": "7708375722368254527",
+  "package_dir": "toutiao/out/db-logical_decode-LogLogicalMessage详解",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL `LogLogicalMessage`",
+  "updated_at": "2026-11-15T20:43:43+08:00"
+}

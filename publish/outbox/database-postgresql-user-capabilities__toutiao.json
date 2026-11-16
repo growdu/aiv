@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "database/postgresql-user-capabilities",
+  "draft_id": "7708375193902645803",
+  "package_dir": "toutiao/out/database-postgresql-user-capabilities",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "当我们在说\"数据库\"的时候，我们到底在说什么",
+  "updated_at": "2026-11-15T20:43:43+08:00"
+}

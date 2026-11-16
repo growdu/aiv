@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "linux/ebpf/rust-ebpf编程基础",
+  "draft_id": "7708375826705777215",
+  "package_dir": "toutiao/out/linux-ebpf-rust-ebpf编程基础",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "rust ebpf编程",
+  "updated_at": "2026-11-15T20:43:53+08:00"
+}
