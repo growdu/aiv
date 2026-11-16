@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -120,6 +121,11 @@ def main() -> None:
             # 基准**绑在字体上**：换一款字体，同一段文字的像素就不同。
             # 记下来，测试才知道什么时候这条基准不适用于当前机器。
             "font": fonts.font_family(),
+            # 基准**也绑在平台上**：macOS 的 cairo 走 CoreText，Linux 走
+            # FreeType，栅格化不同 → 同一个字体、同一段文字，像素仍然不同。
+            # 跨平台比像素是拿噪声当信号，所以**平台不同就跳过**——
+            # 跨机的版式由 `tests/test_layout_fingerprint.py` 守。
+            "platform": platform.system(),
             # 覆盖了多少段——条数由六期契约推导，加期不用改这里，
             # 但漏抓会红（`tests/test_contract.py` 里有覆盖声称的守卫）。
             "segments": sum(1 for _ in _all_segments()),

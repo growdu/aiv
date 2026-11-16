@@ -287,13 +287,19 @@ def baseline_frames():
     """基准指纹里的逐帧哈希。
 
     基准**绑在字体上**：换一款字体，同一段文字的像素就不同，比出来的是
-    噪声不是信号。跨平台时（macOS 的 PingFang SC vs Linux 的 Noto Sans CJK SC）
-    必然对不上，而这条守卫本来要盯的是「有没有手滑改到画面」，不是
-    「两台机器的字体一不一样」——所以字体不一致时跳过并说明原因。
+    噪声不是信号。
+
+    基准**也绑在平台上**：macOS 的 cairo 走 CoreText，Linux 走 FreeType，
+    栅格化不同 → 同一个字体、同一段文字，像素仍然不同。跨平台比像素是
+    拿噪声当信号，所以平台不同就跳过——**跨机的版式由
+    `tests/test_layout_fingerprint.py` 守**（比轮廓、坐标与步进宽度，
+    那三样来自字体文件与场景代码，与栅格化无关）。
 
     做成 fixture 而不是每次手动调一次：**要跟基准比像素的测试必须伸手要它**，
     于是「忘了加守卫」这件事不会再发生（跨平台 CI 第一次就抓到了这种漏）。
     """
+    import platform
+
     data = json.loads(BASELINE.read_text(encoding="utf-8"))
     from pyv import fonts
 
@@ -303,6 +309,14 @@ def baseline_frames():
         pytest.skip(
             f"基准是在「{baseline_font}」下抓的，当前机器是「{current}」——"
             f"跨字体像素本来就不同，这条基准在这里测不出东西"
+        )
+    baseline_platform = data["capture"].get("platform", "")
+    if baseline_platform and baseline_platform != platform.system():
+        pytest.skip(
+            f"基准是在 {baseline_platform} 上抓的，当前机器是 {platform.system()}——"
+            f"cairo 在两边用的栅格化器不同（macOS 走 CoreText，Linux 走 "
+            f"FreeType），跨平台比像素是拿噪声当信号。"
+            f"跨机的版式由 tests/test_layout_fingerprint.py 守"
         )
     return data["frames"]
 

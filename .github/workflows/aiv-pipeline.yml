@@ -48,6 +48,19 @@ jobs:
           # 不无条件跑 pip：它会把 apt 的 numpy 升到 2.x，和 apt 的 scipy 打架。
           python3 -c "import cairo, numpy, PIL, scipy, pytest" || \
             python3 -m pip install --break-system-packages -r aiv/pipeline/requirements.txt
+          # fontTools 只用来读内置字体的 cmap（缺字守卫要用）。纯 Python，
+          # 不碰 numpy/scipy，不会和 apt 的版本打架。
+          python3 -c "import fontTools" || \
+            python3 -m pip install --break-system-packages "fonttools>=4.0"
+
+      - name: 装上内置字体
+        working-directory: aiv/pipeline
+        run: |
+          # 仓库内置的字体子集：两台机器用同一份文件，跨机的版式
+          # （步进宽度、收字号结果）才一致。装进 OS 的字体目录——
+          # cairo 在 Linux 上走 fontconfig，只放在仓库目录里它认不得。
+          python3 scripts/install_font.py
+          python3 scripts/install_font.py --check
 
       - name: 确认字体解析到了开源中文字体
         working-directory: aiv/pipeline
