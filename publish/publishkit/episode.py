@@ -362,14 +362,14 @@ def validate_episode_series(episodes) -> list:
         duplicates = sorted({n for n in numbers if numbers.count(n) > 1})
         if duplicates:
             violations.append(
-                "系列 {!r} 的期号重复：{}".format(series, "、".join(map(str, duplicates)))
+                "系列 {!r} 的期号重复：{}".format(
+                    series, "、".join(map(str, duplicates))
+                )
             )
         unique = sorted(set(numbers))
         if unique and unique != list(range(1, len(unique) + 1)):
             violations.append(
-                "系列 {!r} 的期号不连续：{}".format(
-                    series, "、".join(map(str, unique))
-                )
+                "系列 {!r} 的期号不连续：{}".format(series, "、".join(map(str, unique)))
             )
     return violations
 
@@ -430,9 +430,7 @@ def content_id_for_draft(path, drafts_root) -> str:
     root = Path(drafts_root).resolve()
     relative = Path(path).resolve().relative_to(root)
     if relative.name == "_index.md":
-        raise EpisodeFieldError(
-            "{} 是分类页，不是内容单元".format(path)
-        )
+        raise EpisodeFieldError("{} 是分类页，不是内容单元".format(path))
     if relative.name == "index.md":
         parent = relative.parent
         if str(parent) in (".", ""):
@@ -611,6 +609,4 @@ def read_episode(path, posts_root=None, drafts_root=None) -> Episode:
     fields, _body = parse_front_matter(text)
     if posts_root is not None:
         date = fields.get("date")
-    return episode_from_fields(
-        fields, path=path, content_id=content_id, date=date
-    )
+    return episode_from_fields(fields, path=path, content_id=content_id, date=date)

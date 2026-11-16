@@ -162,11 +162,15 @@ def resolve_config(
 
     return ScheduleConfig(
         repo_root=root,
-        posts_dir=Path(posts_dir) if posts_dir is not None else root / "source" / "_posts",
+        posts_dir=Path(posts_dir)
+        if posts_dir is not None
+        else root / "source" / "_posts",
         outbox_dir=Path(outbox_dir) if outbox_dir is not None else state / "outbox",
         state_dir=state,
         schedule_file=(
-            Path(schedule_file) if schedule_file is not None else state / "schedule.json"
+            Path(schedule_file)
+            if schedule_file is not None
+            else state / "schedule.json"
         ),
         capabilities_dir=(
             Path(capabilities_dir)
@@ -277,7 +281,9 @@ def discover_units(posts_dir) -> tuple:
             errors.append("{}：{}".format(content_id_for(path, root), exc))
             continue
 
-        publish_on = date.fromisoformat(contract.publish_on) if contract.publish_on else None
+        publish_on = (
+            date.fromisoformat(contract.publish_on) if contract.publish_on else None
+        )
         published = parse_content_date(contract.date) if contract.date else None
         units.append(
             ContentUnit(
@@ -450,11 +456,14 @@ def target_platforms(config: ScheduleConfig, platform_filter=None) -> list:
             known = {cap.id for cap in capabilities}
             if platform_filter in known:
                 raise ScheduleConfigError(
-                    "{} 是视频平台，这一期调度器只驱动文档类平台".format(platform_filter)
+                    "{} 是视频平台，这一期调度器只驱动文档类平台".format(
+                        platform_filter
+                    )
                 )
             raise ScheduleConfigError(
                 "找不到平台 {!r} 的能力声明：{}".format(
-                    platform_filter, config.capabilities_dir / "{}.toml".format(platform_filter)
+                    platform_filter,
+                    config.capabilities_dir / "{}.toml".format(platform_filter),
                 )
             )
         return chosen
@@ -484,7 +493,9 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
     index = outbox if outbox is not None else OutboxIndex()
     candidates = [unit for unit in units if platform in unit.platforms]
     if not candidates:
-        return None, "候选集是空的：没有内容单元的 platforms 里包含 {!r}".format(platform)
+        return None, "候选集是空的：没有内容单元的 platforms 里包含 {!r}".format(
+            platform
+        )
 
     # 规则 2：publish_on 落在本周的优先（作者有最终控制权）。
     monday, sunday = window
@@ -561,7 +572,9 @@ class WeekRecord:
 
         content_id = data.get("content_id")
         if not isinstance(content_id, str) or not content_id.strip():
-            raise ScheduleError("{}调度记录的 content_id 必须是非空字符串".format(where))
+            raise ScheduleError(
+                "{}调度记录的 content_id 必须是非空字符串".format(where)
+            )
 
         platforms = data.get("platforms")
         if not isinstance(platforms, list) or not all(
@@ -612,7 +625,9 @@ class ScheduleState:
         try:
             text = path.read_text(encoding="utf-8")
         except OSError as exc:
-            raise ScheduleError("调度状态文件读不了：{}（{}）".format(path, exc)) from exc
+            raise ScheduleError(
+                "调度状态文件读不了：{}（{}）".format(path, exc)
+            ) from exc
 
         try:
             data = json.loads(text)
@@ -644,9 +659,7 @@ class ScheduleState:
 
         周键是 ``YYYY-Www``，两位周号，所以字典序 = 时间序。
         """
-        return sorted(
-            week for week, record in self.records.items() if not record.done
-        )
+        return sorted(week for week, record in self.records.items() if not record.done)
 
     def unfinished_records(self) -> list:
         """没跑完的周**连同它们的记录**，按周键升序。
@@ -668,9 +681,10 @@ class ScheduleState:
         """原子写盘。"""
         path = self.path
         path.parent.mkdir(parents=True, exist_ok=True)
-        text = json.dumps(
-            self.to_dict(), ensure_ascii=False, indent=2, sort_keys=True
-        ) + "\n"
+        text = (
+            json.dumps(self.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
+            + "\n"
+        )
 
         handle, temporary = tempfile.mkstemp(
             dir=str(path.parent), prefix=path.name + ".", suffix=".tmp"
@@ -726,7 +740,9 @@ def retry_failed(
     index = load_outbox_index(config.outbox_dir)
     messages = []
     handled = set()
-    for record in sorted(index.records.values(), key=lambda r: (r.content_id, r.platform)):
+    for record in sorted(
+        index.records.values(), key=lambda r: (r.content_id, r.platform)
+    ):
         if record.status != "failed":
             continue
         if record.data.get("retryable") is False:
@@ -744,9 +760,13 @@ def retry_failed(
             )
             continue
         if publisher(record.content_id, record.platform):
-            messages.append("重试 {} → {}：成功。".format(record.content_id, record.platform))
+            messages.append(
+                "重试 {} → {}：成功。".format(record.content_id, record.platform)
+            )
         else:
-            messages.append("重试 {} → {}：还是失败。".format(record.content_id, record.platform))
+            messages.append(
+                "重试 {} → {}：还是失败。".format(record.content_id, record.platform)
+            )
     return messages, handled
 
 
@@ -802,9 +822,7 @@ def run_weekly(
                     replace(record, done=ok),
                 )
                 state.save()
-        said, retried = retry_failed(
-            config, publisher, dry_run=dry_run, skip=handled
-        )
+        said, retried = retry_failed(config, publisher, dry_run=dry_run, skip=handled)
         messages.extend(said)
         _key, first, _ok = outcomes[0]
         return WeeklyResult(

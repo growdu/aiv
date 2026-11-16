@@ -2,15 +2,21 @@
   Article TL;DR + difficulty rating.
 
   Renders only when the post has at least one of:
-    page.tldr         (newly preferred, short punchy summary)
+    page.tldr         (short punchy summary, written by the author)
     page.summary      (hexo built-in)
-    page.description  (front-matter description)
+
+  **NOT** page.description: sync fills that from the article's editing
+  history table (「编写内容」列), and that column often says what changed
+  in the edit ("理顺结构与定位，修正错误写法"), not what the article is
+  about.  84 articles would grow a TL;DR box they never asked for -- and
+  11 of them already carry their own `> **TL;DR**` block, so the page
+  would show two.  Want a TL;DR box?  Write `tldr:` in the front matter.
 
   Difficulty: page.difficulty (1-5), default 3.
   Renders as 5 stars, filled up to the chosen level.
 */%>
 
-<% var tldr = page.tldr || page.summary || page.description; %>
+<% var tldr = page.tldr || page.summary; %>
 <% if (tldr) { %>
   <div class="post-tldr">
     <div class="post-tldr__label">

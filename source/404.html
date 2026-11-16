@@ -70,50 +70,81 @@ footer a:hover{color:var(--c1)}
 </footer>
 </div>
 <script>
-// 1) Search submit -> redirect to a Google site: search if no inline index,
-//    otherwise push to history with q for a client-side filter.
+// 1) 站内搜索：用**精简索引**（title / url / cat）做标题匹配。
+//
+//    原来这里 fetch 的是 /search.xml —— 站点里根本没有这个文件
+//    （hexo-generator-searchdb 出的是 search.json），于是这个 fetch 永远
+//    失败，永远跳 Google，国内不可用：等于 404 页没有搜索。
+//
+//    也不直接用 search.json：那是 13.5 MB 的全文索引。让一个「页面不存在」
+//    的页面下载 13.5 MB 才能搜一个词，等于把「搜索等于没有」换成「搜索慢到
+//    等于没有」。全文搜索在首页（那里有 MiniSearch 索引）。
 (function(){
   var form = document.getElementById('search-form');
   var input = document.getElementById('q');
   if (!form) return;
+  var index = null;      // 精简索引，懒加载一次就留着
+  var searched = false;  // 搜过就别让「最近发布」把结果冲掉
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
+    });
+  }
+
+  function loadIndex(){
+    if (index) return Promise.resolve(index);
+    return fetch('/search-lite.json').then(function(r){return r.json();}).then(function(d){
+      index = Array.isArray(d) ? d : [];
+      return index;
+    });
+  }
+
   form.addEventListener('submit', function(e){
     e.preventDefault();
     var q = (input.value || '').trim();
     if (!q) { input.focus(); return; }
-    // Inline index (preferred): fetch /search.xml, filter, show modal.
-    fetch('/search.xml').then(function(r){return r.text();}).then(function(xml){
-      var doc = new DOMParser().parseFromString(xml, 'text/xml');
-      var entries = [].slice.call(doc.querySelectorAll('entry'));
-      var hits = entries.filter(function(en){
-        return (en.querySelector('title') || {}).textContent.indexOf(q) >= 0;
-      }).slice(0, 10);
+    searched = true;
+    var list = document.getElementById('recent-list');
+    var divider = document.querySelector('.divider');
+    loadIndex().then(function(posts){
+      var needle = q.toLowerCase();
+      var matched = posts.filter(function(p){
+        var t = String(p.title || '').toLowerCase();
+        var c = String(p.cat || '').toLowerCase();
+        return t.indexOf(needle) >= 0 || c.indexOf(needle) >= 0;
+      });
+      var hits = matched.slice(0, 10);
       if (hits.length) {
-        var list = document.getElementById('recent-list');
-        list.innerHTML = hits.map(function(en){
-          var t = en.querySelector('title').textContent;
-          var u = en.querySelector('url').textContent;
-          return '<li><a href="'+u+'"><span class="title">'+t+'</span></a></li>';
+        list.innerHTML = hits.map(function(p){
+          return '<li><a href="'+esc(p.url)+'"><span class="title">'+esc(p.title)+'</span><span class="cat">'+esc(p.cat)+'</span></a></li>';
         }).join('');
-        document.querySelector('.divider').textContent = '搜索结果 ('+hits.length+')';
+        // 计数是**匹配的总数**，不是列出来的条数：命中 25 篇只列 10 条时，
+        // 写「(10)」会让读者以为只有 10 篇，那 15 篇就无声无息地没了。
+        if (divider) {
+          divider.textContent = '搜索结果 ('+matched.length+')'
+            + (matched.length > hits.length ? '，显示前 '+hits.length+' 条' : '');
+        }
       } else {
-        document.getElementById('recent-list').innerHTML = '<li style="text-align:center;color:var(--muted);padding:14px 0">没有匹配，换个词试试</li>';
-        document.querySelector('.divider').textContent = '搜索结果';
+        list.innerHTML = '<li style="text-align:center;color:var(--muted);padding:14px 0">没有匹配。换个词试试，或者 <a href="https://www.google.com/search?q='+encodeURIComponent(q+' site:growdu.cn')+'" target="_blank" rel="noopener">用搜索引擎找</a></li>';
+        if (divider) divider.textContent = '搜索结果';
       }
     }).catch(function(){
-      // Fallback: Google site search
+      // 索引都拿不到：至少把 Google 兜底给出去
       window.location.href = 'https://www.google.com/search?q='+encodeURIComponent(q+' site:growdu.cn');
     });
   });
-})();
 
-// 2) Render recent posts from a pre-built JSON written by sync-hexo.py
-fetch('/recent-posts.json').then(function(r){return r.json();}).then(function(posts){
-  if (!Array.isArray(posts) || !posts.length) return;
-  var html = posts.map(function(p){
-    return '<li><a href="'+p.url+'"><span class="title">'+p.title+'</span><span class="cat">'+p.cat+'</span></a></li>';
-  }).join('');
-  document.getElementById('recent-list').innerHTML = html;
-}).catch(function(){});
+  // 2) Render recent posts from a pre-built JSON written by sync-hexo.py
+  fetch('/recent-posts.json').then(function(r){return r.json();}).then(function(posts){
+    if (!Array.isArray(posts) || !posts.length) return;
+    if (searched) return;
+    var html = posts.map(function(p){
+      return '<li><a href="'+esc(p.url)+'"><span class="title">'+esc(p.title)+'</span><span class="cat">'+esc(p.cat)+'</span></a></li>';
+    }).join('');
+    document.getElementById('recent-list').innerHTML = html;
+  }).catch(function(){});
+})();
 </script>
 </body>
 </html>

@@ -50,7 +50,11 @@ prismjs:
 # Home page
 index_generator:
   path: ''
-  per_page: 10
+  # 首页是**单页**设计：内容全在 home-content.ejs 里，而那个 partial 只在
+  # `page.current === 1` 时渲染。per_page 为 0 时 hexo-pagination 只产出
+  # 首页一页；留着 10 会生成 /page/2/ … /page/57/ 共 57 个零内容页
+  # （既没有封面也没有列表，站内还没有入口链到它们）。
+  per_page: 0
   order_by: -date
 
 # Category & Tag

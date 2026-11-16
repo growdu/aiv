@@ -13,8 +13,20 @@ article split into instalments rather than as unrelated posts.
 from __future__ import annotations
 
 from .digest import part_digest
-from .mdparse import (Bold, CodeBlock, Heading, Image, InlineCode, Italic, Link,
-                      ListBlock, Paragraph, Quote, Table, Text)
+from .mdparse import (
+    Bold,
+    CodeBlock,
+    Heading,
+    Image,
+    InlineCode,
+    Italic,
+    Link,
+    ListBlock,
+    Paragraph,
+    Quote,
+    Table,
+    Text,
+)
 from .render import links_html, links_items_html
 
 __all__ = [
@@ -77,11 +89,15 @@ def _inline_text(nodes) -> str:
     return "".join(out)
 
 
-_TRANSITION_STYLE = ("margin:0 0 16px;padding:10px 14px;"
-                     "border-left:4px solid #3d7ea6;background:#f6f8fa;"
-                     "color:#555;font-size:14px;")
-_TAIL_STYLE = ("margin:20px 0 0;padding-top:12px;"
-               "border-top:1px solid #e5e5e5;color:#888;font-size:13px;")
+_TRANSITION_STYLE = (
+    "margin:0 0 16px;padding:10px 14px;"
+    "border-left:4px solid #3d7ea6;background:#f6f8fa;"
+    "color:#555;font-size:14px;"
+)
+_TAIL_STYLE = (
+    "margin:20px 0 0;padding-top:12px;"
+    "border-top:1px solid #e5e5e5;color:#888;font-size:13px;"
+)
 
 
 def transition_head_html(title: str, index: int, total: int) -> str:
@@ -96,7 +112,8 @@ def transition_head_html(title: str, index: int, total: int) -> str:
         text = "本文共 {} 部分，这是第 {} 部分。".format(total, index)
     else:
         text = "接《{}》。本文共 {} 部分，这是第 {} 部分。".format(
-            part_title(title, index - 1), total, index)
+            part_title(title, index - 1), total, index
+        )
     return '<p style="{}">{}</p>'.format(_TRANSITION_STYLE, text)
 
 
@@ -163,8 +180,10 @@ def _split_table(table: Table) -> list:
     """Cut a table between rows; every piece keeps the header."""
     if len(table.rows) <= 1:
         return [[table]]
-    return [[Table(header=table.header, rows=[row], align=table.align)]
-            for row in table.rows]
+    return [
+        [Table(header=table.header, rows=[row], align=table.align)]
+        for row in table.rows
+    ]
 
 
 def _split_code(block: CodeBlock) -> list:
@@ -246,8 +265,9 @@ def _same_heading(first, second) -> bool:
     return _inline_text(first.children) == _inline_text(second.children)
 
 
-def _fit_pieces(blocks: list, limit: int, measure, level: int = 0,
-                context: tuple = ()) -> list:
+def _fit_pieces(
+    blocks: list, limit: int, measure, level: int = 0, context: tuple = ()
+) -> list:
     """Break blocks down until every piece fits under the limit.
 
     Returns ``[(blocks, cost, context)]``.  ``context`` is the chain of
@@ -268,8 +288,9 @@ def _fit_pieces(blocks: list, limit: int, measure, level: int = 0,
             continue
         heading = _leading_heading(group)
         level_of_step = _LADDER_LEVEL[level]
-        if heading is not None and (level_of_step is None
-                                    or heading.level == level_of_step):
+        if heading is not None and (
+            level_of_step is None or heading.level == level_of_step
+        ):
             body_blocks = group[1:]
             nested = context + (heading,)
         else:
@@ -292,14 +313,15 @@ def _merge_blocks(current: list, body: list) -> list:
     first = body[0] if body else None
     if isinstance(last, Table) and isinstance(first, Table):
         if last.header == first.header and last.align == first.align:
-            current[-1] = Table(header=last.header,
-                                rows=list(last.rows) + list(first.rows),
-                                align=last.align)
+            current[-1] = Table(
+                header=last.header,
+                rows=list(last.rows) + list(first.rows),
+                align=last.align,
+            )
             return body[1:]
     if isinstance(last, CodeBlock) and isinstance(first, CodeBlock):
         if last.lang == first.lang:
-            current[-1] = CodeBlock(lang=last.lang,
-                                     code=last.code + "\n" + first.code)
+            current[-1] = CodeBlock(lang=last.lang, code=last.code + "\n" + first.code)
             return body[1:]
     return body
 
@@ -366,8 +388,9 @@ def _fit_group(group: list, budget: int, measure, plain_measure) -> list:
     return parts
 
 
-def plan_parts(blocks: list, limit: int, measure, plain_measure=None,
-                reserve: int | None = None) -> list:
+def plan_parts(
+    blocks: list, limit: int, measure, plain_measure=None, reserve: int | None = None
+) -> list:
     """Decide how many drafts an article becomes.
 
     ``measure(blocks)`` returns the rendered size with syntax

@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "pgsql/pg_command/pg_ctl",
+  "draft_id": "7708376840615821867",
+  "package_dir": "toutiao/out/pgsql-pg_command-pg_ctl",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "pg_ctl",
+  "updated_at": "2026-11-15T20:43:56+08:00"
+}

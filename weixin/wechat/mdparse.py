@@ -15,10 +15,25 @@ import re
 from dataclasses import dataclass, field
 
 __all__ = [
-    "Text", "Bold", "Italic", "InlineCode", "Link", "Image",
-    "Heading", "Paragraph", "CodeBlock", "Table", "ListItem", "ListBlock",
-    "Quote", "ThematicBreak", "HtmlBlock",
-    "parse", "parse_inline", "inline_text", "block_text",
+    "Text",
+    "Bold",
+    "Italic",
+    "InlineCode",
+    "Link",
+    "Image",
+    "Heading",
+    "Paragraph",
+    "CodeBlock",
+    "Table",
+    "ListItem",
+    "ListBlock",
+    "Quote",
+    "ThematicBreak",
+    "HtmlBlock",
+    "parse",
+    "parse_inline",
+    "inline_text",
+    "block_text",
 ]
 
 
@@ -139,11 +154,13 @@ def block_text(block) -> str:
     if isinstance(block, Heading):
         return inline_text(block.children)
     if isinstance(block, Quote):
-        return " ".join(text for text in (block_text(child)
-                                          for child in block.blocks) if text)
+        return " ".join(
+            text for text in (block_text(child) for child in block.blocks) if text
+        )
     if isinstance(block, ListBlock):
-        return " ".join(text for text in (block_text(item)
-                                          for item in block.items) if text)
+        return " ".join(
+            text for text in (block_text(item) for item in block.items) if text
+        )
     if isinstance(block, Table):
         cells = [inline_text(cell) for cell in block.header]
         for row in block.rows:
@@ -192,7 +209,7 @@ def parse_inline(text: str) -> list:
     position = 0
     for match in _INLINE_RE.finditer(text):
         if match.start() > position:
-            tokens.append(Text(text[position:match.start()]))
+            tokens.append(Text(text[position : match.start()]))
         if match.group("image"):
             # 外层正则已保证 image 组是完整的图片语法，内层必然匹配得上；
             # 但 match 可能返回 None，类型检查器认得这一点，所以显式收一下。
@@ -214,7 +231,9 @@ def parse_inline(text: str) -> list:
         position = match.end()
     if position < len(text):
         tokens.append(Text(text[position:]))
-    return [token for token in tokens if not (isinstance(token, Text) and not token.value)]
+    return [
+        token for token in tokens if not (isinstance(token, Text) and not token.value)
+    ]
 
 
 def _split_table_row(line: str) -> list:
@@ -261,7 +280,9 @@ def _alignment(cells: list) -> list:
 
 def _is_table_separator(line: str) -> bool:
     cells = _split_table_row(line)
-    return bool(cells) and all(re.fullmatch(r":?-{1,}:?", cell.strip()) for cell in cells)
+    return bool(cells) and all(
+        re.fullmatch(r":?-{1,}:?", cell.strip()) for cell in cells
+    )
 
 
 def _indent_of(line: str) -> int:
@@ -311,7 +332,11 @@ def _parse_list(lines: list, index: int, ordered: bool) -> tuple:
             break
 
         indent = len(match.group("indent"))
-        marker_len = len(match.group("indent")) + len(match.group("marker")) + len(match.group("gap"))
+        marker_len = (
+            len(match.group("indent"))
+            + len(match.group("marker"))
+            + len(match.group("gap"))
+        )
         content_indent = indent + marker_len
         content = match.group("content")
 
@@ -357,9 +382,12 @@ def _parse_blocks(lines: list) -> list:
             index += 1
             while index < total:
                 closing = _FENCE_RE.match(lines[index])
-                if (closing and closing.group(2)[0] == marker[0]
-                        and len(closing.group(2)) >= len(marker)
-                        and not closing.group(3)):
+                if (
+                    closing
+                    and closing.group(2)[0] == marker[0]
+                    and len(closing.group(2)) >= len(marker)
+                    and not closing.group(3)
+                ):
                     index += 1
                     break
                 body.append(lines[index])
@@ -374,8 +402,12 @@ def _parse_blocks(lines: list) -> list:
 
         heading = _HEADING_RE.match(stripped)
         if heading:
-            blocks.append(Heading(level=len(heading.group(1)),
-                                  children=parse_inline(heading.group(2).strip())))
+            blocks.append(
+                Heading(
+                    level=len(heading.group(1)),
+                    children=parse_inline(heading.group(2).strip()),
+                )
+            )
             index += 1
             continue
 
@@ -391,17 +423,23 @@ def _parse_blocks(lines: list) -> list:
             blocks.append(Quote(blocks=_parse_blocks(inner)))
             continue
 
-        if (index + 1 < total and "|" in line
-                and _is_table_separator(lines[index + 1])):
+        if index + 1 < total and "|" in line and _is_table_separator(lines[index + 1]):
             header = _split_table_row(line)
             align = _alignment(_split_table_row(lines[index + 1]))
             index += 2
             rows = []
             while index < total and lines[index].strip().startswith("|"):
-                rows.append([parse_inline(cell) for cell in _split_table_row(lines[index])])
+                rows.append(
+                    [parse_inline(cell) for cell in _split_table_row(lines[index])]
+                )
                 index += 1
-            blocks.append(Table(header=[parse_inline(cell) for cell in header],
-                                rows=rows, align=align))
+            blocks.append(
+                Table(
+                    header=[parse_inline(cell) for cell in header],
+                    rows=rows,
+                    align=align,
+                )
+            )
             continue
 
         if _UL_RE.match(line) or _OL_RE.match(line):

@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "database/postgresql-row-lock-deep-dive",
+  "draft_id": "7708374945595736617",
+  "package_dir": "toutiao/out/database-postgresql-row-lock-deep-dive",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL 行锁机制源码级深度拆解",
+  "updated_at": "2026-11-15T20:43:42+08:00"
+}

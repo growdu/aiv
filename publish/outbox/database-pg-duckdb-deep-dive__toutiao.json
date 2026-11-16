@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "database/pg-duckdb-deep-dive",
+  "draft_id": "7708374965267759652",
+  "package_dir": "toutiao/out/database-pg-duckdb-deep-dive",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "pg_duckdb 深度解析：从 OLTP 到 OLAP",
+  "updated_at": "2026-11-15T20:43:40+08:00"
+}

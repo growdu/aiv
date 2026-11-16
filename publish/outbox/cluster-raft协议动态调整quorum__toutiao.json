@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "cluster/raft协议动态调整quorum",
+  "draft_id": "7708376826980074003",
+  "package_dir": "toutiao/out/cluster-raft协议动态调整quorum",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "raft协议动态调整quorum",
+  "updated_at": "2026-11-15T20:43:38+08:00"
+}

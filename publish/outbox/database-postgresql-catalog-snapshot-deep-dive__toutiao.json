@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "database/postgresql-catalog-snapshot-deep-dive",
+  "draft_id": "7708374815962300947",
+  "package_dir": "toutiao/out/database-postgresql-catalog-snapshot-deep-dive",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL 目录快照源码级深度拆解",
+  "updated_at": "2026-11-15T20:43:41+08:00"
+}

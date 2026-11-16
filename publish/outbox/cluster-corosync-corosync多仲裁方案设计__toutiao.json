@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "cluster/corosync/corosync多仲裁方案设计",
+  "draft_id": "7708376735363908137",
+  "package_dir": "toutiao/out/cluster-corosync-corosync多仲裁方案设计",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "corosync共享多仲裁方案设计",
+  "updated_at": "2026-11-15T20:43:37+08:00"
+}

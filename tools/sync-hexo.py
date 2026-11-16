@@ -8,7 +8,8 @@ Creates:
 
 Does NOT modify docs/ — runs in CI on a fresh checkout.
 """
-import os, re, shutil, subprocess, sys, json
+
+import os, re, shutil, subprocess, sys, json, glob
 from typing import TypeGuard
 
 # The permalinks this tool emits must carry the mount point the
@@ -22,11 +23,11 @@ from site_root import site_root as _site_root
 SITE_ROOT = _site_root()
 from urllib.parse import quote, unquote
 
-DOCS = 'docs'
-SRC = 'source'
-POSTS = os.path.join(SRC, '_posts')
-IMGS = os.path.join(SRC, 'images')
-IMG_EXT = {'.png','.jpg','.jpeg','.gif','.svg','.webp','.bmp','.ico'}
+DOCS = "docs"
+SRC = "source"
+POSTS = os.path.join(SRC, "_posts")
+IMGS = os.path.join(SRC, "images")
+IMG_EXT = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".ico"}
 
 # 内部工程目录（§4.3 的路径排除规则）：路径中任意一级目录名命中即排除，
 # 大小写不敏感。
@@ -40,10 +41,19 @@ IMG_EXT = {'.png','.jpg','.jpeg','.gif','.svg','.webp','.bmp','.ico'}
 # 目录，构建期把它们当成文章发布」。
 #
 # 与 main() 里的隐藏目录守卫**并列**，不是替换它。
-EXCLUDED_DIR_NAMES = frozenset({
-    'tests', 'test', 'fixtures', 'plans', 'pipeline', 'build', 'out',
-    '_staging', 'frames',
-})
+EXCLUDED_DIR_NAMES = frozenset(
+    {
+        "tests",
+        "test",
+        "fixtures",
+        "plans",
+        "pipeline",
+        "build",
+        "out",
+        "_staging",
+        "frames",
+    }
+)
 
 
 def is_excluded_dir(name):
@@ -60,27 +70,28 @@ def prune_excluded_dirs(dirs):
     dirs[:] = [d for d in dirs if not is_excluded_dir(d)]
     return dirs
 
+
 # Posts to feature in the homepage recommend section (relative to docs/)
 # Higher top value = shown first in the recommend carousel
 FEATURED_POSTS = {
-    'life/road/00-intro.md': 100,
-    'life/road/01-how_to_learn_program.md': 90,
-    'cluster/分布式存储需要解决的问题.md': 85,
-    'es/oh-my-search.md': 80,
-    'db/logical_decode/逻辑解码DDL-Replay框架设计/index.md': 75,
-    'cluster/DCF/一文读懂openguass dcf网络模块.md': 70,
-    'cluster/分布式一致性协议.md': 65,
-    'cluster/分布式系统设计必知必会.md': 60,
-    'pgsql/postgresql基操.md': 55,
-    'linux/linux内核指北.md': 50,
-    'dpdk/dpdk常用接口指北.md': 45,
-    'docker/docker基础指北.md': 40,
-    'ai/07_ChatGPT为什么能对话一篇引用17万次的论文.md': 35,
-    'db/logical_decode/逻辑解码/index.md': 30,
-    'language/rust/rust设计原则.md': 25,
-    'tools/那些你不得不会的提高工作效率的软件神器.md': 20,
-    'network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md': 15,
-    'ai/01_开场白目录.md': 10,
+    "life/road/00-intro.md": 100,
+    "life/road/01-how_to_learn_program.md": 90,
+    "cluster/分布式存储需要解决的问题.md": 85,
+    "es/oh-my-search.md": 80,
+    "db/logical_decode/逻辑解码DDL-Replay框架设计/index.md": 75,
+    "cluster/DCF/一文读懂openguass dcf网络模块.md": 70,
+    "cluster/分布式一致性协议.md": 65,
+    "cluster/分布式系统设计必知必会.md": 60,
+    "pgsql/postgresql基操.md": 55,
+    "linux/linux内核指北.md": 50,
+    "dpdk/dpdk常用接口指北.md": 45,
+    "docker/docker基础指北.md": 40,
+    "ai/07_ChatGPT为什么能对话一篇引用17万次的论文.md": 35,
+    "db/logical_decode/逻辑解码/index.md": 30,
+    "language/rust/rust设计原则.md": 25,
+    "tools/那些你不得不会的提高工作效率的软件神器.md": 20,
+    "network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md": 15,
+    "ai/01_开场白目录.md": 10,
 }
 
 
@@ -90,30 +101,30 @@ FEATURED_POSTS = {
 # table every moved article would be dated with its move commit and jump
 # to the top of "recent posts".  Keyed by docs/-relative path.
 DATE_OVERRIDES = {
-    'life/road/00-intro.md': '2025-04-16 09:20:54',
-    'life/road/01-how_to_learn_program.md': '2025-04-16 09:20:54',
-    'life/road/02-elevate_thinking.md': '2026-09-28 14:48:28',
-    'life/road/左耳朵耗子的话——关于技术的一些思考.md': '2025-04-16 09:20:54',
-    'life/hometown/家中对联.md': '2026-08-06 15:28:11',
-    'life/hometown/家中对联-html.html': '2026-08-11 15:41:57',
-    'life/gaokao/math-methods/index.md': '2026-11-06 21:20:33',
-    'life/gaokao/math-paper2/index.md': '2026-11-08 11:59:40',
-    'life/gaokao/english-roots/index.md': '2026-11-11 12:04:05',
-    'life/gaokao/yunnan-policy/index.md': '2026-11-11 21:00:00',
-    'life/gaokao/yunnan-apply/index.md': '2026-11-11 22:30:00',
-    'life/gaokao/physics-methods/index.md': '2026-11-11 22:50:00',
-    'life/gaokao/chemistry-methods/index.md': '2026-11-11 23:20:00',
-    'life/gaokao/biology-methods/index.md': '2026-11-11 23:50:00',
-    'life/gaokao/politics-methods/index.md': '2026-11-12 02:30:00',
-    'life/gaokao/geography-methods/index.md': '2026-11-12 03:10:00',
-    'life/daxue/电子科技大学-计算机-自考-复习计划/index.md': '2026-10-13 11:28:09',
-    'life/daxue/腾冲事业编-公务员备考计划/index.md': '2026-10-13 11:07:22',
-    'life/shehui/economic-downturn-strategy/index.md': '2026-10-28 14:09:55',
-    'life/shehui/economic-downturn-deep-dive/index.md': '2026-10-28 16:30:00',
-    'life/shehui/media-account/index.md': '2026-11-09 16:01:13',
-    'life/shehui/self-host/index.md': '2026-10-23 14:28:54',
-    'life/shehui/area.md': '2026-10-21 16:38:27',
-    'life/shehui/zhuangxiu.md': '2026-10-21 16:38:27',
+    "life/road/00-intro.md": "2025-04-16 09:20:54",
+    "life/road/01-how_to_learn_program.md": "2025-04-16 09:20:54",
+    "life/road/02-elevate_thinking.md": "2026-09-28 14:48:28",
+    "life/road/左耳朵耗子的话——关于技术的一些思考.md": "2025-04-16 09:20:54",
+    "life/hometown/家中对联.md": "2026-08-06 15:28:11",
+    "life/hometown/家中对联-html.html": "2026-08-11 15:41:57",
+    "life/gaokao/math-methods/index.md": "2026-11-06 21:20:33",
+    "life/gaokao/math-paper2/index.md": "2026-11-08 11:59:40",
+    "life/gaokao/english-roots/index.md": "2026-11-11 12:04:05",
+    "life/gaokao/yunnan-policy/index.md": "2026-11-11 21:00:00",
+    "life/gaokao/yunnan-apply/index.md": "2026-11-11 22:30:00",
+    "life/gaokao/physics-methods/index.md": "2026-11-11 22:50:00",
+    "life/gaokao/chemistry-methods/index.md": "2026-11-11 23:20:00",
+    "life/gaokao/biology-methods/index.md": "2026-11-11 23:50:00",
+    "life/gaokao/politics-methods/index.md": "2026-11-12 02:30:00",
+    "life/gaokao/geography-methods/index.md": "2026-11-12 03:10:00",
+    "life/daxue/电子科技大学-计算机-自考-复习计划/index.md": "2026-10-13 11:28:09",
+    "life/daxue/腾冲事业编-公务员备考计划/index.md": "2026-10-13 11:07:22",
+    "life/shehui/economic-downturn-strategy/index.md": "2026-10-28 14:09:55",
+    "life/shehui/economic-downturn-deep-dive/index.md": "2026-10-28 16:30:00",
+    "life/shehui/media-account/index.md": "2026-11-09 16:01:13",
+    "life/shehui/self-host/index.md": "2026-10-23 14:28:54",
+    "life/shehui/area.md": "2026-10-21 16:38:27",
+    "life/shehui/zhuangxiu.md": "2026-10-21 16:38:27",
 }
 
 # Permalinks that changed when docs/life/ was restructured into
@@ -121,23 +132,23 @@ DATE_OVERRIDES = {
 # without the .md extension for single-file posts), value = the new
 # post path.  write_redirects() emits a redirect page at the old URL.
 REDIRECTS = {
-    '00-intro': 'life/road/00-intro',
-    '01-how_to_learn_program': 'life/road/01-how_to_learn_program',
-    '02-elevate_thinking': 'life/road/02-elevate_thinking',
-    'road/左耳朵耗子的话——关于技术的一些思考': 'life/road/左耳朵耗子的话——关于技术的一些思考',
-    'hometown/家中对联': 'life/hometown/家中对联',
-    'hometown/家中对联-html': 'life/hometown/家中对联-html.html',
-    'life/gaokao-math-methods': 'life/gaokao/math-methods',
-    'life/gaokao-math-paper2': 'life/gaokao/math-paper2',
-    'life/gaokao-english-roots': 'life/gaokao/english-roots',
-    'life/电子科技大学-计算机-自考-复习计划': 'life/daxue/电子科技大学-计算机-自考-复习计划',
-    'life/腾冲事业编-公务员备考计划': 'life/daxue/腾冲事业编-公务员备考计划',
-    'life/economic-downturn-strategy': 'life/shehui/economic-downturn-strategy',
-    'life/economic-downturn-deep-dive': 'life/shehui/economic-downturn-deep-dive',
-    'life/media-account': 'life/shehui/media-account',
-    'life/self-host': 'life/shehui/self-host',
-    'life/area': 'life/shehui/area',
-    'life/zhuangxiu': 'life/shehui/zhuangxiu',
+    "00-intro": "life/road/00-intro",
+    "01-how_to_learn_program": "life/road/01-how_to_learn_program",
+    "02-elevate_thinking": "life/road/02-elevate_thinking",
+    "road/左耳朵耗子的话——关于技术的一些思考": "life/road/左耳朵耗子的话——关于技术的一些思考",
+    "hometown/家中对联": "life/hometown/家中对联",
+    "hometown/家中对联-html": "life/hometown/家中对联-html.html",
+    "life/gaokao-math-methods": "life/gaokao/math-methods",
+    "life/gaokao-math-paper2": "life/gaokao/math-paper2",
+    "life/gaokao-english-roots": "life/gaokao/english-roots",
+    "life/电子科技大学-计算机-自考-复习计划": "life/daxue/电子科技大学-计算机-自考-复习计划",
+    "life/腾冲事业编-公务员备考计划": "life/daxue/腾冲事业编-公务员备考计划",
+    "life/economic-downturn-strategy": "life/shehui/economic-downturn-strategy",
+    "life/economic-downturn-deep-dive": "life/shehui/economic-downturn-deep-dive",
+    "life/media-account": "life/shehui/media-account",
+    "life/self-host": "life/shehui/self-host",
+    "life/area": "life/shehui/area",
+    "life/zhuangxiu": "life/shehui/zhuangxiu",
 }
 
 # Redirect pages are Hexo *pages* with `layout: false`.  Hexo's page
@@ -169,128 +180,245 @@ comments: false
 #   stock     docs/stock/ ->  title 股票与金融
 #   hometown  docs/hometown/ -> title 家乡 (now a child of 人生)
 CATEGORY_REDIRECTS = {
-    '成长之路': '人生/成长之路',
-    '随笔': '人生/成长之路',
-    'stock': '股票与金融',
-    'hometown': '人生/家乡',
+    "成长之路": "人生/成长之路",
+    "随笔": "人生/成长之路",
+    "stock": "股票与金融",
+    "hometown": "人生/家乡",
 }
 
 TOPIC_DEFS = [
     # (name, icon, color, blurb)
-    ('内核基础',     'fa-microchip',     '#4283D4', '进程模型 · 存储 · WAL · 执行器 · 学习路径'),
-    ('MVCC 与事务',  'fa-code-branch',   '#10B981', '多版本并发控制 · 事务生命周期 · 隔离级别'),
-    ('逻辑复制',     'fa-network-wired', '#F59E0B', '逻辑解码 · DDL 同步 · publisher / subscriber'),
-    ('分区',         'fa-table-cells',   '#8B5CF6', '分区表设计 · 跨分区 DML 路由 · 跨数据库对比'),
-    ('高可用与复制', 'fa-shield-halved', '#EF4444', '流复制 · 同步复制 · HAProxy · repmgr'),
-    ('分布式一致性', 'fa-share-nodes',   '#EC4899', 'Raft · DCF · 多数派 · Leader 选举'),
-    ('性能调优',     'fa-gauge-high',    '#06B6D4', 'Checkpoint · WAL Writer · 统计信息 · IO 调优'),
-    ('实战经验',     'fa-bookmark',      '#84CC16', '避坑清单 · 翻译整理 · PostgreSQL 万能论'),
+    (
+        "内核基础",
+        "fa-microchip",
+        "#4283D4",
+        "进程模型 · 存储 · WAL · 执行器 · 学习路径",
+    ),
+    (
+        "MVCC 与事务",
+        "fa-code-branch",
+        "#10B981",
+        "多版本并发控制 · 事务生命周期 · 隔离级别",
+    ),
+    (
+        "逻辑复制",
+        "fa-network-wired",
+        "#F59E0B",
+        "逻辑解码 · DDL 同步 · publisher / subscriber",
+    ),
+    (
+        "分区",
+        "fa-table-cells",
+        "#8B5CF6",
+        "分区表设计 · 跨分区 DML 路由 · 跨数据库对比",
+    ),
+    (
+        "高可用与复制",
+        "fa-shield-halved",
+        "#EF4444",
+        "流复制 · 同步复制 · HAProxy · repmgr",
+    ),
+    ("分布式一致性", "fa-share-nodes", "#EC4899", "Raft · DCF · 多数派 · Leader 选举"),
+    (
+        "性能调优",
+        "fa-gauge-high",
+        "#06B6D4",
+        "Checkpoint · WAL Writer · 统计信息 · IO 调优",
+    ),
+    ("实战经验", "fa-bookmark", "#84CC16", "避坑清单 · 翻译整理 · PostgreSQL 万能论"),
 ]
 
 # Inference rules: a post belongs to a topic if any path_contains substring
 # matches its docs/-relative path OR any title_contains keyword matches
 # its title (case-insensitive). A post can belong to multiple topics.
 TOPIC_RULES = {
-    'MVCC 与事务': {
-        'path_contains': [
-            'postgresql-mvcc', 'postgresql-transaction-lifecycle',
-            'db/postgresql/postgresql-row-lock',
+    "MVCC 与事务": {
+        "path_contains": [
+            "postgresql-mvcc",
+            "postgresql-transaction-lifecycle",
+            "db/postgresql/postgresql-row-lock",
         ],
-        'title_contains': ['MVCC', '事务生命周期', 'Transaction Lifecycle', '行锁', 'MultiXact'],
-    },
-    '逻辑复制': {
-        'path_contains': [
-            'postgresql-logical-replication', 'db/logical_decode',
-            'db/postgresql/postgresql-snapbuild', 'db/postgresql/postgresql-reorder',
-            'db/postgresql/postgresql-apply', 'db/postgresql/postgresql-create-replication-slot',
-            'db/postgresql/postgresql-logical-replication-catalog-visibility',
-            'db/postgresql/postgresql-logical-replication-stream-publisher',
-            'db/postgresql/postgresql-logical-replication-add-guc',
-            'db/postgresql/pgsql-hackers-parallel-apply',
-            'db/opengauss-parallel-decoding-design', 'db/opengauss-csn-total-ordering',
-        ],
-        'title_contains': [
-            '逻辑复制', '逻辑解码', 'Logical Replication', 'DDL-Replay', 'DDL Replay',
-            'pglogical', 'pgoutput', 'Babelfish',
-            'SnapBuild', 'reorderbuffer', 'ReorderBuffer', 'applyparallelworker',
-            'apply worker', 'apply parallel', '并行解码', '并行 apply', '并行 Apply',
-            'CSN', 'apply', 'subxact', 'walsender',
+        "title_contains": [
+            "MVCC",
+            "事务生命周期",
+            "Transaction Lifecycle",
+            "行锁",
+            "MultiXact",
         ],
     },
-    '分区': {
-        'path_contains': ['postgresql-partition', 'postgresql-vs-sqlserver-partitioning', 'postgresql-logical-replication-partitioned'],
-        'title_contains': ['分区', 'Partition', 'partitioned'],
-    },
-    '高可用与复制': {
-        'path_contains': ['cluster/postgresql'],
-        'title_contains': ['HAProxy', 'PGBouncer', 'repmgr', '流复制', '高可用', '双写', 'failover'],
-    },
-    '分布式一致性': {
-        'path_contains': ['cluster/raft', 'cluster/DCF', 'cluster/分布式一致性'],
-        'title_contains': ['Raft', 'DCF', 'openGauss DCF', '分布式一致性'],
-    },
-    '性能调优': {
-        'path_contains': [
-            'db/postgresql/postgresql-flame-graph',
-            'db/postgresql/postgresql-logical-replication-apply-parallel-tuning',
+    "逻辑复制": {
+        "path_contains": [
+            "postgresql-logical-replication",
+            "db/logical_decode",
+            "db/postgresql/postgresql-snapbuild",
+            "db/postgresql/postgresql-reorder",
+            "db/postgresql/postgresql-apply",
+            "db/postgresql/postgresql-create-replication-slot",
+            "db/postgresql/postgresql-logical-replication-catalog-visibility",
+            "db/postgresql/postgresql-logical-replication-stream-publisher",
+            "db/postgresql/postgresql-logical-replication-add-guc",
+            "db/postgresql/pgsql-hackers-parallel-apply",
+            "db/opengauss-parallel-decoding-design",
+            "db/opengauss-csn-total-ordering",
         ],
-        'title_contains': ['调优', '性能', 'Checkpoint', 'WalWriter', 'WAL Writer', '统计信息', 'keepalive', 'pg_io', 'bgwriter', 'BgWriter', '火焰图', 'flame graph', 'TPC-C'],
-    },
-    '内核基础': {
-        'path_contains': [
-            'postgresql-memory-management',
-            'db/postgresql/learning-path', 'db/postgresql/part1',
-            'db/postgresql/postgresql-syscache-deep-dive',
-            'db/postgresql/postgresql-shared-memory',
-            'db/postgresql/postgresql-injection-points',
-            'db/postgresql/postgresql-row-lock',
-            'db/postgresql/postgresql-wal-record-types',
-            'db/postgresql/postgresql-rangevar-and-data-structures',
-            'db/postgresql/postgresql-catalog-storage',
-            'db/postgresql/postgresql-read-catalog-table',
-            'db/postgresql/postgresql-background-worker',
-            'db/postgresql/postgresql-parallel-worker',
-            'db/postgresql/postgresql-latch-mechanism',
-            'db/postgresql/postgresql-libpq-mechanism',
-            'db/postgresql/postgresql-module-architecture',
-            'db/postgresql/postgresql-process',
-            'db/postgresql/postgresql-toast',
-            'db/postgresql/postgresql-transaction-lifecycle',
-            'db/postgresql/postgresql-mvcc',
-            'db/linux-shared-memory',
+        "title_contains": [
+            "逻辑复制",
+            "逻辑解码",
+            "Logical Replication",
+            "DDL-Replay",
+            "DDL Replay",
+            "pglogical",
+            "pgoutput",
+            "Babelfish",
+            "SnapBuild",
+            "reorderbuffer",
+            "ReorderBuffer",
+            "applyparallelworker",
+            "apply worker",
+            "apply parallel",
+            "并行解码",
+            "并行 apply",
+            "并行 Apply",
+            "CSN",
+            "apply",
+            "subxact",
+            "walsender",
         ],
-        'title_contains': ['源码', '源码修炼', '学习路径', 'PostgreSQL 主结构', '启动流程', '插入', '进程架构', 'syscache', 'catcache', 'relcache', '共享内存', 'shared memory', 'injection point', 'InOutPoint', 'WAL 记录', 'RangeVar', '数据  结构', 'TOAST', 'latch'],
     },
-    '实战经验': {
-        'path_contains': [
-            'pg-challahscript-tips', 'pg-dont-do-this', 'postgresql-for-everything',
-            'db/postgresql/postgresql-injection-points',
-            'db/postgresql/postgresql-community-gems',
-            'db/postgresql/pgsql-hackers-parallel-apply',
+    "分区": {
+        "path_contains": [
+            "postgresql-partition",
+            "postgresql-vs-sqlserver-partitioning",
+            "postgresql-logical-replication-partitioned",
         ],
-        'title_contains': ["Don't Do This", '万能论', '翻译整理', '内核开发者', '新增 GUC', '社区精髓', 'pgsql-hackers'],
+        "title_contains": ["分区", "Partition", "partitioned"],
+    },
+    "高可用与复制": {
+        "path_contains": ["cluster/postgresql"],
+        "title_contains": [
+            "HAProxy",
+            "PGBouncer",
+            "repmgr",
+            "流复制",
+            "高可用",
+            "双写",
+            "failover",
+        ],
+    },
+    "分布式一致性": {
+        "path_contains": ["cluster/raft", "cluster/DCF", "cluster/分布式一致性"],
+        "title_contains": ["Raft", "DCF", "openGauss DCF", "分布式一致性"],
+    },
+    "性能调优": {
+        "path_contains": [
+            "db/postgresql/postgresql-flame-graph",
+            "db/postgresql/postgresql-logical-replication-apply-parallel-tuning",
+        ],
+        "title_contains": [
+            "调优",
+            "性能",
+            "Checkpoint",
+            "WalWriter",
+            "WAL Writer",
+            "统计信息",
+            "keepalive",
+            "pg_io",
+            "bgwriter",
+            "BgWriter",
+            "火焰图",
+            "flame graph",
+            "TPC-C",
+        ],
+    },
+    "内核基础": {
+        "path_contains": [
+            "postgresql-memory-management",
+            "db/postgresql/learning-path",
+            "db/postgresql/part1",
+            "db/postgresql/postgresql-syscache-deep-dive",
+            "db/postgresql/postgresql-shared-memory",
+            "db/postgresql/postgresql-injection-points",
+            "db/postgresql/postgresql-row-lock",
+            "db/postgresql/postgresql-wal-record-types",
+            "db/postgresql/postgresql-rangevar-and-data-structures",
+            "db/postgresql/postgresql-catalog-storage",
+            "db/postgresql/postgresql-read-catalog-table",
+            "db/postgresql/postgresql-background-worker",
+            "db/postgresql/postgresql-parallel-worker",
+            "db/postgresql/postgresql-latch-mechanism",
+            "db/postgresql/postgresql-libpq-mechanism",
+            "db/postgresql/postgresql-module-architecture",
+            "db/postgresql/postgresql-process",
+            "db/postgresql/postgresql-toast",
+            "db/postgresql/postgresql-transaction-lifecycle",
+            "db/postgresql/postgresql-mvcc",
+            "db/linux-shared-memory",
+        ],
+        "title_contains": [
+            "源码",
+            "源码修炼",
+            "学习路径",
+            "PostgreSQL 主结构",
+            "启动流程",
+            "插入",
+            "进程架构",
+            "syscache",
+            "catcache",
+            "relcache",
+            "共享内存",
+            "shared memory",
+            "injection point",
+            "InOutPoint",
+            "WAL 记录",
+            "RangeVar",
+            "数据  结构",
+            "TOAST",
+            "latch",
+        ],
+    },
+    "实战经验": {
+        "path_contains": [
+            "pg-challahscript-tips",
+            "pg-dont-do-this",
+            "postgresql-for-everything",
+            "db/postgresql/postgresql-injection-points",
+            "db/postgresql/postgresql-community-gems",
+            "db/postgresql/pgsql-hackers-parallel-apply",
+        ],
+        "title_contains": [
+            "Don't Do This",
+            "万能论",
+            "翻译整理",
+            "内核开发者",
+            "新增 GUC",
+            "社区精髓",
+            "pgsql-hackers",
+        ],
     },
 }
 
-TOPIC_NAME_TO_DEF = {name: (icon, color, blurb) for name, icon, color, blurb in TOPIC_DEFS}
+TOPIC_NAME_TO_DEF = {
+    name: (icon, color, blurb) for name, icon, color, blurb in TOPIC_DEFS
+}
 
 
 # Hexo's slugize (hexo-util) — reimplemented so the URLs this script
 # generates match the ones Hexo builds for categories/tags.  A tag named
 # 「MVCC 与事务」 becomes /tags/MVCC-与事务/, NOT /tags/MVCC%20与事务/.
-_R_CONTROL = re.compile(r'[\u0000-\u001f]')
+_R_CONTROL = re.compile(r"[\u0000-\u001f]")
 _R_SPECIAL = re.compile(r'[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"\'<>,.?/]+')
 
 
-def slugize(name, separator='-'):
+def slugize(name, separator="-"):
     """Mirror hexo-util's slugize() so generated links match Hexo's."""
     import unicodedata
-    s = unicodedata.normalize('NFKD', name)
-    s = ''.join(c for c in s if not unicodedata.combining(c))
-    s = _R_CONTROL.sub('', s)
+
+    s = unicodedata.normalize("NFKD", name)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = _R_CONTROL.sub("", s)
     s = _R_SPECIAL.sub(separator, s)
-    s = re.sub(re.escape(separator) + '{2,}', separator, s)
-    s = re.sub('^' + re.escape(separator) + '+|' + re.escape(separator) + '+$', '', s)
+    s = re.sub(re.escape(separator) + "{2,}", separator, s)
+    s = re.sub("^" + re.escape(separator) + "+|" + re.escape(separator) + "+$", "", s)
     return s
 
 
@@ -301,10 +429,12 @@ def infer_topics(rel, title):
     title: post title (already extracted).
     """
     matched = []
-    title_lower = (title or '').lower()
+    title_lower = (title or "").lower()
     for topic_name, rules in TOPIC_RULES.items():
-        path_hit = any(p in rel for p in rules.get('path_contains', []))
-        title_hit = any(kw.lower() in title_lower for kw in rules.get('title_contains', []))
+        path_hit = any(p in rel for p in rules.get("path_contains", []))
+        title_hit = any(
+            kw.lower() in title_lower for kw in rules.get("title_contains", [])
+        )
         if path_hit or title_hit:
             matched.append(topic_name)
     return matched
@@ -314,10 +444,10 @@ def read_section_categories():
     """Map top-level section dir -> Chinese display name from _index.md."""
     titles = {}
     for section in os.listdir(DOCS):
-        idx = os.path.join(DOCS, section, '_index.md')
+        idx = os.path.join(DOCS, section, "_index.md")
         if not os.path.isfile(idx):
             continue
-        with open(idx, encoding='utf-8') as f:
+        with open(idx, encoding="utf-8") as f:
             txt = f.read()
         m = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', txt, re.MULTILINE)
         if m:
@@ -333,19 +463,18 @@ def read_cascade_categories():
     cascades = {}
     for root, dirs, files in os.walk(DOCS):
         prune_excluded_dirs(dirs)
-        if '_index.md' not in files:
+        if "_index.md" not in files:
             continue
-        idx = os.path.join(root, '_index.md')
-        with open(idx, encoding='utf-8') as f:
+        idx = os.path.join(root, "_index.md")
+        with open(idx, encoding="utf-8") as f:
             txt = f.read()
         m = re.search(
-            r'cascade:\s*\n\s*categories:\s*\n((?:\s*-\s*.+\n)+)',
-            txt, re.MULTILINE
+            r"cascade:\s*\n\s*categories:\s*\n((?:\s*-\s*.+\n)+)", txt, re.MULTILINE
         )
         if m:
             items = []
-            for line in m.group(1).split('\n'):
-                item_m = re.match(r'\s*-\s*(.+)', line)
+            for line in m.group(1).split("\n"):
+                item_m = re.match(r"\s*-\s*(.+)", line)
                 if item_m:
                     items.append(item_m.group(1).strip())
             if items:
@@ -362,8 +491,8 @@ def resolve_post_categories(rel, section_titles, cascades):
 
     De-duplicated; primary stays first.
     """
-    section = rel.split(os.sep)[0] if os.sep in rel else ''
-    primary = section_titles.get(section, section or '随笔')
+    section = rel.split(os.sep)[0] if os.sep in rel else ""
+    primary = section_titles.get(section, section or "随笔")
     cats = [primary]
     seen = {primary}
     fdir = os.path.dirname(rel)
@@ -381,7 +510,7 @@ def resolve_post_categories(rel, section_titles, cascades):
 
 def categories_yaml(cats):
     """Render a list of category strings as a YAML list body."""
-    return '\n'.join(f'  - {c}' for c in cats)
+    return "\n".join(f"  - {c}" for c in cats)
 
 
 def collect_database_posts(section_titles, cascades):
@@ -391,15 +520,15 @@ def collect_database_posts(section_titles, cascades):
         prune_excluded_dirs(dirs)
         for filename in sorted(files):
             ext = os.path.splitext(filename)[1].lower()
-            if ext not in ('.md', '.html', '.htm') or filename == '_index.md':
+            if ext not in (".md", ".html", ".htm") or filename == "_index.md":
                 continue
             filepath = os.path.join(root, filename)
             rel = os.path.relpath(filepath, DOCS)
-            with open(filepath, encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 content = f.read()
             fm, body = split_fm(content)
             src = body if fm is not None else content
-            if ext == '.md':
+            if ext == ".md":
                 title = extract_title(src) or fallback_title(filepath)
                 if has_fm_title(fm):
                     title_match = re.search(
@@ -408,8 +537,14 @@ def collect_database_posts(section_titles, cascades):
                     if title_match:
                         title = title_match.group(1).strip()
             else:
-                title_match = re.search(r'<title[^>]*>(.*?)</title>', content, re.I | re.S)
-                title = re.sub(r'<[^>]+>', '', title_match.group(1)).strip() if title_match else fallback_title(filepath)
+                title_match = re.search(
+                    r"<title[^>]*>(.*?)</title>", content, re.I | re.S
+                )
+                title = (
+                    re.sub(r"<[^>]+>", "", title_match.group(1)).strip()
+                    if title_match
+                    else fallback_title(filepath)
+                )
             categories = resolve_post_categories(rel, section_titles, cascades)
             # Database landing page surfaces two flavours:
             #   1. Posts whose cascade tag is "数据库" or "PostgreSQL 源码修炼之路".
@@ -418,42 +553,54 @@ def collect_database_posts(section_titles, cascades):
             #      even though their cascade is "集群". Whitelist them by path
             #      rather than whole-sale pulling in "集群" (which would also
             #      pull Patroni / snowflake / unrelated cluster tools).
-            if ('数据库' not in categories and
-                'PostgreSQL 源码修炼之路' not in categories and
-                not (rel.startswith('cluster/DCF/') or rel.startswith('cluster/raft/'))):
+            if (
+                "数据库" not in categories
+                and "PostgreSQL 源码修炼之路" not in categories
+                and not (
+                    rel.startswith("cluster/DCF/") or rel.startswith("cluster/raft/")
+                )
+            ):
                 continue
             fdir = os.path.dirname(rel)
-            if filename == 'index.md':
+            if filename == "index.md":
                 slug = os.path.basename(fdir)
             else:
                 slug = os.path.splitext(filename)[0]
-                if ext in ('.html', '.htm') and not slug.endswith('-html'):
-                    slug += '-html'
+                if ext in (".html", ".htm") and not slug.endswith("-html"):
+                    slug += "-html"
             date = git_date(filepath)
             # Hexo derives the permalink slug from the post's full path under
             # source/_posts. A page-bundle index.md is flattened to
             # <parent>/<bundle-name>.md by process(), so its link must not
             # include the bundle directory a second time.
-            source_dir = os.path.dirname(fdir) if filename == 'index.md' and fdir else fdir
-            post_path = os.path.join(source_dir, slug) if source_dir and source_dir != '.' else slug
+            source_dir = (
+                os.path.dirname(fdir) if filename == "index.md" and fdir else fdir
+            )
+            post_path = (
+                os.path.join(source_dir, slug)
+                if source_dir and source_dir != "."
+                else slug
+            )
             url = _permalink(date, post_path)
-            posts.append({
-                'title': title,
-                'url': url,
-                'date': date,
-                'topics': infer_topics(rel, title),
-            })
-    unique = {post['url']: post for post in posts}
-    posts_sorted = sorted(unique.values(), key=lambda post: post['date'], reverse=True)
+            posts.append(
+                {
+                    "title": title,
+                    "url": url,
+                    "date": date,
+                    "topics": infer_topics(rel, title),
+                }
+            )
+    unique = {post["url"]: post for post in posts}
+    posts_sorted = sorted(unique.values(), key=lambda post: post["date"], reverse=True)
     # Group posts by inferred topic, preserving the canonical TOPIC_DEFS order.
     topic_groups = {}
     for name, _icon, _color, _blurb in TOPIC_DEFS:
         topic_groups[name] = []
     for post in posts_sorted:
-        for t in post.get('topics', []):
+        for t in post.get("topics", []):
             if t in topic_groups:
                 topic_groups[t].append(post)
-    return {'posts': posts_sorted, 'topics': topic_groups}
+    return {"posts": posts_sorted, "topics": topic_groups}
 
 
 def git_date(filepath):
@@ -463,30 +610,31 @@ def git_date(filepath):
     single .md files to page bundles (dir/index.md), so we search
     multiple historical path candidates on every branch."""
     rel = os.path.relpath(filepath, DOCS)
-    override = DATE_OVERRIDES.get(rel.replace(os.sep, '/'))
+    override = DATE_OVERRIDES.get(rel.replace(os.sep, "/"))
     if override:
         return override
-    candidates = [f'docs/{rel}', rel]
-    if os.path.basename(filepath) == 'index.md':
+    candidates = [f"docs/{rel}", rel]
+    if os.path.basename(filepath) == "index.md":
         parent = os.path.dirname(rel)
         if parent:
-            candidates.append(f'docs/{parent}.md')
-            candidates.append(f'{parent}.md')
+            candidates.append(f"docs/{parent}.md")
+            candidates.append(f"{parent}.md")
     earliest = None
     for path in candidates:
         try:
             r = subprocess.run(
-                ['git', 'log', '--all', '--reverse', '--format=%ai', '--', path],
-                capture_output=True, text=True,
+                ["git", "log", "--all", "--reverse", "--format=%ai", "--", path],
+                capture_output=True,
+                text=True,
             )
             if r.returncode == 0 and r.stdout.strip():
-                d = r.stdout.strip().split('\n')[0].strip()
+                d = r.stdout.strip().split("\n")[0].strip()
                 if earliest is None or d < earliest:
                     earliest = d
         except Exception:
             continue
     if not earliest:
-        return '2024-01-01 00:00:00'
+        return "2024-01-01 00:00:00"
     # Drop the trailing `+0800` / `+0000` offset.  Hexo's date path
     # generation goes through `node_modules/hexo/dist/plugins/processor/
     # common.js:51` `timezone()` which double-applies the offset when
@@ -494,29 +642,29 @@ def git_date(filepath):
     # article that crosses UTC midnight.  Emitting a wall-clock string
     # without offset (and clearing `timezone:` in _config.yml) keeps
     # the rendered Y/M/D identical to the author-time wall clock.
-    return earliest.split(' +')[0].split(' -')[0]
+    return earliest.split(" +")[0].split(" -")[0]
 
 
 def extract_title(content):
-    m = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+    m = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
     return m.group(1).strip() if m else None
 
 
 def fallback_title(filepath):
     base = os.path.splitext(os.path.basename(filepath))[0]
-    if base == 'index':
+    if base == "index":
         return os.path.basename(os.path.dirname(filepath))
     return base
 
 
 def split_fm(content):
     """Return (fm_text, body). fm_text=None if no front matter."""
-    m = re.match(r'^---\r?\n(.*?)\r?\n---\r?\n', content, re.DOTALL)
+    m = re.match(r"^---\r?\n(.*?)\r?\n---\r?\n", content, re.DOTALL)
     if m:
-        return m.group(1), content[m.end():]
-    m = re.match(r'^---\r?\n---\r?\n', content)
+        return m.group(1), content[m.end() :]
+    m = re.match(r"^---\r?\n---\r?\n", content)
     if m:
-        return '', content[m.end():]
+        return "", content[m.end() :]
     return None, content
 
 
@@ -526,11 +674,52 @@ def has_fm_title(fm) -> TypeGuard[str]:
     **是 TypeGuard**：调用方写 `if has_fm_title(fm):` 之后，类型检查器
     就知道 fm 不是 None——否则紧接着的 re.search 得自己再判一遍 None。
     """
-    return fm is not None and bool(re.search(r'^title\s*:', fm, re.MULTILINE))
+    return fm is not None and bool(re.search(r"^title\s*:", fm, re.MULTILINE))
 
 
 def yaml_escape(s):
-    return s.replace('\\','\\\\').replace('"','\\"')
+    return s.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _front_matter_title(text):
+    """Read the ``title`` out of a front matter block.
+
+    **为什么不能按第一个引号切**：生成出来的 front matter 是
+    ``title: "AI 能\\"创造\\"吗？"``——里面的引号被 YAML 转义过。
+    按 ``[^"']+`` 取值会在**第一个**引号处停下，10 篇文章的标题在 404 页
+    的索引里只剩「AI 能\\」，搜这些文章搜不到。
+
+    三种写法都要认：双引号串（带转义）、单引号串（``''`` 是转义的单引号）、
+    裸标量（引号只算正文的一部分）。
+    """
+    m = re.search(r"^title:[ \t]*(.*)$", text, re.M)
+    if not m:
+        return None
+    value = m.group(1).strip()
+    if not value:
+        return None
+    if value[0] == '"':
+        # 双引号串：走到**没有被转义**的那个收尾引号为止。
+        out = []
+        i = 1
+        while i < len(value):
+            ch = value[i]
+            if ch == "\\" and i + 1 < len(value):
+                out.append(value[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                break
+            out.append(ch)
+            i += 1
+        return "".join(out).strip()
+    if value[0] == "'":
+        end = value.find("'", 1)
+        while end != -1 and value[end + 1 : end + 2] == "'":
+            end = value.find("'", end + 2)
+        return (value[1:end] if end != -1 else value[1:]).replace("''", "'").strip()
+    # 裸标量：` #` 之后是 YAML 注释，不算标题的一部分。
+    return re.split(r"\s+#", value, maxsplit=1)[0].strip()
 
 
 # 透传字段（§4.1）：契约层（publish/publishkit/contract.py）要读的那些。
@@ -559,26 +748,26 @@ def yaml_escape(s):
 # 全部是**扁平键名**：front matter 的格式规则只允许扁平标量与单层列表，
 # 嵌套的 episode_media 会被静默丢掉——页面照常渲染，只是期号区块是空的。
 PASSTHROUGH_LIST_FIELDS = (
-    'platforms',
-    'episode_sources',
-    'episode_repro',
+    "platforms",
+    "episode_sources",
+    "episode_repro",
 )
 PASSTHROUGH_SCALAR_FIELDS = (
-    'short_title',
-    'tldr',
-    'description',
-    'difficulty',
-    'cover',
-    'reprintPolicy',
-    'kind',
-    'publish_on',
-    'episode',
-    'episode_no',
-    'series',
-    'episode_hook',
-    'episode_subtitle',
-    'episode_duration_s',
-    'episode_license',
+    "short_title",
+    "tldr",
+    "description",
+    "difficulty",
+    "cover",
+    "reprintPolicy",
+    "kind",
+    "publish_on",
+    "episode",
+    "episode_no",
+    "series",
+    "episode_hook",
+    "episode_subtitle",
+    "episode_duration_s",
+    "episode_license",
 )
 
 
@@ -590,10 +779,10 @@ def _fm_scalar(fm, key):
     """
     if not fm:
         return None
-    for raw in fm.split('\n'):
-        if not raw.strip() or raw[:1] in (' ', '\t'):
+    for raw in fm.split("\n"):
+        if not raw.strip() or raw[:1] in (" ", "\t"):
             continue
-        head, sep, tail = raw.partition(':')
+        head, sep, tail = raw.partition(":")
         if sep and head.strip() == key:
             value = tail.strip()
             return value or None
@@ -614,17 +803,17 @@ def _fm_indented_scalar(fm, key):
     if not fm:
         return None
     under_key = False
-    for raw in fm.split('\n'):
+    for raw in fm.split("\n"):
         if not raw.strip():
             continue
-        if raw[:1] in (' ', '\t'):
+        if raw[:1] in (" ", "\t"):
             if not under_key:
                 continue
             stripped = raw.strip()
-            if stripped.startswith('- '):
+            if stripped.startswith("- "):
                 continue  # 列表形态，交给 _fm_list
             return stripped
-        head, sep, tail = raw.partition(':')
+        head, sep, tail = raw.partition(":")
         under_key = bool(sep) and head.strip() == key and not tail.strip()
     return None
 
@@ -639,15 +828,15 @@ def _fm_list(fm, key):
         return None
     items = []
     list_key = None
-    for raw in fm.split('\n'):
+    for raw in fm.split("\n"):
         if not raw.strip():
             continue
-        if raw[:1] in (' ', '\t'):
+        if raw[:1] in (" ", "\t"):
             stripped = raw.strip()
-            if list_key == key and stripped.startswith('- '):
+            if list_key == key and stripped.startswith("- "):
                 items.append(stripped[2:].strip())
             continue
-        head, sep, tail = raw.partition(':')
+        head, sep, tail = raw.partition(":")
         if sep and head.strip() == key and not tail.strip():
             list_key = key
         else:
@@ -673,8 +862,8 @@ def passthrough_block(fm):
     for key in PASSTHROUGH_LIST_FIELDS:
         items = _fm_list(fm, key)
         if items:
-            lines.append('{}:'.format(key))
-            lines.extend('  - {}'.format(item) for item in items)
+            lines.append("{}:".format(key))
+            lines.extend("  - {}".format(item) for item in items)
         else:
             # 不是列表形态（内联列表 / 单个标量 / 缩进标量）：原样带过去，
             # 让契约层去报错。在这里悄悄丢掉更糟——丢了等于「这篇不发」，
@@ -683,14 +872,14 @@ def passthrough_block(fm):
             if value is None:
                 value = _fm_indented_scalar(fm, key)
             if value:
-                lines.append('{}: {}'.format(key, value))
+                lines.append("{}: {}".format(key, value))
     for key in PASSTHROUGH_SCALAR_FIELDS:
         value = _fm_scalar(fm, key)
         if value is None:
             value = _fm_indented_scalar(fm, key)
         if value:
-            lines.append('{}: {}'.format(key, value))
-    return ''.join(line + '\n' for line in lines)
+            lines.append("{}: {}".format(key, value))
+    return "".join(line + "\n" for line in lines)
 
 
 def read_matery_about_config():
@@ -703,40 +892,40 @@ def read_matery_about_config():
     Returns (profile, my_projects, my_skills, my_education, my_honors,
     my_timeline) as dicts.
     """
-    config_path = '_config.matery.yml'
+    config_path = "_config.matery.yml"
     if not os.path.isfile(config_path):
         # **返回值个数要与末尾那条 return 一致**：调用方解包 6 个，少给一个
         # 就是 ValueError——配置文件不在时反而把整个构建搞崩。
         return (
             {},
-            {'enable': False, 'data': {}},
-            {'enable': False, 'data': {}},
-            {'enable': False, 'data': []},
-            {'enable': False, 'data': []},
-            {'enable': False, 'data': []},
+            {"enable": False, "data": {}},
+            {"enable": False, "data": {}},
+            {"enable": False, "data": []},
+            {"enable": False, "data": []},
+            {"enable": False, "data": []},
         )
 
-    with open(config_path, encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         lines = f.readlines()
 
     profile = {}
-    my_projects = {'enable': False, 'data': {}}
-    my_skills = {'enable': False, 'data': {}}
-    my_education = {'enable': False, 'data': []}
-    my_honors = {'enable': False, 'data': []}
-    my_timeline = {'enable': False, 'data': []}
+    my_projects = {"enable": False, "data": {}}
+    my_skills = {"enable": False, "data": {}}
+    my_education = {"enable": False, "data": []}
+    my_honors = {"enable": False, "data": []}
+    my_timeline = {"enable": False, "data": []}
 
     # Sections whose `data:` is a list of dicts (vs dict of dicts).
-    LIST_DATA_SECTIONS = {'myEducation', 'myHonors', 'myTimeline'}
+    LIST_DATA_SECTIONS = {"myEducation", "myHonors", "myTimeline"}
 
     # Map top-level section name -> mutable target dict so we can
     # look up enable flag and data container uniformly.
     section_data_map = {
-        'myProjects': my_projects,
-        'mySkills': my_skills,
-        'myEducation': my_education,
-        'myHonors': my_honors,
-        'myTimeline': my_timeline,
+        "myProjects": my_projects,
+        "mySkills": my_skills,
+        "myEducation": my_education,
+        "myHonors": my_honors,
+        "myTimeline": my_timeline,
     }
 
     current_top = None
@@ -744,7 +933,7 @@ def read_matery_about_config():
     current_data_key = None
     current_list_item = None
     current_dict_item = None  # dict we are currently populating with key/value pairs
-    current_list_key = None   # key whose list we are currently appending to
+    current_list_key = None  # key whose list we are currently appending to
     multiline_indicator_indent = -1  # indent of the line that opened the block
     in_multiline = False
     multiline_target = None
@@ -753,21 +942,22 @@ def read_matery_about_config():
 
     def strip_comment(s):
         in_q = False
-        q_char = ''
+        q_char = ""
         for i, c in enumerate(s):
-            if c in ('"', "'") and (i == 0 or s[i-1] != '\\'):
+            if c in ('"', "'") and (i == 0 or s[i - 1] != "\\"):
                 if not in_q:
-                    in_q = True; q_char = c
+                    in_q = True
+                    q_char = c
                 elif c == q_char:
                     in_q = False
-            elif c == '#' and not in_q:
+            elif c == "#" and not in_q:
                 return s[:i].rstrip()
         return s.rstrip()
 
     def flush_multiline():
         nonlocal in_multiline, multiline_value, multiline_target
         nonlocal multiline_block_indent, multiline_indicator_indent
-        if multiline_target == 'profile_intro':
+        if multiline_target == "profile_intro":
             # Drop leading blank lines, then lstrip the first content line
             # so the introduction starts flush-left even if the YAML
             # author indented the first line relative to the indicator.
@@ -775,7 +965,7 @@ def read_matery_about_config():
                 multiline_value.pop(0)
             if multiline_value:
                 multiline_value[0] = multiline_value[0].lstrip()
-            profile['introduction'] = '\n'.join(multiline_value).rstrip()
+            profile["introduction"] = "\n".join(multiline_value).rstrip()
         in_multiline = False
         multiline_value = []
         multiline_target = None
@@ -790,12 +980,12 @@ def read_matery_about_config():
         return v
 
     for raw in lines:
-        stripped = raw.rstrip('\n').rstrip('\r')
+        stripped = raw.rstrip("\n").rstrip("\r")
         if not stripped.strip():
             if in_multiline:
-                multiline_value.append('')
+                multiline_value.append("")
             continue
-        if stripped.lstrip().startswith('#'):
+        if stripped.lstrip().startswith("#"):
             continue
 
         indent = len(stripped) - len(stripped.lstrip())
@@ -811,7 +1001,9 @@ def read_matery_about_config():
                 line_text = stripped[multiline_block_indent:]
                 multiline_value.append(line_text)
                 continue
-            elif multiline_block_indent is not None and indent >= multiline_block_indent:
+            elif (
+                multiline_block_indent is not None and indent >= multiline_block_indent
+            ):
                 line_text = stripped[multiline_block_indent:]
                 multiline_value.append(line_text)
                 continue
@@ -822,11 +1014,14 @@ def read_matery_about_config():
             continue
 
         # Top-level key (indent 0)
-        if indent == 0 and content.endswith(':'):
+        if indent == 0 and content.endswith(":"):
             # Flush any pending list-of-dicts item from the previous
             # section before transitioning.
-            if current_list_item is not None and current_data_target in LIST_DATA_SECTIONS:
-                section_data_map[current_data_target]['data'].append(current_list_item)
+            if (
+                current_list_item is not None
+                and current_data_target in LIST_DATA_SECTIONS
+            ):
+                section_data_map[current_data_target]["data"].append(current_list_item)
                 current_list_item = None
                 current_dict_item = None
             current_list_key = None
@@ -836,15 +1031,15 @@ def read_matery_about_config():
             continue
 
         # 2-space indent (subkey of top-level section)
-        if indent == 2 and ':' in content:
-            key, _, value = content.partition(':')
+        if indent == 2 and ":" in content:
+            key, _, value = content.partition(":")
             key = key.strip()
             value = value.strip()
 
-            if current_top == 'profile':
-                if key == 'introduction' and value == '|':
+            if current_top == "profile":
+                if key == "introduction" and value == "|":
                     in_multiline = True
-                    multiline_target = 'profile_intro'
+                    multiline_target = "profile_intro"
                     multiline_block_indent = None
                     multiline_indicator_indent = indent
                     multiline_value = []
@@ -852,9 +1047,9 @@ def read_matery_about_config():
                     profile[key] = unquote(value)
             elif current_top in section_data_map:
                 target = section_data_map[current_top]
-                if key == 'enable':
-                    target['enable'] = (value == 'true')
-                elif key == 'data' and value == '':
+                if key == "enable":
+                    target["enable"] = value == "true"
+                elif key == "data" and value == "":
                     current_data_target = current_top
             current_data_key = None
             current_list_item = None
@@ -865,39 +1060,43 @@ def read_matery_about_config():
             current_list_key = None  # exiting any prior list-collecting scope
             if current_data_target in LIST_DATA_SECTIONS:
                 # List-of-dicts: each `- key: ...` starts a new item.
-                if content.startswith('- '):
+                if content.startswith("- "):
                     if current_list_item is not None:
-                        section_data_map[current_data_target]['data'].append(current_list_item)
+                        section_data_map[current_data_target]["data"].append(
+                            current_list_item
+                        )
                     current_list_item = {}
                     current_dict_item = current_list_item
                     # Inline `- key: value` populates the new item's
                     # first field; otherwise the key comes from a
                     # following 6-space indent line.
                     rest = content[2:].strip()
-                    if ':' in rest:
-                        k, _, v = rest.partition(':')
+                    if ":" in rest:
+                        k, _, v = rest.partition(":")
                         current_dict_item[k.strip()] = unquote(v.strip())
                 continue
-            if content.endswith(':'):
+            if content.endswith(":"):
                 item_name = content[:-1].strip()
                 current_data_key = item_name
-                section_data_map[current_data_target]['data'][item_name] = {}
-                current_dict_item = section_data_map[current_data_target]['data'][item_name]
+                section_data_map[current_data_target]["data"][item_name] = {}
+                current_dict_item = section_data_map[current_data_target]["data"][
+                    item_name
+                ]
             continue
 
         # 6-space indent (property of data item)
-        if indent == 6 and ':' in content:
-            key, _, value = content.partition(':')
+        if indent == 6 and ":" in content:
+            key, _, value = content.partition(":")
             key = key.strip()
             value = unquote(value.strip())
             current_list_key = None  # a fresh 6-space key resets nested-list mode
             if current_dict_item is not None:
-                if value == '' and not content.startswith('- '):
+                if value == "" and not content.startswith("- "):
                     # Empty value: a following 8-space `- xxx` list
                     # populates this key as a list.
                     current_dict_item[key] = []
                     current_list_key = key
-                elif content.startswith('- '):
+                elif content.startswith("- "):
                     current_dict_item.setdefault(key, []).append(value)
                 else:
                     current_dict_item[key] = value
@@ -908,171 +1107,172 @@ def read_matery_about_config():
         if indent >= 8 and current_dict_item is not None and current_list_key:
             target_list = current_dict_item.get(current_list_key)
             if isinstance(target_list, list):
-                if content.startswith('- '):
+                if content.startswith("- "):
                     target_list.append(unquote(content[2:].strip()))
-                elif ':' in content:
-                    _, _, vv = content.partition(':')
+                elif ":" in content:
+                    _, _, vv = content.partition(":")
                     target_list.append(unquote(vv.strip()))
             continue
 
     if in_multiline:
         flush_multiline()
     if current_list_item is not None and current_data_target in LIST_DATA_SECTIONS:
-        section_data_map[current_data_target]['data'].append(current_list_item)
+        section_data_map[current_data_target]["data"].append(current_list_item)
 
     return profile, my_projects, my_skills, my_education, my_honors, my_timeline
 
 
-def build_about_markdown(profile, my_projects, my_skills,
-                           my_education=None, my_honors=None,
-                           my_timeline=None):
+def build_about_markdown(
+    profile, my_projects, my_skills, my_education=None, my_honors=None, my_timeline=None
+):
     """Build source/about/index.md content from matery config + static sections.
 
     `my_education`, `my_honors`, `my_timeline` are optional list-of-dicts
     sections. `my_timeline` renders right under the bio intro as a
     vertical timeline; the others render after the project cards.
     """
-    my_education = my_education or {'enable': False, 'data': []}
-    my_honors = my_honors or {'enable': False, 'data': []}
-    my_timeline = my_timeline or {'enable': False, 'data': []}
+    my_education = my_education or {"enable": False, "data": []}
+    my_honors = my_honors or {"enable": False, "data": []}
+    my_timeline = my_timeline or {"enable": False, "data": []}
 
-    intro = profile.get('introduction') or ''
+    intro = profile.get("introduction") or ""
     # Skip the intro paragraph entirely when empty so no <p></p>
     # appears at the top of the about page.
-    intro = profile.get('introduction') or ''
+    intro = profile.get("introduction") or ""
     # Skip the intro paragraph entirely when empty so no <p></p>
     # appears at the top of the about page.
-    intro_block = (intro.strip() + '\n\n') if intro.strip() else ''
+    intro_block = (intro.strip() + "\n\n") if intro.strip() else ""
 
     # Skill bars
     skill_lines = []
-    if my_skills.get('enable') and my_skills.get('data'):
-        for name, props in my_skills['data'].items():
-            bg = props.get('background', 'linear-gradient(to right, #336791 0%, #4B8BBE 100%)')
-            pct = props.get('percent', '80%')
+    if my_skills.get("enable") and my_skills.get("data"):
+        for name, props in my_skills["data"].items():
+            bg = props.get(
+                "background", "linear-gradient(to right, #336791 0%, #4B8BBE 100%)"
+            )
+            pct = props.get("percent", "80%")
             skill_lines.append(
                 f'<div class="skill-bar">\n'
                 f'  <div class="skill-row"><span>{name}</span><span>{pct}</span></div>\n'
                 f'  <div class="skill-track"><div class="skill-fill" '
                 f'style="width:{pct};background:{bg}"></div></div>\n'
-                f'</div>'
+                f"</div>"
             )
-    skills_block = '\n'.join(skill_lines) if skill_lines else ''
+    skills_block = "\n".join(skill_lines) if skill_lines else ""
 
     # Project cards (richer: time / company / role / achievements / tech)
     project_lines = []
-    if my_projects.get('enable') and my_projects.get('data'):
-        for name, props in my_projects['data'].items():
-            icon = props.get('icon', 'fas fa-code')
-            bg = props.get('iconBackground',
-                           'linear-gradient(to bottom right, #3367D6 0%, #0084FF 100%)')
-            url = props.get('url', '')
-            time = props.get('time', '')
-            company = props.get('company', '')
-            role = props.get('role', '')
-            desc = props.get('desc', '')
-            tech = props.get('tech', '')
-            achievements = props.get('achievements') or []
+    if my_projects.get("enable") and my_projects.get("data"):
+        for name, props in my_projects["data"].items():
+            icon = props.get("icon", "fas fa-code")
+            bg = props.get(
+                "iconBackground",
+                "linear-gradient(to bottom right, #3367D6 0%, #0084FF 100%)",
+            )
+            url = props.get("url", "")
+            time = props.get("time", "")
+            company = props.get("company", "")
+            role = props.get("role", "")
+            desc = props.get("desc", "")
+            tech = props.get("tech", "")
+            achievements = props.get("achievements") or []
 
             meta_bits = [b for b in (company, role, time) if b]
-            meta_sep = ' · '.join(meta_bits)
-            meta_html = (
-                f'<div class="proj-meta">{meta_sep}</div>' if meta_bits else ''
-            )
-            ach_html = ''
+            meta_sep = " · ".join(meta_bits)
+            meta_html = f'<div class="proj-meta">{meta_sep}</div>' if meta_bits else ""
+            ach_html = ""
             if achievements:
-                items = ''.join(f'<li>{a}</li>' for a in achievements)
+                items = "".join(f"<li>{a}</li>" for a in achievements)
                 ach_html = f'<ul class="proj-achievements">{items}</ul>'
-            tech_html = (
-                f'<div class="proj-tech">技术栈: {tech}</div>' if tech else ''
-            )
-            url_attr = f' data-url="{url}"' if url else ''
+            tech_html = f'<div class="proj-tech">技术栈: {tech}</div>' if tech else ""
+            url_attr = f' data-url="{url}"' if url else ""
 
             project_lines.append(
                 f'<div class="project-card"{url_attr}>\n'
                 f'  <div class="proj-icon" style="background:{bg};"><i class="{icon}"></i></div>\n'
                 f'  <div class="proj-body">\n'
                 f'    <div class="proj-name">{name}</div>\n'
-                f'    {meta_html}\n'
+                f"    {meta_html}\n"
                 f'    <div class="proj-desc">{desc}</div>\n'
-                f'    {ach_html}\n'
-                f'    {tech_html}\n'
-                f'  </div>\n'
-                f'</div>'
+                f"    {ach_html}\n"
+                f"    {tech_html}\n"
+                f"  </div>\n"
+                f"</div>"
             )
-    projects_block = '\n'.join(project_lines) if project_lines else ''
+    projects_block = "\n".join(project_lines) if project_lines else ""
 
     # Education cards
     edu_lines = []
-    if my_education.get('enable') and my_education.get('data'):
-        for ed in my_education['data']:
-            school = ed.get('school', '')
-            major = ed.get('major', '')
-            degree = ed.get('degree', '')
-            period = ed.get('period', '')
-            honor = ed.get('honor', '')
-            major_line = ' · '.join(b for b in (major, degree) if b)
+    if my_education.get("enable") and my_education.get("data"):
+        for ed in my_education["data"]:
+            school = ed.get("school", "")
+            major = ed.get("major", "")
+            degree = ed.get("degree", "")
+            period = ed.get("period", "")
+            honor = ed.get("honor", "")
+            major_line = " · ".join(b for b in (major, degree) if b)
             honor_html = (
                 f'<div class="edu-honor"><i class="fas fa-award"></i> {honor}</div>'
-                if honor else ''
+                if honor
+                else ""
             )
             edu_lines.append(
                 f'<div class="edu-item">\n'
                 f'  <div class="edu-school">{school}</div>\n'
                 f'  <div class="edu-major">{major_line}</div>\n'
                 f'  <div class="edu-period">{period}</div>\n'
-                f'  {honor_html}\n'
-                f'</div>'
+                f"  {honor_html}\n"
+                f"</div>"
             )
-    edu_block = '\n'.join(edu_lines) if edu_lines else ''
+    edu_block = "\n".join(edu_lines) if edu_lines else ""
 
     # Bio timeline
     timeline_lines = []
-    if my_timeline.get('enable') and my_timeline.get('data'):
-        for t in my_timeline['data']:
-            period = t.get('period', '')
-            title = t.get('title', '')
-            desc = t.get('desc', '')
+    if my_timeline.get("enable") and my_timeline.get("data"):
+        for t in my_timeline["data"]:
+            period = t.get("period", "")
+            title = t.get("title", "")
+            desc = t.get("desc", "")
             timeline_lines.append(
                 f'<div class="timeline-item">\n'
                 f'  <div class="timeline-date">{period}</div>\n'
                 f'  <div class="timeline-title">{title}</div>\n'
                 f'  <div class="timeline-desc">{desc}</div>\n'
-                f'</div>'
+                f"</div>"
             )
-    timeline_block = '\n'.join(timeline_lines) if timeline_lines else ''
+    timeline_block = "\n".join(timeline_lines) if timeline_lines else ""
 
     # Honors list
     honor_lines = []
-    if my_honors.get('enable') and my_honors.get('data'):
-        for h in my_honors['data']:
-            name = h.get('name', '')
-            level = h.get('level', '')
-            year = h.get('year', '')
-            year_html = (
-                f'<span class="honor-year">{year}</span>\n  '
-                if year else ''
-            )
+    if my_honors.get("enable") and my_honors.get("data"):
+        for h in my_honors["data"]:
+            name = h.get("name", "")
+            level = h.get("level", "")
+            year = h.get("year", "")
+            year_html = f'<span class="honor-year">{year}</span>\n  ' if year else ""
             honor_lines.append(
                 f'<div class="honor-item">\n'
                 f'  <span class="honor-name">{name}</span>\n'
                 f'  <span class="honor-level">{level}</span>\n'
-                f'  {year_html}</div>'
+                f"  {year_html}</div>"
             )
-    honor_block = '\n'.join(honor_lines) if honor_lines else ''
+    honor_block = "\n".join(honor_lines) if honor_lines else ""
 
     # Compose optional sections
     edu_section = (
         f'\n## 教育背景\n\n<div class="edu-grid">\n{edu_block}\n</div>\n'
-        if edu_block else ''
+        if edu_block
+        else ""
     )
     honor_section = (
         f'\n## 个人荣誉\n\n<div class="honor-list">\n{honor_block}\n</div>\n'
-        if honor_block else ''
+        if honor_block
+        else ""
     )
     timeline_section = (
         f'\n<div class="about-timeline">\n{timeline_block}\n</div>\n'
-        if timeline_block else ''
+        if timeline_block
+        else ""
     )
 
     # Compose the template as a plain string and use str.format_map
@@ -1128,17 +1328,18 @@ fetch('https://api.github.com/users/growdu')
     )
 
 
-
 def rewrite_images(content, file_dir):
     """Rewrite ![alt](rel_path) -> ![alt](images/<resolved>)."""
+
     def repl(m):
         alt, path = m.group(1), m.group(2)
-        if path.startswith(('http://','https://','data:','#')):
+        if path.startswith(("http://", "https://", "data:", "#")):
             return m.group(0)
-        path = path.lstrip('./')
+        path = path.lstrip("./")
         resolved = os.path.normpath(os.path.join(file_dir, path))
-        return f'![{alt}](images/{resolved})'
-    return re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', repl, content)
+        return f"![{alt}](images/{resolved})"
+
+    return re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", repl, content)
 
 
 def _resolve_link_target(rel_target, current_post_dir):
@@ -1156,11 +1357,11 @@ def _resolve_link_target(rel_target, current_post_dir):
     # page-bundle directory first; many docs/ posts live under
     # docs/<section>/<slug>/index.md and the link from a sibling bundle
     # points at ./<slug>/index.html.
-    if basename in ('index.md', 'index.html', 'index.htm'):
+    if basename in ("index.md", "index.html", "index.htm"):
         bundle_dir_rel = os.path.dirname(rel_target)
         bundle_dir_abs = os.path.join(DOCS, bundle_dir_rel)
         if os.path.isdir(bundle_dir_abs):
-            for ext in ('index.md', 'index.html', 'index.htm', '_index.md'):
+            for ext in ("index.md", "index.html", "index.htm", "_index.md"):
                 bundle_index = os.path.join(bundle_dir_abs, ext)
                 if os.path.isfile(bundle_index):
                     slug = os.path.basename(bundle_dir_rel)
@@ -1171,11 +1372,11 @@ def _resolve_link_target(rel_target, current_post_dir):
             return None
     if os.path.isdir(abs_target):
         # Page bundle — look for an index file inside it.
-        for ext in ('index.md', 'index.html', 'index.htm', '_index.md'):
+        for ext in ("index.md", "index.html", "index.htm", "_index.md"):
             bundle_index = os.path.join(abs_target, ext)
             if os.path.isfile(bundle_index):
-                slug = os.path.basename(rel_target.rstrip('/'))
-                parent = os.path.dirname(rel_target.rstrip('/'))
+                slug = os.path.basename(rel_target.rstrip("/"))
+                parent = os.path.dirname(rel_target.rstrip("/"))
                 post_path = os.path.join(parent, slug) if parent else slug
                 date = git_date(bundle_index)
                 return _permalink(date, post_path)
@@ -1183,19 +1384,19 @@ def _resolve_link_target(rel_target, current_post_dir):
     if os.path.isfile(abs_target):
         ext = os.path.splitext(rel_target)[1].lower()
         slug = os.path.splitext(os.path.basename(rel_target))[0]
-        if ext in ('.html', '.htm') and not slug.endswith('-html'):
-            slug += '-html'
+        if ext in (".html", ".htm") and not slug.endswith("-html"):
+            slug += "-html"
         parent = os.path.dirname(rel_target)
         post_path = os.path.join(parent, slug) if parent else slug
         date = git_date(abs_target)
         return _permalink(date, post_path)
     # Extension-less link such as `./foo` — try common suffixes.
-    for ext in ('.md', '.html', '.htm'):
+    for ext in (".md", ".html", ".htm"):
         candidate = abs_target + ext
         if os.path.isfile(candidate):
             slug = os.path.splitext(os.path.basename(candidate))[0]
-            if ext in ('.html', '.htm') and not slug.endswith('-html'):
-                slug += '-html'
+            if ext in (".html", ".htm") and not slug.endswith("-html"):
+                slug += "-html"
             parent = os.path.dirname(candidate)
             post_path = os.path.join(parent, slug) if parent else slug
             date = git_date(candidate)
@@ -1217,7 +1418,7 @@ def rewrite_links(content, rel):
     """
     # The post lives at docs/<dirname>/index.md (page bundle).  All
     # relative links inside the markdown resolve against this directory.
-    if os.path.basename(rel) == 'index.md':
+    if os.path.basename(rel) == "index.md":
         post_dir = os.path.dirname(rel)
     else:
         post_dir = os.path.dirname(rel)
@@ -1225,25 +1426,26 @@ def rewrite_links(content, rel):
     def repl(m):
         text, raw = m.group(1), m.group(2)
         # Split anchor / query off so we can preserve them on the rewrite.
-        suffix = ''
-        if '#' in raw or '?' in raw:
+        suffix = ""
+        if "#" in raw or "?" in raw:
             # Preserve both anchor and query string verbatim by holding
             # them aside while we resolve only the path component.
-            hash_idx = raw.find('#')
-            q_idx = raw.find('?')
+            hash_idx = raw.find("#")
+            q_idx = raw.find("?")
             cut = min(i for i in (hash_idx, q_idx) if i >= 0)
             raw, suffix = raw[:cut], raw[cut:]
-        if not raw or raw.startswith(('http://', 'https://', 'data:',
-                                       'mailto:', 'tel:', '#')):
+        if not raw or raw.startswith(
+            ("http://", "https://", "data:", "mailto:", "tel:", "#")
+        ):
             return m.group(0)
-        if raw.startswith('//'):
+        if raw.startswith("//"):
             return m.group(0)
-        if raw.startswith('/'):
+        if raw.startswith("/"):
             # A root-absolute site-internal link still needs the
             # mount point on the GitHub Pages mirror.
             if not SITE_ROOT:
                 return m.group(0)
-            return f'[{text}]({SITE_ROOT}{raw}{suffix})'
+            return f"[{text}]({SITE_ROOT}{raw}{suffix})"
         # Resolve the link against the post's own directory, keeping the
         # leading ../ segments. Dropping them before normpath() (the old
         # behaviour) mis-resolves any link that points at a sibling
@@ -1253,11 +1455,11 @@ def rewrite_links(content, rel):
         # normpath can produce a leading '../' if the link escaped the
         # docs tree entirely — bail out in that case to avoid rewriting
         # something we don't actually understand.
-        if candidate.startswith('..') or os.path.isabs(candidate):
+        if candidate.startswith("..") or os.path.isabs(candidate):
             return m.group(0)
         # Normalise away any leading ./ segments for the sibling fallback
         # below, which re-tries the lookup one directory up.
-        cleaned = raw.lstrip('./')
+        cleaned = raw.lstrip("./")
         # First try the path as written.  If the post is a page bundle
         # (docs/<section>/<slug>/index.md) the author is often thinking
         # in terms of the permalink folder `<slug>/` rather than the
@@ -1267,21 +1469,21 @@ def rewrite_links(content, rel):
         # the parent directory so this common typo self-heals.
         url = _resolve_link_target(candidate, post_dir)
         if url is not None:
-            return f'[{text}]({url}{suffix})'
+            return f"[{text}]({url}{suffix})"
         if post_dir:
             parent_dir = os.path.dirname(post_dir)
-            if parent_dir and not parent_dir.startswith('..'):
+            if parent_dir and not parent_dir.startswith(".."):
                 sibling = os.path.normpath(os.path.join(parent_dir, cleaned))
-                if not sibling.startswith('..'):
+                if not sibling.startswith(".."):
                     url = _resolve_link_target(sibling, parent_dir)
                     if url is not None:
-                        return f'[{text}]({url}{suffix})'
+                        return f"[{text}]({url}{suffix})"
         return m.group(0)
 
     # Match ordinary markdown links but skip image links (which are
     # handled by rewrite_images and start with '!').  The (?<!!) look-
     # behind avoids matching inside an image description.
-    return re.sub(r'(?<!!)\[([^\]]*)\]\(([^)]+)\)', repl, content)
+    return re.sub(r"(?<!!)\[([^\]]*)\]\(([^)]+)\)", repl, content)
 
 
 def copy_images():
@@ -1296,14 +1498,195 @@ def copy_images():
                 shutil.copy2(src, dst)
 
 
+#: 编辑履历表：这样的表是站点自己的编辑记录，不是文章内容——留在正文里
+#: 会污染三处摘要：``<meta name="description">``、首页卡片摘要
+#: （smart_summary）、RSS 的 ``<summary>``。全站 97 张。
+#:
+#: 表头第一格的取值：「编写人」是最常见的写法，也有 3 篇写的是「修改人」。
+#: （要「第一格」而不是「任意一格」：正文里提到「编写人」这三个字的表格
+#: 比比皆是——重构方案.md 里就有一张。）
+EDIT_HISTORY_FIRST_CELLS = ("编写人", "修改人", "编辑人")
+
+#: 履历表里装着「这篇文章是什么」的那一列。别的列名（「修改内容」）不抽
+#: 摘要——那几列装的是「文档初稿」这类空话，不是文章摘要。
+EDIT_HISTORY_CONTENT_CELL = "编写内容"
+
+#: 履历前缀：「初稿，」「初稿。」「修订：」说的是「这次改了什么」，不是
+#: 「文章是什么」。摘要是给读者看这篇文章是什么的——前缀得去掉。
+#:
+#: 关键词后面必须跟着分隔符（或到此为止）才算前缀：「补充完善解决方案」里的
+#: 「补充」是正文，不是履历前缀。
+HISTORY_PREFIX_RE = re.compile(
+    r"^\s*(初稿|修订|校验|校对|更新|整理|补充)\s*(?:[：:，,。；;！!？?+]\s*|$)"
+)
+
+#: 摘要里的 markdown 标记。摘要要进 meta / 卡片 / RSS——那里的 markdown
+#: 标记不会被渲染，是字面量（「**PostgreSQL 目录快照**」显示成带星号的）。
+MD_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+MD_CODE_RE = re.compile(r"`([^`]+)`")
+MD_ITALIC_RE = re.compile(r"(?<![\*\w])\*([^*\s][^*]*?)\*(?!\w)")
+
+#: description 的契约上限（publish/spec/00-架构设计.md §4.1）。
+DESCRIPTION_LIMIT = 150
+
+
+def _table_cells(line):
+    """Cells of a markdown table row, or ``None`` if the line is not a row.
+
+    A row is a line that starts with a pipe.  Leading/trailing pipes are
+    optional; the cells come back stripped.
+    """
+    stripped = line.strip()
+    if not stripped.startswith("|"):
+        return None
+    cells = [c.strip() for c in stripped.strip("|").split("|")]
+    if len(cells) < 2:
+        return None
+    return cells
+
+
+def _is_separator_row(cells):
+    """True for a markdown table's ``| --- | --- |`` divider row."""
+    if not cells:
+        return False
+    return all(re.match(r"^:?-+:?$", c.replace(" ", "")) for c in cells)
+
+
+def find_edit_history_tables(text):
+    """Every editing-history table in ``text``.
+
+    Returns a list of ``(header_cells, data_rows)``.  A table qualifies
+    when its **first** header cell names the editor（「编写人」/「修改人」/
+    「编辑人」）——那是站点自己的编辑履历，不是文章内容。
+    """
+    lines = text.split("\n")
+    tables = []
+    i = 0
+    while i < len(lines):
+        cells = _table_cells(lines[i])
+        if cells and cells[0] in EDIT_HISTORY_FIRST_CELLS:
+            sep = _table_cells(lines[i + 1]) if i + 1 < len(lines) else None
+            if sep and _is_separator_row(sep):
+                rows = []
+                k = i + 2
+                while k < len(lines):
+                    row = _table_cells(lines[k])
+                    if not row:
+                        break
+                    rows.append(row)
+                    k += 1
+                tables.append((cells, rows))
+                i = k
+                continue
+        i += 1
+    return tables
+
+
+def _plain_text(text):
+    """A markdown fragment → plain text.
+
+    The summary lands in ``<meta name="description">``, in the card
+    summaries, in the OG/Twitter cards and in the RSS ``<summary>`` —
+    none of which render markdown, so ``**粗体**`` shows up as literal
+    asterisks.
+    """
+    text = MD_BOLD_RE.sub(r"\1", text)
+    text = MD_CODE_RE.sub(r"\1", text)
+    text = MD_ITALIC_RE.sub(r"\1", text)
+    return text
+
+
+def _fit_description(text, limit=DESCRIPTION_LIMIT):
+    """Cut to the contract's limit — measured on the **escaped** form.
+
+    The contract layer reads front matter with its own tiny parser
+    (``publish/publishkit/contract.py``), which strips the quotes but does
+    **not** unescape: ``\\"`` counts as two characters there.  Cap the
+    escaped form and the semantic form is bounded by the same number —
+    both readings of 「≤150 字」 hold.
+    """
+    if len(yaml_escape(text)) <= limit:
+        return text
+    while text and len(yaml_escape(text + "…")) > limit:
+        text = text[:-1]
+    return text.rstrip() + "…"
+
+
+def edit_history_description(header, rows):
+    """The one-line summary an editing-history table carries (or ``None``).
+
+    Takes the last non-empty 「编写内容」 cell—the table may hold one row
+    per revision, and the last row is the most recent one—strips the
+    revision prefix, flattens the markdown, collapses whitespace, and cuts
+    to the contract's 150 characters.
+
+    A cell that only says 「初稿」 is not a summary: it yields ``None``
+    rather than a description of 「初稿」.
+    """
+    if EDIT_HISTORY_CONTENT_CELL not in header:
+        return None
+    idx = header.index(EDIT_HISTORY_CONTENT_CELL)
+    value = ""
+    for row in rows:
+        cell = row[idx] if len(row) > idx else ""
+        if cell.strip():
+            value = cell
+    if not value.strip():
+        return None
+    text = HISTORY_PREFIX_RE.sub("", value).strip()
+    if not text:
+        return None
+    text = re.sub(r"\s+", " ", text)
+    text = _plain_text(text)
+    return _fit_description(text)
+
+
+def extract_edit_history(body):
+    """Strip the editing-history tables out of ``body``.
+
+    Returns ``(clean_body, description)``: the body without those tables,
+    and the one-line summary the first table that carries a 「编写内容」
+    column had to offer (``None`` when no table offers one).
+
+    The table is not article content.  Left in the body it becomes the
+    first thing every summary scraper sees — the ``<meta name=
+    "description">`` of 98 pages was table residue.
+    """
+    lines = body.split("\n")
+    description = None
+    for header, rows in find_edit_history_tables(body):
+        if description is None:
+            description = edit_history_description(header, rows)
+    out = []
+    i = 0
+    while i < len(lines):
+        cells = _table_cells(lines[i])
+        if cells and cells[0] in EDIT_HISTORY_FIRST_CELLS:
+            sep = _table_cells(lines[i + 1]) if i + 1 < len(lines) else None
+            if sep and _is_separator_row(sep):
+                i += 2
+                while i < len(lines) and _table_cells(lines[i]):
+                    i += 1
+                # 表后面跟着的空行一并收掉，别留三连空行。
+                while i < len(lines) and not lines[i].strip():
+                    i += 1
+                if out and not out[-1].strip():
+                    out.pop()
+                out.append("")
+                continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out), description
+
+
 def process(filepath, section_titles, cascades):
     rel = os.path.relpath(filepath, DOCS)
     fdir = os.path.dirname(rel)
 
-    with open(filepath, encoding='utf-8') as f:
+    with open(filepath, encoding="utf-8") as f:
         content = f.read()
 
-    if os.path.basename(filepath) == '_index.md':
+    if os.path.basename(filepath) == "_index.md":
         return False
 
     fm, body = split_fm(content)
@@ -1319,6 +1702,10 @@ def process(filepath, section_titles, cascades):
     post_cats = resolve_post_categories(rel, section_titles, cascades)
     topics = infer_topics(rel, title)
 
+    # 编辑履历表不是文章内容：先剥掉它，摘要才不会变成表格残骸。
+    # （剥在改写之前：履历里那一句是原始素材，改写会把它里的链接改成
+    # permalink，混进 description 里就不是人话。）
+    src, history_desc = extract_edit_history(src)
     # rewrite images, strip first H1 (title is in front matter)
     body_out = rewrite_images(src, fdir)
     # Rewrite markdown intra-doc links to absolute Hexo permalinks so
@@ -1327,10 +1714,10 @@ def process(filepath, section_titles, cascades):
     # breaking navigation.  Must run after rewrite_images (which already
     # turned `![]()` into `images/...`) so it only sees link references.
     body_out = rewrite_links(body_out, rel)
-    body_out = re.sub(r'^#\s+.+\n?', '', body_out, count=1, flags=re.MULTILINE)
+    body_out = re.sub(r"^#\s+.+\n?", "", body_out, count=1, flags=re.MULTILINE)
 
     top_val = FEATURED_POSTS.get(rel)
-    top_line = f'\ntop: {top_val}' if top_val else ''
+    top_line = f"\ntop: {top_val}" if top_val else ""
     cats_block = categories_yaml(post_cats)
     # Merge categories + topics into the tags list. Order-preserving dedupe
     # keeps the primary category first and appends each topic exactly once.
@@ -1338,19 +1725,26 @@ def process(filepath, section_titles, cascades):
     tags_block = categories_yaml(all_tags)
     # 发布契约要读的两个字段，原样搬过去（没有就什么都不加）。
     passthrough = passthrough_block(fm)
+    # 履历表里那一列是现成的摘要素材（见 docs/blog/重构方案.md §八 B5）：
+    # 源 front matter 里已经写了 description 的以源为准，不覆盖。
+    if history_desc and not _fm_scalar(fm, "description"):
+        if not _fm_indented_scalar(fm, "description"):
+            passthrough += 'description: "{}"\n'.format(yaml_escape(history_desc))
     fm_out = f'---\ntitle: "{yaml_escape(title)}"\ndate: {date}\nauthor: growdu{top_line}\ncategories:\n{cats_block}\ntags:\n{tags_block}\n{passthrough}---\n'
 
-    if os.path.basename(filepath) == 'index.md':
+    if os.path.basename(filepath) == "index.md":
         name = os.path.basename(os.path.dirname(filepath))
         parent = os.path.dirname(fdir)
-        out = os.path.join(POSTS, parent, f'{name}.md')
+        out = os.path.join(POSTS, parent, f"{name}.md")
     else:
         out = os.path.join(POSTS, fdir, os.path.basename(filepath))
 
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    with open(out, 'w', encoding='utf-8') as f:
+    with open(out, "w", encoding="utf-8") as f:
         f.write(fm_out + body_out)
     return True
+
+
 def process_html(filepath, section_titles, cascades):
     """Sync a .html (or .htm) file from docs/ into source/_posts/.
 
@@ -1383,22 +1777,23 @@ def process_html(filepath, section_titles, cascades):
     fdir = os.path.dirname(rel)
     base = os.path.basename(filepath)
 
-    if base in ('_index.html', '_index.htm'):
+    if base in ("_index.html", "_index.htm"):
         return False
 
-    with open(filepath, encoding='utf-8') as f:
+    with open(filepath, encoding="utf-8") as f:
         html_text = f.read()
 
     # title extraction from <title> tag (case-insensitive), with
     # optional inner HTML stripped.
     title_m = re.search(
-        '<title[^>]*>(.*?)</title>',
-        html_text, re.IGNORECASE | re.DOTALL,
+        "<title[^>]*>(.*?)</title>",
+        html_text,
+        re.IGNORECASE | re.DOTALL,
     )
     title = None
     if title_m:
         inner = title_m.group(1)
-        inner = re.sub(r'<[^>]+>', '', inner).strip()
+        inner = re.sub(r"<[^>]+>", "", inner).strip()
         if inner:
             title = inner
     if not title:
@@ -1408,23 +1803,23 @@ def process_html(filepath, section_titles, cascades):
     post_cats = resolve_post_categories(rel, section_titles, cascades)
 
     top_val = FEATURED_POSTS.get(rel)
-    top_line = f'\ntop: {top_val}' if top_val else ''
+    top_line = f"\ntop: {top_val}" if top_val else ""
     cats_block = categories_yaml(post_cats)
     fm_out = (
-        f'---\n'
+        f"---\n"
         f'title: "{yaml_escape(title)}"\n'
-        f'date: {date}\n'
-        f'author: growdu{top_line}\n'
-        f'categories:\n{cats_block}\n'
-        f'tags:\n{cats_block}\n'
-        f'---\n'
+        f"date: {date}\n"
+        f"author: growdu{top_line}\n"
+        f"categories:\n{cats_block}\n"
+        f"tags:\n{cats_block}\n"
+        f"---\n"
     )
 
     body_out = html_text
     if title_m:
         body_out = re.sub(
-            r'<title[^>]*>.*?</title>',
-            '',
+            r"<title[^>]*>.*?</title>",
+            "",
             body_out,
             count=1,
             flags=re.IGNORECASE | re.DOTALL,
@@ -1438,12 +1833,12 @@ def process_html(filepath, section_titles, cascades):
     # The suffix keeps HTML posts out of any markdown twin\'s permalink
     # without relying on a front-matter field that hexo silently ignores.
     out_base, out_ext = os.path.splitext(base)
-    if out_base.endswith('-html'):
+    if out_base.endswith("-html"):
         out_basename = base
     else:
-        out_basename = f'{out_base}-html{out_ext}'
+        out_basename = f"{out_base}-html{out_ext}"
 
-    if base in ('index.html', 'index.htm'):
+    if base in ("index.html", "index.htm"):
         name = os.path.basename(os.path.dirname(filepath))
         parent = os.path.dirname(fdir)
         out = os.path.join(POSTS, parent, out_basename)
@@ -1451,7 +1846,7 @@ def process_html(filepath, section_titles, cascades):
         out = os.path.join(POSTS, fdir, out_basename)
 
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    with open(out, 'w', encoding='utf-8') as f:
+    with open(out, "w", encoding="utf-8") as f:
         f.write(fm_out + body_out)
     return True
 
@@ -1461,27 +1856,33 @@ def create_theme_pages():
     categories and tags overview pages.  hexo-generator-category/tag
     only produce per-category/per-tag pages, not the index listing."""
     pages = [
-        ('categories/index.md', '分类', 'categories'),
-        ('tags/index.md', '标签', 'tags'),
+        ("categories/index.md", "分类", "categories"),
+        ("tags/index.md", "标签", "tags"),
     ]
     for rel, title, layout in pages:
         path = os.path.join(SRC, rel)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         fm = f'---\ntitle: {title}\ndate: 2024-01-01 00:00:00\ntype: "{layout}"\nlayout: "{layout}"\n---\n\n'
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(fm)
 
     # About page - generated from _config.matery.yml profile/myProjects/mySkills
     # so updates to the config (e.g. career dates, project list) flow through
     # to the rendered page automatically on the next sync.
-    about_path = os.path.join(SRC, 'about', 'index.md')
+    about_path = os.path.join(SRC, "about", "index.md")
     os.makedirs(os.path.dirname(about_path), exist_ok=True)
-    _profile, _my_projects, _my_skills, _my_education, _my_honors, _my_timeline = read_matery_about_config()
-    about_md = build_about_markdown(
-        _profile, _my_projects, _my_skills,
-        _my_education, _my_honors, _my_timeline,
+    _profile, _my_projects, _my_skills, _my_education, _my_honors, _my_timeline = (
+        read_matery_about_config()
     )
-    with open(about_path, 'w', encoding='utf-8') as f:
+    about_md = build_about_markdown(
+        _profile,
+        _my_projects,
+        _my_skills,
+        _my_education,
+        _my_honors,
+        _my_timeline,
+    )
+    with open(about_path, "w", encoding="utf-8") as f:
         f.write(about_md)
 
 
@@ -1499,33 +1900,35 @@ def write_redirects():
     """
     written = 0
     for old_path, new_path in REDIRECTS.items():
-        if new_path.endswith('.md') or new_path.endswith('.html'):
+        if new_path.endswith(".md") or new_path.endswith(".html"):
             new_file = os.path.join(DOCS, new_path)
         else:
-            new_file = os.path.join(DOCS, new_path, 'index.md')
+            new_file = os.path.join(DOCS, new_path, "index.md")
             if not os.path.isfile(new_file):
                 # Single-file post (foo.md) rather than a page bundle.
-                new_file = os.path.join(DOCS, new_path + '.md')
+                new_file = os.path.join(DOCS, new_path + ".md")
         if not os.path.isfile(new_file):
-            print(f'WARNING redirect target missing: {new_path}', file=sys.stderr)
+            print(f"WARNING redirect target missing: {new_path}", file=sys.stderr)
             continue
         date = git_date(new_file)
-        stamp = f'{date[:4]}/{date[5:7]}/{date[8:10]}'
+        stamp = f"{date[:4]}/{date[5:7]}/{date[8:10]}"
         # The permalink slug drops the source extension (.md / .html).
         new_slug = new_path
-        for ext in ('.md', '.html'):
+        for ext in (".md", ".html"):
             if new_slug.endswith(ext):
-                new_slug = new_slug[:-len(ext)]
+                new_slug = new_slug[: -len(ext)]
                 break
-        old_url = f'/{stamp}/{quote(old_path)}/'
-        new_url = f'/{stamp}/{quote(new_slug)}/'
-        out_dir = os.path.join(SRC, old_url.strip('/'))
+        old_url = f"/{stamp}/{quote(old_path)}/"
+        new_url = f"/{stamp}/{quote(new_slug)}/"
+        out_dir = os.path.join(SRC, old_url.strip("/"))
         os.makedirs(out_dir, exist_ok=True)
-        with open(os.path.join(out_dir, 'index.md'), 'w', encoding='utf-8') as f:
-            f.write(REDIRECT_PAGE.format(
-                new_url=f'{SITE_ROOT}{new_url}',
-                title=new_path.rsplit('/', 1)[-1],
-            ))
+        with open(os.path.join(out_dir, "index.md"), "w", encoding="utf-8") as f:
+            f.write(
+                REDIRECT_PAGE.format(
+                    new_url=f"{SITE_ROOT}{new_url}",
+                    title=new_path.rsplit("/", 1)[-1],
+                )
+            )
         written += 1
     return written
 
@@ -1542,55 +1945,114 @@ def write_category_redirects():
     """
     written = 0
     for old_path, new_path in CATEGORY_REDIRECTS.items():
-        new_url = f'{SITE_ROOT}/categories/{quote(new_path)}/'
-        old_url = f'{SITE_ROOT}/categories/{quote(old_path)}/'
-        out_dir = os.path.join(SRC, 'categories', old_path)
+        new_url = f"{SITE_ROOT}/categories/{quote(new_path)}/"
+        old_url = f"{SITE_ROOT}/categories/{quote(old_path)}/"
+        out_dir = os.path.join(SRC, "categories", old_path)
         os.makedirs(out_dir, exist_ok=True)
-        with open(os.path.join(out_dir, 'index.md'), 'w', encoding='utf-8') as f:
-            f.write(REDIRECT_PAGE.format(
-                new_url=new_url,
-                title=new_path,
-            ))
+        with open(os.path.join(out_dir, "index.md"), "w", encoding="utf-8") as f:
+            f.write(
+                REDIRECT_PAGE.format(
+                    new_url=new_url,
+                    title=new_path,
+                )
+            )
         written += 1
     return written
+
+
+#: 不算文章的目录：站点自己的元文档（攻略、工具说明、页面集合）。
+META_CATS = ("blog", "tools", "page")
+
+
+def collect_index_posts(posts_root, meta_cats=META_CATS):
+    """Scan ``source/_posts`` and return one record per article.
+
+    每条记录::
+
+        {"title": ..., "url": ..., "cat": ..., "date": "YYYY-MM-DD", "top": int}
+
+    ``url`` 是站点**真实**的 permalink——日期段 + 完整路径 + 挂载点前缀，
+    由 ``site_root.permalink`` 一处拼出来。404 页的「最近发布」与它的
+    搜索索引都从这里出，两个地方不许各拼各的。
+
+    跳过 ``_index`` 与元文档目录（``blog/`` / ``tools/`` / ``page/``）——
+    它们不是文章。
+    """
+    records = []
+    if not os.path.isdir(posts_root):
+        return records
+
+    for fp in glob.glob(os.path.join(posts_root, "**", "*.md"), recursive=True):
+        try:
+            with open(fp, encoding="utf-8") as f:
+                txt = f.read(4000)
+        except OSError:
+            continue
+        rel = os.path.relpath(fp, posts_root).replace("\\", "/")
+        parts = rel.split("/")
+        cat = parts[0] if len(parts) > 1 else ""
+        slug = parts[-1].replace(".md", "").replace(".html", "")
+        if not slug or slug.startswith("_index") or cat in meta_cats:
+            continue
+        # 文章在站点里的相对路径（去掉扩展名）。站点的 permalink 是
+        # /:year/:month/:day/:title/，:title 就是这个路径——**整条**，
+        # 不是首尾两段：只拿 {cat}/{slug} 拼的话，db/nested/deep.md
+        # 会被拼成 /db/deep/，中间那层掉了。
+        post_path = os.path.splitext(rel)[0]
+        title = _front_matter_title(txt) or slug
+        dm = re.search(r"^date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})", txt, re.M)
+        top_m = re.search(r"^top:\s*([0-9]+)", txt, re.M)
+        date_str = dm.group(1) if dm else "1970-01-01"
+        top_n = int(top_m.group(1)) if top_m else 0
+        records.append(
+            {
+                "title": title,
+                "url": _permalink(date_str, post_path),
+                "cat": cat or post_path.rsplit("/", 1)[-1],
+                "date": date_str,
+                "top": top_n,
+            }
+        )
+    return records
 
 
 def main():
     # Preserve custom pages (source/all/, source/recommended/) across regeneration
     import tempfile
+
     preserved = tempfile.mkdtemp()
-    all_path = os.path.join(SRC, 'all')
-    rec_path = os.path.join(SRC, 'recommended')
+    all_path = os.path.join(SRC, "all")
+    rec_path = os.path.join(SRC, "recommended")
     all_preserved = os.path.isdir(all_path)
     rec_preserved = os.path.isdir(rec_path)
     if all_preserved:
-        shutil.move(all_path, os.path.join(preserved, 'all'))
+        shutil.move(all_path, os.path.join(preserved, "all"))
     if rec_preserved:
-        shutil.move(rec_path, os.path.join(preserved, 'recommended'))
+        shutil.move(rec_path, os.path.join(preserved, "recommended"))
     if os.path.exists(SRC):
         shutil.rmtree(SRC)
     if all_preserved:
-        shutil.move(os.path.join(preserved, 'all'), all_path)
+        shutil.move(os.path.join(preserved, "all"), all_path)
     if rec_preserved:
-        shutil.move(os.path.join(preserved, 'recommended'), rec_path)
+        shutil.move(os.path.join(preserved, "recommended"), rec_path)
     shutil.rmtree(preserved)
     os.makedirs(POSTS)
 
-    verification_dir = os.path.join(SRC, '.well-known')
+    verification_dir = os.path.join(SRC, ".well-known")
     os.makedirs(verification_dir, exist_ok=True)
     verification_path = os.path.join(
-        verification_dir, 'vercount-verify-zd5pj09shdfkbm6h83ra5zzk.txt'
+        verification_dir, "vercount-verify-zd5pj09shdfkbm6h83ra5zzk.txt"
     )
-    with open(verification_path, 'w', encoding='utf-8') as f:
-        f.write('vercount-domain-verify=growdu.github.io,zd5pj09shdfkbm6h83ra5zzk')
-    print('Created Vercount verification file')
+    with open(verification_path, "w", encoding="utf-8") as f:
+        f.write("vercount-domain-verify=growdu.github.io,zd5pj09shdfkbm6h83ra5zzk")
+    print("Created Vercount verification file")
 
     section_titles = read_section_categories()
     cascade_map = read_cascade_categories()
-    print(f'Section titles: {len(section_titles)}, cascade dirs: {len(cascade_map)}')
+    print(f"Section titles: {len(section_titles)}, cascade dirs: {len(cascade_map)}")
 
     copy_images()
-    print('Images copied')
+    print("Images copied")
 
     n_md = 0
     n_html = 0
@@ -1600,20 +2062,20 @@ def main():
         # without this, e.g. docs/life/aiv/pipeline/.pytest_cache/README.md
         # became a published post ("pytest cache directory #") and got its
         # own Gitalk issue on the next deploy.
-        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
         # §4.3 的路径排除规则：内部工程目录整棵不进产物。
         # 与上面那条隐藏目录守卫并列，不是替换它。
         prune_excluded_dirs(dirs)
         for f in sorted(files):
-            if f.startswith('.'):
+            if f.startswith("."):
                 continue
             ext = os.path.splitext(f)[1].lower()
             fp = os.path.join(root, f)
             try:
-                if ext == '.md':
+                if ext == ".md":
                     if process(fp, section_titles, cascade_map):
                         n_md += 1
-                elif ext in ('.html', '.htm'):
+                elif ext in (".html", ".htm"):
                     # Naming convention: if an .html shares a basename
                     # with an .md in the same directory, the .html MUST
                     # carry a -html suffix (e.g. 'foo.html' ->
@@ -1623,64 +2085,67 @@ def main():
                     # loud — better to break the build than silently
                     # produce two posts with the same URL.
                     base_no_ext = os.path.splitext(f)[0]
-                    if not base_no_ext.endswith('-html'):
-                        twin_md = os.path.join(root, base_no_ext + '.md')
+                    if not base_no_ext.endswith("-html"):
+                        twin_md = os.path.join(root, base_no_ext + ".md")
                         if os.path.isfile(twin_md):
                             print(
-                                f'ERROR {fp}: shares basename with {twin_md} '
-                                f'but is not suffixed with -html. Rename the .html '
-                                f'file to {os.path.join(root, base_no_ext + "-html.html")} '
-                                f'(see docs/blog/同名文章-html-与-md-版本管理.md).',
+                                f"ERROR {fp}: shares basename with {twin_md} "
+                                f"but is not suffixed with -html. Rename the .html "
+                                f"file to {os.path.join(root, base_no_ext + '-html.html')} "
+                                f"(see docs/blog/同名文章-html-与-md-版本管理.md).",
                                 file=sys.stderr,
                             )
                             sys.exit(2)
                     if process_html(fp, section_titles, cascade_map):
                         n_html += 1
             except Exception as e:
-                print(f'ERROR {fp}: {e}', file=sys.stderr)
-    print(f'Markdown posts: {n_md}')
-    print(f'HTML docs:      {n_html}')
+                print(f"ERROR {fp}: {e}", file=sys.stderr)
+    print(f"Markdown posts: {n_md}")
+    print(f"HTML docs:      {n_html}")
 
     n_redirect = write_redirects()
-    print(f'Redirect pages: {n_redirect}')
+    print(f"Redirect pages: {n_redirect}")
 
     n_cat_redirect = write_category_redirects()
-    print(f'Category redirects: {n_cat_redirect}')
-
+    print(f"Category redirects: {n_cat_redirect}")
 
     # robots.txt for SEO
-    robots_path = os.path.join(SRC, 'robots.txt')
-    with open(robots_path, 'w', encoding='utf-8') as f:
-        f.write('User-agent: *\nAllow: /\n\nSitemap: https://growdu.cn/sitemap.xml\n')
-    print('Created robots.txt')
-
+    robots_path = os.path.join(SRC, "robots.txt")
+    with open(robots_path, "w", encoding="utf-8") as f:
+        f.write("User-agent: *\nAllow: /\n\nSitemap: https://growdu.cn/sitemap.xml\n")
+    print("Created robots.txt")
 
     # PWA manifest (re-include icons[] on every regen so a fresh CI
     # checkout doesn't silently drop the 48x48 favicon + 192x192 logo
     # entries; aa9cfb6 originally restored them after a similar bug).
-    manifest_path = os.path.join(SRC, 'manifest.json')
-    with open(manifest_path, 'w', encoding='utf-8') as f:
-        f.write('{\n  "name": "编程之路",\n  "short_name": "编程之路",\n  "description": "资深后端研发工程师的技术博客",\n  "start_url": "/",\n  "scope": "/",\n  "display": "standalone",\n  "background_color": "#ffffff",\n  "theme_color": "#009688",\n  "lang": "zh-CN",\n  "icons": [\n    {\n      "src": "/favicon.png",\n      "sizes": "48x48",\n      "type": "image/png"\n    },\n    {\n      "src": "/medias/logo.jpg",\n      "sizes": "192x192",\n      "type": "image/jpeg"\n    }\n  ]\n}\n')
-    print('Created manifest.json')
+    manifest_path = os.path.join(SRC, "manifest.json")
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        f.write(
+            '{\n  "name": "编程之路",\n  "short_name": "编程之路",\n  "description": "资深后端研发工程师的技术博客",\n  "start_url": "/",\n  "scope": "/",\n  "display": "standalone",\n  "background_color": "#ffffff",\n  "theme_color": "#009688",\n  "lang": "zh-CN",\n  "icons": [\n    {\n      "src": "/favicon.png",\n      "sizes": "48x48",\n      "type": "image/png"\n    },\n    {\n      "src": "/medias/logo.jpg",\n      "sizes": "192x192",\n      "type": "image/jpeg"\n    }\n  ]\n}\n'
+        )
+    print("Created manifest.json")
 
     # Custom SVG favicon (database icon)
-    favicon_path = os.path.join(SRC, 'favicon.svg')
-    with open(favicon_path, 'w', encoding='utf-8') as f:
-        f.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#009688"/><ellipse cx="32" cy="18" rx="16" ry="6" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 18v14a16 6 0 0 0 32 0V18" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 32v14a16 6 0 0 0 32 0V32" fill="none" stroke="#fff" stroke-width="2.5"/></svg>')
-    print('Created favicon.svg')
-
+    favicon_path = os.path.join(SRC, "favicon.svg")
+    with open(favicon_path, "w", encoding="utf-8") as f:
+        f.write(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#009688"/><ellipse cx="32" cy="18" rx="16" ry="6" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 18v14a16 6 0 0 0 32 0V18" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 32v14a16 6 0 0 0 32 0V32" fill="none" stroke="#fff" stroke-width="2.5"/></svg>'
+        )
+    print("Created favicon.svg")
 
     # Service worker for offline reading
-    sw_path = os.path.join(SRC, 'sw.js')
-    with open(sw_path, 'w', encoding='utf-8') as f:
-        f.write("""const CACHE='blog-v3';self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;const put=async(req,res)=>{try{if(res&&res.status===200&&res.clone){await caches.open(CACHE).then(c=>c.put(req,res.clone()));}}catch(_){}};if(e.request.headers.get('accept')&&e.request.headers.get('accept').includes('text/html')){e.respondWith(fetch(e.request).then(r=>{put(e.request,r);return r;}).catch(()=>caches.match(e.request)));}else{e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request).then(r=>{put(e.request,r);return r;}).catch(()=>caches.match(e.request))));}});""")
-    print('Created sw.js')
-
+    sw_path = os.path.join(SRC, "sw.js")
+    with open(sw_path, "w", encoding="utf-8") as f:
+        f.write(
+            """const CACHE='blog-v3';self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;const put=async(req,res)=>{try{if(res&&res.status===200&&res.clone){await caches.open(CACHE).then(c=>c.put(req,res.clone()));}}catch(_){}};if(e.request.headers.get('accept')&&e.request.headers.get('accept').includes('text/html')){e.respondWith(fetch(e.request).then(r=>{put(e.request,r);return r;}).catch(()=>caches.match(e.request)));}else{e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request).then(r=>{put(e.request,r);return r;}).catch(()=>caches.match(e.request))));}});"""
+        )
+    print("Created sw.js")
 
     # 404 page (upgraded with search + recent posts)
-    notfound_path = os.path.join(SRC, '404.html')
-    with open(notfound_path, 'w', encoding='utf-8') as f:
-        f.write(_root_prefix_urls("""<!DOCTYPE html>
+    notfound_path = os.path.join(SRC, "404.html")
+    with open(notfound_path, "w", encoding="utf-8") as f:
+        f.write(
+            _root_prefix_urls("""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -1752,98 +2217,127 @@ footer a:hover{color:var(--c1)}
 </footer>
 </div>
 <script>
-// 1) Search submit -> redirect to a Google site: search if no inline index,
-//    otherwise push to history with q for a client-side filter.
+// 1) 站内搜索：用**精简索引**（title / url / cat）做标题匹配。
+//
+//    原来这里 fetch 的是 /search.xml —— 站点里根本没有这个文件
+//    （hexo-generator-searchdb 出的是 search.json），于是这个 fetch 永远
+//    失败，永远跳 Google，国内不可用：等于 404 页没有搜索。
+//
+//    也不直接用 search.json：那是 13.5 MB 的全文索引。让一个「页面不存在」
+//    的页面下载 13.5 MB 才能搜一个词，等于把「搜索等于没有」换成「搜索慢到
+//    等于没有」。全文搜索在首页（那里有 MiniSearch 索引）。
 (function(){
   var form = document.getElementById('search-form');
   var input = document.getElementById('q');
   if (!form) return;
+  var index = null;      // 精简索引，懒加载一次就留着
+  var searched = false;  // 搜过就别让「最近发布」把结果冲掉
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
+    });
+  }
+
+  function loadIndex(){
+    if (index) return Promise.resolve(index);
+    return fetch('/search-lite.json').then(function(r){return r.json();}).then(function(d){
+      index = Array.isArray(d) ? d : [];
+      return index;
+    });
+  }
+
   form.addEventListener('submit', function(e){
     e.preventDefault();
     var q = (input.value || '').trim();
     if (!q) { input.focus(); return; }
-    // Inline index (preferred): fetch /search.xml, filter, show modal.
-    fetch('/search.xml').then(function(r){return r.text();}).then(function(xml){
-      var doc = new DOMParser().parseFromString(xml, 'text/xml');
-      var entries = [].slice.call(doc.querySelectorAll('entry'));
-      var hits = entries.filter(function(en){
-        return (en.querySelector('title') || {}).textContent.indexOf(q) >= 0;
-      }).slice(0, 10);
+    searched = true;
+    var list = document.getElementById('recent-list');
+    var divider = document.querySelector('.divider');
+    loadIndex().then(function(posts){
+      var needle = q.toLowerCase();
+      var matched = posts.filter(function(p){
+        var t = String(p.title || '').toLowerCase();
+        var c = String(p.cat || '').toLowerCase();
+        return t.indexOf(needle) >= 0 || c.indexOf(needle) >= 0;
+      });
+      var hits = matched.slice(0, 10);
       if (hits.length) {
-        var list = document.getElementById('recent-list');
-        list.innerHTML = hits.map(function(en){
-          var t = en.querySelector('title').textContent;
-          var u = en.querySelector('url').textContent;
-          return '<li><a href="'+u+'"><span class="title">'+t+'</span></a></li>';
+        list.innerHTML = hits.map(function(p){
+          return '<li><a href="'+esc(p.url)+'"><span class="title">'+esc(p.title)+'</span><span class="cat">'+esc(p.cat)+'</span></a></li>';
         }).join('');
-        document.querySelector('.divider').textContent = '搜索结果 ('+hits.length+')';
+        // 计数是**匹配的总数**，不是列出来的条数：命中 25 篇只列 10 条时，
+        // 写「(10)」会让读者以为只有 10 篇，那 15 篇就无声无息地没了。
+        if (divider) {
+          divider.textContent = '搜索结果 ('+matched.length+')'
+            + (matched.length > hits.length ? '，显示前 '+hits.length+' 条' : '');
+        }
       } else {
-        document.getElementById('recent-list').innerHTML = '<li style="text-align:center;color:var(--muted);padding:14px 0">没有匹配，换个词试试</li>';
-        document.querySelector('.divider').textContent = '搜索结果';
+        list.innerHTML = '<li style="text-align:center;color:var(--muted);padding:14px 0">没有匹配。换个词试试，或者 <a href="https://www.google.com/search?q='+encodeURIComponent(q+' site:growdu.cn')+'" target="_blank" rel="noopener">用搜索引擎找</a></li>';
+        if (divider) divider.textContent = '搜索结果';
       }
     }).catch(function(){
-      // Fallback: Google site search
+      // 索引都拿不到：至少把 Google 兜底给出去
       window.location.href = 'https://www.google.com/search?q='+encodeURIComponent(q+' site:growdu.cn');
     });
   });
-})();
 
-// 2) Render recent posts from a pre-built JSON written by sync-hexo.py
-fetch('/recent-posts.json').then(function(r){return r.json();}).then(function(posts){
-  if (!Array.isArray(posts) || !posts.length) return;
-  var html = posts.map(function(p){
-    return '<li><a href="'+p.url+'"><span class="title">'+p.title+'</span><span class="cat">'+p.cat+'</span></a></li>';
-  }).join('');
-  document.getElementById('recent-list').innerHTML = html;
-}).catch(function(){});
+  // 2) Render recent posts from a pre-built JSON written by sync-hexo.py
+  fetch('/recent-posts.json').then(function(r){return r.json();}).then(function(posts){
+    if (!Array.isArray(posts) || !posts.length) return;
+    if (searched) return;
+    var html = posts.map(function(p){
+      return '<li><a href="'+esc(p.url)+'"><span class="title">'+esc(p.title)+'</span><span class="cat">'+esc(p.cat)+'</span></a></li>';
+    }).join('');
+    document.getElementById('recent-list').innerHTML = html;
+  }).catch(function(){});
+})();
 </script>
 </body>
-</html>"""))
-    print('Created 404.html')
+</html>""")
+        )
+    print("Created 404.html")
 
     # Recent posts JSON: consumed by the 404 page.
     # Source: source/_posts/**/*.md, sorted by `top` desc then `date` desc.
     # Skips `blog/` meta-docs and any path starting with `_index`.
-    # (json is already imported at module level)
-    import glob as _glob
-    import re as _re
-    posts_root = os.path.join(SRC, '_posts')
-    META_CATS = ('blog', 'tools', 'page')  # skip meta-doc categories
-    if os.path.isdir(posts_root):
-        scored = []
-        for fp in _glob.glob(os.path.join(posts_root, '**', '*.md'), recursive=True):
-            try:
-                with open(fp, encoding='utf-8') as f:
-                    txt = f.read(4000)
-            except OSError:
-                continue
-            rel = os.path.relpath(fp, posts_root).replace('\\', '/')
-            parts = rel.split('/')
-            cat = parts[0] if len(parts) > 1 else ''
-            slug = parts[-1].replace('.md', '').replace('.html', '')
-            if not slug or slug.startswith('_index') or cat in META_CATS:
-                continue
-            tm = _re.search(r'^title:\s*["\']?([^"\'\n]+)["\']?', txt, _re.M)
-            dm = _re.search(r'^date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})', txt, _re.M)
-            top_m = _re.search(r'^top:\s*([0-9]+)', txt, _re.M)
-            title = tm.group(1).strip() if tm else slug
-            date_str = dm.group(1) if dm else '1970-01-01'
-            top_n = int(top_m.group(1)) if top_m else 0
-            scored.append((top_n, date_str, cat, slug, title))
-        scored.sort(key=lambda x: (-x[0], -int(x[1].replace('-', ''))))
-        recent = []
-        for (_t, _d, c, s, t) in scored[:6]:
-            url = ('/' + s + '/') if not c else ('/' + c + '/' + s + '/')
-            recent.append({'title': t, 'url': url, 'cat': c or s})
-        if recent:
-            recent_path = os.path.join(SRC, 'recent-posts.json')
-            with open(recent_path, 'w', encoding='utf-8') as f:
-                json.dump(recent, f, ensure_ascii=False, indent=2)
-            print('Wrote recent-posts.json (%d items)' % len(recent))
+    posts_root = os.path.join(SRC, "_posts")
+    records = collect_index_posts(posts_root)
+
+    # 404 页的「最近发布」：编辑推荐在前，其余按时间。
+    scored = sorted(
+        records, key=lambda r: (-r["top"], -int(r["date"].replace("-", "")))
+    )
+    recent = [
+        {"title": r["title"], "url": r["url"], "cat": r["cat"]} for r in scored[:6]
+    ]
+    if recent:
+        recent_path = os.path.join(SRC, "recent-posts.json")
+        with open(recent_path, "w", encoding="utf-8") as f:
+            json.dump(recent, f, ensure_ascii=False, indent=2)
+        print("Wrote recent-posts.json (%d items)" % len(recent))
+
+    # 404 页的搜索索引：**精简**版——每篇只有 title / url / cat。
+    #
+    # 不用站点的全文索引（search.json，13.5 MB）：让一个「页面不存在」的
+    # 页面下载 13.5 MB 才能搜一个词，是把「搜索等于没有」换成「搜索慢到
+    # 等于没有」。这里只匹配**标题和分类**，几十 KB 就能下完。
+    #
+    # 全文搜索在首页（那里有 MiniSearch 索引）。
+    lite = [
+        {"title": r["title"], "url": r["url"], "cat": r["cat"]}
+        for r in sorted(records, key=lambda r: r["date"], reverse=True)
+    ]
+    if lite:
+        lite_path = os.path.join(SRC, "search-lite.json")
+        with open(lite_path, "w", encoding="utf-8") as f:
+            json.dump(lite, f, ensure_ascii=False, separators=(",", ":"))
+        print("Wrote search-lite.json (%d items)" % len(lite))
     # Database landing page
     database_data = collect_database_posts(section_titles, cascade_map)
     create_database_landing_page(database_data)
-    print('Created database landing page')
+    print("Created database landing page")
+
 
 def create_database_landing_page(database_data):
     """Copy the curated database landing page from tools/templates/ into
@@ -1854,46 +2348,45 @@ def create_database_landing_page(database_data):
     'topics' ({topic_name: [posts]}) keys.
     """
     here = os.path.dirname(os.path.abspath(__file__))
-    template = os.path.join(here, 'templates', 'database.md')
-    db_path = os.path.join(SRC, 'database', 'index.md')
+    template = os.path.join(here, "templates", "database.md")
+    db_path = os.path.join(SRC, "database", "index.md")
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    with open(template, encoding='utf-8') as f:
+    with open(template, encoding="utf-8") as f:
         content = f.read()
-    content = rewrite_links(content, 'database/index.md')
+    content = rewrite_links(content, "database/index.md")
 
-    topics_marker = '<!-- DATABASE_TOPICS_START -->'
-    topics_end = '<!-- DATABASE_TOPICS_END -->'
-    recent_marker = '<!-- DATABASE_RECENT_START -->'
-    recent_end = '<!-- DATABASE_RECENT_END -->'
-    featured_marker = '<!-- DATABASE_FEATURED_START -->'
-    featured_end = '<!-- DATABASE_FEATURED_END -->'
-    topic_index_marker = '<!-- DATABASE_TOPIC_INDEX_START -->'
-    topic_index_end = '<!-- DATABASE_TOPIC_INDEX_END -->'
+    topics_marker = "<!-- DATABASE_TOPICS_START -->"
+    topics_end = "<!-- DATABASE_TOPICS_END -->"
+    recent_marker = "<!-- DATABASE_RECENT_START -->"
+    recent_end = "<!-- DATABASE_RECENT_END -->"
+    featured_marker = "<!-- DATABASE_FEATURED_START -->"
+    featured_end = "<!-- DATABASE_FEATURED_END -->"
+    topic_index_marker = "<!-- DATABASE_TOPIC_INDEX_START -->"
+    topic_index_end = "<!-- DATABASE_TOPIC_INDEX_END -->"
 
     if topics_marker not in content or topics_end not in content:
-        raise ValueError('database template is missing DATABASE_TOPICS markers')
+        raise ValueError("database template is missing DATABASE_TOPICS markers")
     if recent_marker not in content or recent_end not in content:
-        raise ValueError('database template is missing DATABASE_RECENT markers')
+        raise ValueError("database template is missing DATABASE_RECENT markers")
     if featured_marker not in content or featured_end not in content:
-        raise ValueError('database template is missing DATABASE_FEATURED markers')
+        raise ValueError("database template is missing DATABASE_FEATURED markers")
     if topic_index_marker not in content or topic_index_end not in content:
-        raise ValueError('database template is missing DATABASE_TOPIC_INDEX markers')
+        raise ValueError("database template is missing DATABASE_TOPIC_INDEX markers")
 
-    db_posts = database_data['posts']
-    topic_groups = database_data['topics']
+    db_posts = database_data["posts"]
+    topic_groups = database_data["topics"]
 
     # Recent N articles (chronological, top N)
     RECENT_N = 10
     recent = db_posts[:RECENT_N]
     if recent:
-        recent_items = '\n'.join(
-            f'- [{p["title"]}]({p["url"]}) · {p["date"][:10]}'
-            for p in recent
+        recent_items = "\n".join(
+            f"- [{p['title']}]({p['url']}) · {p['date'][:10]}" for p in recent
         )
     else:
-        recent_items = '数据库专题文章正在整理中。'
+        recent_items = "数据库专题文章正在整理中。"
     content = content.replace(recent_marker, recent_items, 1)
-    content = content.replace(recent_end, '', 1)
+    content = content.replace(recent_end, "", 1)
 
     # Featured: posts with top > 0 (parsed from FEATURED_POSTS via process())
     # collect_database_posts doesn't carry the top value through, so we look it up here.
@@ -1902,22 +2395,23 @@ def create_database_landing_page(database_data):
     for p in db_posts:
         # p['url'] like '/2026/10/22/db%2Fpostgresql/postgresql-reorderbuffer-c-function-reference/'
         # Re-derive the docs/-relative path from the URL body.
-        path_part = unquote(p['url'].rstrip('/').split('/', 4)[-1]) if '/' in p['url'] else ''
+        path_part = (
+            unquote(p["url"].rstrip("/").split("/", 4)[-1]) if "/" in p["url"] else ""
+        )
         # Compare against FEATURED_POSTS keys (e.g. 'db/logical_decode/逻辑解码DDL-Replay框架设计/index.md')
         for fp in featured_paths:
-            slug = fp.replace('/', os.sep).replace('.md', '')
+            slug = fp.replace("/", os.sep).replace(".md", "")
             if path_part.endswith(slug) or slug.endswith(path_part):
                 featured_posts.append(p)
                 break
     if featured_posts:
-        featured_items = '\n'.join(
-            f'- [{p["title"]}]({p["url"]})'
-            for p in featured_posts
+        featured_items = "\n".join(
+            f"- [{p['title']}]({p['url']})" for p in featured_posts
         )
     else:
-        featured_items = '_（暂无置顶文章。在 `tools/sync-hexo.py` 的 `FEATURED_POSTS` 中配置即可展示在此处。）_'
+        featured_items = "_（暂无置顶文章。在 `tools/sync-hexo.py` 的 `FEATURED_POSTS` 中配置即可展示在此处。）_"
     content = content.replace(featured_marker, featured_items, 1)
-    content = content.replace(featured_end, '', 1)
+    content = content.replace(featured_end, "", 1)
 
     # Topic index: compact one-line-per-topic with article count.
     topic_index_lines = []
@@ -1926,18 +2420,26 @@ def create_database_landing_page(database_data):
         count = len(group)
         if count == 0:
             continue
-        tag_url = f'{SITE_ROOT}/tags/{quote(slugize(name))}/'
+        tag_url = f"{SITE_ROOT}/tags/{quote(slugize(name))}/"
         topic_index_lines.append(
             f'- <i class="fa-solid {icon}" style="color:{color}"></i> [{name}]({tag_url}) · **{count}** 篇 · {blurb}'
         )
-    topic_index_items = '\n'.join(topic_index_lines) if topic_index_lines else '_（暂无主题索引）_'
+    topic_index_items = (
+        "\n".join(topic_index_lines) if topic_index_lines else "_（暂无主题索引）_"
+    )
     content = content.replace(topic_index_marker, topic_index_items, 1)
-    content = content.replace(topic_index_end, '', 1)
+    content = content.replace(topic_index_end, "", 1)
 
     # Topic card grid: each topic renders as a card with icon, blurb,
     # article count and up to 5 most-recent post titles linking to /tags/<topic>/
     def _esc(s):
-        return (s or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+        return (
+            (s or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )
 
     topic_lines = ['<div class="db-topic-grid">']
     for name, icon, color, blurb in TOPIC_DEFS:
@@ -1948,12 +2450,12 @@ def create_database_landing_page(database_data):
             continue
         preview = group[:5]
         tag_slug = quote(slugize(name))
-        tag_url = f'{SITE_ROOT}/tags/{tag_slug}/'
-        cards = ''.join(
+        tag_url = f"{SITE_ROOT}/tags/{tag_slug}/"
+        cards = "".join(
             f'<li><a href="{_esc(p["url"])}">{_esc(p["title"])}</a></li>'
             for p in preview
         )
-        more = ''
+        more = ""
         if count > len(preview):
             more = f'<li class="db-topic-more"><a href="{tag_url}">还有 {count - len(preview)} 篇 →</a></li>'
         topic_lines.append(f'''<div class="db-topic-card" style="--topic-color:{color}">
@@ -1967,23 +2469,24 @@ def create_database_landing_page(database_data):
     <ul class="db-topic-posts">{cards}{more}</ul>
   </a>
 </div>''')
-    topic_lines.append('</div>')
-    topic_grid = '\n'.join(topic_lines)
+    topic_lines.append("</div>")
+    topic_grid = "\n".join(topic_lines)
     content = content.replace(topics_marker, topic_grid, 1)
-    content = content.replace(topics_end, '', 1)
+    content = content.replace(topics_end, "", 1)
 
-    with open(db_path, 'w', encoding='utf-8') as f:
+    with open(db_path, "w", encoding="utf-8") as f:
         f.write(content)
     n_topics = sum(1 for n, _, _, _ in TOPIC_DEFS if topic_groups.get(n))
-    print(f'Created {os.path.relpath(db_path, ".")} ({len(db_posts)} posts, {n_topics} topics)')
-
+    print(
+        f"Created {os.path.relpath(db_path, '.')} ({len(db_posts)} posts, {n_topics} topics)"
+    )
 
     # Projects page (custom page with card grid for growdu's GitHub projects)
     create_projects_page()
-    print('Created projects landing page')
+    print("Created projects landing page")
 
     create_theme_pages()
-    print('Theme pages created')
+    print("Theme pages created")
 
 
 def create_projects_page():
@@ -1991,87 +2494,326 @@ def create_projects_page():
     # All non-fork, non-archived growdu repos, sorted by latest commit.
     # Tuple: (name, description, language, stars, url).
     projects = [
-        ('ai_all_in_one', '面向普通人的 AI 工具集合，封装主流大模型与办公 AI，一条命令跑起来。',                      'Go',        0, 'https://github.com/growdu/ai_all_in_one'),
-        ('blog',         '博客站点源码，本仓库 Hexo + matery 主题的构建来源。',                                      'Python',    0, 'https://github.com/growdu/blog'),
-        ('ai_toubiao',   'AI 招投标助手，自动解析招标文件、生成应答方案，提升售前效率。',                          'Go',        1, 'https://github.com/growdu/ai_toubiao'),
-        ('growdu',       '个人 GitHub profile README 配置仓库。',                                                  '',          1, 'https://github.com/growdu/growdu'),
-        ('ai_teacher',   'AI 教师视频工作室，自动生成教学视频、字幕与讲稿。',                                     'Java',      0, 'https://github.com/growdu/ai_teacher'),
-        ('learn_pg',     'PostgreSQL 内核学习笔记，边读源码边注释，吃透关键模块。',                               'Go',        1, 'https://github.com/growdu/learn_pg'),
-        ('dbt',          '日常数据库诊断与运维小工具合集，覆盖 PostgreSQL / openGauss 等场景。',                  'C',         0, 'https://github.com/growdu/dbt'),
-        ('ebpf_all',     'eBPF 一站式学习与实验仓库，覆盖内核观测、网络、安全、性能等场景。',                    'Rust',      0, 'https://github.com/growdu/ebpf_all'),
-        ('loving',       '提升生育率的小工具集合。',                                                              'Vue',       0, 'https://github.com/growdu/loving'),
-        ('aistock',      '面向个人的 AI 量化交易，集成大模型的选股、回测与策略生成实验。',                         'Python',    1, 'https://github.com/growdu/aistock'),
-        ('dbk',          'database kernel ai cli：让 AI 直接参与数据库内核开发、调试与性能分析的 CLI。',           'Python',    0, 'https://github.com/growdu/dbk'),
-        ('Ace',          '千分/腰子分/百分等常见纸牌游戏的脚本与统计工具。',                                     'Makefile',  0, 'https://github.com/growdu/Ace'),
-        ('ebpf_dev',     'eBPF 开发环境 Dockerfile，开箱即用的内核观测调试容器。',                                'Dockerfile',0, 'https://github.com/growdu/ebpf_dev'),
-        ('children_study_guide', '孩子学习调优指南，整理从小学到高中各阶段的学习方法与资源。',                    'HTML',      0, 'https://github.com/growdu/children_study_guide'),
-        ('db_god',       '数据库修仙之路，系统梳理数据库内核知识图谱，从单机存储到分布式事务。',                  'JavaScript',0, 'https://github.com/growdu/db_god'),
-        ('docker-compose-home', '常用服务的 docker-compose 配置合集，可直接被 Dockge 等面板挂载。',               '',          0, 'https://github.com/growdu/docker-compose-home'),
-        ('k8s_god',      'k8s 修仙指南，从零搭建、调优到生产化部署的全景实战笔记。',                             'JavaScript',0, 'https://github.com/growdu/k8s_god'),
-        ('autotest',     '自动化测试脚本与样例合集，覆盖前后端常见场景。',                                        'JavaScript',0, 'https://github.com/growdu/autotest'),
-        ('docusaurus_custom_table_width', 'Docusaurus 表格列宽自定义小插件，解决表格列内容截断问题。',           'JavaScript',0, 'https://github.com/growdu/docusaurus_custom_table_width'),
-        ('java-work',    'Java 学习与测试代码，按专题整理常见用法与踩坑记录。',                                   'Java',      0, 'https://github.com/growdu/java-work'),
-        ('docsify-blog', 'docsify 风格的博客模板，自动渲染 Markdown 目录，开箱即用。',                          'HTML',      0, 'https://github.com/growdu/docsify-blog'),
-        ('anycode',      'database developer program anywhere：基于 Web 的在线数据库开发环境。',                  'Vue',       0, 'https://github.com/growdu/anycode'),
-        ('dockerfile',   '日常 Dockerfile 集合，按用途分类便于复用。',                                           'Dockerfile',0, 'https://github.com/growdu/dockerfile'),
-        ('db021',        '从零开始写数据库，手写存储引擎、SQL 解析与执行器。',                                   'C',         0, 'https://github.com/growdu/db021'),
-        ('ctest',        'C 语言函数测试合集，涵盖常见系统调用与库函数的单元测试。',                             '',          0, 'https://github.com/growdu/ctest'),
-        ('growdu.github.io', 'GitHub Pages 上的早期博客版本，hexo-renderer 与 matery 主题实践。',                  'JavaScript',1, 'https://github.com/growdu/growdu.github.io'),
-        ('deploy_vps',   '一键部署 shadowsocks 的安装脚本与运维工具。',                                          'Shell',     0, 'https://github.com/growdu/deploy_vps'),
-        ('auto_email',   '自动收发邮件机器人，基于规则与 AI 的邮件分类、回复与提醒。',                            'Python',    0, 'https://github.com/growdu/auto_email'),
-        ('growdu.io',    'Hexo + matery 主题的博客源码，配套 GitHub Pages 部署实践。',                            'JavaScript',1, 'https://github.com/growdu/growdu.io'),
-        ('easy_blog',    '将 GitHub 仓库一键变成可阅读博客，自动生成 Markdown 文章索引。',                         'Python',    1, 'https://github.com/growdu/easy_blog'),
-        ('mofang',       '魔方相关的小实验与可视化页面。',                                                        'HTML',      0, 'https://github.com/growdu/mofang'),
-        ('namer',        '随机起名小工具，支持多场景多风格。',                                                    'CSS',       0, 'https://github.com/growdu/namer'),
-        ('leetcode',     'LeetCode 刷题笔记与模板代码，按专题整理常见套路与高频题解。',                          'C',         0, 'https://github.com/growdu/leetcode'),
-        ('install-guide','开发工具的安装与配置指南，覆盖 macOS / Linux 常见环境。',                              '',          0, 'https://github.com/growdu/install-guide'),
-        ('go-work',      'Go 语言学习与练习代码。',                                                               'Go',        0, 'https://github.com/growdu/go-work'),
-        ('CSharpTest',   'C# 语言的测试与示例代码。',                                                             'C#',        1, 'https://github.com/growdu/CSharpTest'),
+        (
+            "ai_all_in_one",
+            "面向普通人的 AI 工具集合，封装主流大模型与办公 AI，一条命令跑起来。",
+            "Go",
+            0,
+            "https://github.com/growdu/ai_all_in_one",
+        ),
+        (
+            "blog",
+            "博客站点源码，本仓库 Hexo + matery 主题的构建来源。",
+            "Python",
+            0,
+            "https://github.com/growdu/blog",
+        ),
+        (
+            "ai_toubiao",
+            "AI 招投标助手，自动解析招标文件、生成应答方案，提升售前效率。",
+            "Go",
+            1,
+            "https://github.com/growdu/ai_toubiao",
+        ),
+        (
+            "growdu",
+            "个人 GitHub profile README 配置仓库。",
+            "",
+            1,
+            "https://github.com/growdu/growdu",
+        ),
+        (
+            "ai_teacher",
+            "AI 教师视频工作室，自动生成教学视频、字幕与讲稿。",
+            "Java",
+            0,
+            "https://github.com/growdu/ai_teacher",
+        ),
+        (
+            "learn_pg",
+            "PostgreSQL 内核学习笔记，边读源码边注释，吃透关键模块。",
+            "Go",
+            1,
+            "https://github.com/growdu/learn_pg",
+        ),
+        (
+            "dbt",
+            "日常数据库诊断与运维小工具合集，覆盖 PostgreSQL / openGauss 等场景。",
+            "C",
+            0,
+            "https://github.com/growdu/dbt",
+        ),
+        (
+            "ebpf_all",
+            "eBPF 一站式学习与实验仓库，覆盖内核观测、网络、安全、性能等场景。",
+            "Rust",
+            0,
+            "https://github.com/growdu/ebpf_all",
+        ),
+        (
+            "loving",
+            "提升生育率的小工具集合。",
+            "Vue",
+            0,
+            "https://github.com/growdu/loving",
+        ),
+        (
+            "aistock",
+            "面向个人的 AI 量化交易，集成大模型的选股、回测与策略生成实验。",
+            "Python",
+            1,
+            "https://github.com/growdu/aistock",
+        ),
+        (
+            "dbk",
+            "database kernel ai cli：让 AI 直接参与数据库内核开发、调试与性能分析的 CLI。",
+            "Python",
+            0,
+            "https://github.com/growdu/dbk",
+        ),
+        (
+            "Ace",
+            "千分/腰子分/百分等常见纸牌游戏的脚本与统计工具。",
+            "Makefile",
+            0,
+            "https://github.com/growdu/Ace",
+        ),
+        (
+            "ebpf_dev",
+            "eBPF 开发环境 Dockerfile，开箱即用的内核观测调试容器。",
+            "Dockerfile",
+            0,
+            "https://github.com/growdu/ebpf_dev",
+        ),
+        (
+            "children_study_guide",
+            "孩子学习调优指南，整理从小学到高中各阶段的学习方法与资源。",
+            "HTML",
+            0,
+            "https://github.com/growdu/children_study_guide",
+        ),
+        (
+            "db_god",
+            "数据库修仙之路，系统梳理数据库内核知识图谱，从单机存储到分布式事务。",
+            "JavaScript",
+            0,
+            "https://github.com/growdu/db_god",
+        ),
+        (
+            "docker-compose-home",
+            "常用服务的 docker-compose 配置合集，可直接被 Dockge 等面板挂载。",
+            "",
+            0,
+            "https://github.com/growdu/docker-compose-home",
+        ),
+        (
+            "k8s_god",
+            "k8s 修仙指南，从零搭建、调优到生产化部署的全景实战笔记。",
+            "JavaScript",
+            0,
+            "https://github.com/growdu/k8s_god",
+        ),
+        (
+            "autotest",
+            "自动化测试脚本与样例合集，覆盖前后端常见场景。",
+            "JavaScript",
+            0,
+            "https://github.com/growdu/autotest",
+        ),
+        (
+            "docusaurus_custom_table_width",
+            "Docusaurus 表格列宽自定义小插件，解决表格列内容截断问题。",
+            "JavaScript",
+            0,
+            "https://github.com/growdu/docusaurus_custom_table_width",
+        ),
+        (
+            "java-work",
+            "Java 学习与测试代码，按专题整理常见用法与踩坑记录。",
+            "Java",
+            0,
+            "https://github.com/growdu/java-work",
+        ),
+        (
+            "docsify-blog",
+            "docsify 风格的博客模板，自动渲染 Markdown 目录，开箱即用。",
+            "HTML",
+            0,
+            "https://github.com/growdu/docsify-blog",
+        ),
+        (
+            "anycode",
+            "database developer program anywhere：基于 Web 的在线数据库开发环境。",
+            "Vue",
+            0,
+            "https://github.com/growdu/anycode",
+        ),
+        (
+            "dockerfile",
+            "日常 Dockerfile 集合，按用途分类便于复用。",
+            "Dockerfile",
+            0,
+            "https://github.com/growdu/dockerfile",
+        ),
+        (
+            "db021",
+            "从零开始写数据库，手写存储引擎、SQL 解析与执行器。",
+            "C",
+            0,
+            "https://github.com/growdu/db021",
+        ),
+        (
+            "ctest",
+            "C 语言函数测试合集，涵盖常见系统调用与库函数的单元测试。",
+            "",
+            0,
+            "https://github.com/growdu/ctest",
+        ),
+        (
+            "growdu.github.io",
+            "GitHub Pages 上的早期博客版本，hexo-renderer 与 matery 主题实践。",
+            "JavaScript",
+            1,
+            "https://github.com/growdu/growdu.github.io",
+        ),
+        (
+            "deploy_vps",
+            "一键部署 shadowsocks 的安装脚本与运维工具。",
+            "Shell",
+            0,
+            "https://github.com/growdu/deploy_vps",
+        ),
+        (
+            "auto_email",
+            "自动收发邮件机器人，基于规则与 AI 的邮件分类、回复与提醒。",
+            "Python",
+            0,
+            "https://github.com/growdu/auto_email",
+        ),
+        (
+            "growdu.io",
+            "Hexo + matery 主题的博客源码，配套 GitHub Pages 部署实践。",
+            "JavaScript",
+            1,
+            "https://github.com/growdu/growdu.io",
+        ),
+        (
+            "easy_blog",
+            "将 GitHub 仓库一键变成可阅读博客，自动生成 Markdown 文章索引。",
+            "Python",
+            1,
+            "https://github.com/growdu/easy_blog",
+        ),
+        (
+            "mofang",
+            "魔方相关的小实验与可视化页面。",
+            "HTML",
+            0,
+            "https://github.com/growdu/mofang",
+        ),
+        (
+            "namer",
+            "随机起名小工具，支持多场景多风格。",
+            "CSS",
+            0,
+            "https://github.com/growdu/namer",
+        ),
+        (
+            "leetcode",
+            "LeetCode 刷题笔记与模板代码，按专题整理常见套路与高频题解。",
+            "C",
+            0,
+            "https://github.com/growdu/leetcode",
+        ),
+        (
+            "install-guide",
+            "开发工具的安装与配置指南，覆盖 macOS / Linux 常见环境。",
+            "",
+            0,
+            "https://github.com/growdu/install-guide",
+        ),
+        (
+            "go-work",
+            "Go 语言学习与练习代码。",
+            "Go",
+            0,
+            "https://github.com/growdu/go-work",
+        ),
+        (
+            "CSharpTest",
+            "C# 语言的测试与示例代码。",
+            "C#",
+            1,
+            "https://github.com/growdu/CSharpTest",
+        ),
     ]
-
 
     def card(name, desc, lang, stars, url):
         initial = name[0].upper()
-        lang_badge = ('<span class="proj-grid-lang">' + lang + '</span>') if lang else ''
-        star = ('<span class="pg-stat"><i class="fa-solid fa-star"></i>' + str(stars) + '</span>') if stars > 0 else ''
-        return (''.join([
-            '<a class="proj-grid-card" href="' + url + '" target="_blank" rel="noopener">',
-            '<div class="proj-grid-head">',
-            '<div class="proj-grid-icon">' + initial + '</div>',
-            '<div class="proj-grid-name">' + name + '</div>',
-            lang_badge,
-            '</div>',
-            '<div class="proj-grid-desc">' + desc + '</div>',
-            '<div class="proj-grid-foot">',
-            star,
-            '<span class="pg-link">查看仓库 →</span>',
-            '</div>',
-            '</a>'
-        ]))
+        lang_badge = (
+            ('<span class="proj-grid-lang">' + lang + "</span>") if lang else ""
+        )
+        star = (
+            (
+                '<span class="pg-stat"><i class="fa-solid fa-star"></i>'
+                + str(stars)
+                + "</span>"
+            )
+            if stars > 0
+            else ""
+        )
+        return "".join(
+            [
+                '<a class="proj-grid-card" href="'
+                + url
+                + '" target="_blank" rel="noopener">',
+                '<div class="proj-grid-head">',
+                '<div class="proj-grid-icon">' + initial + "</div>",
+                '<div class="proj-grid-name">' + name + "</div>",
+                lang_badge,
+                "</div>",
+                '<div class="proj-grid-desc">' + desc + "</div>",
+                '<div class="proj-grid-foot">',
+                star,
+                '<span class="pg-link">查看仓库 →</span>',
+                "</div>",
+                "</a>",
+            ]
+        )
 
     cards_html = chr(10).join(card(*p) for p in projects)
 
     fm = '---\ntitle: 我的开源项目\ndate: 2026-07-29 00:00:00\ntype: "projects"\nlayout: "page"\n---\n\n'
-    intro = chr(10).join([
-        '# 我的开源项目',
-        '',
-        '这里收录了我在 GitHub 上开源的主要项目，覆盖数据库内核、eBPF、AI 工具、博客系统等多个方向。每个项目都配有独立仓库，欢迎前往围观、Star 或 Fork。',
-        '',
-        '> 数据来自 [github.com/growdu](https://github.com/growdu)，共 ' + str(len(projects)) + ' 个非 fork 项目，按最近提交时间排序。',
-        '',
-        '<div class="proj-grid">',
-        cards_html,
-        '</div>',
-        '',
-        '更多小实验和练手项目可以在 [GitHub 个人主页](https://github.com/growdu) 上翻到，欢迎一起交流。',
-    ])
+    intro = chr(10).join(
+        [
+            "# 我的开源项目",
+            "",
+            "这里收录了我在 GitHub 上开源的主要项目，覆盖数据库内核、eBPF、AI 工具、博客系统等多个方向。每个项目都配有独立仓库，欢迎前往围观、Star 或 Fork。",
+            "",
+            "> 数据来自 [github.com/growdu](https://github.com/growdu)，共 "
+            + str(len(projects))
+            + " 个非 fork 项目，按最近提交时间排序。",
+            "",
+            '<div class="proj-grid">',
+            cards_html,
+            "</div>",
+            "",
+            "更多小实验和练手项目可以在 [GitHub 个人主页](https://github.com/growdu) 上翻到，欢迎一起交流。",
+        ]
+    )
 
-    proj_path = os.path.join(SRC, 'projects', 'index.md')
+    proj_path = os.path.join(SRC, "projects", "index.md")
     os.makedirs(os.path.dirname(proj_path), exist_ok=True)
-    with open(proj_path, 'w', encoding='utf-8') as f:
+    with open(proj_path, "w", encoding="utf-8") as f:
         f.write(fm + intro + chr(10))
-    print('Created ' + os.path.relpath(proj_path, '.') + ' (' + str(len(projects)) + ' cards)')
+    print(
+        "Created "
+        + os.path.relpath(proj_path, ".")
+        + " ("
+        + str(len(projects))
+        + " cards)"
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
