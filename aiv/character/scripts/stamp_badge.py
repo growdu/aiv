@@ -59,10 +59,19 @@ MIN_SIDE = 8                # 铭牌最小边长（像素）
 # 上下扩展一点），所以卡 1.5 留足余量。
 MIN_ASPECT = 1.5            # 铭牌是横向长方形
 MAX_AREA_RATIO = 0.004      # 铭牌面积不超过画布的 0.4%
-# 铭牌四周一圈的「马甲占比」随生成批次波动很大（实测 0.17 ~ 0.74：
-# 铭牌有时紧贴马甲边沿，有时旁边是角色的浅色身体），所以这个值只当
-# 兜底门槛，真正的判据是尺寸 + 长宽比。
+# 铭牌四周一圈的「马甲占比」随生成批次波动很大（实测 0.27~0.47，
+# 10px 环宽下），所以这个值只当兜底门槛，真正的判据是尺寸 + 长宽比。
 MIN_VEST_FRACTION = 0.08    # 四周一圈必须是马甲色
+# 「马甲占比」那一圈的宽度。
+#
+# **必须够宽，越过铭牌自带的描边。** 铭牌是 3D 渲染的塑料牌，边缘自带一圈
+# 深色厚度/描边。环只有 4px 宽时，整个环都落在那圈描边上，量到的「马甲
+# 占比」几乎为零——实测点赞姿态：4px 环 0.016、10px 环 0.268。真实铭牌
+# 被自己的描边挡住，判定直接失败（素材上明明有铭牌，却报「没找到铭牌」）。
+#
+# 10px 环宽下三枚真实铭牌的实测值：主形象 0.466、点赞姿态 0.268，
+# 都稳稳高于 MIN_VEST_FRACTION。
+VEST_RING_WIDTH = 10
 # 铭牌是服装上固定尺寸的道具，所有素材同一比例，所以按画布比例卡下限。
 # 这一条是眼镜带来的：镜腿末端模型偶尔会贴一块小白牌，它四周全是镜框色，
 # 「马甲占比」接近 1.0，比真正的铭牌还高——只有「够大」才分得开。
@@ -218,7 +227,8 @@ def _best_badge_in(near_white: np.ndarray, vest: np.ndarray,
         if white_fraction < MIN_WHITE_FRACTION:
             continue
         ring = np.zeros_like(near_white)
-        ring[max(0, y0 - 4):y1 + 4, max(0, x0 - 4):x1 + 4] = True
+        ring[max(0, y0 - VEST_RING_WIDTH):y1 + VEST_RING_WIDTH,
+             max(0, x0 - VEST_RING_WIDTH):x1 + VEST_RING_WIDTH] = True
         ring[y0:y1, x0:x1] = False
         fraction = float(vest[ring].mean()) if ring.any() else 0.0
         if fraction < MIN_VEST_FRACTION:
