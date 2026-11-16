@@ -1,6 +1,8 @@
+import ast
 import json
 import os
 import subprocess
+from pathlib import Path
 
 import cairo
 import pytest
@@ -8,6 +10,8 @@ import pytest
 from pyv import character
 from pyv import render
 from pyv.timeline import Scene
+
+PACKAGE = Path(render.__file__).resolve().parent
 
 
 def _probe(path):
@@ -116,3 +120,106 @@ def test_clip_is_stale_when_the_character_asset_changes(tmp_path, monkeypatch):
     os.utime(out, (stale, stale))
     assert not render.clip_is_fresh(out, scene), \
         "素材比片段新，片段必须作废重渲"
+
+
+# -------------------------------------------------- 重渲染输入清单
+
+
+def _imported_pyv_modules(source: str) -> set[str]:
+    """源码里 import 的 `pyv.*` 模块名。
+
+    `from pyv import components` 与 `from pyv.draw import text` 两种写法
+    都要认：前者 import 的是模块本身，后者 import 的是模块里的东西。
+    """
+    tree = ast.parse(source)
+    out: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.level or not node.module:
+                continue
+            if node.module == "pyv":
+                out.update(f"pyv.{alias.name}" for alias in node.names)
+            elif node.module.split(".")[0] == "pyv":
+                out.add(node.module)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split(".")[0] == "pyv":
+                    out.add(alias.name)
+    return out
+
+
+def _modules_the_renderer_uses() -> set[str]:
+    """渲染入口（传递地）用到的 `pyv` 模块的文件名。
+
+    起点是三个：`render.py`（渲染入口）、`subtitle.py`（字幕烧录，
+    由 `render.py` 的 `burner` 参数传进来，不是 import 进来的）、
+    以及全部场景模块（`render.py` 用 `importlib` 动态 import 它们，
+    静态扫不到）。
+
+    **场景模块自己不在结果里**：改一个场景不该作废其它场景的片段，
+    场景自己的源码由 `newest_source_mtime` 单独算。
+    """
+    roots = ["render.py", "subtitle.py"]
+    roots += sorted(f"scenes/{path.name}"
+                    for path in (PACKAGE / "scenes").glob("*.py"))
+    seen: set[str] = set()
+    queue = list(roots)
+    while queue:
+        name = queue.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        path = PACKAGE / name
+        if not path.exists():
+            continue
+        for module in _imported_pyv_modules(path.read_text(encoding="utf-8")):
+            candidate = "/".join(module.split(".")[1:]) + ".py"
+            if candidate.startswith("scenes/") or candidate in seen:
+                continue
+            queue.append(candidate)
+    return {name for name in seen if not name.startswith("scenes/")}
+
+
+def test_the_render_input_list_covers_every_module_the_renderer_uses():
+    """渲染入口用到的每个模块都必须在重渲染输入清单里。
+
+    **漏登记的症状是「改了它，画面没变」**：片段因为「比渲染输入新」
+    被当成没过期直接复用，**而且没有任何报错**。
+
+    这条守卫**独立扫一遍源码**（不复用生产代码的推导逻辑）：从渲染
+    入口出发把 `pyv.*` 的 import 递归收齐，跟清单对照。清单少一个
+    就红。
+    """
+    missing = sorted(_modules_the_renderer_uses()
+                     - set(render.RENDER_INPUT_MODULES))
+    assert not missing, (
+        f"这些模块会影响画面，但不在 RENDER_INPUT_MODULES 里：{missing}\n"
+        f"改了它们，片段会被当成「没过期」直接复用——画面还是旧的。"
+    )
+
+
+def test_a_layout_change_makes_the_clip_stale(tmp_path):
+    """**行为上的判据**：改了版式层，片段必须作废。
+
+    清单里写着不算数——得真的会因为它变陈旧。这条把 `layout.py` 的
+    修改时间推到片段之后，`clip_is_fresh` 必须返回 False。
+    """
+    layout_module = PACKAGE / "layout.py"
+    original = layout_module.stat().st_mtime
+    scene = Scene(id="s01", start=0.0, end=1.0, type="code",
+                  subtitle="测试", renderer="sample_scene")
+    out = tmp_path / "s01.mp4"
+    out.write_bytes(b"old clip")
+    try:
+        fresh = render.newest_source_mtime(scene) + 10
+        os.utime(out, (fresh, fresh))
+        assert render.clip_is_fresh(out, scene), "片段比所有输入都新，应该复用"
+
+        changed = fresh + 10
+        os.utime(layout_module, (changed, changed))
+        assert not render.clip_is_fresh(out, scene), (
+            "layout.py 比片段新，片段必须作废重渲——"
+            "它不在 RENDER_INPUT_MODULES 里？"
+        )
+    finally:
+        os.utime(layout_module, (original, original))
