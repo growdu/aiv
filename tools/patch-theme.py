@@ -2051,22 +2051,53 @@ sidebar_ejs = """<% if (site.categories && site.categories.length) { %>
     return 'p' + Math.abs(h);
   };
   var getDate = function(p) { return p.date ? new Date(p.date).getTime() : 0; };
+  // 阅读量快照 —— GoatCounter 的**真实** PV。
+  //
+  // 真相在仓库根的 data/view-counts.json：tools/fetch-view-counts.py 抓来的，
+  // sync-hexo.py 复制到 source/_data/，hexo 挂到 site.data 上。
+  //
+  // 这里曾经是**假的**：旧代码写的是 Math.max(5, Math.floor(字数 / 50))，
+  // 于是十万字的文章显示「🔥 2000」——读者以为有两千人读过它。
+  // 拿不到真实值时**宁可这一格不显示**，也不显示一个假的🔥。
+  var _vc = (site.data && site.data['view-counts']) || null;
+  var _counts = (_vc && _vc.counts) || {};
+  var _norm = function(p) {
+    // hexo 的 post.path 是 '2026/08/18/db/aaa/index.html'，
+    // GoatCounter 记的是 '/2026/08/18/db/aaa/'——两边归一到同一个键。
+    var s = String(p || '');
+    if (s.charAt(0) === '/') { s = s.slice(1); }
+    if (s.slice(-11) === '/index.html') { s = s.slice(0, -11); }
+    else if (s === 'index.html') { s = ''; }
+    while (s.length > 0 && s.charAt(s.length - 1) === '/') { s = s.slice(0, -1); }
+    return s;
+  };
+  var pvOf = function(p) {
+    var n = _counts[_norm(p && p.path)];
+    return typeof n === 'number' ? n : 0;
+  };
+  var hasPV = Object.keys(_counts).length > 0;
   var wcOf = function(p) { return p.content ? String(p.content).replace(/<[^>]+>/g, '').length : 0; };
-  var allPosts = site.posts.data.slice().sort(function(a, b) {
-    return wcOf(b) - wcOf(a);
-  });
-  var hotPosts = allPosts.slice(0, 50);
+  var allPosts = site.posts.data.slice();
+  var hotPosts;
+  if (hasPV) {
+    // 有真实阅读量：按它排。
+    hotPosts = allPosts.slice().sort(function(a, b) { return pvOf(b) - pvOf(a); }).slice(0, 50);
+  } else {
+    // 没有真实阅读量：按字数排（老样子），但**一个数字都不显示**。
+    allPosts.sort(function(a, b) { return wcOf(b) - wcOf(a); });
+    hotPosts = allPosts.slice(0, 50);
+  }
   var hotData = hotPosts.map(function(p) {
     var cats = (p.categories && p.categories.data) || [];
     var cat = cats.length > 0 ? cats[0].name : '';
-    return {h: hashCode(p.path), t: p.title, u: p.path.replace('index.html', ''), c: Math.max(5, Math.floor((p.content ? String(p.content).replace(/<[^>]+>/g, '').length : 0) / 50)), cat: cat};
+    return {h: hashCode(p.path), t: p.title, u: p.path.replace('index.html', ''), c: pvOf(p), cat: cat};
   });
 %>
 <div class="hot-sidebar">
-  <div class="hot-title"><i class="fas fa-fire"></i> 热门文章</div>
+  <div class="hot-title"><i class="fas fa-fire"></i> <%= hasPV ? '最多阅读' : '长文排行' %></div>
   <div class="hot-list" id="hot-posts-list">
     <% hotPosts.slice(0, 20).forEach(function(post, i) { %>
-    <a href="<%- url_for(post.path) %>"><span class="hot-rank rank-<%= i+1 %>"><%= i+1 %></span><div class="hot-content"><span class="hot-name"><%= post.title %></span><div class="hot-meta"><% var _cats = (post.categories && post.categories.data) || []; if (_cats.length > 0) { %><span class="hot-cat"><%= _cats[0].name %></span><% } %><% var _wc = post.content ? String(post.content).replace(/<[^>]+>/g, "").length : 0; %><span class="hot-views">🔥 <%= Math.max(5, Math.floor(_wc / 50)) %></span></div></div></a>
+    <a href="<%- url_for(post.path) %>"><span class="hot-rank rank-<%= i+1 %>"><%= i+1 %></span><div class="hot-content"><span class="hot-name"><%= post.title %></span><div class="hot-meta"><% var _cats = (post.categories && post.categories.data) || []; if (_cats.length > 0) { %><span class="hot-cat"><%= _cats[0].name %></span><% } %><% var _pv = pvOf(post); if (_pv > 0) { %><span class="hot-views">🔥 <%= _pv %></span><% } %></div></div></a>
     <% }); %>
   </div>
 </div>
@@ -2077,7 +2108,8 @@ sidebar_ejs = """<% if (site.categories && site.categories.length) { %>
   var data=JSON.parse(document.getElementById('hot-posts-json').textContent);
   if(!data||!data.length)return;
   var ROOT='<%- config.root %>';
-  // Sort by locally-computed popularity (already weighted by word count).
+  // Sort by the real view count from the GoatCounter snapshot.
+  // 没有快照时 c 全是 0 —— 排序不动，页面保持服务端按字数的顺序。
   data.sort(function(a,b){return b.c-a.c;});
   Promise.resolve(data).then(function(results){
     var list=document.getElementById('hot-posts-list');
