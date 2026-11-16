@@ -1457,6 +1457,148 @@ def copy_images():
                 shutil.copy2(src, dst)
 
 
+#: 编辑履历表：表头第一格是「编写人」。这样的表是站点自己的编辑记录，不是
+#: 文章内容——留在正文里会污染三处摘要：``<meta name="description">``、
+#: 首页卡片摘要（smart_summary）、RSS 的 ``<summary>``。全站 97 张。
+EDIT_HISTORY_FIRST_CELL = "编写人"
+
+#: 履历表里装着「这篇文章是什么」的那一列。
+EDIT_HISTORY_CONTENT_CELL = "编写内容"
+
+#: 履历前缀：「初稿，」「修订：」说的是「这次改了什么」，不是「文章是什么」。
+#: 摘要是给读者看这篇文章是什么的——前缀得去掉，剩下的才是素材。
+#:
+#: 关键词后面必须跟着分隔符（或到此为止）才算前缀：「补充完善解决方案」里的
+#: 「补充」是正文，不是履历前缀。
+HISTORY_PREFIX_RE = re.compile(
+    r"^\s*(初稿|修订|校验|校对|更新|整理|补充)\s*(?:[：:，,、]\s*|$)"
+)
+
+#: description 的契约上限（publish/spec/00-架构设计.md §4.1）。
+DESCRIPTION_LIMIT = 150
+
+
+def _table_cells(line):
+    """Cells of a markdown table row, or ``None`` if the line is not a row.
+
+    A row is a line that starts with a pipe.  Leading/trailing pipes are
+    optional; the cells come back stripped.
+    """
+    stripped = line.strip()
+    if not stripped.startswith("|"):
+        return None
+    cells = [c.strip() for c in stripped.strip("|").split("|")]
+    if len(cells) < 2:
+        return None
+    return cells
+
+
+def _is_separator_row(cells):
+    """True for a markdown table's ``| --- | --- |`` divider row."""
+    if not cells:
+        return False
+    return all(re.match(r"^:?-+:?$", c.replace(" ", "")) for c in cells)
+
+
+def find_edit_history_tables(text):
+    """Every editing-history table in ``text``.
+
+    Returns a list of ``(header_cells, data_rows)``.  A table qualifies
+    when its **first** header cell is 「编写人」——那是站点自己的编辑履历，
+    不是文章内容。（要「第一格」而不是「任意一格」：正文里提到「编写人」
+    这三个字的表格比比皆是。）
+    """
+    lines = text.split("\n")
+    tables = []
+    i = 0
+    while i < len(lines):
+        cells = _table_cells(lines[i])
+        if cells and cells[0] == EDIT_HISTORY_FIRST_CELL:
+            sep = _table_cells(lines[i + 1]) if i + 1 < len(lines) else None
+            if sep and _is_separator_row(sep):
+                rows = []
+                k = i + 2
+                while k < len(lines):
+                    row = _table_cells(lines[k])
+                    if not row:
+                        break
+                    rows.append(row)
+                    k += 1
+                tables.append((cells, rows))
+                i = k
+                continue
+        i += 1
+    return tables
+
+
+def edit_history_description(header, rows):
+    """The one-line summary an editing-history table carries (or ``None``).
+
+    Takes the last non-empty 「编写内容」 cell—the table may hold one row
+    per revision, and the last row is the most recent one—strips the
+    revision prefix, collapses whitespace, and cuts to the contract's
+    150 characters.
+
+    A cell that only says 「初稿」 is not a summary: it yields ``None``
+    rather than a description of 「初稿」.
+    """
+    if EDIT_HISTORY_CONTENT_CELL not in header:
+        return None
+    idx = header.index(EDIT_HISTORY_CONTENT_CELL)
+    value = ""
+    for row in rows:
+        cell = row[idx] if len(row) > idx else ""
+        if cell.strip():
+            value = cell
+    if not value.strip():
+        return None
+    text = HISTORY_PREFIX_RE.sub("", value).strip()
+    if not text:
+        return None
+    text = re.sub(r"\s+", " ", text)
+    if len(text) > DESCRIPTION_LIMIT:
+        text = text[: DESCRIPTION_LIMIT - 1].rstrip() + "…"
+    return text
+
+
+def extract_edit_history(body):
+    """Strip the editing-history tables out of ``body``.
+
+    Returns ``(clean_body, description)``: the body without those tables,
+    and the one-line summary the first table that carries a 「编写内容」
+    column had to offer (``None`` when no table offers one).
+
+    The table is not article content.  Left in the body it becomes the
+    first thing every summary scraper sees — the ``<meta name=
+    "description">`` of 98 pages was table residue.
+    """
+    lines = body.split("\n")
+    description = None
+    for header, rows in find_edit_history_tables(body):
+        if description is None:
+            description = edit_history_description(header, rows)
+    out = []
+    i = 0
+    while i < len(lines):
+        cells = _table_cells(lines[i])
+        if cells and cells[0] == EDIT_HISTORY_FIRST_CELL:
+            sep = _table_cells(lines[i + 1]) if i + 1 < len(lines) else None
+            if sep and _is_separator_row(sep):
+                i += 2
+                while i < len(lines) and _table_cells(lines[i]):
+                    i += 1
+                # 表后面跟着的空行一并收掉，别留三连空行。
+                while i < len(lines) and not lines[i].strip():
+                    i += 1
+                if out and not out[-1].strip():
+                    out.pop()
+                out.append("")
+                continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out), description
+
+
 def process(filepath, section_titles, cascades):
     rel = os.path.relpath(filepath, DOCS)
     fdir = os.path.dirname(rel)
@@ -1480,6 +1622,10 @@ def process(filepath, section_titles, cascades):
     post_cats = resolve_post_categories(rel, section_titles, cascades)
     topics = infer_topics(rel, title)
 
+    # 编辑履历表不是文章内容：先剥掉它，摘要才不会变成表格残骸。
+    # （剥在改写之前：履历里那一句是原始素材，改写会把它里的链接改成
+    # permalink，混进 description 里就不是人话。）
+    src, history_desc = extract_edit_history(src)
     # rewrite images, strip first H1 (title is in front matter)
     body_out = rewrite_images(src, fdir)
     # Rewrite markdown intra-doc links to absolute Hexo permalinks so
@@ -1499,6 +1645,11 @@ def process(filepath, section_titles, cascades):
     tags_block = categories_yaml(all_tags)
     # 发布契约要读的两个字段，原样搬过去（没有就什么都不加）。
     passthrough = passthrough_block(fm)
+    # 履历表里那一列是现成的摘要素材（见 docs/blog/重构方案.md §八 B5）：
+    # 源 front matter 里已经写了 description 的以源为准，不覆盖。
+    if history_desc and not _fm_scalar(fm, "description"):
+        if not _fm_indented_scalar(fm, "description"):
+            passthrough += 'description: "{}"\n'.format(yaml_escape(history_desc))
     fm_out = f'---\ntitle: "{yaml_escape(title)}"\ndate: {date}\nauthor: growdu{top_line}\ncategories:\n{cats_block}\ntags:\n{tags_block}\n{passthrough}---\n'
 
     if os.path.basename(filepath) == "index.md":
