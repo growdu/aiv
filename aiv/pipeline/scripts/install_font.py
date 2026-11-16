@@ -38,7 +38,8 @@ sys.path.insert(0, str(PIPELINE_ROOT))
 
 from pyv import fonts  # noqa: E402
 
-FONT_SOURCE = PIPELINE_ROOT / "assets" / "fonts" / "AIVSansCJKSC-Regular.otf"
+#: 要装进 OS 字体目录的内置字体文件（两个字重）。
+FONT_SOURCES = fonts.BUNDLED_PATHS
 
 
 def sha256_of(path: Path) -> str:
@@ -62,21 +63,24 @@ def target_dir() -> Path:
 
 
 def install() -> int:
-    if not FONT_SOURCE.is_file():
-        print(f"内置字体不在仓库里：{FONT_SOURCE}")
+    missing = [path for path in FONT_SOURCES if not path.is_file()]
+    if missing:
+        for path in missing:
+            print(f"内置字体不在仓库里：{path}")
         print("先跑 scripts/build_font_subset.py 生成")
         return 1
 
     directory = target_dir()
     directory.mkdir(parents=True, exist_ok=True)
-    target = directory / FONT_SOURCE.name
 
-    source_sha = sha256_of(FONT_SOURCE)
-    if target.is_file() and sha256_of(target) == source_sha:
-        print(f"已安装（sha256 一致）：{target}")
-    else:
-        shutil.copyfile(FONT_SOURCE, target)
-        print(f"已安装：{target}")
+    for source in FONT_SOURCES:
+        target = directory / source.name
+        source_sha = sha256_of(source)
+        if target.is_file() and sha256_of(target) == source_sha:
+            print(f"已安装（sha256 一致）：{target}")
+        else:
+            shutil.copyfile(source, target)
+            print(f"已安装：{target}")
 
     if platform.system() == "Linux":
         fc_cache = shutil.which("fc-cache")
@@ -96,11 +100,18 @@ def _wait_until_resolved() -> int:
     `~/Library/Fonts/` 的字体不会立刻可见——实测装完立刻查，
     cairo 还是回落到 PingFang。Linux 上 `fc-cache -f` 是同步的，
     一般立刻就好。
+
+    **两个字重都要认得**：认得 Regular 不等于认得 Bold——粗体没认到
+    的话，cairo 会**合成**一份，两个平台的合成方式还不一样（实测轮廓
+    差 3.14px）。所以这里查的是「粗体能不能量出 Bold 的步进」。
     """
     for attempt in range(6):
         if fonts.family_resolves(fonts.BUNDLED_FAMILY):
             print(f"cairo 认得「{fonts.BUNDLED_FAMILY}」了")
-            return 0
+            if fonts.bold_face_resolves():
+                print("粗体也认得了（用真的 Bold 字形，不是合成的）")
+                return 0
+            print("粗体还没认到——cairo 会合成粗体，跨机版式会对不上")
         if attempt < 5:
             time.sleep(1.0)
     print(
@@ -114,19 +125,22 @@ def _wait_until_resolved() -> int:
 def check() -> int:
     """字体装没装、cairo 认不认。"""
     directory = target_dir()
-    target = directory / FONT_SOURCE.name
-    installed = target.is_file()
-    same = installed and sha256_of(target) == sha256_of(FONT_SOURCE)
-    resolved = fonts.family_resolves(fonts.BUNDLED_FAMILY)
+    resolved = fonts.font_family()
 
-    print(f"字体文件    {FONT_SOURCE}")
-    print(f"安装目标    {target}")
-    print(f"已安装      {'是' if installed else '否'}"
-          f"{'（sha256 一致）' if same else ''}")
-    print(f"cairo 解析  {'认得' if resolved else '认不得'}「{fonts.BUNDLED_FAMILY}」")
-    print(f"当前在用    {fonts.font_family()}")
+    print(f"字体文件    {', '.join(str(p) for p in FONT_SOURCES)}")
+    print(f"安装目标    {directory}")
+    for source in FONT_SOURCES:
+        target = directory / source.name
+        installed = target.is_file()
+        same = installed and sha256_of(target) == sha256_of(source)
+        print(f"  {source.name:<28} 已安装 {'是' if installed else '否'}"
+              f"{'（sha256 一致）' if same else ''}")
+    print(f"cairo 解析  {'认得' if fonts.family_resolves(fonts.BUNDLED_FAMILY) else '认不得'}"
+          f"「{fonts.BUNDLED_FAMILY}」")
+    print(f"粗体        {'认得（真的 Bold 字形）' if fonts.bold_face_resolves() else '认不得——会合成粗体'}")
+    print(f"当前在用    {resolved}")
 
-    if resolved:
+    if fonts.family_resolves(fonts.BUNDLED_FAMILY) and fonts.bold_face_resolves():
         print("OK 内置字体已就位")
         return 0
     print("还没装好——跑 python3 scripts/install_font.py")

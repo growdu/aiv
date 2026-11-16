@@ -2,7 +2,7 @@
 
 **为什么要有它**：逐像素基准在 macOS 与 Linux 之间**不可比**——
 cairo 在 macOS 走 CoreText、在 Linux 走 FreeType，栅格化不同，像素必然不同。
-但下面这四类量**与栅格化无关**，跨机可比：
+但下面这四类量**是字体的性质**，跨机可比：
 
 | 量 | 从哪来 | 跨机 |
 | --- | --- | --- |
@@ -11,14 +11,34 @@ cairo 在 macOS 走 CoreText、在 Linux 走 FreeType，栅格化不同，像素
 | 步进宽度 `x_advance` | 字体文件的 hmtx | 一致 |
 | 轮廓包围盒 | `text_path` + `path_extents` | 一致 |
 
-**实测（2026-11-16，macOS / CoreText）**：cairo 量出来的步进宽度与
-「从字体文件 hmtx 算出来的」差 **≤ 0.056px**；`text_path` 的轮廓包围盒
-与「从字体文件的字形数据算出来的」**逐项相等**（y 轴只是屏幕坐标向下、
-字形坐标向上的翻面）。
+**这件事成立有两个前提**，都是踩过坑才补上的（2026-11-16）：
 
-也就是说这四类量**直接来自字体文件**，不是栅格化的产物——换一台机器、
-换一个渲染后端，数值不变。所以「跨机像素一致」做不到，但「跨机版式
-一致」做得到，而且是可以**量出来**的。
+1. **hinting 必须关掉**。Linux 上 cairo 走 FreeType，默认**开着**
+   autohinter——轮廓点吸附像素网格、度量取整。于是「步进宽度」这种
+   本该只由字体文件决定的量，变成了「字体文件 × 栅格化后端」的产物。
+   实测开着 hinting 时，一行字的步进能差 **68px**（墨迹宽度被取整，
+   `fit_size` 收出的字号跟着差 3.2px，整条轮廓再整体缩放）。
+   关掉之后，FreeType 量出来的步进与字体文件的 hmtx **逐项相等**。
+
+2. **粗体必须是真的 Bold 字形**。只装常规字重的话，cairo 会**合成**
+   粗体——CoreText 合成一套、FreeType 合成另一套。实测同一段粗体文字，
+   两个后端的轮廓包围盒差 **3.14px**。
+
+**实测（2026-11-16，Linux/FreeType vs macOS/CoreText，同一份字体文件）**：
+
+| 量 | 跨机最大差 |
+| --- | --- |
+| 落笔坐标 x / y | **0.000**（纯算术） |
+| 字号 | 0.027 |
+| 步进宽度 | 0.812 |
+| 轮廓包围盒 | 0.711 |
+
+步进与轮廓那点差来自 **CoreText 对少数拉丁字形多给几个 em 单位**
+（'A' +8、'V' +10、'Y' +13、'f' +5，单位是 1/1000 em）——字体文件本身
+自洽（字形轮廓里的宽度与 hmtx 逐项相等），FreeType 严格照 hmtx 走。
+
+所以「跨机像素一致」做不到，但「跨机版式一致」做得到，而且是可以
+**量出来**的。
 
 采集靠插桩拦 `draw.text`。**要拦两处**：
 
@@ -68,11 +88,7 @@ def _measure(ctx, s: str, x: float, y: float, size: float,
     记的是**落笔点 (x, y)**——场景代码算出来的那个，纯算术，跨机完全
     一致；调整过的笔位不用记，它已经体现在轮廓包围盒里了。
     """
-    ctx.select_font_face(
-        fonts.font_family(),
-        cairo.FONT_SLANT_NORMAL,
-        cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL,
-    )
+    fonts.select_font(ctx, bold=bold)
     ctx.set_font_size(size)
     extents = ctx.text_extents(s)
     origin = x

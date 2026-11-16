@@ -8,7 +8,7 @@
 
   1. 自动定位胸口那块白铭牌（不硬编码坐标，重生成后依然有效）
   2. 把铭牌刷成纯白，抹掉模型写的任何字
-  3. 用 PingFang SC 写上 growdu
+  3. 用内置字体的粗体面写上 growdu
 
 文字来源于是从「模型碰运气」变成「代码确定」：模型这次碰巧写对了也不算数，
 下次重新生成时铭牌照样是对的。
@@ -40,7 +40,8 @@ AIV = HERE.parent.parent                     # aiv
 CHAR_DIR = AIV / "character"
 BRAND_ASSETS = AIV / "brand" / "assets"
 
-# 字体族名统一由流水线解析（macOS PingFang SC / Linux Noto Sans CJK SC）
+# 字体族名统一由流水线解析（默认是仓库内置的 `AIV Sans CJK SC`；
+# 没装内置字体时才退到系统字体）
 sys.path.insert(0, str(AIV / "pipeline"))
 from pyv import fonts  # noqa: E402
 
@@ -263,7 +264,11 @@ def render_text_mask(text: str, size: int, origin: tuple[float, float],
     """把一段文字渲染成 alpha 掩膜（供合成与测试比对）。"""
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
     ctx = cairo.Context(surface)
-    ctx.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+    # **走 fonts.select_font**：它顺带把 hinting 关掉——开着 hinting 时
+    # Linux 的 FreeType 会把轮廓吸附到像素网格、度量取整，Linux 上盖出来
+    # 的铭牌跟 macOS 就不一样了（同一类跨机不一致，见《上机指南》§三）。
+    # macOS 的 CoreText 本身不做 hinting，所以这一步在 macOS 上是空操作。
+    fonts.select_font(ctx, FONT, bold=True)
     ctx.set_font_size(float(size))
     ctx.set_source_rgba(0.0, 0.0, 0.0, 1.0)
     ctx.move_to(origin[0], origin[1])
@@ -284,7 +289,7 @@ def plan_badge(image: Image.Image) -> Badge | None:
     box_w, box_h = x1 - x0, y1 - y0
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1)
     ctx = cairo.Context(surface)
-    ctx.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+    fonts.select_font(ctx, FONT, bold=True)
     size = _fit_text(ctx, TEXT, box_w, box_h)
     ext = _measure(ctx, TEXT, float(size))
     x_bearing, y_bearing = ext[0], ext[1]

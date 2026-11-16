@@ -56,18 +56,61 @@ UPSTREAM_URLS = (
 )
 UPSTREAM_URL = UPSTREAM_URLS[0]
 
+#: **粗体那一面**的上游。
+#:
+#: **为什么必须把粗体也入库**：只装 Regular 的时候，cairo 会**合成**粗体
+#: ——CoreText 合成一套、FreeType 合成另一套。实测（2026-11-16）：
+#: 同一段粗体文字，两个后端量出来的轮廓包围盒差 **3.14px**。合成粗体是
+#: 各后端自己的做法，不是字体文件的性质，于是「几何只由字体文件决定」
+#: 这条前提在粗体上不成立。
+#:
+#: 装上真的 Bold 之后，同样的对比差降到 **0.36px**。
+UPSTREAM_BOLD_SHA256 = (
+    "b5f0d1a190a7f9b43c310a8850630af12553df32c4c050543f9059732d9b4c0a"
+)
+UPSTREAM_BOLD_URLS = (
+    "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@Sans2.004/"
+    "Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Bold.otf",
+    "https://raw.githubusercontent.com/notofonts/noto-cjk/Sans2.004/"
+    "Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Bold.otf",
+)
+UPSTREAM_BOLD_URL = UPSTREAM_BOLD_URLS[0]
+
 #: 授权：SIL Open Font License 1.1，允许随软件分发。
 LICENSE = "SIL Open Font License 1.1"
 LICENSE_URL = "https://github.com/notofonts/noto-cjk/blob/Sans2.004/LICENSE"
 
 #: 内置族名。**必须唯一**——跟系统里任何字体重名，fontconfig 就会在
 #: 两份之间二选一，机器之间就不一致了。
+#:
+#: **两个字重共用一个族名**：Regular 与 Bold 是**同一个族的两面**
+#: （name ID 1 相同，ID 2 分别是 Regular / Bold）。这样 cairo 的
+#: `select_font_face(family, ..., BOLD)` 在两个平台上都解析到同一份
+#: 粗体字形；族名不同的话，两个平台挑到的就不是同一个字体。
 FAMILY = "AIV Sans CJK SC"
-PS_NAME = "AIVSansCJKSC-Regular"
 
 FONT_DIR = PIPELINE_ROOT / "assets" / "fonts"
-SUBSET_PATH = FONT_DIR / "AIVSansCJKSC-Regular.otf"
 MANIFEST_PATH = FONT_DIR / "SOURCE.json"
+
+#: 要生成的两面。
+#:
+#: `style` 写进 name ID 2（子族名）——操作系统靠它把两面认成同一族。
+FACES = (
+    {
+        "style": "Regular",
+        "file": "AIVSansCJKSC-Regular.otf",
+        "postscript_name": "AIVSansCJKSC-Regular",
+        "upstream_urls": UPSTREAM_URLS,
+        "upstream_sha256": UPSTREAM_SHA256,
+    },
+    {
+        "style": "Bold",
+        "file": "AIVSansCJKSC-Bold.otf",
+        "postscript_name": "AIVSansCJKSC-Bold",
+        "upstream_urls": UPSTREAM_BOLD_URLS,
+        "upstream_sha256": UPSTREAM_BOLD_SHA256,
+    },
+)
 
 
 #: 画字模块：这些模块里的字符串字面量会经 cairo 画到画面上。
@@ -198,14 +241,15 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
-def fetch_upstream(target: Path) -> Path:
+def fetch_upstream(target: Path, urls: tuple[str, ...],
+                  expected_sha256: str) -> Path:
     """下载上游字体并核对 sha256。
 
     多个源按顺序试——GitHub 的原始地址实测很慢会断，CDN 快得多。
     **内容一样**，sha256 核对过才收。
     """
     errors: list[str] = []
-    for url in UPSTREAM_URLS:
+    for url in urls:
         print(f"下载上游字体：{url}")
         try:
             with urllib.request.urlopen(url, timeout=300) as response:
@@ -214,7 +258,7 @@ def fetch_upstream(target: Path) -> Path:
             errors.append(f"{url} → {exc}")
             continue
         actual = sha256_of(target)
-        if actual == UPSTREAM_SHA256:
+        if actual == expected_sha256:
             return target
         target.unlink()
         errors.append(f"{url} → sha256 不符（{actual}）")
@@ -222,12 +266,16 @@ def fetch_upstream(target: Path) -> Path:
         "所有下载源都没拿到可用的上游文件：\n  "
         + "\n  ".join(errors)
         + "\n可以自己下载一份再传 --from：\n  "
-        + "\n  ".join(UPSTREAM_URLS)
+        + "\n  ".join(urls)
     )
 
 
-def build(source: Path, charset: set[str]) -> None:
-    """子集化并改族名。"""
+def build(source: Path, charset: set[str], face: dict) -> Path:
+    """子集化并改族名。
+
+    **两个字重用的是同一个族名**（name ID 1），只有子族名（ID 2）与
+    PostScript 名（ID 6）不同——操作系统据此把它们认成同一族的两面。
+    """
     from fontTools import subset
     from fontTools.ttLib import TTFont
 
@@ -245,10 +293,15 @@ def build(source: Path, charset: set[str]) -> None:
     options.drop_tables = []
     options.glyph_names = False
 
+    style = face["style"]
+    ps_name = face["postscript_name"]
+    full_name = FAMILY if style == "Regular" else f"{FAMILY} {style}"
+
     font = subset.load_font(str(source), options)
     name = font["name"]
-    for name_id, value in ((1, FAMILY), (2, "Regular"), (3, PS_NAME),
-                           (4, FAMILY), (6, PS_NAME), (16, FAMILY), (17, "Regular")):
+    for name_id, value in ((1, FAMILY), (2, style), (3, ps_name),
+                           (4, full_name), (6, ps_name), (16, FAMILY),
+                           (17, style)):
         name.setName(value, name_id, 3, 1, 0x409)
     name.setName(FAMILY, 1, 1, 0, 0)
 
@@ -263,7 +316,8 @@ def build(source: Path, charset: set[str]) -> None:
     # sha256，台账里的 `chars` 也还是上一次的数量。半成品的组合比
     # 什么都没有更难查。
     FONT_DIR.mkdir(parents=True, exist_ok=True)
-    staged = SUBSET_PATH.with_suffix(".otf.staged")
+    subset_path = FONT_DIR / face["file"]
+    staged = subset_path.with_suffix(".otf.staged")
     subset.save_font(font, str(staged), options)
 
     # **子集必须真的盖住每一个字**：子集化可能因为某些字符没有字形
@@ -274,32 +328,32 @@ def build(source: Path, charset: set[str]) -> None:
     if missing:
         staged.unlink()
         raise SystemExit(
-            f"子集缺 {len(missing)} 个字：{missing[:20]}\n"
+            f"子集（{style}）缺 {len(missing)} 个字：{missing[:20]}\n"
             f"上游字体里没有这些字形——换个来源或把这些字挪出画面。"
         )
 
-    staged.replace(SUBSET_PATH)
+    staged.replace(subset_path)
+    return subset_path
 
 
-def write_manifest(charset: set[str]) -> None:
+def write_manifest(charset: set[str], faces: list[dict]) -> None:
     manifest = {
         "family": FAMILY,
-        "postscript_name": PS_NAME,
         "license": LICENSE,
         "license_url": LICENSE_URL,
-        "upstream": UPSTREAM_URL,
         "version": UPSTREAM_VERSION,
-        "sha256": UPSTREAM_SHA256,
-        "subset_sha256": sha256_of(SUBSET_PATH),
-        "subset_bytes": SUBSET_PATH.stat().st_size,
         "chars": len(charset),
+        "faces": faces,
         "note": (
             "按仓库实际用到的字符子集化。**字符集由 "
             "`scripts/build_font_subset.py` 从仓库自动提取**，"
             "不手工维护——`tests/test_font_subset.py` 独立复算一遍，"
             "对不上就红。\n"
             "上游钉在 2.004：Debian/Ubuntu 的 fonts-noto-cjk 就是这个版本，"
-            "系统字体与内置子集的字形一致。"
+            "系统字体与内置子集的字形一致。\n"
+            "**两个字重都是真的字形**：只装 Regular 的话，cairo 会用各后端"
+            "自己的办法合成粗体，两个后端合成出来的不一样（实测轮廓差 "
+            "3.14px）。"
         ),
     }
     MANIFEST_PATH.write_text(
@@ -312,31 +366,59 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="生成内置字体子集")
     parser.add_argument("--from", dest="source", default=None,
                         help="用这份本地文件当上游（必须是上游原版，sha256 要对得上）")
+    parser.add_argument("--from-bold", dest="source_bold", default=None,
+                        help="用这份本地文件当粗体上游")
     args = parser.parse_args()
 
     charset = repo_charset()
     print(f"仓库用到的字符：{len(charset)} 个")
 
-    if args.source:
-        source = Path(args.source)
-        actual = sha256_of(source)
-        if actual != UPSTREAM_SHA256:
-            raise SystemExit(
-                f"这份文件的 sha256 与台账不符：\n"
-                f"  期望 {UPSTREAM_SHA256}\n"
-                f"  实际 {actual}"
-            )
-        print(f"用本地上游：{source}")
-    else:
-        source = fetch_upstream(FONT_DIR / "_upstream.otf")
+    face_records = []
+    for face in FACES:
+        style = face["style"]
+        urls = face["upstream_urls"]
+        expected = face["upstream_sha256"]
 
-    build(source, charset)
-    write_manifest(charset)
+        if args.source and style == "Regular":
+            source = Path(args.source)
+            actual = sha256_of(source)
+            if actual != expected:
+                raise SystemExit(
+                    f"这份文件的 sha256 与台账不符：\n"
+                    f"  期望 {expected}\n"
+                    f"  实际 {actual}"
+                )
+            print(f"用本地上游：{source}")
+        elif args.source_bold and style == "Bold":
+            source = Path(args.source_bold)
+            actual = sha256_of(source)
+            if actual != expected:
+                raise SystemExit(
+                    f"粗体上游的 sha256 与台账不符：\n"
+                    f"  期望 {expected}\n"
+                    f"  实际 {actual}"
+                )
+            print(f"用本地上游：{source}")
+        else:
+            source = fetch_upstream(
+                FONT_DIR / f"_upstream_{style.lower()}.otf", urls, expected)
 
-    if source.name == "_upstream.otf":
-        source.unlink()
+        subset_path = build(source, charset, face)
+        face_records.append({
+            "style": style,
+            "file": face["file"],
+            "postscript_name": face["postscript_name"],
+            "upstream": urls[0],
+            "sha256": expected,
+            "subset_sha256": sha256_of(subset_path),
+            "subset_bytes": subset_path.stat().st_size,
+        })
+        print(f"已生成 {subset_path}（{subset_path.stat().st_size} 字节）")
 
-    print(f"已生成 {SUBSET_PATH}（{SUBSET_PATH.stat().st_size} 字节）")
+        if source.name.startswith("_upstream_"):
+            source.unlink()
+
+    write_manifest(charset, face_records)
     print(f"台账 {MANIFEST_PATH}")
     return 0
 

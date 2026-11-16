@@ -44,6 +44,10 @@ REQUIRED_ASSETS = {
     # 收字号结果）才一致。没装就退到系统字体，画面照样能出，
     # 但跨机就不保证一致了。
     "aiv/pipeline/assets/fonts/AIVSansCJKSC-Regular.otf": "内置中文字体（渲染必需）",
+    # **粗体也要入库**：只装常规字重的话，cairo 会用各后端自己的办法
+    # 合成粗体，两个平台合成出来的不一样（实测轮廓差 3.14px）——
+    # 跨机版式就又对不上了。
+    "aiv/pipeline/assets/fonts/AIVSansCJKSC-Bold.otf": "内置中文字体的粗体面（渲染必需）",
 }
 
 #: 备用素材：入库了，但**不是**默认出片必需的（缺了照样能出片）。
