@@ -11,8 +11,8 @@ fetch 永远失败，永远走 catch 分支跳 Google site: 搜索（国内不�
 没有」。所以另出一个精简索引 ``search-lite.json``——每篇只有
 title / url / cat，几十 KB，404 页拿它做标题匹配。
 
-代价说清楚：404 页的搜索只匹配**标题**，不搜正文。站内完整搜索仍在首页
-（那里有 MiniSearch 全文索引）。
+代价说清楚：404 页的搜索只匹配**标题和分类**，不搜正文。站内完整搜索仍在
+首页（那里有 MiniSearch 全文索引）。
 
 这条测试除了看产物，还**真的在 node 里跑一遍 404 页的那段 JS**：
 喂一个搜索词，断言结果列表里出现了匹配的文章。
@@ -52,10 +52,14 @@ def run_sync(root: Path) -> None:
 
 DRAFT = "---\ntitle: {title}\n---\n\n{body}\n"
 
+#: 标题里带引号——10 篇文章的标题里有引号（``AI 能"创造"吗？``）。
+QUOTED_TITLE = 'AI 能"创造"吗？——从一团噪声到一幅画'
+
 CORPUS = {
     "db/postgresql.md": DRAFT.format(title="PostgreSQL 数据库", body="数据库正文。"),
     "cluster/paxos.md": DRAFT.format(title="Paxos 共识", body="共识协议正文。"),
     "life/intro.md": DRAFT.format(title="编程之路", body="随笔。"),
+    "ai/creative.md": DRAFT.format(title=QUOTED_TITLE, body="绘画正文。"),
 }
 
 
@@ -98,6 +102,7 @@ def test_the_index_covers_every_publishable_post(tmp_path):
         "/2024/01/01/db/postgresql/",
         "/2024/01/01/cluster/paxos/",
         "/2024/01/01/life/intro/",
+        "/2024/01/01/ai/creative/",
     }, urls
 
 
@@ -151,7 +156,11 @@ global.fetch = function (url) {
     if (!handlers.submit) { console.error('NO_SUBMIT_HANDLER'); process.exit(3); }
     await handlers.submit({ preventDefault: function () {} });
     await new Promise(function (r) { setTimeout(r, 100); });
-    console.log(JSON.stringify({ html: els['recent-list'].innerHTML, fetched: fetched }));
+    console.log(JSON.stringify({
+        html: els['recent-list'].innerHTML,
+        fetched: fetched,
+        divider: divider.textContent
+    }));
 })();
 """
 
@@ -229,3 +238,50 @@ def test_the_lite_index_is_small_enough_to_fetch_from_an_error_page(tmp_path):
     size = (tmp_path / "source" / "search-lite.json").stat().st_size
 
     assert size < 200 * 1024, "精简索引有 {} 字节，太大了".format(size)
+
+
+def test_a_title_containing_quotes_survives_the_index(tmp_path):
+    """标题里有引号时，索引里的标题不能被截断。
+
+    **病根**：生成出来的 front matter 是 ``title: "AI 能\\"创造\\"吗？"``
+    （引号被 YAML 转义过）。按 ``[^"']+`` 取值会在**第一个**引号处停下，
+    10 篇文章的标题在索引里只剩「AI 能\\」——404 页上搜这些文章搜不到。
+    """
+    build_corpus(tmp_path, CORPUS)
+    run_sync(tmp_path)
+
+    index = read_lite_index(tmp_path)
+    titles = {entry["title"] for entry in index}
+
+    assert QUOTED_TITLE in titles, sorted(titles)
+
+
+def test_the_result_count_counts_every_match_not_only_the_ones_shown(tmp_path):
+    """「搜索结果 (N)」里的 N 要是**匹配的总数**，不是显示出来的条数。
+
+    404 页一次只列 10 条。如果 N 写的是列出来的条数，搜「数据库」命中 25 篇
+    却显示「搜索结果 (10)」——读者以为只有 10 篇，越界的 15 篇**消失得无声无息**。
+    """
+    if NODE is None:
+        import pytest
+
+        pytest.skip("node 不在 PATH 上")
+
+    corpus = {
+        "db/p{:02d}.md".format(i): DRAFT.format(
+            title="数据库 第 {} 篇".format(i), body="正文。"
+        )
+        for i in range(12)
+    }
+    build_corpus(tmp_path, corpus)
+    run_sync(tmp_path)
+
+    result = run_404_script(tmp_path, "数据库")
+
+    assert result.returncode == 0, "404 页的搜索抛异常了：\n{}\n{}".format(
+        result.stdout, result.stderr
+    )
+    payload = json.loads(result.stdout.strip().splitlines()[-1])
+
+    assert "12" in payload["divider"], payload["divider"]
+    assert "10" in payload["divider"], payload["divider"]

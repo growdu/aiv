@@ -109,16 +109,22 @@ footer a:hover{color:var(--c1)}
     var divider = document.querySelector('.divider');
     loadIndex().then(function(posts){
       var needle = q.toLowerCase();
-      var hits = posts.filter(function(p){
+      var matched = posts.filter(function(p){
         var t = String(p.title || '').toLowerCase();
         var c = String(p.cat || '').toLowerCase();
         return t.indexOf(needle) >= 0 || c.indexOf(needle) >= 0;
-      }).slice(0, 10);
+      });
+      var hits = matched.slice(0, 10);
       if (hits.length) {
         list.innerHTML = hits.map(function(p){
           return '<li><a href="'+esc(p.url)+'"><span class="title">'+esc(p.title)+'</span><span class="cat">'+esc(p.cat)+'</span></a></li>';
         }).join('');
-        if (divider) divider.textContent = '搜索结果 ('+hits.length+')';
+        // 计数是**匹配的总数**，不是列出来的条数：命中 25 篇只列 10 条时，
+        // 写「(10)」会让读者以为只有 10 篇，那 15 篇就无声无息地没了。
+        if (divider) {
+          divider.textContent = '搜索结果 ('+matched.length+')'
+            + (matched.length > hits.length ? '，显示前 '+hits.length+' 条' : '');
+        }
       } else {
         list.innerHTML = '<li style="text-align:center;color:var(--muted);padding:14px 0">没有匹配。换个词试试，或者 <a href="https://www.google.com/search?q='+encodeURIComponent(q+' site:growdu.cn')+'" target="_blank" rel="noopener">用搜索引擎找</a></li>';
         if (divider) divider.textContent = '搜索结果';

@@ -681,6 +681,47 @@ def yaml_escape(s):
     return s.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def _front_matter_title(text):
+    """Read the ``title`` out of a front matter block.
+
+    **为什么不能按第一个引号切**：生成出来的 front matter 是
+    ``title: "AI 能\\"创造\\"吗？"``——里面的引号被 YAML 转义过。
+    按 ``[^"']+`` 取值会在**第一个**引号处停下，10 篇文章的标题在 404 页
+    的索引里只剩「AI 能\\」，搜这些文章搜不到。
+
+    三种写法都要认：双引号串（带转义）、单引号串（``''`` 是转义的单引号）、
+    裸标量（引号只算正文的一部分）。
+    """
+    m = re.search(r"^title:[ \t]*(.*)$", text, re.M)
+    if not m:
+        return None
+    value = m.group(1).strip()
+    if not value:
+        return None
+    if value[0] == '"':
+        # 双引号串：走到**没有被转义**的那个收尾引号为止。
+        out = []
+        i = 1
+        while i < len(value):
+            ch = value[i]
+            if ch == "\\" and i + 1 < len(value):
+                out.append(value[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                break
+            out.append(ch)
+            i += 1
+        return "".join(out).strip()
+    if value[0] == "'":
+        end = value.find("'", 1)
+        while end != -1 and value[end + 1 : end + 2] == "'":
+            end = value.find("'", end + 2)
+        return (value[1:end] if end != -1 else value[1:]).replace("''", "'").strip()
+    # 裸标量：` #` 之后是 YAML 注释，不算标题的一部分。
+    return re.split(r"\s+#", value, maxsplit=1)[0].strip()
+
+
 # 透传字段（§4.1）：契约层（publish/publishkit/contract.py）要读的那些。
 # sync 只负责**原样搬运**——值的校验归契约层管（publish/spec/00-架构设计.md §4.1）。
 #
@@ -1958,10 +1999,9 @@ def collect_index_posts(posts_root, meta_cats=META_CATS):
         # 不是首尾两段：只拿 {cat}/{slug} 拼的话，db/nested/deep.md
         # 会被拼成 /db/deep/，中间那层掉了。
         post_path = os.path.splitext(rel)[0]
-        tm = re.search(r'^title:\s*["\']?([^"\'\n]+)["\']?', txt, re.M)
+        title = _front_matter_title(txt) or slug
         dm = re.search(r"^date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})", txt, re.M)
         top_m = re.search(r"^top:\s*([0-9]+)", txt, re.M)
-        title = tm.group(1).strip() if tm else slug
         date_str = dm.group(1) if dm else "1970-01-01"
         top_n = int(top_m.group(1)) if top_m else 0
         records.append(
@@ -2216,16 +2256,22 @@ footer a:hover{color:var(--c1)}
     var divider = document.querySelector('.divider');
     loadIndex().then(function(posts){
       var needle = q.toLowerCase();
-      var hits = posts.filter(function(p){
+      var matched = posts.filter(function(p){
         var t = String(p.title || '').toLowerCase();
         var c = String(p.cat || '').toLowerCase();
         return t.indexOf(needle) >= 0 || c.indexOf(needle) >= 0;
-      }).slice(0, 10);
+      });
+      var hits = matched.slice(0, 10);
       if (hits.length) {
         list.innerHTML = hits.map(function(p){
           return '<li><a href="'+esc(p.url)+'"><span class="title">'+esc(p.title)+'</span><span class="cat">'+esc(p.cat)+'</span></a></li>';
         }).join('');
-        if (divider) divider.textContent = '搜索结果 ('+hits.length+')';
+        // 计数是**匹配的总数**，不是列出来的条数：命中 25 篇只列 10 条时，
+        // 写「(10)」会让读者以为只有 10 篇，那 15 篇就无声无息地没了。
+        if (divider) {
+          divider.textContent = '搜索结果 ('+matched.length+')'
+            + (matched.length > hits.length ? '，显示前 '+hits.length+' 条' : '');
+        }
       } else {
         list.innerHTML = '<li style="text-align:center;color:var(--muted);padding:14px 0">没有匹配。换个词试试，或者 <a href="https://www.google.com/search?q='+encodeURIComponent(q+' site:growdu.cn')+'" target="_blank" rel="noopener">用搜索引擎找</a></li>';
         if (divider) divider.textContent = '搜索结果';
@@ -2275,7 +2321,7 @@ footer a:hover{color:var(--c1)}
     #
     # 不用站点的全文索引（search.json，13.5 MB）：让一个「页面不存在」的
     # 页面下载 13.5 MB 才能搜一个词，是把「搜索等于没有」换成「搜索慢到
-    # 等于没有」。这里只匹配标题，几十 KB 就能下完。
+    # 等于没有」。这里只匹配**标题和分类**，几十 KB 就能下完。
     #
     # 全文搜索在首页（那里有 MiniSearch 索引）。
     lite = [
