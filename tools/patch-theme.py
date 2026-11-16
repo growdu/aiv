@@ -181,10 +181,10 @@ inject_css = r"""<meta property="og:title" content="<%= page.title || config.tit
 <meta property="og:type" content="<%= page.layout === 'post' ? 'article' : 'website' %>">
 <meta property="og:url" content="<%- _selfUrl %>">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:description" content="<%= (page.description || config.description || '').replace(/"/g, '&quot;') %>">
+<meta property="og:description" content="<%= page.description || config.description || '' %>">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="<%= page.title || config.title %>">
-<meta name="twitter:description" content="<%= (page.description || config.description || '').replace(/"/g, '&quot;') %>">
+<meta name="twitter:description" content="<%= page.description || config.description || '' %>">
 <% if (page.layout === 'post') { %>
 <meta property="article:author" content="<%= config.author %>">
 <meta property="article:published_time" content="<%- date(page.date, 'YYYY-MM-DD') %>">
@@ -231,7 +231,9 @@ PRISM_BLOCK = """<% var _hasCode = !!(page.content && /<(?:pre|code)\\b/i.test(p
 <script>if(window.Prism&&Prism.plugins&&Prism.plugins.autoloader){Prism.plugins.autoloader.languages_path='<%= url_for("/lib/prism/components/") %>';}</script>
 <% } %>"""
 
-inject_js = PRISM_BLOCK + """
+inject_js = (
+    PRISM_BLOCK
+    + """
 <% if (theme.mermaid.enable) { %>
 <script>
 /* Mermaid loader -----------------------------------------------------------
@@ -396,6 +398,7 @@ window.initMermaidDiagrams = function () {
 };
 </script>
 <% } %>"""
+)
 
 for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
     for fname in files:
@@ -457,9 +460,9 @@ THEME_MERMAID_BLOCK = re.compile(
 # this script would append another copy to the theme.
 OLD_INJECTED_BLOCK = re.compile(
     # 新版注入块前面会多一行 _hasCode 声明，一并吃掉
-    r'(?:<% var _hasCode[^\n]*\n)?'
+    r"(?:<% var _hasCode[^\n]*\n)?"
     # 旧版条件是 is_post()，新版是 is_post() && _hasCode
-    r'<% if \(is_post\(\)(?: && _hasCode)?\) \{ %>\s*'
+    r"<% if \(is_post\(\)(?: && _hasCode)?\) \{ %>\s*"
     r'<script src="[^"]*prism-core\.min\.js[^"]*"></script>.*?'
     r"<% \} %>\n",
     re.S,
