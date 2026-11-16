@@ -39,6 +39,16 @@
     var description = config.description ? config.description : config.title;
     if (page.summary) {
         description = page.summary;
+    } else if (page.description) {
+        // 文章 front matter 里的 description。
+        //
+        // 主题自己只认 page.summary——568 篇文章里只有 1 篇写了 <!-- more -->，
+        // 于是这一格一直是**正文的前 120 个字**：代码文章的第一段就是代码，
+        // 搜索结果和链接预览里就出现一段 C 代码。
+        //
+        // 优先级和卡片摘要、TL;DR 框一致：作者写的（summary）优先，
+        // description 次之，正文前 120 字垫底。
+        description = page.description;
     } else if (page.hasOwnProperty('__post') && page.__post) {
         description = strip_html(page.content).substring(0, 120);
     }

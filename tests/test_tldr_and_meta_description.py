@@ -26,15 +26,167 @@ TL;DR 框，其中 11 篇正文开头本来就有自己的 ``> **TL;DR**`` 引�
 定的），但不能转义两次——``<%= %>`` 本来就会转义 HTML，手工再
 ``.replace(/"/g, '&quot;')`` 一次，页面里就变成 ``&amp;quot;``，
 读者看到的是 ``&quot;``。
+
+**``<meta name="description">``**（搜索结果和链接预览里显示的那一句）：
+主题自己的逻辑只看 ``page.summary``——568 篇文章里只有 1 篇写了
+``<!-- more -->``，于是这一句**一直是正文的前 120 个字**：
+``static XLogCtlData *XLogCtl = NULL;`` 这种代码残骸会出现在搜索结果里。
+文章 front matter 里的 ``description`` 该在这里说话。
 """
 
+import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TLDR_PARTIAL = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "post-tldr.ejs"
 HEAD_PARTIAL = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "head.ejs"
 PATCH_THEME = REPO_ROOT / "tools" / "patch-theme.py"
+NODE = shutil.which("node")
+
+
+#: head.ejs 开头那个 ``<% ... %>`` 脚本块——description 的算法就在里面。
+def _head_script() -> str:
+    """抠出 head.ejs 的第一个 ``<% ... %>`` 块。
+
+    主题在那个块里算 ``description``，块里还有 ``is_archive()`` 这些
+    hexo 的全局函数——测试里得给它们打桩。
+    """
+    text = HEAD_PARTIAL.read_text(encoding="utf-8")
+    m = re.search(r"<%(.*?)%>", text, re.S)
+    assert m, "head.ejs 里没有找到 <% ... %> 块"
+    return m.group(1)
+
+
+HARNESS = r"""
+const fs = require('fs');
+const script = fs.readFileSync(process.argv[1], 'utf8');
+const cases = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const strip_html = function (s) { return String(s).replace(/<[^>]*>/g, ''); };
+const noop = function () { return false; };
+const fn = new Function(
+    'page', 'config', 'strip_html', '__', 'is_archive', 'is_month', 'is_year',
+    'is_category', 'is_tag', 'theme',
+    script + '\nreturn description;'
+);
+const out = cases.map(function (c) {
+    return fn(c.page || {}, c.config || {}, strip_html, function (s) { return s; },
+              noop, noop, noop, noop, noop, {favicon: '/favicon.png'});
+});
+console.log(JSON.stringify(out));
+"""
+
+
+def _meta_description(cases, tmp_path):
+    """在 node 里跑 head.ejs 那段算 description 的代码。"""
+    if NODE is None:
+        import pytest
+
+        pytest.skip("node 不在 PATH 上")
+
+    script_path = tmp_path / "head-script.js"
+    script_path.write_text(_head_script(), encoding="utf-8")
+    cases_path = tmp_path / "cases.json"
+    cases_path.write_text(json.dumps(cases, ensure_ascii=False), encoding="utf-8")
+
+    result = subprocess.run(
+        [NODE, "-e", HARNESS, str(script_path), str(cases_path)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    assert result.returncode == 0, "head.ejs 那段代码抛异常了：\n{}\n{}".format(
+        result.stdout, result.stderr
+    )
+    return json.loads(result.stdout.strip().splitlines()[-1])
+
+
+def test_the_meta_description_uses_the_articles_own_description(tmp_path):
+    """文章 front matter 里的 description 进 ``<meta name="description">``。
+
+    主题自己的逻辑只看 ``page.summary``——于是这一句是**正文的前 120 个字**。
+    代码文章的第一段就是代码，搜索结果里就出现一段 C 代码。
+    """
+    got = _meta_description(
+        [
+            {
+                "page": {
+                    "title": "xlog",
+                    "description": "xlog 笔记：XLogCtlData 全局变量，以及写入与刷新的状态结构。",
+                    "__post": True,
+                    "content": "<p>static XLogCtlData *XLogCtl = NULL;</p>",
+                },
+                "config": {"title": "growdu", "description": "站点描述"},
+            }
+        ],
+        tmp_path,
+    )
+
+    assert "XLogCtlData 全局变量" in got[0], got[0]
+    assert "XLogCtl = NULL" not in got[0], got[0]
+
+
+def test_the_authors_own_summary_still_wins_over_the_description(tmp_path):
+    """作者写了 ``<!-- more -->`` 的，summary 优先。"""
+    got = _meta_description(
+        [
+            {
+                "page": {
+                    "title": "某篇",
+                    "summary": "作者自己写的摘要",
+                    "description": "自动生成的描述",
+                    "__post": True,
+                    "content": "<p>正文</p>",
+                },
+                "config": {"title": "growdu", "description": "站点描述"},
+            }
+        ],
+        tmp_path,
+    )
+
+    assert "作者自己写的摘要" in got[0], got[0]
+    assert "自动生成的描述" not in got[0], got[0]
+
+
+def test_a_post_without_any_description_still_gets_something(tmp_path):
+    """两样都没有的，退回正文的前 120 个字——不能空。
+
+    空的一句 meta description 会被搜索引擎当成「没有摘要」，比丑一点的
+    正文开头还差。
+    """
+    got = _meta_description(
+        [
+            {
+                "page": {
+                    "title": "某篇",
+                    "__post": True,
+                    "content": "<p>这是正文的第一段，足够长以便被截断到一百二十个字。</p>",
+                },
+                "config": {"title": "growdu", "description": "站点描述"},
+            }
+        ],
+        tmp_path,
+    )
+
+    assert "这是正文的第一段" in got[0], got[0]
+
+
+def test_a_non_post_page_still_uses_the_site_description(tmp_path):
+    """不是文章的页面（首页、归档页）用站点描述。"""
+    got = _meta_description(
+        [
+            {
+                "page": {"title": "归档"},
+                "config": {"title": "growdu", "description": "站点描述"},
+            }
+        ],
+        tmp_path,
+    )
+
+    assert got[0] == "站点描述", got[0]
 
 
 def test_the_tldr_box_falls_back_to_the_description_only_after_the_authors_own():
