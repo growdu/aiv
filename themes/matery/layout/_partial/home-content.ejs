@@ -35,13 +35,46 @@
   });
 
   // Tab data: 3 distinct sources, 6 cards each.
-  //   featured: hand-curated (top >= 70), sorted by top desc
+  //   featured: **策展清单**（data/featured.json 的 featured 组）
   //   hot:      **真实阅读量**（GoatCounter 快照）；没有快照才退回 top
   //   latest:   newest by date
   // site.posts 是 warehouse 的 Query，不是数组——filter/sort/slice 返回的
   // 还是 Query，而 Query 没有 concat。所以先 toArray() 拿真正的数组。
   var allPosts = site.posts.toArray();
-  var featured = allPosts.filter(function (p) { return p.top && p.top >= 70; }).sort(function (a, b) { return b.top - a.top; }).slice(0, 6);
+
+  // 「编辑推荐」是**策展**出来的：清单在仓库根的 data/featured.json
+  // （跟首屏那三篇代表作同一个文件），sync 复制到 source/_data/，
+  // 这里通过 site.data.featured 读到。作者改清单就能换这一格。
+  //
+  // 以前这里是 `top >= 70` —— 一个跟策展无关的阈值，而清单里那 6 条
+  // 谁都不读：作者改了清单，页面纹丝不动。
+  //
+  // 清单里的 slug 是 <相对路径>（不带日期段），而 post.path 形如
+  // 2026/08/18/db/aaa/ —— 所以先把日期段剥掉再匹配（跟首屏同一个口径）。
+  var _featData = (site.data && site.data.featured) || {};
+  var _featSlugs = _featData.featured || [];
+  var _featSlugOf = function (p) {
+    var m = String((p && p.path) || '').match(/\d{4}\/\d{2}\/\d{2}\/(.+)$/);
+    if (!m) return '';
+    var s = m[1].replace(/\/+$/, '');
+    if (s.slice(-11) === '/index.html') s = s.slice(0, -11);
+    return s;
+  };
+  var _featBySlug = {};
+  allPosts.forEach(function (p) {
+    var k = _featSlugOf(p);
+    if (k) _featBySlug[k] = p;
+  });
+  var featured = [];
+  _featSlugs.forEach(function (s) {
+    var p = _featBySlug[s];
+    if (p) featured.push(p);
+  });
+  if (!featured.length) {
+    // 清单缺失（sync 没跑 / 文件还没建），或者一条都对不上：
+    // 退回旧阈值，至少给六篇——这一格空着不像话。
+    featured = allPosts.filter(function (p) { return p.top && p.top >= 70; }).sort(function (a, b) { return b.top - a.top; }).slice(0, 6);
+  }
 
   // 阅读量快照（GoatCounter 的真实 PV）。
   //
@@ -71,14 +104,16 @@
     .map(function (p) { return {post: p, pv: _pv(p)}; })
     .filter(function (x) { return x.pv > 0; })
     .sort(function (a, b) { return b.pv - a.pv; })
-    .slice(0, 6)
-    .map(function (x) { return x.post; });
+    .slice(0, 6);
 
   var hotTabName = '近期热门';
   var hot;
-  if (_byPv.length >= 2) {
+  // 「热门」得**分得出高下**才算热门：至少两篇有真实 PV，而且头两篇的
+  // PV 不一样。PV 全是 1 的时候，那个 tab 叫「近期热门」却给不出任何
+  // 热门——计划里说的是「PV 普遍低到无法区分」，不是「有几篇有 PV」。
+  if (_byPv.length >= 2 && _byPv[0].pv > _byPv[1].pv) {
     // 有真实阅读量：按 PV 排。
-    hot = _byPv;
+    hot = _byPv.map(function (x) { return x.post; });
   } else {
     // 快照缺失、或者 PV 少到分不出高下：退回 top 排序，并**改掉 tab 的名字**。
     hotTabName = '编辑精选';

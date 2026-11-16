@@ -134,3 +134,59 @@ def test_the_archive_page_exists_in_the_built_site():
         pytest.skip("还没构建（public/archives/index.html 不存在）")
 
     assert built.stat().st_size > 0, "public/archives/index.html 是空的"
+
+
+# --- 独立页不该被注入主题资源 -----------------------------------------------
+
+
+def _patcher_function(name: str):
+    """把 ``patch-theme.py`` 里某个函数抠出来单独跑。
+
+    那个脚本是一路执行下来的（没有 ``main()`` 保护），import 它会把整个
+    主题改一遍——所以只能抠出函数体自己 exec。
+    """
+    text = (REPO / "tools" / "patch-theme.py").read_text(encoding="utf-8")
+    rest = text[text.index("def {}(".format(name)):]
+    # 函数体到**第一个顶格行**为止（下一个模块级语句）。
+    lines = rest.split("\n")
+    body_lines = [lines[0]]  # def 那一行本身是顶格的
+    for line in lines[1:]:
+        if line and not line.startswith((" ", "\t")):
+            break
+        body_lines.append(line)
+    body = "\n".join(body_lines)
+    namespace = {"re": re}
+    exec(compile(body, "patch-theme.py", "exec"), namespace)
+    return namespace[name]
+
+
+def test_the_patcher_recognises_a_standalone_page():
+    """``layout: false`` 的页面自带 html/head/body，主题资源不该往里塞。"""
+    is_standalone = _patcher_function("is_standalone_page")
+
+    assert is_standalone(
+        "---\nlayout: false\n---\n<html><head></head><body></body></html>"
+    )
+    assert not is_standalone(
+        "---\ntitle: x\n---\n<html><head></head><body></body></html>"
+    )
+    assert not is_standalone("<html><head></head><body></body></html>")
+
+
+def test_the_all_page_is_not_polluted_with_the_theme_assets():
+    """``/all/`` 是个重定向页，不该背着一整份主题 CSS。
+
+    它以前被 patcher 当成注入目标，于是：多了一份 25KB 的 CSS、多了
+    一条跟自己的跳转目标打架的 canonical（``/archives/`` 和
+    ``growdu.cn/all/index.html`` 同时存在）——而且因为注入过的文件会被
+    跳过，那份 CSS 从此冻结，patcher 再也不刷新它。
+    """
+    text = ALL_EJS.read_text(encoding="utf-8")
+
+    assert "custom-blog-style" not in text, "独立页里被注入了主题 CSS"
+    assert "custom-blog-script" not in text, "独立页里被注入了主题 JS"
+    assert text.count('rel="canonical"') == 1, (
+        "有 {} 条 canonical——跳转页只能有一条，指向它的正身".format(
+            text.count('rel="canonical"')
+        )
+    )

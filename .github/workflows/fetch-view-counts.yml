@@ -34,6 +34,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          # 钉死在 master：这个工作流直接推 master，从别的分支触发的话，
+          # 那个分支上的提交会被 rebase 到 master 再推上去。
+          ref: master
 
       - uses: actions/setup-python@v5
         with:
@@ -49,11 +52,32 @@ jobs:
           fi
           python3 tools/fetch-view-counts.py
 
+      - name: 跑契约测试
+        run: python3 -m pip install pytest && python3 -m pytest tests/ -q
+
       - name: 提交快照
         run: |
           set -euo pipefail
+          # 推 master 之前确认自己在 master 上。
+          branch="$(git branch --show-current)"
+          if [ "$branch" != "master" ]; then
+            echo "::error title=不在 master 上::当前分支是 $branch，拒绝推送"
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 快照是空的 = 整个功能被悄悄关掉了（侧栏一个🔥都没有、
+          # 首页那个 tab 改名成「编辑精选」）。这种情况不许提交。
+          python3 - <<'PY'
+          import json, sys
+          data = json.load(open("data/view-counts.json", encoding="utf-8"))
+          counts = data.get("counts") or {}
+          if not counts:
+              print("::error title=快照是空的::抓不到任何路径，拒绝提交——"
+                    "先把原因查清楚（API 形状？key？站点改名？）")
+              sys.exit(1)
+          print("快照里有 %d 条路径" % len(counts))
+          PY
           git add data/view-counts.json
           if git diff --staged --quiet; then
             echo "阅读量跟上次一样，不用提交"

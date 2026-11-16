@@ -27,7 +27,6 @@
 
 from __future__ import annotations
 
-import ast
 import importlib.util
 import json
 import re
@@ -38,7 +37,6 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PATCH_THEME = REPO_ROOT / "tools" / "patch-theme.py"
 THEME_LAYOUT = REPO_ROOT / "themes" / "matery" / "layout" / "layout.ejs"
 HOME_CONTENT = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
 FETCHER = REPO_ROOT / "tools" / "fetch-view-counts.py"
@@ -51,21 +49,14 @@ needs_node = pytest.mark.skipif(NODE is None, reason="node 不在 PATH 上")
 # --- 取模板 -----------------------------------------------------------------
 
 
-def _patcher_sidebar() -> str:
-    """``patch-theme.py`` 里那段注入用的侧栏模板。
-
-    它是**生成器**：下次跑 patch-theme.py 时，这段会重新写进主题文件。
-    主题文件（layout.ejs）里那段是手改过的（多了折叠开关），两者已经
-    不是同一段文本了——所以这里两边都取出来，各自断言。
-    """
-    text = PATCH_THEME.read_text(encoding="utf-8")
-    match = re.search(r'sidebar_ejs = """(.*?)"""', text, re.S)
-    assert match, "patch-theme.py 里找不到 sidebar_ejs"
-    return ast.literal_eval('"""' + match.group(1) + '"""')
-
-
 def _theme_sidebar() -> str:
-    """主题文件里实际生效的那段侧栏模板。"""
+    """主题文件里实际生效的那段侧栏模板。
+
+    侧栏模板现在**只有这一份**。``patch-theme.py`` 里原来还有一份抄本
+    （注入用的生成器），可它跟这份早就对不上了——抄本少了折叠开关
+    （``onclick="toggleSidebar('cat')"``）和定义 ``window.toggleSidebar``
+    的那段脚本。抄本已经删掉，见 tests/test_patch_theme_sidebar.py。
+    """
     text = THEME_LAYOUT.read_text(encoding="utf-8")
     start = text.find("<% if (site.categories && site.categories.length) { %>")
     end = text.find("<%# Per-page view counter is handled by Vercount embed below. %>")
@@ -75,7 +66,6 @@ def _theme_sidebar() -> str:
 
 
 SIDEBAR_TEMPLATES = {
-    "patcher": _patcher_sidebar,
     "theme": _theme_sidebar,
 }
 
@@ -439,3 +429,253 @@ def test_the_snapshot_reaches_the_hexo_data_dir(tmp_path):
     assert dest is not None, "快照没有被复制到 source/_data/"
     copied = json.loads(Path(dest).read_text(encoding="utf-8"))
     assert copied == json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+
+
+# --- 6. 中文路径：GoatCounter 返回百分号编码，hexo 的 post.path 是原始 Unicode ---
+
+
+def test_the_snapshot_key_matches_the_template_for_a_chinese_path():
+    """GoatCounter 的 API 返回的是**百分号编码**的路径，hexo 的 ``post.path``
+    是**原始 Unicode**。
+
+    614 篇文章里有 358 篇（58.5%）的路径带中文。不解码的话，一多半的文章
+    永远匹配不上——而且是**安静地**不匹配：「近期热门」只排那 42% 的 ASCII
+    路径文章，看起来一切正常。
+    """
+    fetcher = _load_fetcher()
+
+    assert fetcher.normalize_path(
+        "/2022/04/13/pgsql/extension/pgsql%E6%89%A9%E5%B1%95/"
+    ) == "2022/04/13/pgsql/extension/pgsql扩展"
+
+    # 已经是原始 Unicode 的（有的 GoatCounter 实例存的是解码后的）也不能被改坏
+    assert fetcher.normalize_path(
+        "/2022/04/13/pgsql/extension/pgsql扩展/"
+    ) == "2022/04/13/pgsql/extension/pgsql扩展"
+
+
+def test_the_snapshot_key_matches_a_template_path_with_a_space():
+    """带空格的路径同理（空格在 URL 里编码成 %20）。"""
+    fetcher = _load_fetcher()
+
+    assert fetcher.normalize_path("/2026/01/01/db/a%20b/") == "2026/01/01/db/a b"
+
+
+def test_a_broken_escape_sequence_does_not_explode():
+    """路径里出现落单的 % 时，解码要**原样保留**，不能抛异常也不能变成乱码。"""
+    fetcher = _load_fetcher()
+
+    assert fetcher.normalize_path("/2026/01/01/100%/") == "2026/01/01/100%"
+
+
+# --- 7. HTTP 契约：URL、请求头、翻页 ----------------------------------------
+
+
+class _FakeGoatCounter:
+    """一个假的 GoatCounter：记下每次请求长什么样，按剧本回数据。
+
+    真接口没有 key 跑不了，但**请求长什么样**是可以钉死的——URL 里有哪些
+    参数、认证头是什么、翻页怎么翻。这些东西错了，刷新就是静悄悄地失败。
+    """
+
+    def __init__(self, pages):
+        # pages: [{"hits": [...], "more": bool}, ...]
+        self.pages = pages
+        self.requests = []
+
+    def __enter__(self):
+        import http.server
+        import threading
+
+        outer = self
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_GET(self):
+                import urllib.parse
+
+                parsed = urllib.parse.urlparse(self.path)
+                query = urllib.parse.parse_qs(parsed.query)
+                outer.requests.append(
+                    {
+                        "path": parsed.path,
+                        "query": query,
+                        "full": self.path,
+                        "authorization": self.headers.get("Authorization"),
+                    }
+                )
+                index = min(len(outer.requests) - 1, len(outer.pages) - 1)
+                page = outer.pages[index]
+                body = json.dumps(page).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.port = self.server.server_address[1]
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.server.shutdown()
+        self.server.server_close()
+        return False
+
+    @property
+    def api_base(self):
+        return "http://127.0.0.1:{}/api/v0".format(self.port)
+
+
+def _hit(path, count):
+    return {"path": path, "count": count, "event": False, "path_id": 1}
+
+
+def test_the_fetcher_asks_the_api_the_documented_way():
+    """请求的 URL、参数、认证头要跟官方 API 文档对得上。"""
+    fetcher = _load_fetcher()
+    with _FakeGoatCounter([{"hits": [_hit("/a/", 1)], "more": False}]) as fake:
+        fetcher.API_BASE = fake.api_base
+        counts = fetcher.fetch_counts("SECRET", "growdu")
+
+    assert counts == {"a": 1}, counts
+    request = fake.requests[0]
+    assert request["path"] == "/api/v0/stats/hits", request
+    assert request["authorization"] == "Bearer SECRET", request
+    assert request["query"]["path_by_name"] == ["true"], request
+    assert request["query"]["limit"] == ["100"], request
+    assert request["query"]["start"] and request["query"]["end"], request
+
+
+def test_the_fetcher_pages_with_offset_instead_of_a_growing_url():
+    """翻页用 ``offset``，**不是** ``exclude_paths``。
+
+    exclude_paths 的办法是把已经拿到的路径全塞回下一次请求：600 条路径
+    之后 URL 有 8 万多字符，多数服务器和代理在 8–32KB 就掐了——刷新会
+    硬失败，而这件事在真接口上跑一次之前谁也发现不了。
+    """
+    fetcher = _load_fetcher()
+    pages = [
+        {"hits": [_hit("/p%d/" % i, i) for i in range(100)], "more": True},
+        {"hits": [_hit("/p100/", 100)], "more": False},
+    ]
+    with _FakeGoatCounter(pages) as fake:
+        fetcher.API_BASE = fake.api_base
+        counts = fetcher.fetch_counts("SECRET", "growdu")
+
+    assert len(counts) == 101, len(counts)
+    assert [r["query"].get("offset", ["0"])[0] for r in fake.requests] == ["0", "100"]
+    # URL 长度不随页数增长
+    assert len(fake.requests[1]["full"]) < len(fake.requests[0]["full"]) + 50
+
+
+def test_the_fetcher_refuses_to_count_the_same_path_twice():
+    """翻页出错（同一页被返回两次）要**报错**，不能悄悄把阅读量翻倍。
+
+    offset 没被服务端认的时候就会这样：每页都是前 100 条。悄悄翻倍比直接
+    失败更糟——数字看着合理，其实全错。
+    """
+    fetcher = _load_fetcher()
+    page = {"hits": [_hit("/a/", 5), _hit("/b/", 6)], "more": True}
+    with _FakeGoatCounter([page, page]) as fake:
+        fetcher.API_BASE = fake.api_base
+        with pytest.raises(RuntimeError):
+            fetcher.fetch_counts("SECRET", "growdu")
+
+
+def test_the_fetcher_stops_after_too_many_pages():
+    """服务端一直说 more，也不能无限翻下去。"""
+    fetcher = _load_fetcher()
+    pages = [{"hits": [_hit("/p%d/" % i, i)], "more": True} for i in range(3)]
+    with _FakeGoatCounter(pages) as fake:
+        fetcher.API_BASE = fake.api_base
+        counts = fetcher.fetch_counts("SECRET", "growdu", max_pages=3)
+
+    assert len(fake.requests) == 3, len(fake.requests)
+    assert counts == {"p0": 0, "p1": 1, "p2": 2}, counts
+
+
+def test_the_hot_tab_falls_back_when_every_post_has_the_same_view_count(tmp_path):
+    """所有文章的 PV **都一样** → 分不出高下 → 退回 top，并改名。
+
+    计划里写的是「PV 普遍低到**无法区分**」——不是「有几篇有 PV」。
+    三篇都是 1 的时候，那个 tab 叫「近期热门」却给不出任何热门。
+    """
+    got = _home_tabs(
+        {
+            "posts": _three_posts(),
+            "data": {
+                "view-counts": {
+                    "counts": {
+                        "2026/08/18/db/aaa": 1,
+                        "2026/08/18/db/bbb": 1,
+                        "2026/08/18/db/ccc": 1,
+                    }
+                }
+            },
+        },
+        tmp_path,
+    )
+
+    assert got["hotTabName"] == "编辑精选", got["hotTabName"]
+    assert got["hot"][0] == "2026/08/18/db/bbb/index.html", got["hot"]
+
+
+# --- 8. 刷新工作流不能把好数据悄悄抹掉 ---------------------------------------
+
+WORKFLOW = REPO_ROOT / ".github" / "workflows" / "fetch-view-counts.yml"
+
+
+def test_the_fetcher_refuses_to_wipe_a_good_snapshot(tmp_path, monkeypatch):
+    """抓不到东西时**不能**把快照写成空的。
+
+    空快照 = 侧栏一个🔥都不显示 + 首页那个 tab 改名成「编辑精选」——
+    整个功能被悄悄关掉，而 CI 是绿的。API 形状变了、key 过期、站点改名，
+    都会让抓取结果变成空。
+    """
+    out = tmp_path / "view-counts.json"
+    out.write_text(json.dumps({"counts": {"a": 1}}), encoding="utf-8")
+
+    fetcher = _load_fetcher()
+    monkeypatch.setenv("GOATCOUNTER_API_KEY", "SECRET")
+    monkeypatch.setattr(fetcher, "fetch_counts", lambda *a, **k: {})
+
+    rc = fetcher.main(["--out", str(out)])
+
+    assert rc != 0, "空快照被写进去了"
+    assert json.loads(out.read_text(encoding="utf-8"))["counts"] == {"a": 1}, (
+        "原来好的数据被覆盖了"
+    )
+
+
+def test_the_fetcher_refuses_a_snapshot_that_lost_most_of_its_paths(tmp_path, monkeypatch):
+    """路径数**骤减**也是坏信号：形状变了的话，会安静地少掉一大半。"""
+    out = tmp_path / "view-counts.json"
+    old = {"p%d" % i: i for i in range(100)}
+    out.write_text(json.dumps({"counts": old}), encoding="utf-8")
+
+    fetcher = _load_fetcher()
+    monkeypatch.setenv("GOATCOUNTER_API_KEY", "SECRET")
+    monkeypatch.setattr(fetcher, "fetch_counts", lambda *a, **k: {"p0": 1})
+
+    rc = fetcher.main(["--out", str(out)])
+
+    assert rc != 0, "只剩 1 条的快照被写进去了"
+    assert json.loads(out.read_text(encoding="utf-8"))["counts"] == old
+
+
+def test_the_refresh_workflow_is_pinned_to_master_and_runs_the_tests():
+    """工作流直接推 master，所以要钉死在 master 上，推之前先跑测试。
+
+    不钉的话，从别的分支手动触发这个工作流，那个分支上的提交会被
+    rebase 到 master 再推上去。
+    """
+    text = WORKFLOW.read_text(encoding="utf-8")
+
+    assert "ref: master" in text, "checkout 没有钉在 master 上"
+    assert "pytest" in text, "推 master 之前没有跑测试"
+    assert "workflow_dispatch" in text, "只剩自动触发就不是「手动刷新」了"

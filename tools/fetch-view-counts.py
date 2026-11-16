@@ -61,10 +61,36 @@ DEFAULT_START = "2020-01-01T00:00:00Z"
 #: GoatCounter 一次最多给 100 条路径，超了要翻页。
 PAGE_LIMIT = 100
 
+#: 最多翻多少页。服务端一直说「还有」也不能无限翻——600 篇文章按 100 条一页
+#: 是 6 页，翻到 20 页还没完就该出问题了。
+MAX_PAGES = 20
+
+#: GoatCounter 的 API 根。写成常量而不是散在代码里，是为了测试能把它指向
+#: 本地的一台假服务器（真接口没有 key 跑不了，但请求长什么样可以钉死）。
+API_BASE = "https://{code}.goatcounter.com/api/v0"
+
 
 def _now_iso() -> str:
     """当前 UTC 时间（秒精度，RFC3339）。"""
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def percent_decode(text: str) -> str:
+    """把百分号编码还原成原文；解不了就**原样返回**。
+
+    GoatCounter 记的是浏览器请求的那个 URL，也就是**百分号编码**的
+    （arp242/goatcounter#834）。hexo 的 ``post.path`` 却是原始 Unicode。
+    两边不统一的话，614 篇文章里有 358 篇（路径带中文）永远匹配不上——
+    而且是安静地不匹配：「近期热门」只排那 42% 的 ASCII 路径文章，
+    看上去一切正常。
+    """
+    if "%" not in text:
+        return text
+    try:
+        return urllib.parse.unquote(text, errors="strict")
+    except UnicodeDecodeError:
+        # 落单的 % 或坏掉的转义：原样留着，别变成乱码。
+        return text
 
 
 def normalize_path(path) -> str:
@@ -73,6 +99,9 @@ def normalize_path(path) -> str:
     hexo 的 ``post.path`` 是 ``2026/08/18/db/aaa/index.html``，
     GoatCounter 记的是 ``/2026/08/18/db/aaa/``——两边都得归一成
     ``2026/08/18/db/aaa``，模板才匹配得上。
+
+    还要把**百分号编码**还原：GoatCounter 返回的是编码过的路径，
+    hexo 的是原始 Unicode——不解码的话中文路径的文章一条都匹配不上。
 
     归一口径必须和模板里的那段 JS **一模一样**，否则永远匹配不上。
     """
@@ -84,7 +113,7 @@ def normalize_path(path) -> str:
     elif s == "index.html":
         s = ""
     s = s.rstrip("/")
-    return s
+    return percent_decode(s)
 
 
 def parse_counts(payload) -> dict:
@@ -129,18 +158,18 @@ def site_code(config_path=CONFIG_PATH) -> str:
     return code.group(1) if code else ""
 
 
-def fetch_page(api_key, code, start, end, exclude=None, limit=PAGE_LIMIT) -> dict:
+def fetch_page(api_key, code, start, end, offset=0, limit=PAGE_LIMIT) -> dict:
     """调一次 GoatCounter 的统计接口。"""
     query = urllib.parse.urlencode(
-        {"start": start, "end": end, "limit": limit, "path_by_name": "true"}
+        {
+            "start": start,
+            "end": end,
+            "limit": limit,
+            "offset": offset,
+            "path_by_name": "true",
+        }
     )
-    if exclude:
-        # exclude_paths 是**路径名**（path_by_name=true 时按名字排除），
-        # 重复同一个参数名。
-        query += "&" + urllib.parse.urlencode(
-            {"exclude_paths": list(exclude)}, doseq=True
-        )
-    url = "https://{}.goatcounter.com/api/v0/stats/hits?{}".format(code, query)
+    url = API_BASE.format(code=code) + "/stats/hits?" + query
     request = urllib.request.Request(
         url,
         headers={
@@ -154,28 +183,42 @@ def fetch_page(api_key, code, start, end, exclude=None, limit=PAGE_LIMIT) -> dic
     return json.loads(body)
 
 
-def fetch_counts(api_key, code, start=DEFAULT_START, end=None) -> dict:
+def fetch_counts(api_key, code, start=DEFAULT_START, end=None, max_pages=MAX_PAGES) -> dict:
     """把 GoatCounter 上所有路径的 PV 抓回来。
 
-    接口一次最多给 100 条，后面靠 ``exclude_paths`` 翻页。
+    接口一次最多给 100 条，后面靠 ``offset`` 翻页——**不是** ``exclude_paths``。
+    exclude_paths 的办法是把已经拿到的路径全塞回下一次请求：600 条路径之后
+    URL 有八万多字符，多数服务器和代理在 8–32KB 就掐了，刷新会硬失败。
+    offset 的 URL 长度是恒定的。
     """
     end = end or _now_iso()
     counts = {}
-    exclude = []
-    while True:
-        payload = fetch_page(api_key, code, start, end, exclude)
+    seen = set()
+    offset = 0
+    for _ in range(max_pages):
+        payload = fetch_page(api_key, code, start, end, offset=offset)
         hits = payload.get("hits") if isinstance(payload, dict) else None
         if not hits:
             break
+        raw_paths = [
+            str(hit["path"]) for hit in hits
+            if isinstance(hit, dict) and hit.get("path")
+        ]
+        # 同一页被返回两次 = 翻页参数没被服务端认（offset 被忽略了）。
+        # 悄悄把阅读量翻倍比直接失败更糟——数字看着合理，其实全错。
+        repeated = seen.intersection(raw_paths)
+        if repeated:
+            raise RuntimeError(
+                "第 %d 页出现了上一页已有的路径（%s）——offset 没被服务端认，"
+                "再抓下去会把阅读量翻倍。已中止。"
+                % (offset // PAGE_LIMIT + 1, ", ".join(sorted(repeated)[:3]))
+            )
+        seen.update(raw_paths)
         for key, count in parse_counts(payload).items():
             counts[key] = counts.get(key, 0) + count
         if not payload.get("more"):
             break
-        # 翻页：把已经拿到的路径排除掉。
-        exclude.extend(
-            str(hit["path"]) for hit in hits
-            if isinstance(hit, dict) and hit.get("path")
-        )
+        offset += len(raw_paths)
     return counts
 
 
@@ -222,6 +265,35 @@ def main(argv=None) -> int:
     end = args.end or _now_iso()
     counts = fetch_counts(api_key, code, args.start, end)
 
+    out = Path(args.out)
+    old_counts = {}
+    if out.is_file():
+        try:
+            old_counts = (json.loads(out.read_text(encoding="utf-8")) or {}).get("counts") or {}
+        except (OSError, ValueError):
+            old_counts = {}
+
+    # 坏数据不能覆盖好数据。
+    #
+    # 空快照 = 侧栏一个🔥都不显示、首页那个 tab 改名成「编辑精选」——
+    # 整个功能被**悄悄**关掉，而 CI 是绿的。API 的形状变了、key 过期了、
+    # 站点改名了，都会让抓取结果变成空的或者少一大半。
+    if old_counts:
+        if not counts:
+            print(
+                "抓到的路径数是 0，而 %s 里已经有 %d 条 —— 拒绝覆盖。\n"
+                "（API 形状变了、key 不对、站点改名，都会这样。先查清楚再刷新。）"
+                % (out, len(old_counts))
+            )
+            return 3
+        if len(counts) < len(old_counts) * 0.5:
+            print(
+                "只抓到 %d 条路径，上一份有 %d 条（少了一半以上）—— 拒绝覆盖。\n"
+                "（多半是 API 的形状变了。先查清楚再刷新。）"
+                % (len(counts), len(old_counts))
+            )
+            return 3
+
     payload = {
         "_comment": (
             "真实阅读量快照。tools/fetch-view-counts.py 从 GoatCounter 抓的，"
@@ -235,7 +307,6 @@ def main(argv=None) -> int:
         "end": end,
         "counts": dict(sorted(counts.items())),
     }
-    out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

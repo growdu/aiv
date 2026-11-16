@@ -41,6 +41,7 @@
     <div class="home-hero__search">
       <label class="home-hero__search-label" for="homeSearch">站内搜索</label>
       <input type="search" id="homeSearch" class="home-hero__search-input"
+             data-index-url="<%- url_for('/search-lite.json') %>"
              placeholder="按标题或分类搜索…" autocomplete="off" spellcheck="false" />
       <ul class="home-hero__search-results" id="homeSearchResults" hidden></ul>
       <p class="home-hero__search-hint">按标题搜索 · 全文搜索用顶部导航</p>
@@ -133,9 +134,16 @@
     });
   };
 
+  // 索引的地址由**模板**给出（带挂载点前缀）。
+  //
+  // 写死 '/search-lite.json' 的话，镜像站（挂在 /blog/ 下）会 404——
+  // 而下面那个 .catch() 会把 404 吞成一个空索引，用户看到的是
+  // 「没有匹配的文章」：一个坏掉的控件，看起来像「搜不到」。
+  var INDEX_URL = input.getAttribute('data-index-url') || '/search-lite.json';
+
   var loadIndex = function () {
     if (index) return Promise.resolve(index);
-    return fetch('/search-lite.json')
+    return fetch(INDEX_URL)
       .then(function (r) { return r.json(); })
       .then(function (d) { index = Array.isArray(d) ? d : []; return index; })
       .catch(function () { index = []; return index; });
