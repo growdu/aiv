@@ -20,12 +20,16 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 SPEC = REPO / "publish" / "spec" / "08-站点IP骨架.md"
+# 长视频三档的规格（契约八）。它与 SPEC 各自独立，但共享下面两条纪律：
+# 契约编号不冲突、引用的仓库路径必须真实存在。
+SPEC_LONG_VIDEO = REPO / "publish" / "spec" / "09-长视频三档.md"
 
 # --- 期 → 主母稿的映射 ---------------------------------------------------
 #
@@ -76,6 +80,27 @@ EV_DIAGRAM_MIN = 1
 EV_SPEECH_RATE = 7.19
 EV_DRAFT_P90 = 23_583
 
+# --- 长视频三档的阈值（契约八 §3.1）--------------------------------------
+#
+# 同样是**独立取值**：规格里写死，测试重算一遍，两边必须一致。
+#
+# 口播字数阈值 = 时长阈值 × 语速。语速沿用 EV_SPEECH_RATE——
+# 两个规格引用**同一个**语速常数，才不会出现「这里 7.19、那里 7.2」。
+TIER_SHORT_MAX_S = 60
+TIER_MID_MIN_S = 300
+TIER_MID_MAX_S = 600
+TIER_FULL_MIN_S = 600
+
+TIER_SHORT_MAX_CHARS = 431      # 60 × 7.19
+TIER_MID_MIN_CHARS = 2_157      # 300 × 7.19
+TIER_MID_MAX_CHARS = 4_314      # 600 × 7.19
+TIER_FULL_MIN_CHARS = 4_314     # 600 × 7.19
+
+# 压缩比上界（母稿散文 ÷ 口播字数）
+TIER_SHORT_MAX_RATIO = 100
+TIER_MID_MAX_RATIO = 12
+TIER_FULL_MAX_RATIO = 1.5
+
 # 规格里引用、但**尚未创建**的路径（本期要新增的）。
 # 实施对应 commit 时从这里移除——移除的那一刻就是该模块真的落地了。
 PLANNED_PATHS = {
@@ -83,11 +108,17 @@ PLANNED_PATHS = {
     "publish/publishkit/linkcheck.py",
     "publish/tests/test_evidence.py",
     "publish/tests/test_episode_page.py",
-    "source/_data/",
-    "source/_data/podcast_index.json",
-    "source/podcast/index.md",
     "source/feed.xml",
     "aiv/pipeline/scripts/episode-baseline.py",
+    # 契约八（长视频三档）计划新增的路径：
+    # 讲稿骨架与三档裁剪、母稿解析、四个通用渲染器。
+    "aiv/pipeline/pyv/skeleton.py",
+    "aiv/pipeline/pyv/motherdoc.py",
+    "aiv/pipeline/pyv/derive.py",
+    "aiv/pipeline/pyv/scenes/gen_mermaid.py",
+    "aiv/pipeline/pyv/scenes/gen_code.py",
+    "aiv/pipeline/pyv/scenes/gen_table.py",
+    "aiv/pipeline/pyv/scenes/gen_card.py",
 }
 
 # 仓库的顶层目录。只有**顶层目录开头**的 token 才可能被当成仓库路径——
@@ -96,7 +127,7 @@ PLANNED_PATHS = {
 REPO_TOP_DIRS = {
     "aiv", "bilibili", "browser", "channels", "docs", "douyin",
     "public", "publish", "review", "scripts", "source", "tests",
-    "tools", "toutiao", "weixin",
+    "themes", "tools", "toutiao", "weixin",
 }
 
 # **生成目录**：`.gitignore` 里的 `/source/`（只放行 `source/all/` 与
@@ -216,16 +247,138 @@ def test_spec_declares_contract_seven():
         )
 
 
+def test_spec_declares_contract_eight():
+    """契约八（长视频三档）的编号不与既有规格冲突。
+
+    与契约七那条守卫互为镜像：两份规格各自占用一个编号，
+    且**互不串号**——任何一份规格里都不许出现另一份的编号。
+    """
+    text = SPEC_LONG_VIDEO.read_text(encoding="utf-8")
+    assert text.lstrip().startswith("# 契约八："), "规格标题必须是「契约八」"
+
+    # 契约八只能出现在这一份规格里
+    for path in sorted((REPO / "publish/spec").glob("*.md")):
+        if path == SPEC_LONG_VIDEO:
+            continue
+        assert "契约八" not in path.read_text(encoding="utf-8"), (
+            f"{path.name} 里也出现了「契约八」，编号冲突"
+        )
+
+
+# --- 长视频三档的阈值与数据 -----------------------------------------------
+
+
+def _tier_rows() -> list[list[str]]:
+    """契约八 §3.1 的三档阈值表。
+
+    定位关键字用「压缩比上限」而不是「档位」——§1.1 的目标表表头也含「档位」，
+    用它会定位到那张表，列全是错的。
+    """
+    return _markdown_table(SPEC_LONG_VIDEO.read_text(encoding="utf-8"), "压缩比上限")
+
+
+def _prose_chars(path: Path) -> int:
+    """母稿的**散文**字数（去空白的字符数）。
+
+    只算被读出来的部分：标题行、代码块内、表格行都不算——
+    它们在成片里是**画面**，不是口播。这与契约八 §2.1 的口径一致。
+    """
+    total = 0
+    in_fence = False
+    for line in _body_of(path).splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if stripped.startswith("#") or stripped.startswith("|"):
+            continue
+        total += _dense_chars(stripped)
+    return total
+
+
+def test_tier_threshold_table_matches_the_independent_values():
+    """三档的字数阈值必须等于「时长阈值 × 语速」，压缩比上界与独立取值一致。"""
+    rows = _tier_rows()
+    short = _row_with(rows, 0, "精简版")
+    mid = _row_with(rows, 0, "进阶版")
+    full = _row_with(rows, 0, "完整版")
+
+    # 时长
+    assert f"{TIER_SHORT_MAX_S}" in short[1]
+    assert f"{TIER_MID_MIN_S}" in mid[1] and f"{TIER_MID_MAX_S}" in mid[1]
+    assert f"{TIER_FULL_MIN_S}" in full[1]
+
+    # 口播字数
+    assert f"{TIER_SHORT_MAX_CHARS:,}" in short[2]
+    assert f"{TIER_MID_MIN_CHARS:,}" in mid[2]
+    assert f"{TIER_MID_MAX_CHARS:,}" in mid[2]
+    assert f"{TIER_FULL_MIN_CHARS:,}" in full[2]
+
+    # 压缩比上界
+    assert f"{TIER_SHORT_MAX_RATIO}:1" in short[4]
+    assert f"{TIER_MID_MAX_RATIO}:1" in mid[4]
+    assert f"{TIER_FULL_MAX_RATIO}:1" in full[4]
+
+    # 字数阈值 = 时长 × 语速（这条是推导，不是抄数）
+    assert TIER_SHORT_MAX_CHARS == round(TIER_SHORT_MAX_S * EV_SPEECH_RATE)
+    assert TIER_MID_MIN_CHARS == round(TIER_MID_MIN_S * EV_SPEECH_RATE)
+    assert TIER_MID_MAX_CHARS == round(TIER_MID_MAX_S * EV_SPEECH_RATE)
+    assert TIER_FULL_MIN_CHARS == round(TIER_FULL_MIN_S * EV_SPEECH_RATE)
+
+
+def test_mother_draft_stats_in_the_spec_match_the_recomputed_values():
+    """契约八 §2.1 的母稿字数、母稿散文、压缩比必须等于实际重算出来的值。
+
+    规格里的数是人手写的，母稿会变。这条守卫保证：
+    母稿改了而规格没改，**它会红**——而不是让一份过期的表继续骗人。
+    """
+    rows = _markdown_table(SPEC_LONG_VIDEO.read_text(encoding="utf-8"), "视觉段")
+    for label, slug in _episode_map().items():
+        row = _row_with(rows, 0, label)
+        path = REPO / EPISODE_DRAFTS[slug]
+        draft_chars = _dense_chars(_body_of(path))
+        prose_chars = _prose_chars(path)
+
+        assert _number(row[1]) == draft_chars, (
+            f"{label} 的母稿字数对不上：规格 {_number(row[1])}，实测 {draft_chars}"
+        )
+        assert _number(row[2]) == prose_chars, (
+            f"{label} 的母稿散文对不上：规格 {_number(row[2])}，实测 {prose_chars}"
+        )
+        expected_ratio = round(prose_chars / EPISODE_SPOKEN_CHARS[slug], 1)
+        assert _number(row[5]) == pytest.approx(expected_ratio, abs=0.05), (
+            f"{label} 的压缩比对不上：规格 {_number(row[5])}，实测 {expected_ratio}"
+        )
+
+
+def test_the_existing_six_episodes_meet_the_short_tier():
+    """现有六期就是精简版：字数、时长、压缩比都必须落在精简版区间里。
+
+    这条守住「精简版不需要豁免」这个结论——它不是一句断言，
+    是从六期的真实数据算出来的。
+    """
+    for label, slug in _episode_map().items():
+        spoken = EPISODE_SPOKEN_CHARS[slug]
+        duration = EPISODE_DURATION_S[slug]
+        ratio = _prose_chars(REPO / EPISODE_DRAFTS[slug]) / spoken
+        assert spoken <= TIER_SHORT_MAX_CHARS, (
+            f"{label} 口播 {spoken} 字，超过精简版上限 {TIER_SHORT_MAX_CHARS}"
+        )
+        assert duration <= TIER_SHORT_MAX_S, (
+            f"{label} 时长 {duration} s，超过精简版上限 {TIER_SHORT_MAX_S}"
+        )
+        assert ratio <= TIER_SHORT_MAX_RATIO, (
+            f"{label} 压缩比 {ratio:.1f}:1，超过精简版上限 {TIER_SHORT_MAX_RATIO}:1"
+        )
+
+
 # --- 路径引用 -------------------------------------------------------------
 
-
-def test_referenced_repo_paths_exist():
-    """规格引用的每个仓库路径都真实存在。
-
-    文档里的**计划新增**路径在 `PLANNED_PATHS` 里显式列出——
-    实施对应 commit 时移除，那一刻就是模块真的落地了。
-    """
-    text = _spec_text()
+def _missing_paths(spec_path: Path) -> list[str]:
+    """规格里引用了、但仓库里不存在、也没登记为「计划新增」的路径。"""
+    text = spec_path.read_text(encoding="utf-8")
     candidates: set[str] = set()
 
     def _accept(token: str) -> None:
@@ -246,23 +399,33 @@ def test_referenced_repo_paths_exist():
     for token in re.findall(r"`([^`\n]+)`", text):
         _accept(token)
 
-    # markdown 链接的目标（相对 publish/spec/）
+    # markdown 链接的目标（相对规格所在目录）
     for target in re.findall(r"\]\(([^)]+)\)", text):
         if "://" in target or target.startswith("#"):
             continue
-        resolved = (SPEC.parent / target).resolve()
+        resolved = (spec_path.parent / target).resolve()
         try:
             candidates.add(str(resolved.relative_to(REPO)))
         except ValueError:
             continue  # 指向仓库外
 
-    missing = sorted(
+    return sorted(
         p for p in candidates
         if p not in PLANNED_PATHS
         and not p.startswith(GENERATED_PREFIXES)
         and not (REPO / p).exists()
     )
-    assert not missing, f"规格引用了不存在的路径：{missing}"
+
+
+@pytest.mark.parametrize("spec_path", [SPEC, SPEC_LONG_VIDEO], ids=["站点IP骨架", "长视频三档"])
+def test_referenced_repo_paths_exist(spec_path: Path):
+    """规格引用的每个仓库路径都真实存在。
+
+    文档里的**计划新增**路径在 `PLANNED_PATHS` 里显式列出——
+    实施对应 commit 时移除，那一刻就是模块真的落地了。
+    """
+    missing = _missing_paths(spec_path)
+    assert not missing, f"{spec_path.name} 引用了不存在的路径：{missing}"
 
 
 def test_generated_prefixes_are_really_gitignored():
@@ -276,15 +439,35 @@ def test_generated_prefixes_are_really_gitignored():
     assert "public/" in gitignore, "public/ 应当仍在 .gitignore 里"
 
 
-def test_planned_paths_are_actually_missing():
-    """计划新增的路径现在应当还不存在。
+def _git_tracked_paths() -> set[str]:
+    """仓库里**真正跟踪**的文件。
 
-    哪天它们被创建了，这条测试会红——那是提醒把路径从 `PLANNED_PATHS`
-    移走（移除即承认它已经落地），不是失败。
+    判断「一个路径是不是仓库里的事实」，看的是 git 跟踪，不是磁盘上有没有：
+    `source/` 与 `public/` 整个是 gitignore 的生成目录，本地跑过一次构建
+    就有文件——用存在性判断会得到一个与实现无关的假红。
     """
-    already = sorted(p for p in PLANNED_PATHS if (REPO / p).exists())
+    result = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "-z"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return {path for path in result.stdout.split("\0") if path}
+
+
+def test_planned_paths_are_actually_missing():
+    """计划新增的路径现在还不该是**仓库里的事实**。
+
+    哪天它们被提交了，这条测试会红——那是提醒把路径从 `PLANNED_PATHS`
+    移走（移除即承认它已经落地），不是失败。
+
+    判据是 **git 跟踪**，不是磁盘上有没有：`source/` 整个是 gitignore 的
+    生成目录，本地构建过一次就有文件，用存在性判断会得到假红。
+    """
+    tracked = _git_tracked_paths()
+    already = sorted(p for p in PLANNED_PATHS if p.rstrip("/") in tracked)
     assert not already, (
-        f"这些路径已经存在了，请从 PLANNED_PATHS 移除：{already}"
+        f"这些路径已经入库了，请从 PLANNED_PATHS 移除：{already}"
     )
 
 

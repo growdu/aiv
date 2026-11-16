@@ -85,9 +85,25 @@
         <% } %>
 
         <div class="card-content article-card-content">
-            <%- partial('_partial/post-tldr') %>
+            <%
+/* 期号区块（契约七 §4.2）：正文的第一张机制图搬进区块，正文里不再重复。
+   非期号页（没有 episode 字段）原样输出，不受任何影响。 */
+var _epContent = page.content;
+var _epFigure = null;
+if (page.episode) {
+  var _epMermaid = _epContent.match(/<div class="mermaid"[^>]*>[\s\S]*?<\/div>/);
+  if (_epMermaid) {
+    var _epAfter = _epContent.substring(_epMermaid.index + _epMermaid[0].length);
+    var _epCaption = _epAfter.match(/^\s*<p>([\s\S]*?)<\/p>/);
+    _epFigure = { diagram: _epMermaid[0], caption: _epCaption ? _epCaption[1] : '' };
+    _epContent = _epContent.replace(_epMermaid[0], '');
+  }
+}
+%>
+<%- partial('_partial/episode-block', { figure: _epFigure }) %>
+<%- partial('_partial/post-tldr') %>
             <div id="articleContent">
-                <%- page.content %>
+                <%- _epContent %>
                 <% if (theme.bbtime.enable && page.layout == 'bb') { %>
                     <link rel="stylesheet" href="<%- theme.jsDelivr.url %><%- url_for('/css/bb.css') %>">
                     <style>

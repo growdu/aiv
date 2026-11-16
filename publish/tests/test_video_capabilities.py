@@ -23,8 +23,10 @@ AUTH = ("none", "appid_secret")
 LIMIT_KEYS = {
     "channels": ("title_chars", "description_chars", "topics_max", "topic_chars"),
     "bilibili": ("title_chars", "description_chars", "tags_chars", "tag_chars"),
-    # 抖音的 text 是**一个字段**装下标题+正文+话题，所以限额是四项 + 拼装后的总量。
-    # text_chars 是给 adapter 拼装完做总量校验用的（epmeta 逐字段查不到总量）。
+    # 抖音限额是四项 + 拼装后的总量。
+    # text_chars 是给 adapter 拼装完做总量校验用的（epmeta 逐字段查不到总量）；
+    # 它量的是**开放平台 API** 那一个 text 字段——网页后台是标题与描述两个框，
+    # 各自有计数器（2026-11-15 实测）。
     "douyin": ("text_chars", "title_chars", "description_chars",
                "topics_max", "topic_chars"),
 }
@@ -36,10 +38,18 @@ PINNED = {
                  "topics_max": 5, "topic_chars": 15},
     "bilibili": {"title_chars": 79, "description_chars": 249,
                  "tags_chars": 199, "tag_chars": 20},
-    # 抖音（2026-11-14 对官方文档核对，**非实测**——个人主体批不下发布能力）。
-    # text_chars = 1000 是**平台写明**的（错误码 2100005「标题文字不得多于1000个」）；
-    # 剩下四项是**我们自己的编辑口径**，平台没写死（规格 §6.6）。
-    "douyin": {"text_chars": 1000, "title_chars": 55, "description_chars": 500,
+    # 抖音，两个出处分开记：
+    #
+    # - text_chars = 1000：**平台写明**（开放平台错误码 2100005
+    #   「标题文字不得多于1000个」）。2026-11-14 对官方文档核对。
+    # - title_chars = 30：**实测**（2026-11-15，网页后台 creator.douyin.com
+    #   「作品标题」输入框右侧的计数器是 `0 / 30`）。原来写的 55 是
+    #   「常见口径、未实测」，**比平台硬上限大**——闸比平台松就是错闸，
+    #   会放行平台当场拒掉的标题，所以跟着实测收紧。
+    # - description_chars = 500：我们的编辑预算（平台实测上限是 1000，
+    #   比我们宽，闸比平台严，安全）。
+    # - topics_max / topic_chars：平台没文档化，我们的编辑口径（规格 §6.6）。
+    "douyin": {"text_chars": 1000, "title_chars": 30, "description_chars": 500,
                "topics_max": 5, "topic_chars": 15},
 }
 

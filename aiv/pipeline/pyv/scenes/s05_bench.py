@@ -105,7 +105,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     - **字要放得下**：每一行字都过 `scene_layout.line`，放不下就收字号。
     """
     left = w * scene_layout.MARGIN_X
-    max_width = w * scene_layout.CONTENT_W
+    max_width = scene_layout.content_width(w)
 
     scene_layout.title(ctx, p["title"], w, h, size=60)
 
@@ -151,7 +151,11 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     for value, x in ((1, serial_end), (RANGE_LOW, range_x),
                      (RANGE_HIGH, range_end)):
         rounded_rect(ctx, x - 3, h * 0.513, 6, h * 0.036, 3, COLORS["primary"])
-        scene_layout.line(ctx, f"{value} 倍", x, h * 0.588, max_width, 36,
-                          COLORS["primary"], anchor="center")
+        if x >= range_end - 1:
+            # 最右那个刻度的标签贴着内容区右缘：**居中会探进右侧按钮栏**
+            scene_layout.line(ctx, f"{value} 倍", left + max_width, h * 0.588,
+                              max_width, 36, COLORS["primary"], anchor="right")
+        else:
+            scene_layout.line(ctx, f"{value} 倍", x, h * 0.588, max_width, 36,
+                              COLORS["primary"], anchor="center")
 
-    scene_layout.caption(ctx, p["caption"], w, h)

@@ -72,7 +72,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     ddl = str(p["ddl_text"])
 
     left = w * scene_layout.MARGIN_X
-    content_w = w * scene_layout.CONTENT_W
+    content_w = scene_layout.content_width(w)
 
     scene_layout.title(ctx, p["title"], w, h)
 
@@ -108,4 +108,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     arrow(ctx, left + content_w / 2, 690, left + content_w / 2, 780,
           COLORS["accent"], 7, 24)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

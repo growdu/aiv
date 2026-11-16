@@ -17,10 +17,17 @@ def _run(args: list[str]) -> subprocess.CompletedProcess:
 
     带着继承来的 PYTHONPATH 跑，测试就是假的：路径一给，`pyv` 自然能找到，
     adapter 挂没挂 `sys.path` 这件事根本没被验到。
+
+    **编码必须两端对齐。** 子进程的 stdout 按 `PYTHONIOENCODING` 写（本机 utf-8），
+    而 `text=True` 的父进程按 `locale.getpreferredencoding` 解码
+    （中文 Windows 是 cp936/GBK）——两边对不上会在读取线程里炸掉，
+    `proc.stdout` 变成 `None`，测试报成与被测对象无关的 TypeError。
     """
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    env["PYTHONIOENCODING"] = "utf-8"
     return subprocess.run([sys.executable, "-m", "bilibili.cli", *args],
-                          cwd=BILIBILI_DIR, env=env, capture_output=True, text=True)
+                          cwd=BILIBILI_DIR, env=env, capture_output=True,
+                          encoding="utf-8", errors="replace")
 
 
 def test_the_cli_runs_without_pythonpath():

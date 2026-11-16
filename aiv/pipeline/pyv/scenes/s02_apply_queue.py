@@ -104,7 +104,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     active = str(p["active_txn"])
 
     left = w * scene_layout.MARGIN_X
-    content_w = w * scene_layout.CONTENT_W
+    content_w = scene_layout.content_width(w)
     inner = content_w - 80
 
     scene_layout.title(ctx, p["title"], w, h)
@@ -156,9 +156,9 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     arrow(ctx, left + content_w / 2, app_y + app_h,
           left + content_w / 2, 752, COLORS["accent"], 6, 20)
 
-    # 队列底下的框线
-    stroke_rect(ctx, left - 8, queue_y - 8, content_w + 16,
+    # 队列底下的框线。**框线不许越出内容区**——右侧是抖音的按钮栏，
+    # 探出去 8px 就会撞上。
+    stroke_rect(ctx, left + 8, queue_y - 8, content_w - 16,
                 len(txn_ids) * chip_h + (len(txn_ids) - 1) * gap + 16, 12,
                 "#DCE1E8", 3, 0.9)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

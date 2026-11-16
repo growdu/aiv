@@ -174,7 +174,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     commit_op = str(p["commit_op"])
 
     left = w * scene_layout.MARGIN_X
-    max_width = w * scene_layout.CONTENT_W
+    max_width = scene_layout.content_width(w)
     center = left + max_width / 2
 
     scene_layout.title(ctx, p["title"], w, h, size=60)
@@ -297,4 +297,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     arrow(ctx, center, h * 0.478, center, h * 0.505, COLORS["accent"], 7, 24,
           alpha=emit_alpha)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

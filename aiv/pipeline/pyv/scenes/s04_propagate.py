@@ -78,7 +78,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     竖着排之后每个节点都有一整行，日志类的长标签放得下。
     """
     left = w * scene_layout.MARGIN_X
-    width = w * scene_layout.CONTENT_W
+    width = scene_layout.content_width(w)
     center = left + width / 2
 
     scene_layout.title(ctx, p["title"], w, h)
@@ -117,4 +117,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                   center, node_y + node_h + gap - h * 0.008,
                   COLORS["primary"], 6, 18, alpha=appear)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

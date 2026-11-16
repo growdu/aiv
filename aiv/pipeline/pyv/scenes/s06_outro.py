@@ -77,7 +77,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
 
     appear = easing.ease_out_cubic(max(0.0, min(1.0, t * 2.5)))
     left = w * scene_layout.MARGIN_X
-    max_width = w * scene_layout.CONTENT_W
+    max_width = scene_layout.content_width(w)
     scene_layout.line(ctx, p["title"], left, h * scene_layout.TITLE_Y,
                       max_width, 60, COLORS["primary"], bold=True, alpha=appear)
     scene_layout.line(ctx, p["subtitle"], left, h * 0.135, max_width,

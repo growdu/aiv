@@ -549,6 +549,10 @@ def test_the_module_entry_point_works(workspace):
     repo_root = Path(__file__).resolve().parents[2]
     environment = dict(os.environ)
     environment["PYTHONPATH"] = str(repo_root / "publish")
+    # **解码必须显式。** `text=True` 会按 `locale.getpreferredencoding()`
+    # 解码（中文 Windows 是 cp936），而子进程输出的是 UTF-8——
+    # 两边对不上就会在读取线程里炸出 UnicodeDecodeError，`stdout` 变 None。
+    environment["PYTHONIOENCODING"] = "utf-8"
 
     completed = subprocess.run(
         [
@@ -566,7 +570,8 @@ def test_the_module_entry_point_works(workspace):
         cwd=str(repo_root / "publish"),
         env=environment,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
     assert completed.returncode == EXIT_OK, completed.stderr

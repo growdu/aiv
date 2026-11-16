@@ -25,21 +25,36 @@ def _tracked_files(directory: Path):
 
     ``None`` when git cannot answer -- the check is then skipped rather
     than failed, because "git is missing" is not "the repository is dirty".
+
+    ``-z`` is not optional here.  Without it git quotes every path that
+    holds a non-ASCII character and writes the bytes as octal escapes
+    (``"publish/outbox/db-logical_decode-postgresql\\351\\207\\217..."``),
+    so a file whose name contains Chinese never matches the real name on
+    disk -- and a **tracked** file gets reported as untracked.  The
+    snapshot names are derived from the article titles, and those are
+    Chinese, so this is not a hypothetical.
     """
     try:
         result = subprocess.run(
-            ["git", "ls-files", "--", str(directory.relative_to(REPO_ROOT))],
+            [
+                "git", "ls-files", "-z", "--",
+                str(directory.relative_to(REPO_ROOT)),
+            ],
             cwd=str(REPO_ROOT),
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            text=True,
             check=False,
         )
     except OSError:
         return None
     if result.returncode != 0:
         return None
-    return {Path(line).name for line in result.stdout.splitlines() if line.strip()}
+    names = set()
+    for entry in result.stdout.split(b"\0"):
+        if not entry:
+            continue
+        names.add(Path(entry.decode("utf-8", "surrogateescape")).name)
+    return names
 
 
 @pytest.fixture(scope="session", autouse=True)

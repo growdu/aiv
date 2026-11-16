@@ -5,7 +5,7 @@ import pytest
 from douyin import contract
 from pyv import epmeta
 
-LIMITS = {"text_chars": 1000, "title_chars": 55, "description_chars": 500,
+LIMITS = {"text_chars": 1000, "title_chars": 30, "description_chars": 500,
           "topics_max": 5, "topic_chars": 15}
 
 
@@ -57,6 +57,54 @@ def test_build_text_without_topics_has_no_trailing_line():
     copy = contract.DouyinCopy(
         title="钩子", description="正文", topics=(), cover_at=1.0)
     assert contract.build_text(copy) == "钩子\n正文"
+
+
+# --- 网页后台的两个字段 -----------------------------------------------------
+
+
+def test_web_fields_puts_the_title_and_the_description_apart():
+    """网页后台是**两个框**：作品标题、作品描述。
+
+    2026-11-15 实测 creator.douyin.com：后台有独立的「作品标题」
+    （上限 30 字）与「作品描述」（上限 1000 字）两个输入框，
+    不是开放平台文档里那一个 `text` 字段。
+    """
+    copy = contract.DouyinCopy(
+        title="钩子", description="正文", topics=(), cover_at=1.0)
+    title, description = contract.web_fields(copy)
+    assert title == "钩子"
+    assert description == "正文"
+
+
+def test_web_fields_puts_the_topics_inside_the_description():
+    """话题跟着描述走——描述框里内嵌 `#话题` 会被抖音识别成真话题。
+
+    实测：在描述框里敲 `#开源`，后台立刻弹出该话题的热度与关联话题。
+    """
+    copy = contract.DouyinCopy(
+        title="钩子", description="正文", topics=("数据库", "内核"), cover_at=1.0)
+    title, description = contract.web_fields(copy)
+    assert title == "钩子"
+    assert description == "正文\n#数据库 #内核"
+
+
+def test_web_fields_never_repeat_the_title_in_the_description():
+    """标题**不进描述框**。
+
+    照着开放平台文档把整段 `text` 贴进描述框，标题会在正文里重复一遍——
+    这是最容易犯也最难看的一处错。
+    """
+    copy = contract.DouyinCopy(
+        title="32 核机器", description="正文很长" * 10,
+        topics=("数据库",), cover_at=1.0)
+    title, description = contract.web_fields(copy)
+    assert title not in description
+
+
+def test_web_fields_without_topics_has_no_trailing_newline():
+    copy = contract.DouyinCopy(
+        title="钩子", description="正文", topics=(), cover_at=1.0)
+    assert contract.web_fields(copy) == ("钩子", "正文")
 
 
 # --- 总量上限 ---------------------------------------------------------------

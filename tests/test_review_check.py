@@ -14,12 +14,32 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = REPO_ROOT / "tools" / "review-check.py"
+
+
+def run_tool(*args):
+    """跑一次审校检查器。
+
+    **解码必须显式。** ``text=True`` 按 ``locale.getpreferredencoding()``
+    解码（中文 Windows 是 cp936），而子进程输出的是 UTF-8——两边对不上，
+    UnicodeDecodeError 就发生在读取线程里，``stdout`` 变成 None，
+    失败时连报错内容都读不到。
+    """
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
+    return subprocess.run(
+        [sys.executable, str(TOOL), *args],
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        cwd=REPO_ROOT,
+        env=env,
+    )
 
 
 def load_tool():
@@ -114,10 +134,7 @@ def test_cli_json_output_has_expected_shape():
     """集成：真跑一次 CLI，检查 JSON 结构。"""
     target = REPO_ROOT / "docs" / "database" / "postgresql-mvcc" / "index.md"
     assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
-    result = subprocess.run(
-        [sys.executable, str(TOOL), str(target), "--json"],
-        capture_output=True, text=True, cwd=REPO_ROOT,
-    )
+    result = run_tool(str(target), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert "docs" in payload
@@ -131,20 +148,14 @@ def test_cli_json_output_has_expected_shape():
 def test_cli_runs_over_a_whole_pillar():
     """集成：整目录跑一遍，不许崩。"""
     pillar = REPO_ROOT / "docs" / "database"
-    result = subprocess.run(
-        [sys.executable, str(TOOL), str(pillar), "--json"],
-        capture_output=True, text=True, cwd=REPO_ROOT,
-    )
+    result = run_tool(str(pillar), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert len(payload["docs"]) >= 50
 
 
 def test_cli_reports_missing_path():
-    result = subprocess.run(
-        [sys.executable, str(TOOL), "docs/does-not-exist"],
-        capture_output=True, text=True, cwd=REPO_ROOT,
-    )
+    result = run_tool("docs/does-not-exist")
     assert result.returncode == 1
     assert "路径不存在" in result.stderr
 
@@ -168,10 +179,7 @@ REVIEWED_ARTICLES = (
 def test_reviewed_articles_have_no_long_paragraph_signal():
     """集成：已合入审校的文章不该再被 AIF-03 命中。"""
     for rel in REVIEWED_ARTICLES:
-        result = subprocess.run(
-            [sys.executable, str(TOOL), str(REPO_ROOT / rel), "--json"],
-            capture_output=True, text=True, cwd=REPO_ROOT,
-        )
+        result = run_tool(str(REPO_ROOT / rel), "--json")
         assert result.returncode == 0, result.stderr
         payload = json.loads(result.stdout)
         hits = [s for s in payload["docs"][0]["signals"]
@@ -642,10 +650,7 @@ def test_the_checker_reports_fig_signals_for_a_real_article():
     """集成：真实文章上跑一遍，FIG-01/FIG-02 真的会报出来。"""
     target = REPO_ROOT / "docs" / "cluster" / "DCF" / "一文读懂openguass dcf网络模块.md"
     assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
-    result = subprocess.run(
-        [sys.executable, str(TOOL), str(target), "--json"],
-        capture_output=True, text=True, cwd=REPO_ROOT,
-    )
+    result = run_tool(str(target), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     signals = payload["docs"][0]["signals"]

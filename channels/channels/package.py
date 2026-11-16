@@ -28,14 +28,88 @@ from channels import assets, contract, snapshot, state
 # 仓库根：channels/channels/package.py → channels/channels → channels → 仓库根
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+# 清单里随状态改写的两处：抬头与状态说明。
+#
+# **状态一变，这两处就得跟着变。** 人只看 `publish.md`——
+# 它写着「待你上传」而 `meta.json` 写着「已存草稿」，人就会**再传一遍**，
+# 在平台上多出一条重复的作品。含糊地说状态是发布场景里最贵的一种 bug。
+_STATUS_NOTE_START = "<!-- status-note:start -->"
+_STATUS_NOTE_END = "<!-- status-note:end -->"
+
+# 状态 → 清单抬头的说法
+_STATUS_LABELS = {
+    "packaged": "待发布",
+    "drafted": "已存草稿，待发表",
+    "published": "已发布",
+}
+
+
+def _status_heading(status: str, title: str, episode: str) -> str:
+    label = _STATUS_LABELS.get(status, "待发布")
+    return f"# {label}：{title}（{episode}）"
+
+
+def _status_note(status: str) -> list[str]:
+    """清单末尾的状态说明。措辞跟 `notify` 那一套对齐。"""
+    if status == "drafted":
+        return [
+            "> **已存草稿，待你点发表。** 草稿已经在视频号草稿箱里了——"
+            "**这不是「待上传」**，再传一遍会多出一条重复的作品。",
+        ]
+    if status == "published":
+        return [
+            "> **已发布。** 这一条已经发出去了。",
+        ]
+    return [
+        "> **待你上传。** 这一步没做完之前，状态只能写「待上传」。",
+    ]
+
+
+def rewrite_status_block(path: Path, status: str) -> None:
+    """把清单里随状态改写的两处改成当前状态。
+
+    `mark published` / `mark drafted` 改了 `meta.json`，清单也得跟着改——
+    否则包里的 `publish.md` 与 `meta.json` 说的不是一回事。
+    """
+    if not path.is_file():
+        return
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        if line.startswith("# ") and "：" in line:
+            # 只换抬头上的状态词，标题与期号原样留着。
+            lines[index] = f"# {_STATUS_LABELS.get(status, '待发布')}：" + \
+                line.split("：", 1)[1]
+            break
+    if _STATUS_NOTE_START in lines and _STATUS_NOTE_END in lines:
+        start = lines.index(_STATUS_NOTE_START)
+        end = lines.index(_STATUS_NOTE_END)
+        lines[start + 1:end] = _status_note(status)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
 
 def repo_relative(path: str | Path, root: str | Path | None = None) -> str:
-    """把路径写成相对仓库根的形式。
+    """把路径写成相对仓库根的形式（**分隔符一律用 `/`**）。
 
     快照要入库。绝对路径换台机器就对不上，还把本机信息带进了库。
+
+    两条规矩：
+
+    1. **分隔符用正斜杠。** 快照是入库的文本，同一个仓库在 Windows 与
+       Linux 上跑出来的内容必须一模一样——反斜杠会让每台机器各写一份，
+       提交上去就成了「谁最后跑谁说了算」。
+    2. **永远不是绝对路径。** 目标不在仓库里（甚至在另一个盘）时，
+       `os.path.relpath` 拿不到相对路径；那就退回到目标所在盘根的相对形式，
+       仍然不带盘符与绝对路径。
     """
     base = Path(root) if root else REPO_ROOT
-    return os.path.relpath(Path(path).resolve(), base.resolve())
+    target = Path(path).resolve()
+    try:
+        relative = os.path.relpath(target, base.resolve())
+    except ValueError:
+        # Windows 跨盘符：两边没有共同祖先，relpath 直接抛。
+        # 退回到目标所在盘的盘根——仍是相对路径，也不带本机盘符。
+        relative = os.path.relpath(target, target.anchor)
+    return Path(relative).as_posix()
 
 
 class PackageError(RuntimeError):
@@ -62,10 +136,11 @@ class PackageResult:
 
 
 def _checklist(episode: str, copy: contract.ChannelsCopy,
-               info: preflight.VideoInfo, warnings: list[str]) -> str:
+               info: preflight.VideoInfo, warnings: list[str],
+               status: str = "packaged") -> str:
     topics = contract.topics_line(copy.topics)
     lines = [
-        f"# 待发布：{copy.title}（{episode}）",
+        _status_heading(status, copy.title, episode),
         "",
         "| 项 | 值 |",
         "| --- | --- |",
@@ -93,7 +168,9 @@ def _checklist(episode: str, copy: contract.ChannelsCopy,
         lines += [f"- ⚠️ {warning}" for warning in warnings]
         lines += [""]
     lines += [
-        "> **待你上传。** 这一步没做完之前，状态只能写「待上传」。",
+        _STATUS_NOTE_START,
+        *_status_note(status),
+        _STATUS_NOTE_END,
         "",
     ]
     return "\n".join(lines)
@@ -211,8 +288,6 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
     (target / "description.txt").write_text(copy.description, encoding="utf-8")
     (target / "topics.txt").write_text(
         contract.topics_line(copy.topics), encoding="utf-8")
-    (target / "publish.md").write_text(
-        _checklist(episode, copy, info, warnings), encoding="utf-8")
 
     # 人工回填的发布状态不能被出包抹掉。
     # 成片没变 → 之前发出去的就是这一条，状态保留；
@@ -223,6 +298,12 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
     else:
         status = "packaged"
         published_url = None
+
+    # 清单要按**当前状态**写：复用包的状态可能是「已存草稿」，
+    # 清单还写「待你上传」，人会再传一遍。
+    (target / "publish.md").write_text(
+        _checklist(episode, copy, info, warnings, status=status),
+        encoding="utf-8")
 
     (target / "meta.json").write_text(
         json.dumps({
@@ -272,6 +353,7 @@ def mark_published(target: str | Path, url: str) -> Path:
         json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+    rewrite_status_block(directory / "publish.md", "published")
     return path
 
 
@@ -293,4 +375,5 @@ def mark_drafted(target: str | Path) -> Path:
         json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+    rewrite_status_block(directory / "publish.md", "drafted")
     return path

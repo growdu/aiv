@@ -98,7 +98,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     steps = [(str(row[0]), str(row[1])) for row in p["steps"]]
     count = len(steps)
     left = w * scene_layout.MARGIN_X
-    width = w * scene_layout.CONTENT_W
+    width = scene_layout.content_width(w)
     right = left + width
 
     scene_layout.title(ctx, p["title"], w, h)
@@ -146,4 +146,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                   axis_x, card_y + card_h + gap - h * 0.004,
                   COLORS["accent"], 4, 12, alpha=appear)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

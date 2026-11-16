@@ -24,7 +24,11 @@
 产物：
 
     source/_posts/video/<期号>.md    每期一个内容单元
-    source/videos/index.md           视频合集页
+
+**合集页（``source/videos/index.md``）不由这个脚本写**：它由
+``tools/build-series-page.py`` 生成——那一页是**系列页**，按期号排，
+每期带钩子、时长与完整版（母稿页）的链接，数据来自期号索引
+（母稿是唯一真相）。一个文件一个写入者。
 """
 
 import argparse
@@ -39,7 +43,6 @@ MAKEFILE = AIV_ROOT / "pipeline" / "Makefile"
 CONTRACTS_DIR = AIV_ROOT / "contracts"
 OUTBOX_DIR = REPO_ROOT / "publish" / "outbox"
 POSTS_DIR = REPO_ROOT / "source" / "_posts"
-COLLECTION_DIR = REPO_ROOT / "source" / "videos"
 
 CATEGORY = "视频"
 AUTHOR = "growdu"
@@ -196,39 +199,10 @@ def build_page(episode, script_path, outbox):
     return title, date, "\n".join(front_matter) + "\n\n" + body.lstrip("\n")
 
 
-def write_collection(pages):
-    """The collection page: every episode, where it went, and its state."""
-    lines = [
-        "---",
-        'title: "视频"',
-        "date: 2026-01-01 00:00:00",
-        "type: videos",
-        "layout: page",
-        "---",
-        "",
-        "# 视频",
-        "",
-        "> 同一个机制往下挖。每期一条视频，页面上是它的口播稿与字幕——"
-        "视频讲的是公开的上游机制，不涉及任何公司内部信息。",
-        "",
-    ]
-    for episode, title, date, url, platforms in pages:
-        lines.append(f"## {title}")
-        lines.append("")
-        lines.append(f"- 期号：`{episode}`")
-        lines.append(f"- 出品日期：{date}")
-        if platforms:
-            lines.append("- 已发布到：{}".format("、".join(platforms)))
-        lines.append(f"- [口播稿与字幕]({url})")
-        lines.append("")
-    COLLECTION_DIR.mkdir(parents=True, exist_ok=True)
-    (COLLECTION_DIR / "index.md").write_text("\n".join(lines), encoding="utf-8")
-
-
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="build-video-pages",
-        description="把 AIV 的口播稿生成成站上的视频内容单元与合集页。",
+        description="把 AIV 的口播稿生成成站上的视频内容单元。",
     )
     parser.parse_args(argv)
 
@@ -266,12 +240,10 @@ def main(argv=None) -> int:
         )
         pages.append((episode, title, date, url, platforms))
 
-    write_collection(pages)
-
     print("生成视频内容单元 {} 个：{}".format(
         len(pages), "、".join(episode for episode, *_ in pages)
     ))
-    print("合集页：source/videos/index.md")
+    print("合集页（系列页）由 tools/build-series-page.py 生成")
     return 0
 
 

@@ -19,10 +19,13 @@ from pyv.params import Params
 REQUIRED = ("title", "source_label", "source_sub", "worker_count",
             "worker_prefix", "target_label", "target_sub", "caption")
 
-# 竖版：上下三段的版式常量（比例相对画面高度；宽度相对内容区宽度）
-V_SOURCE_TOP_RATIO, V_SOURCE_H_RATIO = 0.140, 0.080
-V_WORKER_TOP_RATIO, V_WORKER_H_RATIO = 0.300, 0.140
-V_TARGET_TOP_RATIO, V_TARGET_H_RATIO = 0.515, 0.080
+# 竖版：上下三段的版式常量（像素——竖版只有这一档画布）。
+#
+# **箭头段从 154 收到 100**：三条带之间不留大白，链路才连成一条。
+V_SOURCE_TOP, V_SOURCE_H = 250, 280
+V_ARROW_H = 100
+V_WORKER_TOP, V_WORKER_H = 630, 300
+V_TARGET_TOP, V_TARGET_H = 1030, 280
 V_WORKER_GAP_RATIO = 0.021    # 分支之间的列距（相对内容区宽度）
 
 
@@ -77,31 +80,32 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
 def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     """竖版：来源在上、并行分支在中间一行、汇聚在下。
 
-    **字号不缩、框变宽**：来源与汇聚各占一条整行（内容区宽 950），
-    分支并排一行、每个 222 宽，标签字号跟横版同档。
+    **字号不缩、框变宽**：来源与汇聚各占一条整行（内容区宽 895），
+    分支并排一行、每个 205 宽，标签字号跟横版同档。
+
+    **链路要连成一条**：带与带之间只留 100px 给箭头（原来留 154），
+    三条带从 250 排到 1310，整条链路贯穿内容区，不再散成三段图。
     """
-    left = w * scene_layout.MARGIN_X
-    width = w * scene_layout.CONTENT_W
+    left = scene_layout.content_left(w)
+    width = scene_layout.content_width(w)
     right = left + width
 
     scene_layout.title(ctx, p["title"], w, h)
 
     # ---- 来源方：一条横带 ----
-    src_y = h * V_SOURCE_TOP_RATIO
-    src_h = h * V_SOURCE_H_RATIO
+    src_y, src_h = V_SOURCE_TOP, V_SOURCE_H
     rounded_rect(ctx, left, src_y, width, src_h, 18, COLORS["primary"])
     baseline = src_y + src_h * 0.63
-    scene_layout.line(ctx, p["source_label"], left + w * 0.045, baseline,
-                      width * 0.45, 48, "#FFFFFF", bold=True)
-    scene_layout.line(ctx, p["source_sub"], right - w * 0.045, baseline,
-                      width * 0.35, 30, "#FFFFFF", anchor="right")
+    scene_layout.line(ctx, p["source_label"], left + width * 0.045, baseline,
+                      width * 0.45, 52, "#FFFFFF", bold=True)
+    scene_layout.line(ctx, p["source_sub"], right - width * 0.045, baseline,
+                      width * 0.35, 34, "#FFFFFF", anchor="right")
 
     # ---- 并行分支：并排一行 ----
     count = int(p["worker_count"])
     gap = width * V_WORKER_GAP_RATIO
     box_w = (width - (count - 1) * gap) / count
-    worker_y = h * V_WORKER_TOP_RATIO
-    worker_h = h * V_WORKER_H_RATIO
+    worker_y, worker_h = V_WORKER_TOP, V_WORKER_H
     for i in range(count):
         cx = left + i * (box_w + gap)
         delay = 0.10 * i
@@ -111,24 +115,21 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
         # 标签跟着盒子一起长：盒子没展开到位就先不显示
         label_alpha = max(0.0, min(1.0, (grow - 0.55) / 0.45))
         scene_layout.line(ctx, f"{p['worker_prefix']} {i + 1}", cx + box_w / 2,
-                          worker_y + box_h * 0.55, box_w, 34, "#FFFFFF",
+                          worker_y + worker_h * 0.52, box_w, 40, "#FFFFFF",
                           alpha=label_alpha, anchor="center")
         # 来源 → 分支：竖着的箭头，从来源带底边落到分支顶边
-        arrow(ctx, cx + box_w / 2, src_y + src_h + h * 0.010,
-              cx + box_w / 2, worker_y - h * 0.010, COLORS["accent"], 5, 16)
+        arrow(ctx, cx + box_w / 2, src_y + src_h + 12,
+              cx + box_w / 2, worker_y - 12, COLORS["accent"], 5, 16)
         # 分支 → 汇聚：从分支底边落到汇聚带顶边
-        arrow(ctx, cx + box_w / 2, worker_y + worker_h + h * 0.010,
-              cx + box_w / 2, h * V_TARGET_TOP_RATIO - h * 0.010,
-              COLORS["secondary"], 4, 14)
+        arrow(ctx, cx + box_w / 2, worker_y + worker_h + 12,
+              cx + box_w / 2, V_TARGET_TOP - 12, COLORS["secondary"], 4, 14)
 
     # ---- 汇聚方：一条横带 ----
-    tgt_y = h * V_TARGET_TOP_RATIO
-    tgt_h = h * V_TARGET_H_RATIO
+    tgt_y, tgt_h = V_TARGET_TOP, V_TARGET_H
     rounded_rect(ctx, left, tgt_y, width, tgt_h, 18, "#DCE1E8")
     baseline = tgt_y + tgt_h * 0.63
-    scene_layout.line(ctx, p["target_label"], left + w * 0.045, baseline,
-                      width * 0.45, 44, COLORS["primary"], bold=True)
-    scene_layout.line(ctx, p["target_sub"], right - w * 0.045, baseline,
-                      width * 0.35, 30, COLORS["secondary"], anchor="right")
+    scene_layout.line(ctx, p["target_label"], left + width * 0.045, baseline,
+                      width * 0.45, 48, COLORS["primary"], bold=True)
+    scene_layout.line(ctx, p["target_sub"], right - width * 0.045, baseline,
+                      width * 0.35, 34, COLORS["secondary"], anchor="right")
 
-    scene_layout.caption(ctx, p["caption"], w, h)

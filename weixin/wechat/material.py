@@ -16,12 +16,13 @@ the image is uploaded again.
 
 from __future__ import annotations
 
-import fcntl
 import json
 import os
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
+
+from . import locking as locking_module
 
 __all__ = ["MaterialCache"]
 
@@ -44,13 +45,8 @@ class MaterialCache:
         writes back in full, the same hazard the publish ledger has.
         """
         lock_path = self.path.with_name(self.path.name + ".lock")
-        lock_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(lock_path, "a+") as handle:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-            try:
-                yield
-            finally:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        with locking_module.exclusive(lock_path):
+            yield
 
     def _load_all(self) -> dict:
         if not self.path.is_file():

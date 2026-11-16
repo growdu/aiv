@@ -1,14 +1,19 @@
 """抖音版的文案。
 
-抖音**没有独立的 description 字段**：标题、正文、话题、@ 全塞在一个 `text` 里
-（话题靠 `#话题` 内嵌）。规格 §6.6.3 的三段拼一个字段就是这里做的。
+抖音的**文案形状取决于走哪条路**——这是 2026-11-15 实测网页后台才分清的：
 
-所以这一层比视频号多两件事：
+- **开放平台 API**：标题、正文、话题、@ 全塞在一个 `text` 里（话题靠 `#话题`
+  内嵌）。规格 §6.6.3 的三段拼一个字段就是这里做的（`build_text`）。
+- **网页后台**（我们这一档实际走的路——个人主体拿不到 API 凭据）：后台是
+  **两个独立字段**——「作品标题」（上限 30 字）与「作品描述」（上限 1000 字），
+  两个计数器都实测过。所以网页档是分开填两个框（`web_fields`）。
 
-1. **三段拼一个字段**（`build_text`）。
+所以这一层有两件事：
+
+1. **拼装**：`build_text`（API 档的一个字段）与 `web_fields`（网页档的两个框）。
 2. **拼完再查总量**（`text_chars`，平台写明的硬上限 1000 字）——
    这条**不能**交给 `pyv.epmeta`：它逐字段查，查不出「三段加起来超了」。
-   逐字段查的是各自的上限（title 55 / description 500 / 话题 5×15），
+   逐字段查的是各自的上限（title 30 / description 500 / 话题 5×15），
    拼起来的总量只有这里能算。
 
 还有一条抖音特有的闸：**文案里不能有站外引流**。抖音禁「过度营销信息与
@@ -123,11 +128,13 @@ def topics_line(topics: tuple[str, ...]) -> str:
 
 
 def build_text(copy: DouyinCopy) -> str:
-    """三段拼成平台要的那一个 `text`。
+    """三段拼成平台要的那一个 `text`（**开放平台 API 档**）。
 
     顺序：标题、正文、话题。抖音信息流只露前几十个字，所以钩子在最前面。
 
     话题用 `#话题` 内嵌——抖音**没有**独立的话题字段，井号就是它的标记方式。
+
+    **网页后台不走这条**：那边是标题与描述两个框，用 `web_fields`。
     """
     parts = [copy.title, copy.description]
     topics = topics_line(copy.topics)
@@ -136,11 +143,36 @@ def build_text(copy: DouyinCopy) -> str:
     return SEPARATOR.join(part for part in parts if part)
 
 
+def web_fields(copy: DouyinCopy) -> tuple[str, str]:
+    """网页后台要填的**两个字段**：作品标题、作品描述。
+
+    **标题进标题框，正文与话题进描述框。**
+
+    话题跟着描述走——网页后台的描述框里内嵌 `#话题` 会被抖音识别成
+    **真话题**（2026-11-15 实测：在描述框里敲 `#开源`，后台立刻弹出
+    该话题的热度与关联话题），所以话题不必另找地方放。
+
+    与 `build_text` 的区别只有一处，但那一处正是最容易犯的错：
+    **标题不进描述框**。照着开放平台文档把整段 `text` 贴进描述框，
+    标题会在正文里重复一遍。
+    """
+    description = copy.description
+    topics = topics_line(copy.topics)
+    if topics:
+        description = f"{description}{SEPARATOR}{topics}" if description else topics
+    return copy.title, description
+
+
 def check_text_length(text: str, limits: dict) -> list[str]:
     """拼装后的 `text` 不能超过平台写明的上限。
 
     `limits` 是 `publish/capabilities/douyin.toml` 的 `[limits]` 段。
     缺 `text_chars` 就**不查**——能力声明被改坏时，宁可不查也不要瞎报。
+
+    这条量的是**开放平台 API 那个 `text` 字段**（三段拼起来的整段）。
+    网页后台是标题与描述两个框，分别有各自的计数器——标题那 30 字由
+    `pyv.epmeta` 按 `title_chars` 卡，描述那 1000 字比这条宽，
+    所以这条闸在两条路径上都够用。
     """
     limit = limits.get("text_chars")
     if not isinstance(limit, int) or limit <= 0:
@@ -149,7 +181,7 @@ def check_text_length(text: str, limits: dict) -> list[str]:
         return []
     return [
         f"拼装后的文案有 {len(text)} 字，超过平台上限 {limit} 字"
-        f"（平台只有这一个字段，标题、正文、话题全在里面）"
+        f"（开放平台那一个 text 字段装下标题、正文、话题）"
     ]
 
 

@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -191,11 +192,18 @@ def test_audit_corpus_on_empty_directory(tmp_path):
 
 def test_cli_audit_prints_the_funnel(tmp_path):
     posts_dir = _write_corpus(tmp_path)
+    # The CLI prints Chinese.  On Windows the parent would decode the
+    # child's UTF-8 output with the system code page (GBK) and blow up
+    # with a UnicodeDecodeError, which surfaces as a TypeError about
+    # ``stdout`` being None -- so both ends are pinned to UTF-8.
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
     result = subprocess.run(
         [sys.executable, "-m", "wechat.cli", "audit", "--posts-dir", str(posts_dir)],
         cwd=str(REPO_ROOT / "weixin"),
         capture_output=True,
-        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
     )
 
     assert result.returncode == 0, result.stderr

@@ -181,7 +181,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     matrix = p["matrix"]
 
     left = w * scene_layout.MARGIN_X
-    width = w * scene_layout.CONTENT_W
+    width = scene_layout.content_width(w)
     right = left + width
 
     scene_layout.title(ctx, p["title"], w, h)
@@ -270,4 +270,3 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     scene_layout.line(ctx, p["legend_label"], x3, ly, width * 0.45, 30,
                       COLORS["secondary"], alpha=appear)
 
-    scene_layout.caption(ctx, p["caption"], w, h)

@@ -515,3 +515,16 @@ def test_post_without_any_paragraph_is_skipped():
     result = slice_post(_post(body="| a | b |\n| --- | --- |\n| 1 | 2 |"), LIMITS)
     assert result.article is None
     assert result.reason
+
+
+def test_thematic_breaks_do_not_become_paragraphs():
+    """分隔线是标记，不是正文。
+
+    留着它，头条正文里就会出现一行字面的 "---"；出现在文章开头时，读起来
+    像文档坏了，而不是一段分隔。
+    """
+    result = slice_post(_post(body="---\n\n第一段。\n\n***\n\n第二段。\n"), LIMITS)
+    assert "---" not in result.article.body
+    assert "***" not in result.article.body
+    assert "第一段。" in result.article.body
+    assert "第二段。" in result.article.body

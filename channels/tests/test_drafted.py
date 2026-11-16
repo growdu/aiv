@@ -95,6 +95,25 @@ def test_the_drafted_phrase_does_not_claim_it_is_published():
     assert "发表" in text
 
 
+def test_the_checklist_follows_the_state(meta, video, tmp_path):
+    """清单写着「待你上传」而 `meta.json` 写着「已存草稿」，人会**再传一遍**。
+
+    人只看 `publish.md`——它和 `meta.json` 说的不是一回事，就是在平台上
+    多出一条重复的作品。状态一变，清单的抬头与状态说明就得跟着变。
+    """
+    out = tmp_path / "out"
+    package.build_package("ep01", meta, video, out)
+    checklist = (out / "ep01" / "publish.md").read_text(encoding="utf-8")
+    assert checklist.startswith("# 待发布：")
+    assert "待你上传" in checklist
+
+    _mark_drafted(out, "ep01")
+    checklist = (out / "ep01" / "publish.md").read_text(encoding="utf-8")
+    assert checklist.startswith("# 已存草稿，待发表：")
+    assert "待你上传" not in checklist
+    assert "已存草稿，待你点发表" in checklist
+
+
 # --- 命令行 -----------------------------------------------------------------
 
 

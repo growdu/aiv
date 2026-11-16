@@ -1,16 +1,24 @@
-"""封面：抽一帧。
+"""封面：抽一帧，再出后台要的两张槽位图。
 
-**抖音的封面规格没有公开文档，我们也没投过一条，所以这里不猜比例。**
+**抖音创作者后台的封面槽位有两个**（2026-11-15 实测 creator.douyin.com）：
+竖封面 **3:4** 与横封面 **4:3**。后台自己的「发文助手」在只给一张时会提示
+「横/竖双封面缺失」——两张都要。
 
-短视频平台的信息流是 9:16 全屏，但主页卡片与列表缩略图的比例各家不一样；
-抖音创作者后台的封面槽位长什么样、会不会裁，公开资料里查不到。
-猜一个比例去做版式，猜错了就是白做——而且错的那版会混进发布包，
-让人以为「封面已经做好了」。
+这两个比例是后台标在槽位上的，**不是猜的**。上一版写着「封面比例不猜，
+先给与成片同比例的图，投完一条看后台实际怎么裁再定」——现在投过了，
+答案就是后台写在那儿的两个比例。
 
-所以这一版出**与成片同比例**的一张图：不缩放、不裁切，就是那一帧。
-清单里会写明「比例未实测，投完一条看后台实际怎么裁再定」。
+出三张图，各有各的用处：
 
-真到了要出竖版封面那天，改的是这里的一个常量，不是重写这一层。
+| 文件 | 比例 | 填哪 | 做法 |
+| --- | --- | --- | --- |
+| `cover.jpg` | 与成片同比例 | 不直接填槽位 | 原帧，不缩放不裁 |
+| `cover_3x4.jpg` | 3:4 | 竖封面槽位 | 居中裁切 |
+| `cover_4x3.jpg` | 4:3 | 横封面槽位 | 等比缩放居中，四周留白 |
+
+**横封面为什么是留白而不是裁。** 竖版成片（9:16）裁一刀取 4:3，只剩
+中间一条横带，画面里的字会被拦腰截断；留白保住整幅画面，代价是两侧
+有底色——那本来就是给横版视频准备的槽位，竖片填它只能这样。
 """
 from __future__ import annotations
 
@@ -18,6 +26,11 @@ import subprocess
 from pathlib import Path
 
 from PIL import Image
+
+#: 竖封面槽位（3:4）。
+VERTICAL_COVER_SIZE = (1080, 1440)
+#: 横封面槽位（4:3）。
+HORIZONTAL_COVER_SIZE = (1200, 900)
 
 
 def extract_frame(video: str | Path, at: float, out_path: str | Path) -> Path:
@@ -38,17 +51,63 @@ def extract_frame(video: str | Path, at: float, out_path: str | Path) -> Path:
     return out
 
 
-def make_cover(video: str | Path, at: float, out_dir: str | Path) -> Path:
-    """抽一帧，存成 `cover.jpg`。
+def _crop_to_ratio(picture: Image.Image, ratio: tuple[int, int]) -> Image.Image:
+    """居中裁到目标宽高比。"""
+    width, height = picture.size
+    target = ratio[0] / ratio[1]
+    if width / height > target:
+        new_width = max(1, int(round(height * target)))
+        left = (width - new_width) // 2
+        return picture.crop((left, 0, left + new_width, height))
+    new_height = max(1, int(round(width / target)))
+    top = (height - new_height) // 2
+    return picture.crop((0, top, width, top + new_height))
 
-    **保持成片的原始比例**——见模块开头：抖音的封面规格未实测，
-    猜比例不如先给原图。
+
+def _contain_on_canvas(picture: Image.Image, size: tuple[int, int],
+                       background: tuple[int, int, int] = (255, 255, 255),
+                       ) -> Image.Image:
+    """等比缩放居中放到画布上（留白）。"""
+    canvas = Image.new("RGB", size, background)
+    scale = min(size[0] / picture.width, size[1] / picture.height)
+    resized = picture.resize(
+        (max(1, int(picture.width * scale)),
+         max(1, int(picture.height * scale))),
+        Image.LANCZOS)
+    canvas.paste(resized, ((size[0] - resized.width) // 2,
+                           (size[1] - resized.height) // 2))
+    return canvas
+
+
+def make_covers(video: str | Path, at: float, out_dir: str | Path) -> dict:
+    """抽一帧，出三张封面。
+
+    返回 ``{"original": 路径, "vertical": 路径, "horizontal": 路径}``。
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     raw = extract_frame(video, at, out_dir / "_frame.png")
-    cover = out_dir / "cover.jpg"
+
+    paths = {
+        "original": out_dir / "cover.jpg",
+        "vertical": out_dir / "cover_3x4.jpg",
+        "horizontal": out_dir / "cover_4x3.jpg",
+    }
     with Image.open(raw) as frame:
-        frame.convert("RGB").save(cover, quality=92)
+        picture = frame.convert("RGB")
+        picture.save(paths["original"], quality=92)
+        _crop_to_ratio(picture, (3, 4)).resize(
+            VERTICAL_COVER_SIZE, Image.LANCZOS).save(
+                paths["vertical"], quality=92)
+        _contain_on_canvas(picture, HORIZONTAL_COVER_SIZE).save(
+            paths["horizontal"], quality=92)
     raw.unlink(missing_ok=True)
-    return cover
+    return paths
+
+
+def make_cover(video: str | Path, at: float, out_dir: str | Path) -> Path:
+    """抽一帧，存成 `cover.jpg`（与成片同比例）。
+
+    保留这个入口是为了不打断别的调用方；后台槽位那两张用 `make_covers`。
+    """
+    return make_covers(video, at, out_dir)["original"]

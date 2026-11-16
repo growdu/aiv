@@ -380,7 +380,10 @@ function fitMermaidDiagrams() {
      MIN_SCALE we therefore keep the natural size and let the container
      scroll horizontally instead of shipping unreadable diagrams. */
   var MIN_SCALE = 0.7;
-  var svgs = root.querySelectorAll('.mermaid svg');
+  /* 期号区块（契约七 §4.2）把正文的第一张机制图搬到了文章内容**之外**，
+     所以这里除了 #articleContent 还得看 .episode-block——否则那张图
+     在窄屏上会按原始宽度溢出，而且点不开放大。 */
+  var svgs = document.querySelectorAll('#articleContent .mermaid svg, .episode-block .mermaid svg');
   for (var i = 0; i < svgs.length; i++) {
     var svg = svgs[i];
     var box = svg.parentNode;
@@ -436,7 +439,7 @@ window.initMermaidDiagrams = function () {
   window.addEventListener('resize', fitMermaidDiagrams);
   document.addEventListener('click', function (e) {
     var svg = e.target && e.target.closest
-      ? e.target.closest('#articleContent .mermaid svg')
+      ? e.target.closest('#articleContent .mermaid svg, .episode-block .mermaid svg')
       : null;
     if (!svg) return;
     var vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/);

@@ -7,7 +7,7 @@
 - 语料：**569 篇**文章、7689 个代码围栏（mermaid 1280）、13512 行表格、568 张图、1208 处站外链接
 - 合规：**558 篇可发布**——标题超长按内容裁剪、正文超长自动拆篇；只有「拆不开」和「正文为空」的 11 篇会被拒
 - 正文上限：**60000 字符**（渲染后的 HTML），可配（`--max-length` / `WX_MAX_LENGTH`，实测天花板 100000）；读者看到约 1.5 万字，草稿总数从 1484 篇降到 736 篇
-- 测试：**444 个**，全绿，不依赖网络
+- 测试：**484 个**，全绿，不依赖网络；**Windows / macOS / Linux 上都能跑**
 - **发布链路已用真实账号实测**：`stable_token` / `media/uploadimg` /
   `material/add_material` / `draft/add` / `draft/update` 全部通过，草稿已进草稿箱；
   `freepublish/submit` 返回 **48001 api unauthorized**——该账号没有发表权限，
@@ -63,6 +63,7 @@
 | pillow | 图片压缩与尺寸（已装） |
 | pytest | 测试（已装） |
 | node + `@mermaid-js/mermaid-cli` | mermaid → PNG（唯一需额外安装的） |
+| 系统 Chrome 或 Edge | SVG / mermaid 渲染用的浏览器（Windows 下从 Program Files 找，macOS 下用 app bundle） |
 
 除上面这些外只用标准库：front-matter 是手写解析器，HTTP 用 `urllib`，multipart 编码自己拼。
 
@@ -189,15 +190,22 @@ export WX_NOTIFY_KEY=SCTxxxxxxxx     # https://sct.ftqq.com 扫码登录即可�
 | 批量 / 定时 | `cli.py` | ✅ `batch` 批量建草稿、`auto-draft` 定时自动进草稿（launchd 模板在 `deploy/`） |
 | 拆分 | `split.py` | ✅ 超上限的文章按标题边界拆成多篇，编号 + 衔接；上限可配（`--max-length`） |
 | 审计 | `audit.py` | ✅ 复算全语料统计与 HTML 合规检查 |
+| 浏览器 | `chrome.py` | ✅ 跨平台找 Chrome/Edge；无头截图用独立 profile，参数写不对会换写法重试 |
+| 锁 | `locking.py` | ✅ 独占锁：Windows 走命名互斥量，Unix 走 flock |
 | CLI | `cli.py` | ✅ scan / audit / convert / publish / categories / collections / publish-collection / batch / auto-draft / reconcile / status |
 
 ## 测试
 
 ```bash
-cd /Users/growduduan/code/blog && python3 -m pytest weixin/tests -q
+cd weixin && python3 -m pytest tests -q
 ```
 
 测试不依赖网络：微信接口用本地假 HTTP server 模拟（绑定 `127.0.0.1`）。
+
+套件本身是**跨平台**的，Windows 上也能全量跑：锁在 Windows 上是命名互斥量而不是
+`fcntl`，浏览器从 `Program Files` 里找，子进程的输出两端都按 UTF-8 对齐。
+`tests/test_portability.py` 盯着这些规矩——谁再把 `fcntl` 写回文件头，
+或者用 `os.kill(pid, 0)` 问进程活性，测试会当场拦下。
 
 ## 边界
 
