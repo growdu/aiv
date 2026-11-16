@@ -1,0 +1,66 @@
+name: Refresh view counts
+
+# 真实阅读量（GoatCounter 的 PV）快照的刷新入口。
+#
+# **只有手动触发**：快照是构建期读的静态文件（data/view-counts.json →
+# source/_data/ → site.data），CI 不定时抓。
+#
+# 抓取用 GoatCounter 的 API（只读），不是不蒜子——不蒜子每查一次会给
+# 那个路径 +1，用它做统计会把统计本身改坏。
+#
+# 需要仓库 secret **GOATCOUNTER_API_KEY**（GoatCounter 账号设置里：
+# Username → API）。没有这个 key 这个工作流会直接失败并说清楚原因。
+#
+# 抓完直接提交到 master：快照就是构建的输入，刷新它就是为了让站点
+# 显示真实的阅读量。推送前会先 rebase，撞上并行推送时宁可失败也不
+# 覆盖别人的提交。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-view-counts
+  # 同一时间只跑一个：两个刷新会互相覆盖快照。
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 抓 GoatCounter 的阅读量
+        env:
+          GOATCOUNTER_API_KEY: ${{ secrets.GOATCOUNTER_API_KEY }}
+        run: |
+          if [ -z "$GOATCOUNTER_API_KEY" ]; then
+            echo "::error title=缺少 GOATCOUNTER_API_KEY::仓库 secret 里没有这个 key（GoatCounter 账号设置 → Username → API）"
+            exit 1
+          fi
+          python3 tools/fetch-view-counts.py
+
+      - name: 提交快照
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/view-counts.json
+          if git diff --staged --quiet; then
+            echo "阅读量跟上次一样，不用提交"
+            exit 0
+          fi
+          git commit -m "chore(data): 刷新 GoatCounter 阅读量快照"
+          # 撞上并行推送时 rebase 一下再推；推不上去就让这个 run 失败，
+          # 不覆盖别人的提交。
+          git pull --rebase origin master
+          git push origin HEAD:master

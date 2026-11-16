@@ -22,7 +22,7 @@
 它的 API 是**只读**的，不会像不蒜子那样每查一次就给那个路径 +1。
 
 这里断言的是**行为**：模板渲染出来的 HTML 里有没有那个数字、数字是
-多少——不是「代码里有没有某个字符串」。
+多少、tab 叫什么——不是「代码里有没有某个字符串」。
 """
 
 from __future__ import annotations
@@ -41,6 +41,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PATCH_THEME = REPO_ROOT / "tools" / "patch-theme.py"
 THEME_LAYOUT = REPO_ROOT / "themes" / "matery" / "layout" / "layout.ejs"
 HOME_CONTENT = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
+FETCHER = REPO_ROOT / "tools" / "fetch-view-counts.py"
+SNAPSHOT = REPO_ROOT / "data" / "view-counts.json"
 NODE = shutil.which("node")
 
 needs_node = pytest.mark.skipif(NODE is None, reason="node 不在 PATH 上")
@@ -234,3 +236,168 @@ def test_the_sidebar_leaves_out_the_number_for_a_page_the_snapshot_does_not_know
     assert html.count("hot-views") == 1, (
         "只有快照里有数的那一篇才显示这一格，实际 {} 处".format(html.count("hot-views"))
     )
+
+
+# --- 2. 首页 tab ------------------------------------------------------------
+
+
+def _three_posts() -> list:
+    return [
+        {"path": "2026/08/18/db/aaa/index.html", "title": "AAA", "date": 1000, "top": 90, "content": "<p>a</p>"},
+        {"path": "2026/08/18/db/bbb/index.html", "title": "BBB", "date": 2000, "top": 50, "content": "<p>b</p>"},
+        {"path": "2026/08/18/db/ccc/index.html", "title": "CCC", "date": 3000, "top": 45, "content": "<p>c</p>"},
+    ]
+
+
+@needs_node
+def test_the_hot_tab_reads_the_real_view_count_snapshot(tmp_path):
+    """「近期热门」按快照里的真实 PV 排——不是按手写的 top 分数。
+
+    这里故意让 PV 的高下与 ``top`` 的高下**相反**：CCC 的 top 只有 45，
+    真实 PV 却是最高的。排序听 PV 的，才算真的换了数据源。
+    """
+    got = _home_tabs(
+        {
+            "posts": _three_posts(),
+            "data": {
+                "view-counts": {
+                    "counts": {
+                        "2026/08/18/db/aaa": 5,
+                        "2026/08/18/db/bbb": 80,
+                        "2026/08/18/db/ccc": 200,
+                    }
+                }
+            },
+        },
+        tmp_path,
+    )
+
+    assert got["hot"][0] == "2026/08/18/db/ccc/index.html", got["hot"]
+    assert got["hotTabName"] == "近期热门", got["hotTabName"]
+
+
+@needs_node
+def test_the_hot_tab_falls_back_when_the_snapshot_is_missing(tmp_path):
+    """快照缺失 → 退回 ``top`` 排序，**并且 tab 改名成「编辑精选」**。
+
+    一个叫「热门」的 tab 装着手动排序的内容，是在骗读者——所以名字要跟着变。
+    """
+    got = _home_tabs({"posts": _three_posts()}, tmp_path)
+
+    assert got["hotTabName"] == "编辑精选", got["hotTabName"]
+    # 回退时按 top 排：bbb(50) 在 ccc(45) 前面。
+    assert got["hot"][:2] == [
+        "2026/08/18/db/bbb/index.html",
+        "2026/08/18/db/ccc/index.html",
+    ], got["hot"]
+
+
+@needs_node
+def test_the_hot_tab_falls_back_when_there_is_not_enough_real_data(tmp_path):
+    """只有一篇有 PV —— 分不出高下，退回 ``top`` 排序并改名。
+
+    一篇有 PV 的「热门」tab 装的是另一套排序的内容，比没有还糟。
+    """
+    got = _home_tabs(
+        {
+            "posts": _three_posts(),
+            "data": {"view-counts": {"counts": {"2026/08/18/db/ccc": 7}}},
+        },
+        tmp_path,
+    )
+
+    assert got["hotTabName"] == "编辑精选", got["hotTabName"]
+    assert got["hot"][0] == "2026/08/18/db/bbb/index.html", got["hot"]
+
+
+def test_the_hot_tab_label_is_bound_to_the_computed_name():
+    """标签要跟着算出来的名字走——写死「近期热门」的话改名就不算数。"""
+    text = HOME_CONTENT.read_text(encoding="utf-8")
+
+    assert "<%= hotTabName %>" in text, "tab 标签没有用算出来的名字"
+    assert "近期热门</a>" not in text, "tab 标签的名字写死了"
+
+
+# --- 3. 抓取器 --------------------------------------------------------------
+
+
+def _load_fetcher():
+    spec = importlib.util.spec_from_file_location("fetch_view_counts", FETCHER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_fetcher_parses_a_goatcounter_response():
+    """喂一个假的 GoatCounter 响应，断言解析出的 path→PV 映射。
+
+    GoatCounter 的 ``/api/v0/stats/hits`` 返回 ``{"hits": [{"path": ..., "count": ...}]}``。
+    """
+    fetcher = _load_fetcher()
+    payload = {
+        "hits": [
+            {
+                "path": "/2026/08/18/db/postgresql/learning-path/03-query-pipeline/",
+                "count": 42,
+                "event": False,
+                "path_id": 7,
+            },
+            {"path": "/archives/", "count": 3, "event": False, "path_id": 9},
+        ],
+        "more": False,
+        "total": 2,
+    }
+
+    counts = fetcher.parse_counts(payload)
+
+    assert counts["2026/08/18/db/postgresql/learning-path/03-query-pipeline"] == 42
+    assert counts["archives"] == 3
+
+
+def test_the_fetcher_normalizes_the_path_the_same_way_the_template_does():
+    """快照里的键要和模板算出来的键**一模一样**，否则永远匹配不上。
+
+    hexo 的 ``post.path`` 是 ``2026/08/18/db/aaa/index.html``，
+    GoatCounter 记的是 ``/2026/08/18/db/aaa/``——两边都要归一到
+    ``2026/08/18/db/aaa``。
+    """
+    fetcher = _load_fetcher()
+
+    assert fetcher.normalize_path("/2026/08/18/db/aaa/") == "2026/08/18/db/aaa"
+    assert fetcher.normalize_path("2026/08/18/db/aaa/index.html") == "2026/08/18/db/aaa"
+    assert fetcher.normalize_path("/2026/08/18/db/aaa") == "2026/08/18/db/aaa"
+
+
+# --- 4. 快照怎么进到站点里 -------------------------------------------------
+
+
+def test_the_snapshot_file_is_a_valid_counts_object():
+    """快照文件必须存在，且长成 ``{"counts": {...}}`` 的样子。"""
+    assert SNAPSHOT.is_file(), "缺少 data/view-counts.json"
+
+    data = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+    assert isinstance(data.get("counts"), dict), data
+
+
+def _load_sync():
+    spec = importlib.util.spec_from_file_location("sync_hexo_view_counts", REPO_ROOT / "tools" / "sync-hexo.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_snapshot_reaches_the_hexo_data_dir(tmp_path):
+    """快照必须被复制到 ``source/_data/``——hexo 才会把它挂到 site.data 上。
+
+    复制不到 ``_data/`` 的话，模板里的 ``site.data['view-counts']``
+    永远是 undefined，页面会一直显示不出阅读量。
+    """
+    sync = _load_sync()
+
+    dest = sync.copy_view_counts_snapshot(src_dir=str(tmp_path))
+
+    assert dest is not None, "快照没有被复制到 source/_data/"
+    copied = json.loads(Path(dest).read_text(encoding="utf-8"))
+    assert copied == json.loads(SNAPSHOT.read_text(encoding="utf-8"))

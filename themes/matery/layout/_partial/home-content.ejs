@@ -36,20 +36,64 @@
 
   // Tab data: 3 distinct sources, 6 cards each.
   //   featured: hand-curated (top >= 70), sorted by top desc
-  //   hot:      mid-tier (top 40-69), sorted by top desc
+  //   hot:      **真实阅读量**（GoatCounter 快照）；没有快照才退回 top
   //   latest:   newest by date
-  var featured = site.posts.filter(function (p) { return p.top && p.top >= 70; }).sort(function (a, b) { return b.top - a.top; }).slice(0, 6);
-  var hot = site.posts.filter(function (p) { return p.top && p.top >= 40 && p.top < 70; }).sort(function (a, b) { return b.top - a.top; }).slice(0, 6);
-  if (hot.length < 6) {
-    // Fallback: fill with top scoring posts not already in featured
+  // site.posts 是 warehouse 的 Query，不是数组——filter/sort/slice 返回的
+  // 还是 Query，而 Query 没有 concat。所以先 toArray() 拿真正的数组。
+  var allPosts = site.posts.toArray();
+  var featured = allPosts.filter(function (p) { return p.top && p.top >= 70; }).sort(function (a, b) { return b.top - a.top; }).slice(0, 6);
+
+  // 阅读量快照（GoatCounter 的真实 PV）。
+  //
+  // 真相在仓库根的 data/view-counts.json —— tools/fetch-view-counts.py 抓的，
+  // sync-hexo.py 复制到 source/_data/，hexo 挂到 site.data 上。
+  //
+  // 这个 tab 以前排的是手写的 top 分数：568 篇文章里只有 19 篇有 top，
+  // 跟真实热度无关。有真实 PV 就按 PV 排；没有就退回 top，**并改名**——
+  // 不要让一个叫「热门」的 tab 装着手动排序的内容。
+  var _vc = (site.data && site.data['view-counts']) || null;
+  var _counts = (_vc && _vc.counts) || {};
+  var _norm = function (p) {
+    // hexo 的 post.path 是 '2026/08/18/db/aaa/index.html'，
+    // GoatCounter 记的是 '/2026/08/18/db/aaa/'——两边归一到同一个键。
+    var s = String((p && p.path) || '');
+    if (s.charAt(0) === '/') { s = s.slice(1); }
+    if (s.slice(-11) === '/index.html') { s = s.slice(0, -11); }
+    else if (s === 'index.html') { s = ''; }
+    while (s.length > 0 && s.charAt(s.length - 1) === '/') { s = s.slice(0, -1); }
+    return s;
+  };
+  var _pv = function (p) {
+    var n = _counts[_norm(p)];
+    return typeof n === 'number' ? n : 0;
+  };
+  var _byPv = allPosts
+    .map(function (p) { return {post: p, pv: _pv(p)}; })
+    .filter(function (x) { return x.pv > 0; })
+    .sort(function (a, b) { return b.pv - a.pv; })
+    .slice(0, 6)
+    .map(function (x) { return x.post; });
+
+  var hotTabName = '近期热门';
+  var hot;
+  if (_byPv.length >= 2) {
+    // 有真实阅读量：按 PV 排。
+    hot = _byPv;
+  } else {
+    // 快照缺失、或者 PV 少到分不出高下：退回 top 排序，并**改掉 tab 的名字**。
+    hotTabName = '编辑精选';
     var featuredIds = new Set(featured.map(function (p) { return p._id; }));
-    var more = site.posts.data
-      .filter(function (p) { return !featuredIds.has(p._id); })
-      .sort(function (a, b) { return (b.top || 0) - (a.top || 0); })
-      .slice(0, 6 - hot.length);
-    hot = hot.concat(more);
+    hot = allPosts.filter(function (p) { return p.top && p.top >= 40 && p.top < 70; }).sort(function (a, b) { return b.top - a.top; });
+    var hotIds = new Set(hot.map(function (p) { return p._id; }));
+    // 补齐：不在 featured、也不在 hot 里的，按 top 从高到低。
+    // （老代码只排除了 featured，于是 hot 里已有的文章会被再补一遍——
+    //  同一个卡片出现两次。）
+    var more = allPosts
+      .filter(function (p) { return !featuredIds.has(p._id) && !hotIds.has(p._id); })
+      .sort(function (a, b) { return (b.top || 0) - (a.top || 0); });
+    hot = hot.concat(more).slice(0, 6);
   }
-  var latest = site.posts.data.slice().sort(function (a, b) { return b.date - a.date; }).slice(0, 6);
+  var latest = allPosts.slice().sort(function (a, b) { return b.date - a.date; }).slice(0, 6);
 %>
 
 <section class="home-content" data-aos="fade-up">
@@ -88,7 +132,7 @@
             所以即使 JS 没跑起来，首页也不会一次铺开 18 张卡片。 %>
         <li class="tab col s4"><a class="active" href="#home-tab-latest" role="tab"><i class="fas fa-clock"></i>&nbsp;最新发布</a></li>
         <li class="tab col s4"><a href="#home-tab-featured" role="tab"><i class="fas fa-star"></i>&nbsp;编辑推荐</a></li>
-        <li class="tab col s4"><a href="#home-tab-hot" role="tab"><i class="fas fa-fire"></i>&nbsp;近期热门</a></li>
+        <li class="tab col s4"><a href="#home-tab-hot" role="tab"><i class="fas fa-fire"></i>&nbsp;<%= hotTabName %></a></li>
       </ul>
 
       <div id="home-tab-latest" class="col s12 home-tab-panel active" role="tabpanel">
