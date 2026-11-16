@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "db/postgresql/postgresql-reorderbuffer-c-function-reference",
+  "draft_id": "7708374890201580075",
+  "package_dir": "toutiao/out/db-postgresql-postgresql-reorderbuffer-c-function-reference",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL reorderbuffer.c",
+  "updated_at": "2026-11-15T20:43:47+08:00"
+}

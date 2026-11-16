@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "dpdk/vpp",
+  "draft_id": "7708376676039770667",
+  "package_dir": "toutiao/out/dpdk-vpp",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "vpp",
+  "updated_at": "2026-11-15T20:43:49+08:00"
+}

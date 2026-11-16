@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "pgsql/replication/详解完整恢复及基于时间点的恢复",
+  "draft_id": "7708376178012258857",
+  "package_dir": "toutiao/out/pgsql-replication-详解完整恢复及基于时间点的恢复",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "详解完整恢复及基于时间点的恢复",
+  "updated_at": "2026-11-15T20:43:57+08:00"
+}

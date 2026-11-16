@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "database/postgresql-rangevar-and-data-structures",
+  "draft_id": "7708374939866300971",
+  "package_dir": "toutiao/out/database-postgresql-rangevar-and-data-structures",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL 18 内核数据结构全景",
+  "updated_at": "2026-11-15T20:43:42+08:00"
+}

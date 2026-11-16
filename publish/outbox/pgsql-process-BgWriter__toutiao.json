@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "pgsql/process/BgWriter",
+  "draft_id": "7708376895159419455",
+  "package_dir": "toutiao/out/pgsql-process-BgWriter",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "BgWriter",
+  "updated_at": "2026-11-15T20:43:56+08:00"
+}

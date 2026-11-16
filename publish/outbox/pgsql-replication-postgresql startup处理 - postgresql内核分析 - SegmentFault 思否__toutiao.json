@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "pgsql/replication/postgresql startup处理 - postgresql内核分析 - SegmentFault 思否",
+  "draft_id": "7708376317443572260",
+  "package_dir": "toutiao/out/pgsql-replication-postgresql startup处理 - postgresql内核分析 - SegmentFault 思否",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "tcpdump -i eth1 -s0 -nnX -w",
+  "updated_at": "2026-11-15T20:43:57+08:00"
+}

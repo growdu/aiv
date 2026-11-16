@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "db/logical_decode/pa_decode/概要设计说明书",
+  "draft_id": "7708374791086817846",
+  "package_dir": "toutiao/out/db-logical_decode-pa_decode-概要设计说明书",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "概要设计说明书（逻辑复制并行解码）",
+  "updated_at": "2026-11-15T20:43:44+08:00"
+}
