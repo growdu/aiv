@@ -6,13 +6,22 @@
 **竖版（1080×1920）**：横版是「来源在左、分支在中、汇聚在右」三栏并排；
 竖版只有 1080 宽，三栏并排每栏只剩 300 宽，标签全得缩。
 竖版改成上下三段：来源一条横带、四个分支并排一行、汇聚一条横带，
-箭头竖着走（见 `pyv/scene_layout.py` 的三条规矩）。
+箭头竖着走（见 `pyv/layout.py` 的竖版四条规矩）。
+
+**这一版用了两个共用层**：
+- `pyv.layout`：画幅级的版式常量与绘制入口（横版 H / 竖版 V）
+- `pyv.components`：块、块排、箭头这些可复用的零件
+
+**坐标一个都没改**——迁移只是把「手写的算术」换成「组件的算术」，
+结果必须逐像素相同（`tests/test_contract.py` 的基准守着呢）。
 """
 from __future__ import annotations
 
+from pyv import components
 from pyv import easing
+from pyv import layout
 from pyv import scene_layout
-from pyv.draw import arrow, rounded_rect, text
+from pyv.draw import arrow, text
 from pyv.palette import COLORS
 from pyv.params import Params
 
@@ -41,10 +50,11 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         _render_vertical(ctx, t, w, h, p)
         return
 
-    text(ctx, p["title"], w * 0.06, h * 0.15, 60, COLORS["primary"], bold=True)
+    layout.H.title(ctx, p["title"], w, h)
 
     # 来源方
-    rounded_rect(ctx, w * 0.05, h * 0.26, w * 0.19, h * 0.24, 18, COLORS["primary"])
+    components.block(ctx, w * 0.05, h * 0.26, w * 0.19, h * 0.24,
+                     radius=18, fill=COLORS["primary"])
     text(ctx, p["source_label"], w * 0.145, h * 0.41, 48, "#FFFFFF", anchor="center")
     text(ctx, p["source_sub"], w * 0.145, h * 0.545, 28, COLORS["primary"], anchor="center")
 
@@ -52,13 +62,15 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     worker_h = h * 0.115
     worker_gap = h * 0.04
     top = h * 0.20
-    for i in range(worker_count(params)):
-        y = top + i * (worker_h + worker_gap)
+    count = worker_count(params)
+    for i, (_, y, _, _) in enumerate(
+            components.steps(w * 0.47, top, 0.0, worker_h, count,
+                              step_y=worker_h + worker_gap)):
         delay = 0.10 * i
         grow = easing.ease_out_cubic(max(0.0, min(1.0, (t - delay) * 3.0)))
         box_w = w * 0.17 * (0.4 + 0.6 * grow)
-        rounded_rect(ctx, w * 0.47, y, box_w, worker_h,
-                     14, COLORS["secondary"])
+        components.block(ctx, w * 0.47, y, box_w, worker_h,
+                         radius=14, fill=COLORS["secondary"])
         # 标签跟着盒子一起长：居中于当前盒子宽度，盒子没展开到位就先不显示
         label_alpha = max(0.0, min(1.0, (grow - 0.55) / 0.45))
         text(ctx, f"{p['worker_prefix']} {i + 1}", w * 0.47 + box_w / 2, y + worker_h * 0.68,
@@ -70,11 +82,12 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
               COLORS["secondary"], 4, 14)
 
     # 汇聚方
-    rounded_rect(ctx, w * 0.73, h * 0.30, w * 0.19, h * 0.40, 18, "#DCE1E8")
+    components.block(ctx, w * 0.73, h * 0.30, w * 0.19, h * 0.40,
+                     radius=18, fill="#DCE1E8")
     text(ctx, p["target_label"], w * 0.825, h * 0.50, 40, COLORS["primary"], anchor="center")
     text(ctx, p["target_sub"], w * 0.825, h * 0.60, 28, COLORS["secondary"], anchor="center")
 
-    text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
+    layout.H.caption(ctx, p["caption"], w, h)
 
 
 def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
@@ -90,11 +103,12 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     width = scene_layout.content_width(w)
     right = left + width
 
-    scene_layout.title(ctx, p["title"], w, h)
+    layout.V.title(ctx, p["title"], w, h)
 
     # ---- 来源方：一条横带 ----
     src_y, src_h = V_SOURCE_TOP, V_SOURCE_H
-    rounded_rect(ctx, left, src_y, width, src_h, 18, COLORS["primary"])
+    components.block(ctx, left, src_y, width, src_h,
+                     radius=18, fill=COLORS["primary"])
     baseline = src_y + src_h * 0.63
     scene_layout.line(ctx, p["source_label"], left + width * 0.045, baseline,
                       width * 0.45, 52, "#FFFFFF", bold=True)
@@ -104,32 +118,33 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     # ---- 并行分支：并排一行 ----
     count = int(p["worker_count"])
     gap = width * V_WORKER_GAP_RATIO
-    box_w = (width - (count - 1) * gap) / count
     worker_y, worker_h = V_WORKER_TOP, V_WORKER_H
-    for i in range(count):
-        cx = left + i * (box_w + gap)
+    for i, ((cx, box_w), _) in enumerate(
+            zip(components.row(left, width, count, gap=gap), range(count))):
         delay = 0.10 * i
         grow = easing.ease_out_cubic(max(0.0, min(1.0, (t - delay) * 3.0)))
         box_h = worker_h * (0.4 + 0.6 * grow)
-        rounded_rect(ctx, cx, worker_y, box_w, box_h, 14, COLORS["secondary"])
+        components.block(ctx, cx, worker_y, box_w, box_h,
+                         radius=14, fill=COLORS["secondary"])
         # 标签跟着盒子一起长：盒子没展开到位就先不显示
         label_alpha = max(0.0, min(1.0, (grow - 0.55) / 0.45))
         scene_layout.line(ctx, f"{p['worker_prefix']} {i + 1}", cx + box_w / 2,
                           worker_y + worker_h * 0.52, box_w, 40, "#FFFFFF",
                           alpha=label_alpha, anchor="center")
         # 来源 → 分支：竖着的箭头，从来源带底边落到分支顶边
-        arrow(ctx, cx + box_w / 2, src_y + src_h + 12,
-              cx + box_w / 2, worker_y - 12, COLORS["accent"], 5, 16)
+        components.arrow_v(ctx, cx + box_w / 2, src_y + src_h + 12,
+                           worker_y - 12, color=COLORS["accent"], width=5, head=16)
         # 分支 → 汇聚：从分支底边落到汇聚带顶边
-        arrow(ctx, cx + box_w / 2, worker_y + worker_h + 12,
-              cx + box_w / 2, V_TARGET_TOP - 12, COLORS["secondary"], 4, 14)
+        components.arrow_v(ctx, cx + box_w / 2, worker_y + worker_h + 12,
+                           V_TARGET_TOP - 12, color=COLORS["secondary"],
+                           width=4, head=14)
 
     # ---- 汇聚方：一条横带 ----
     tgt_y, tgt_h = V_TARGET_TOP, V_TARGET_H
-    rounded_rect(ctx, left, tgt_y, width, tgt_h, 18, "#DCE1E8")
+    components.block(ctx, left, tgt_y, width, tgt_h,
+                     radius=18, fill="#DCE1E8")
     baseline = tgt_y + tgt_h * 0.63
     scene_layout.line(ctx, p["target_label"], left + width * 0.045, baseline,
                       width * 0.45, 48, COLORS["primary"], bold=True)
     scene_layout.line(ctx, p["target_sub"], right - width * 0.045, baseline,
                       width * 0.35, 34, COLORS["secondary"], anchor="right")
-

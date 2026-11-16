@@ -7,12 +7,21 @@
 三栏并排；竖版只有 1080 宽，三栏会把每栏压到三分之一——所以改成
 上下堆叠：五个积压块排成一行在最上，下面是唯一的解码线程，
 再下面是接收方。
+
+**这一版用了两个共用层**：
+- `pyv.layout`：画幅级的版式常量与绘制入口（横版 H / 竖版 V）
+- `pyv.components`：块、块排、箭头这些可复用的零件
+
+**坐标一个都没改**——迁移只是把「手写的算术」换成「组件的算术」，
+结果必须逐像素相同（`tests/test_contract.py` 的基准守着呢）。
 """
 from __future__ import annotations
 
+from pyv import components
 from pyv import easing
+from pyv import layout
 from pyv import scene_layout
-from pyv.draw import arrow, rounded_rect, text
+from pyv.draw import text
 from pyv.palette import COLORS
 from pyv.params import Params
 
@@ -28,28 +37,33 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         _render_vertical(ctx, t, w, h, p)
         return
 
-    text(ctx, p["title"], w * 0.07, h * 0.16, 60, COLORS["problem"], bold=True)
+    layout.H.title(ctx, p["title"], w, h, x_ratio=0.07, y_ratio=0.16,
+                   color=COLORS["problem"])
 
     # 排队的事务块：越靠前越接近解码器
-    for i, color in enumerate(QUEUE_COLORS[:QUEUE_COUNT]):
-        y = h * (0.28 + i * 0.105)
-        progress = easing.ease_in_out(min(1.0, t * 1.5))
+    progress = easing.ease_in_out(min(1.0, t * 1.5))
+    blocks = components.column(h * 0.28, h * 0.485, QUEUE_COUNT, gap=h * 0.04)
+    for i, ((y, block_h), color) in enumerate(zip(blocks, QUEUE_COLORS)):
         # 事务块朝解码器（右侧）推进，不能滑出画面左侧
         shift = progress * w * 0.065 * (i + 1) / QUEUE_COUNT
-        rounded_rect(ctx, w * 0.08 + shift, y, w * 0.20, h * 0.065, 10, color)
+        components.block(ctx, w * 0.08 + shift, y, w * 0.20, block_h,
+                         radius=10, fill=color)
 
     # 唯一的解码线程
-    rounded_rect(ctx, w * 0.36, h * 0.28, w * 0.17, h * 0.42, 18, COLORS["primary"])
+    components.block(ctx, w * 0.36, h * 0.28, w * 0.17, h * 0.42,
+                     radius=18, fill=COLORS["primary"])
     text(ctx, p["decoder_label"], w * 0.445, h * 0.53, 46, "#FFFFFF", anchor="center")
     text(ctx, p["decoder_sub"], w * 0.445, h * 0.60, 34, COLORS["secondary"], anchor="center")
 
-    arrow(ctx, w * 0.54, h * 0.49, w * 0.73, h * 0.49, COLORS["primary"], 8, 24)
+    components.arrow_h(ctx, h * 0.49, w * 0.54, w * 0.73,
+                       color=COLORS["primary"], width=8, head=24)
 
     # 接收方
-    rounded_rect(ctx, w * 0.75, h * 0.34, w * 0.18, h * 0.30, 18, "#DCE1E8")
+    components.block(ctx, w * 0.75, h * 0.34, w * 0.18, h * 0.30,
+                     radius=18, fill="#DCE1E8")
     text(ctx, p["target_label"], w * 0.84, h * 0.52, 40, COLORS["primary"], anchor="center")
 
-    text(ctx, p["caption"], w * 0.07, h * 0.86, 44, COLORS["primary"])
+    layout.H.caption(ctx, p["caption"], w, h, x_ratio=0.07)
 
 
 def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
@@ -59,25 +73,26 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     把它们横着排成一行，靠宽度撑住；往下依次是那一个解码线程和
     接收方——排队这件事从上往下看更清楚。
     """
-    left = w * scene_layout.MARGIN_X
+    left = scene_layout.content_left(w)
     content_w = scene_layout.content_width(w)
 
-    scene_layout.title(ctx, p["title"], w, h, color=COLORS["problem"])
+    layout.V.title(ctx, p["title"], w, h, color=COLORS["problem"])
 
     # 排队的事务块：越靠前越接近解码器
     block_y, block_h = 280.0, 130.0
     gap = 20.0
-    block_w = (content_w - gap * (QUEUE_COUNT - 1)) / QUEUE_COUNT
     progress = easing.ease_in_out(min(1.0, t * 1.5))
-    for i, color in enumerate(QUEUE_COLORS[:QUEUE_COUNT]):
-        x = left + i * (block_w + gap)
+    blocks = components.row(left, content_w, QUEUE_COUNT, gap=gap)
+    for i, ((x, block_w), color) in enumerate(zip(blocks, QUEUE_COLORS)):
         # 事务块朝解码器（下方）推进，不能滑出画面
         shift = progress * 70.0 * (i + 1) / QUEUE_COUNT
-        rounded_rect(ctx, x, block_y + shift, block_w, block_h, 12, color)
+        components.block(ctx, x, block_y + shift, block_w, block_h,
+                         radius=12, fill=color)
 
     # 唯一的解码线程
     app_y, app_h = 520.0, 270.0
-    rounded_rect(ctx, left, app_y, content_w, app_h, 18, COLORS["primary"])
+    components.block(ctx, left, app_y, content_w, app_h,
+                     radius=18, fill=COLORS["primary"])
     scene_layout.line(ctx, p["decoder_label"], left + content_w / 2,
                       app_y + 105, content_w - 80, 48, "#FFFFFF",
                       anchor="center", bold=True)
@@ -85,13 +100,13 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                       app_y + 185, content_w - 80, 36, COLORS["secondary"],
                       anchor="center")
 
-    arrow(ctx, left + content_w / 2, app_y + app_h, left + content_w / 2, 900,
-          COLORS["primary"], 8, 24)
+    components.arrow_v(ctx, left + content_w / 2, app_y + app_h, 900,
+                       color=COLORS["primary"], width=8, head=24)
 
     # 接收方
     tgt_y, tgt_h = 910.0, 210.0
-    rounded_rect(ctx, left, tgt_y, content_w, tgt_h, 18, "#DCE1E8")
+    components.block(ctx, left, tgt_y, content_w, tgt_h,
+                     radius=18, fill="#DCE1E8")
     scene_layout.line(ctx, p["target_label"], left + content_w / 2,
                       tgt_y + 125, content_w - 80, 44, COLORS["primary"],
                       anchor="center")
-

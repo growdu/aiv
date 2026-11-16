@@ -5,13 +5,22 @@
 
 **竖版（1080×1920）**：横版是「左核阵列 + 右压力」左右分栏，
 竖版改成上下堆叠——核阵列铺满宽度放在上面，两组方块（上面一块大色块、
-下面一排小色块）依次排在下面（见 `pyv/scene_layout.py` 的三条规矩）。
+下面一排小色块）依次排在下面（见 `pyv/layout.py` 的竖版四条规矩）。
+
+**这一版用了两个共用层**：
+- `pyv.layout`：画幅级的版式常量与绘制入口（横版 H / 竖版 V）
+- `pyv.components`：块、网格、块排这些可复用的零件
+
+**坐标一个都没改**——迁移只是把「手写的算术」换成「组件的算术」，
+结果必须逐像素相同（`tests/test_contract.py` 的基准守着呢）。
 """
 from __future__ import annotations
 
+from pyv import components
 from pyv import easing
+from pyv import layout
 from pyv import scene_layout
-from pyv.draw import rounded_rect, text
+from pyv.draw import text
 from pyv.palette import COLORS, hex_to_rgb
 from pyv.params import Params
 
@@ -37,8 +46,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     cols = int(p["core_cols"])
     highlighted = int(p["highlighted_core"])
 
-    text(ctx, p["title"], w * 0.07, h * 0.15, 60,
-         COLORS["primary"], bold=True)
+    layout.H.title(ctx, p["title"], w, h, x_ratio=0.07, color=COLORS["primary"])
 
     cell_w, cell_h = w * 0.043, h * 0.088
     gap_x, gap_y = w * 0.011, h * 0.032
@@ -46,12 +54,11 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     pulse = easing.ease_out_cubic(max(0.0, (t - 0.20) / 0.55))
     lit = set(highlighted_cores(params))
 
-    for i in range(core_count):
-        col, row = i % cols, i // cols
-        x = x0 + col * (cell_w + gap_x)
-        y = y0 + row * (cell_h + gap_y)
-        rounded_rect(ctx, x, y, cell_w, cell_h, 8,
-                     COLORS["accent"] if i in lit else "#DCE1E8")
+    for i, (x, y, _, _) in enumerate(
+            components.grid(x0, y0, cell_w, cell_h, core_count, cols,
+                            gap_x=gap_x, gap_y=gap_y)):
+        components.block(ctx, x, y, cell_w, cell_h, radius=8,
+                         fill=COLORS["accent"] if i in lit else "#DCE1E8")
 
     cx = x0 + (highlighted % cols) * (cell_w + gap_x) + cell_w / 2
     cy = y0 + (highlighted // cols) * (cell_h + gap_y) + cell_h / 2
@@ -64,12 +71,15 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
 
     # 右侧压力：大块 + 小块
     text(ctx, p["big_label"], w * 0.56, h * 0.28, 42, COLORS["problem"], bold=True)
-    rounded_rect(ctx, w * 0.56, h * 0.32, w * 0.30, h * 0.09, 10, COLORS["problem"])
+    components.block(ctx, w * 0.56, h * 0.32, w * 0.30, h * 0.09,
+                     radius=10, fill=COLORS["problem"])
 
     text(ctx, p["small_label"], w * 0.56, h * 0.52, 42, COLORS["problem"], bold=True)
-    for i in range(SMALL_BLOCKS):
-        rounded_rect(ctx, w * 0.56 + i * w * 0.046, h * 0.56, w * 0.036, h * 0.065, 8,
-                     COLORS["problem"] if i % 2 == 0 else "#F8C489")
+    for i, (x, y, _, _) in enumerate(
+            components.steps(w * 0.56, h * 0.56, w * 0.036, h * 0.065,
+                              SMALL_BLOCKS, step_x=w * 0.046)):
+        components.block(ctx, x, y, w * 0.036, h * 0.065, radius=8,
+                         fill=COLORS["problem"] if i % 2 == 0 else "#F8C489")
 
     text(ctx, p["conclusion"], w * 0.56, h * 0.78, 52, COLORS["primary"], bold=True)
 
@@ -98,7 +108,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     left = scene_layout.content_left(w)
     full_w = scene_layout.content_width(w)
 
-    scene_layout.title(ctx, p["title"], w, h)
+    layout.V.title(ctx, p["title"], w, h)
 
     # ---- 核阵列：8 列 × 4 行，铺满内容区 ----
     cell_w, cell_h = 96, 88
@@ -109,12 +119,11 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     pulse = easing.ease_out_cubic(max(0.0, (t - 0.20) / 0.55))
     lit = set(highlighted_cores(p.as_dict()))
 
-    for i in range(core_count):
-        col, row = i % cols, i // cols
-        x = x0 + col * (cell_w + gap_x)
-        y = y0 + row * (cell_h + gap_y)
-        rounded_rect(ctx, x, y, cell_w, cell_h, 8,
-                     COLORS["accent"] if i in lit else "#DCE1E8")
+    for i, (x, y, _, _) in enumerate(
+            components.grid(x0, y0, cell_w, cell_h, core_count, cols,
+                            gap_x=gap_x, gap_y=gap_y)):
+        components.block(ctx, x, y, cell_w, cell_h, radius=8,
+                         fill=COLORS["accent"] if i in lit else "#DCE1E8")
 
     cx = x0 + (highlighted % cols) * (cell_w + gap_x) + cell_w / 2
     cy = y0 + (highlighted // cols) * (cell_h + gap_y) + cell_h / 2
@@ -124,7 +133,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     ctx.stroke()
 
     # ---- 只用到一核：浅橙底的 chip ----
-    rounded_rect(ctx, left, 700, 520, 76, 14, "#FDF0DC")
+    components.block(ctx, left, 700, 520, 76, radius=14, fill="#FDF0DC")
     scene_layout.line(ctx, p["stat"], left + 28, 752, 460, 48,
                       COLORS["accent"], bold=True)
 
@@ -137,17 +146,15 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                       COLORS["problem"], bold=True)
 
     # 大事务：一整块
-    rounded_rect(ctx, left, 906, col_w, 294, 14, COLORS["problem"])
+    components.block(ctx, left, 906, col_w, 294, radius=14, fill=COLORS["problem"])
 
     # 小事务高并发：七个块排成 4 + 3（挤在一行里会探出内容区右缘）
-    block_w = (col_w - 3 * 14) / 4
-    for i in range(SMALL_BLOCKS):
-        col = i % 4
-        row = i // 4
-        x = right_x + col * (block_w + 14)
-        y = 906 + row * 150
-        rounded_rect(ctx, x, y, block_w, 130, 10,
-                     COLORS["problem"] if i % 2 == 0 else "#F8C489")
+    block_w = components.cols_width(col_w, 4, 14)
+    for i, (x, y, _, _) in enumerate(
+            components.grid(right_x, 906, block_w, 130, SMALL_BLOCKS, 4,
+                            gap_x=14, gap_y=20)):
+        components.block(ctx, x, y, block_w, 130, radius=10,
+                         fill=COLORS["problem"] if i % 2 == 0 else "#F8C489")
 
     # ---- 结论 ----
     scene_layout.line(ctx, p["conclusion"], left, 1290, full_w, 60,

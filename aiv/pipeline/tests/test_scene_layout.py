@@ -57,12 +57,29 @@ def _subtitle_band_top() -> float:
 
 
 def _caption_ratio(module_path: Path) -> float | None:
-    """这个场景把说明画在画面高度的几分之几处。"""
+    """这个场景把说明画在画面高度的几分之几处。
+
+    **两种画法都认**：
+
+    - 老写法：`text(ctx, p["caption"], …, h * 0.86, …)`
+    - 新写法：`layout.H.caption(ctx, p["caption"], …)`——纵坐标由
+      `layout.H.CAPTION_Y` 决定，**那个常量由 `tests/test_layout.py`
+      用字面量 0.86 钉死**。
+
+    这里返回 `CAPTION_RATIO`（本文件里的字面量 0.86）而不是去 import
+    `layout.H.CAPTION_Y`：阈值从被测代码 import 就是自证，永远是绿的。
+    两段链条各钉一头——本文件钉「场景把说明交给哪个常量」，
+    `test_layout.py` 钉「那个常量等于 0.86」。
+    """
     source = module_path.read_text(encoding="utf-8")
     match = re.search(
         r'text\(ctx,\s*p\["caption"\][^)]*?h\s*\*\s*([0-9.]+)', source
     )
-    return float(match.group(1)) if match else None
+    if match:
+        return float(match.group(1))
+    if re.search(r'layout\.[HV]\.caption\(\s*ctx,\s*p\["caption"\]', source):
+        return CAPTION_RATIO
+    return None
 
 
 @pytest.mark.parametrize("module_path", sorted(SCENES_DIR.glob("*.py")),
