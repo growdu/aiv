@@ -1,3 +1,6 @@
+---
+description: "repmgr分为三部分，其主要功能如下："
+---
 # repmgr实现原理
 
 repmgr分为三部分，其主要功能如下：

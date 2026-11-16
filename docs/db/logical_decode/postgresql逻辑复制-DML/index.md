@@ -1,6 +1,7 @@
 ---
 platforms:
   - toutiao
+description: "postgresql逻辑复制采用发布者订阅者模式，并且发布者和订阅者之间是多对多的关系。"
 ---
 
 # postgresql逻辑复制(DML)

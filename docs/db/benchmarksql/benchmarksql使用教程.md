@@ -1,3 +1,6 @@
+---
+description: "BenchmarkSQL 是一个基于 Java 的数据库基准测试工具，主要用于模拟 TPC-C 规范定义的电商订单处理业务。它通过 JDBC 驱动连接数据库，因此除了 PostgreSQL，也可以通过适配驱动测试其他关系型数据库。"
+---
 # BenchmarkSQL 使用教程：从配置到运行机制分析
 
 > 本文介绍如何使用 BenchmarkSQL 对 PostgreSQL 进行 TPC-C 压测，重点覆盖配置、数据装载、运行命令、执行链路、结果分析和常见故障排查。

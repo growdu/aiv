@@ -1,3 +1,6 @@
+---
+description: "TeX Live 的安装步骤：下载 iso、挂载、安装以及配置环境变量。"
+---
 # texlive安装
 
 ## 下载iso包

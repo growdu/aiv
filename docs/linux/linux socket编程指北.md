@@ -1,3 +1,6 @@
+---
+description: "以下server和client的c代码均拷贝自博客，详细内容请阅读原文。在其上添加了错误码打印，修改了服务端ip和端口，并增加了makefile脚本。"
+---
 # linux socket编程指北
 
 以下server和client的c代码均拷贝自[博客](https://blog.csdn.net/weixin_41249411/article/details/89060985)，详细内容请阅读[原文](https://blog.csdn.net/weixin_41249411/article/details/89060985)。在其上添加了错误码打印，修改了服务端ip和端口，并增加了makefile脚本。

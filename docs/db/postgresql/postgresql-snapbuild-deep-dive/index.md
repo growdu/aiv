@@ -15,6 +15,7 @@ tags:
   - Logical Decoding
   - MVCC
   - 源码分析
+description: "逻辑解码的核心矛盾:我们要在 WAL 记录中\"还原\"当时的元组,但元组中的 tid 是 catalog 表的(系统表),而 catalog 表本身也在被并发修改。要读 catalog 的历史版本,只能靠 MVCC 快照。"
 ---
 
 # PostgreSQL snapbuild.c 深度解析:逻辑复制"目录快照"子系统全栈拆解

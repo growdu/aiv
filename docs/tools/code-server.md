@@ -1,3 +1,6 @@
+---
+description: "code-server是C/S架构，一般将服务端部署在linux机器上，然后我们就可以在windows端通过浏览器来访问linux机器上的代码。"
+---
 # code-server安装
 
 code-server是C/S架构，一般将服务端部署在linux机器上，然后我们就可以在windows端通过浏览器来访问linux机器上的代码。

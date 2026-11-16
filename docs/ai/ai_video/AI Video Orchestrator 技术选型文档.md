@@ -1,3 +1,6 @@
+---
+description: "AI 视频编排平台的技术选型文档：跨平台优先、Agent 优先、插件化优先三条原则，以及每一层的具体技术选型。"
+---
 # AI Video Orchestrator 技术选型文档
 
 版本：V1.0

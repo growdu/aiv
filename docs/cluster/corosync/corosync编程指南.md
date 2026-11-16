@@ -1,3 +1,6 @@
+---
+description: "corosync编译依赖libqb和kronosnet。基于ubuntu20.04编译。"
+---
 # corosync编程指南
 
 ## 安装corosync

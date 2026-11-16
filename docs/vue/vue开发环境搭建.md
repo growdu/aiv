@@ -1,3 +1,6 @@
+---
+description: "下载node.js安装包安装。"
+---
 # vue开发环境搭建
 
 ## 安装node.js

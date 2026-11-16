@@ -1,3 +1,6 @@
+---
+description: "核心网（x86机器）使用pktgen发包到nxpls2160（arm机器），nxp通过dpdk l3fwd进行转发。"
+---
 # nxp l3fwd测试
 
 dpdk层三转发。

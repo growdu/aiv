@@ -1,3 +1,6 @@
+---
+description: "每个 standby 都： 1. wal receiver 连到 primary（PG 17+ 默认连 5432；早期连单独的 replication 端口） 2. 接收 WAL，流式写到本地 pg_wal 3. startup process replay WAL（与 crash recover…"
+---
 # 12 物理复制深入
 
 > 目标：吃透 PG 的 streaming replication 全套机制——wal sender、wal receiver、replication slot、sync vs async、cascade、failover、monitoring。**这是读写分离、高可用、灾备的基石**。

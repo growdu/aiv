@@ -1,3 +1,6 @@
+---
+description: "xlog 笔记：XLogCtlData 全局变量，以及 XLogwrtRqst/XLogwrtResult 这组写入与刷新的状态结构。"
+---
 # xlog
 
 - 全局变量

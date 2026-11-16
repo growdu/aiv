@@ -1,3 +1,6 @@
+---
+description: "可以，下面我直接给你一版接近 PostgreSQL patch 风格的 LogLogicalDDLMessage() 实现草稿。它的设计核心是：复用 PostgreSQL 现有 generic logical decoding message 的 WAL 记录格式与写入路径。现有源码里，xl_lo…"
+---
 可以，下面我直接给你一版**接近 PostgreSQL patch 风格**的 `LogLogicalDDLMessage()` 实现草稿。它的设计核心是：**复用 PostgreSQL 现有 generic logical decoding message 的 WAL 记录格式与写入路径**。现有源码里，`xl_logical_message` 记录了 `dbId`、`transactional`、`prefix_size`、`message_size` 和 payload；`LogLogicalMessage()` 会走 `XLogBeginInsert()` / `XLogRegisterData()` / `XLogInsert(RM_LOGICALMSG_ID, XLOG_LOGICAL_MESSAGE)`，并带上 `XLOG_INCLUDE_ORIGIN` 标记。([doxygen.postgresql.org][1])
 
 先说一句定位：

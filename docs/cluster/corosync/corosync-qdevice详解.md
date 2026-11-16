@@ -1,3 +1,6 @@
+---
+description: "corosync-qdevice是corosync集群工具的一个组件，用于提供第三方仲裁服务。corosync-qdevice需与corosync-qnetd和corosync一起使用，无法单独运行。"
+---
 # corosync-qdevice详解
 
 corosync-qdevice是corosync集群工具的一个组件，用于提供第三方仲裁服务。corosync-qdevice需与corosync-qnetd和corosync一起使用，无法单独运行。

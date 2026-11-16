@@ -1,3 +1,6 @@
+---
+description: "page是一段内存的指针，pageheaderData是page内存最前面的数据,pageheader是指向pageheaderData的指针。"
+---
 # pg内存管理
 
 ## buffer

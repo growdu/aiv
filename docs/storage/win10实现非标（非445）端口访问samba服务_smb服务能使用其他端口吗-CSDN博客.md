@@ -1,3 +1,6 @@
+---
+description: "在 Windows 10 上访问使用非标准端口的 Samba 服务：为什么默认的 445 端口用不了，以及该怎么配置。"
+---
 ![](https://csdnimg.cn/release/blogv2/dist/pc/img/original.png)
 
 [糖果墙](https://blog.csdn.net/qq_38505969 "糖果墙") ![](https://csdnimg.cn/release/blogv2/dist/pc/img/newCurrentTime2.png) 于 2023-11-14 01:58:11 发布

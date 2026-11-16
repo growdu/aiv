@@ -1,3 +1,6 @@
+---
+description: "提到 PostgreSQL 的压测工具，几乎所有人第一反应都是 pgbench。但 pgbench 到底是什么？它如何跑起来？它在客户端到底干了什么？它怎么用三套不同的 libpq API 把 SQL 扔给 server？它的状态机长什么样？"
+---
 # pgbench 源码全解：一个 C 文件如何撑起 PostgreSQL 官方压测工具
 
 | 编写人 | 编写内容 | 编写时间 |

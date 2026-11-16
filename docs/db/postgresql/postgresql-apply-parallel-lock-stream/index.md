@@ -14,6 +14,7 @@ tags:
   - 死锁检测
   - lmgr
   - session lock
+description: "源码位置:src/backend/replication/logical/applyparallelworker.c:1598。"
 ---
 
 # Apply Parallel Worker 的 lock_stream 与 unlock_stream:为什么"获得就释放"的死锁防护机制

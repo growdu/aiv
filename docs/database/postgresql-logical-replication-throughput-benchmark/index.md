@@ -1,3 +1,6 @@
+---
+description: "想测 PostgreSQL 逻辑复制的吞吐率，第一直觉是\"找一个叫 logical-replication-benchmark 的工具\"——没有。PostgreSQL 官方仓库里没有这种独立 benchmark；pg_logicalbench / logical-replication-ben…"
+---
 # PostgreSQL 逻辑复制性能与速率测试：从一个公开的"没有"讲起
 
 | 编写人 | 编写内容 | 编写时间 |

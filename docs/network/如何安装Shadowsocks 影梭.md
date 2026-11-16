@@ -1,3 +1,6 @@
+---
+description: "Shadowsocks 中文名称影梭，是一个跨平台软件、基于 Apache 许可证的开放源代码软件，用于保护网络流量、加密数据传输。"
+---
 Shadowsocks 中文名称影梭，是一个跨平台软件、基于 Apache 许可证的开放源代码软件，用于保护网络流量、加密数据传输。
 
 Shadowsocks 使用 Socks5 代理方式，Shadowsocks 分为服务器端和客户端。

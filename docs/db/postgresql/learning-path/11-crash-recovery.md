@@ -1,3 +1,6 @@
+---
+description: "PG 的 WAL 只 redo 不 undo。这意味着： - 已 WAL 化的事务 ⇒ 一定要 redo - 未 WAL 化的事务 ⇒ 丢失（即\"提交前 crash\"） - 未提交但已 WAL 化的 ⇒ 通过 clog 标 ABORTED + vacuum 回收"
+---
 # 11 崩溃恢复深入
 
 > 目标：把 PG 的 crash recovery 单独成章，吃透 redo 全流程、timeline 切换、PITR 的内部细节、partial restore、recovery target 与 promote。**这是"内核工程师"与"会用 PG"的关键分水岭**，因为很多线上故障都靠它定位。

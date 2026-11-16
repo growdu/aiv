@@ -1,3 +1,6 @@
+---
+description: "cargo 构建技巧：把 crates.io 换成国内镜像源，以及 rustup 升级。"
+---
 # cargo教程
 
 ## 替换国内源

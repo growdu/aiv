@@ -1,3 +1,6 @@
+---
+description: "本文主要介绍postgresql 的startup处理流程。startup发生在一个client连接server端时，server与client建立连接，并创建对应的backend process。后续就可以进行正常的消息交互了。"
+---
 #### 内容简介
 
 本文主要介绍postgresql 的startup处理流程。startup发生在一个client连接server端时，server与client建立连接，并创建对应的backend process。后续就可以进行正常的消息交互了。

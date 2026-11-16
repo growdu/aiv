@@ -1,3 +1,6 @@
+---
+description: "文件是数据库的持久化存储，当然我们已经知道数据库的relation以文件的形式存在在磁盘上，无论是xxx文件还是xxx_fsm,还是xxx_vm，这是文件的概念。 当relation的xxx的文件特别大，超过1G的时候，同一个relation还会分文件存储，出现xxx.1，xxx.2这种文件。 所…"
+---
 # pgsql之page
 
 ## 基本概念

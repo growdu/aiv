@@ -1,3 +1,6 @@
+---
+description: "postgresql当前的逻辑复制仅支持复制DML，不支持复制DDL，需要手动在目标端执行DDL。"
+---
 # 逻辑复制支持DDL需求分析
 
 ## 需求内容

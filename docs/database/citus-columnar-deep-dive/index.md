@@ -1,3 +1,6 @@
+---
+description: "本文回答 4 个问题："
+---
 # Citus Columnar 深度解析：从 cstore_fdw 到 Table AM 的 PG 原生列存扩展
 
 | 编写人 | 编写内容 | 编写时间 |

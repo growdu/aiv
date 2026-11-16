@@ -26,6 +26,7 @@ episode_repro:
   - "ALTER PUBLICATION pub_orders ADD TABLE orders_p1;"
   - "ALTER PUBLICATION pub_orders ADD TABLE orders_p2;"
   - "DROP TABLE orders CASCADE;"
+description: "主要源码路径： - ~/cwork/postgresql/src/backend/replication/logical/worker.c - ~/cwork/postgresql/src/backend/replication/logical/tablesync.c - ~/cwork/post…"
 ---
 
 # PostgreSQL 逻辑复制：DDL 同步后如何启动 apply worker 同步 DML（分区表专题）

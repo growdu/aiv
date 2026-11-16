@@ -1,3 +1,6 @@
+---
+description: "PG 8.0 (2005) 之前没有内置加密函数。pgcrypto 是 2000 年进入 contrib 的\"安全工具箱\"，25 年演化到 v1.3，对接 OpenSSL 3.x，是 99% PG 部署的加密核心。"
+---
 # pgcrypto 深度解析：从 md5 到 OpenSSL 集成的 PG 加密扩展
 
 | 编写人 | 编写内容 | 编写时间 |

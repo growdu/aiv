@@ -1,3 +1,6 @@
+---
+description: "很多人以为逻辑复制就是\"publisher 解码 WAL → subscriber 重放\"——把它想成一份 tcpdump -X + psql -f。但只要你想过一次\"如果事务在 publisher 上回滚了，subscriber 怎么办？\"、\"如果 publisher 写到一半崩了，重…"
+---
 # PostgreSQL 逻辑复制的 ReorderBuffer 与事务机制：从一行 WAL 到一致性变更流的全链路绑定
 
 | 编写人 | 编写内容 | 编写时间 |

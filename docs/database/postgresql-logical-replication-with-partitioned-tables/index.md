@@ -1,3 +1,6 @@
+---
+description: "主要源码路径： - ~/cwork/postgresql/src/backend/replication/logical/worker.c - ~/cwork/postgresql/src/backend/replication/logical/tablesync.c - ~/cwork/post…"
+---
 # PostgreSQL 逻辑复制与分区表：从 publisher 到 partition leaf 的全链路
 
 | 编写人 | 编写内容 | 编写时间 |

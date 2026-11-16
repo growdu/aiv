@@ -19,6 +19,7 @@ tags:
   - WAL
   - 多线程
   - 源码分析
+description: "PG 原版逻辑复制采用单线程顺序解码(参考 ~/cwork/postgresql/src/backend/replication/logical/reorderbuffer.c 5615 行、decode.c 1316 行):"
 ---
 
 # openGauss 并行解码设计原理深度拆解:reader + 多 worker + CSN 三层架构的源码级剖析

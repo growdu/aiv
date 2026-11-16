@@ -13,6 +13,7 @@ tags:
   - 内核测试
   - 共享内存
   - lock-free
+description: "Injection Point 是 PG 17/18 强化的 运行时测试钩子(runtime test hook)。它让测试代码可以在内核的 指定代码路径 上,触发 任意自定义回调——而且这一切都在生产代码路径中,零侵入、可移除、可控制。"
 ---
 
 # PostgreSQL 18 Injection Point 完整指南:原理、API 与实战

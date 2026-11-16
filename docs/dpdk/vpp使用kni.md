@@ -1,3 +1,6 @@
+---
+description: "在dpdk插件的main.c通过判断/dev/kni是否存在来确定rte_kni模块是否加载。"
+---
 # vpp使用kni
 
 ## 加载rte_kni.ko

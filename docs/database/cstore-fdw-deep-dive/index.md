@@ -1,3 +1,6 @@
+---
+description: "PG 生态里最早做\"列存\"的扩展是 Hydra 商业版（2014），后来开源为 cstore_fdw（2016），又被 Citus 5.0+ 集成进 columnar extension（2017）。它是 PG 列存 FDW 的鼻祖。"
+---
 # cstore_fdw 深度解析：从 Hydra 到 Citus Columnar 的列存 FDW 鼻祖
 
 | 编写人 | 编写内容 | 编写时间 |

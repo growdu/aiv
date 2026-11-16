@@ -1,3 +1,6 @@
+---
+description: "用 pytest 写自动化测试：yaml 配置文件的语法规则，以及测试用例的组织方式。"
+---
 # pytest自动化测试
 
 ## yaml

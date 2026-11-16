@@ -1,3 +1,6 @@
+---
+description: "PostgreSQL 源码编译：拉源码、装依赖（icu、readline、zlib、bison、flex）到 configure、make、make install。"
+---
 # postgresql 源码编译
 
 ## 下载源码

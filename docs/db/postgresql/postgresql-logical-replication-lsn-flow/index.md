@@ -19,6 +19,7 @@ tags:
   - restart_lsn
   - confirmed_flush_lsn
   - 源码分析
+description: "每个 segment 16MB(wal_segment_size,默认)。段文件名编码 LSN 的高地址: - 000000010000000000000003 表示 timeline 1,起始 LSN 0/03000000"
 ---
 
 # PostgreSQL 逻辑复制 LSN 推进全景:从 WAL 字节到订阅者 apply 的全链路 LSN 视角

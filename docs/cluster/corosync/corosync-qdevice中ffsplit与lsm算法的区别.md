@@ -1,3 +1,6 @@
+---
+description: "corosync-qdevice目前支持两种算法来设置corosync-qnetd如何为给定的节点或者分区提供投票的行为。"
+---
 # corosync-qdevice中ffsplit与lsm算法的区别
 
 corosync-qdevice目前支持两种算法来设置corosync-qnetd如何为给定的节点或者分区提供投票的行为。

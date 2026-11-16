@@ -1,3 +1,6 @@
+---
+description: "ChatGPT 是什么、能用来干什么：代码相关的问题怎么问它，以及日常把它当助手用的几种典型场景。"
+---
 # chatgpt使用
 
 可点击([高效率工具——chatgpt使用_growdu_real的博客-CSDN博客](https://blog.csdn.net/github_38294679/article/details/130811966?spm=1001.2014.3001.5501))在网络上访问本文。

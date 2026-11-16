@@ -18,6 +18,7 @@ tags:
   - 源码分析
   - relcache
   - hash 表
+description: "PostgreSQL 内核有几大缓存模块,职责分明:"
 ---
 
 # PostgreSQL syscache 模块源码深度拆解:CatCache 数据结构、LRU 哈希表、cache invalidation 全链路

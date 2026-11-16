@@ -1,3 +1,6 @@
+---
+description: "docker-compose.yml的内容如下："
+---
 # docker搭建个人镜像仓库
 
 ## 安装registry

@@ -1,3 +1,6 @@
+---
+description: "TimescaleDB 2.10 (2023) 引入了 hypercore columnar storage——把\"行存 + 列存\"在同一张 hypertable 上混合：最近数据行存快速写入，老数据列存压缩查询。这是PG 时序生态里最聪明的 hybrid 引擎。"
+---
 # TimescaleDB Columnstore（hypercore）深度解析：时序列存压缩的 hybrid engine
 
 | 编写人 | 编写内容 | 编写时间 |

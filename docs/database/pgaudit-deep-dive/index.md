@@ -1,3 +1,6 @@
+---
+description: "合规要求下，PG 必须能回答 3 个问题：谁在什么时间做了什么、数据被谁修改、谁访问了敏感字段。pgAudit 把 PG 自带的 log_statement = all 升级为细粒度审计扩展。"
+---
 # pgAudit 深度解析：从 log_statement 到 PG 审计标准的合规扩展
 
 | 编写人 | 编写内容 | 编写时间 |

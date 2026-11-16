@@ -1,3 +1,6 @@
+---
+description: "如果你只学过 SQL，看到事务大概是这样的："
+---
 # PostgreSQL 事务：一次 BEGIN 与 COMMIT 背后的双层世界
 
 | 编写人 | 编写内容 | 编写时间 |

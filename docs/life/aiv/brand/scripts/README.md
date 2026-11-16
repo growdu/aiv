@@ -1,3 +1,6 @@
+---
+description: "需要 FFmpeg（7.x 或兼容版本）、Python 3（cairo / numpy / Pillow / scipy）。"
+---
 需要 FFmpeg（7.x 或兼容版本）、Python 3（cairo / numpy / Pillow / scipy）。
 
 当前的生产入口只有两个，按顺序执行：

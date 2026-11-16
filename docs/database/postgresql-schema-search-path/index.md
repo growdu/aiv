@@ -1,3 +1,6 @@
+---
+description: "schema 常被理解为“表的目录”。这不够准确。"
+---
 # PostgreSQL Schema 与 search_path：从名称解析源码到 DDL 对象归属
 
 | 编写人 | 编写内容 | 编写时间 |

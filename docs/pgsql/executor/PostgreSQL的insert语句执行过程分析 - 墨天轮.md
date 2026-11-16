@@ -1,3 +1,6 @@
+---
+description: "用 gdb 断点演示一条 insert 语句在 PostgreSQL 里的完整执行流程：解析、执行计划，到真正写进堆文件。"
+---
 [首页](https://www.modb.pro/) / PostgreSQL的insert语句执行过程分析
 
 在数据库的使用中，增删改查这种操作每天都在进行，本文通过gdb工具演示了一个insert语句的执行流程。

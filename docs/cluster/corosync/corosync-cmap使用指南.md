@@ -1,3 +1,6 @@
+---
+description: "cmap是corosync的内存key/value存储。cmap提供了如下功能："
+---
 # corosync-cmap使用指南
 
 cmap是corosync的内存key/value存储。cmap提供了如下功能：

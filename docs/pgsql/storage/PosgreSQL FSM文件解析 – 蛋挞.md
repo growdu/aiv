@@ -1,3 +1,6 @@
+---
+description: "由于PostgreSQL使用的MVCC机制，导致对同一张表的不断更新会产生大量空闲空间（free space），在插入tuple之前优先现在之前的空闲空间是个较好的选择。"
+---
 > 还剩下VM，抽时间也一起看了
 
 由于PostgreSQL使用的MVCC机制，导致对同一张表的不断更新会产生大量空闲空间（free space），在插入tuple之前优先现在之前的空闲空间是个较好的选择。

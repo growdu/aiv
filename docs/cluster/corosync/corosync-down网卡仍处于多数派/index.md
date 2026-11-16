@@ -1,3 +1,6 @@
+---
+description: "网卡 down 掉以后，corosync 已经和另外两个节点失去联系，却仍然报告自己是 quorate。 于是 fence 不动作，主库不停，跨中心的 observer 又把主库切到了灾备中心； 等网络恢复，两个中心各有一个主库。"
+---
 # corosync down网卡仍处于多数派问题分析
 
 | 编写人 | 编写内容 | 编写时间 |

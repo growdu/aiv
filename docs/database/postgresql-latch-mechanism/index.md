@@ -1,3 +1,6 @@
+---
+description: "想象一下，PostgreSQL 里有 200 个 backend 同时挤在 shared_buffers 上抢同一个热点 page。某个 backend 在等 WALFlush，另一个在等 LockManager，还有一个在等客户端的下一条 SQL。它们都在睡觉，但都不能用 sleep(1)——一…"
+---
 # PostgreSQL Latch 机制详解：从一行 SetLatch 到 epoll 的内核之旅
 
 | 编写人 | 编写内容 | 编写时间 |

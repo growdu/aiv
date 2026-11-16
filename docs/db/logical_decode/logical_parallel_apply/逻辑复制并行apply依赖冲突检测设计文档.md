@@ -12,6 +12,7 @@ tags:
   - 依赖冲突
   - ConflictKey
   - DAG
+description: "定义 TWPA 中依赖冲突检测的算法、数据结构、调度策略,包括:"
 ---
 
 # TWPA 依赖冲突检测设计文档

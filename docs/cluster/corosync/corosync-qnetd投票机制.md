@@ -1,3 +1,6 @@
+---
+description: "corosync-qnetd是corosync的第三方仲裁机制，当corosync出现网络分区时，集群内部无法选择出quorate一方时，就会借助corosync-qnetd来进行辅助投票。"
+---
 # corosync-qnetd投票机制
 
 | 修改人 | 修改内容 | 修改时间   |

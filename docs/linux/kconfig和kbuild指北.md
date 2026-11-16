@@ -1,3 +1,6 @@
+---
+description: "kconfig和kbuild是linux用来辅助配置和编译的工具。"
+---
 # kconfig和kbuild指北
 
 kconfig和kbuild是linux用来辅助配置和编译的工具。

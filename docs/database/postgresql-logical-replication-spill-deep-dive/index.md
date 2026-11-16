@@ -1,3 +1,6 @@
+---
+description: "在逻辑复制的生态里，spill 是一个高频混淆词。试图搜过 PostgreSQL 官方文档的读者会发现一个尴尬的事实："
+---
 # PostgreSQL 逻辑复制 spill 文件深度剖析：从 `xid-*.spill` 到 TPC-C 的增长方程
 
 | 编写人 | 编写内容 | 编写时间 |

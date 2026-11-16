@@ -1,3 +1,6 @@
+---
+description: "结论：union all的性能大约是union的好几倍。"
+---
 # sql总结
 
 ## union 与union all

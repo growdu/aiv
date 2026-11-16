@@ -1,3 +1,6 @@
+---
+description: "2023 年 5 月，纽约南区联邦法院。"
+---
 # AI为什么会撒谎——一个律师被ChatGPT骗了
 
 > 来源: [https://wmyskxz.cn/wiki/whats_ai/7/](https://wmyskxz.cn/wiki/whats_ai/7/)

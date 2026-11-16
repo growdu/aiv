@@ -1,3 +1,6 @@
+---
+description: "上一篇《WAL 机制浅析》简单介绍了 PostgreSQL 中的 WAL 机制，其中讲到创建 checkpoint 会触发刷新 xlog 日志页到磁盘。本文接着讲 checkpoint 机制本身。"
+---
 # PostgreSQL Checkpoint 机制浅析
 
 | 编写人 | 编写内容 | 编写时间 |

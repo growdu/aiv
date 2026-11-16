@@ -1,3 +1,6 @@
+---
+description: "nginx由内核和模块组成，nginx接收到请求时，通过查找配置文件将此次请求映射到一个location block。"
+---
 # nginx 基本原理
 
 nginx由内核和模块组成，nginx接收到请求时，通过查找配置文件将此次请求映射到一个location block。

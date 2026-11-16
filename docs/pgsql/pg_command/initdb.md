@@ -1,3 +1,6 @@
+---
+description: "可以看到，initdb最终会调用postgres来初始化数据库。"
+---
 # initdb
 
 ## 启动

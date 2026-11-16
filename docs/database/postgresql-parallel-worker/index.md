@@ -1,3 +1,6 @@
+---
+description: "提到 PostgreSQL 并行，第一反应往往是\"加 max_parallel_workers_per_gather 就完事了\"。但实际生产里我们会遇到一堆反直觉的问题："
+---
 # PostgreSQL 18 并行 Worker 机制全解：从 `ParallelContext` 到 `ParallelQueryMain` 的全链路
 
 | 编写人 | 编写内容 | 编写时间 |

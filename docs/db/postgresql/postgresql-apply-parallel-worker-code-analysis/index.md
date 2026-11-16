@@ -14,6 +14,7 @@ tags:
   - DSM
   - shm_mq
   - 模块协作
+description: "源码位置:src/backend/replication/logical/applyparallelworker.c(1646 行)。"
 ---
 
 # applyparallelworker.c 源码深度解析:1646 行代码的完整结构与模块协作

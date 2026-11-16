@@ -1,3 +1,6 @@
+---
+description: "align属性不仅可以修饰变量，类型， 还可以修饰函数，用于地址对齐。"
+---
 # gcc attribute指北
 
 >

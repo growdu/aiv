@@ -14,6 +14,7 @@ tags:
   - 调优
   - streaming
   - worker pool
+description: "PG 16 引入 streaming=parallel 之后,逻辑复制的吞吐上了一个量级,但随之而来的是大量可调旋钮——开多了打爆内存、抢占锁导致死锁、Worker 池溢出、spill 文件暴涨……这篇文章把 PG 18 上 Apply Parallel Worker(以下简称 PA)涉及的所有可…"
 ---
 
 # PostgreSQL 逻辑复制 Apply Parallel Worker 参数调优实战

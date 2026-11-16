@@ -1,3 +1,6 @@
+---
+description: "使用elasticsearch和search-ui搭建自己的搜索引擎，快速查找资源和文件。如果对代码感兴趣，相关代码已在github上开源，欢迎fork代码。"
+---
 # oh-my-search
 
 使用elasticsearch和search-ui搭建自己的搜索引擎，快速查找资源和文件。如果对代码感兴趣，相关代码已在github上开源，欢迎[fork](https://github.com/growdu/oh-my-search)代码。

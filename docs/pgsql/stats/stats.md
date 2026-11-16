@@ -1,3 +1,6 @@
+---
+description: "PostgreSQL 统计信息相关的参数与视图：stats_temp_directory、pg_stat_activity、pg_stat_replication、pg_stat_wal_receiver 等。"
+---
 1. 
 ```
 设置存储临时统计数据的目录。这可以是一个相对于数据目录的路径或一个绝对路径。默认值是pg_stat_tmp。在一个基于 RAM 的文件系统上指明这个参数将降低物理 I/O 需求，并且提高性能。这个参数只能在postgresql.conf文件中或在服务器命令行上设置。

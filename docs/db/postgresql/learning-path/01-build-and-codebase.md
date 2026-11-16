@@ -1,3 +1,6 @@
+---
+description: "PG 18 已默认走 meson。文档与脚本也都在跟进。"
+---
 # 01 编译调试与代码布局
 
 > 目标：能在 `~/cwork/postgresql` 上 **30 分钟内编译成功**、能 GDB 跟一条 SQL、能用 `ctags` / `cscope` 在代码里跳转。

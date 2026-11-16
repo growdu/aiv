@@ -14,6 +14,7 @@ tags:
   - 内核开发
   - SQL Server
   - DDL 同步
+description: "PG 的 GUC(Grand Unified Configuration)是 一切配置参数的总称。在内核开发者眼里,一个 GUC 由 5 部分组成:"
 ---
 
 # 从内核开发者视角,在 PostgreSQL 18 逻辑复制中新增一个 GUC 参数

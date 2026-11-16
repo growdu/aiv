@@ -13,6 +13,7 @@ tags:
   - SNAPSHOT_HISTORIC_MVCC
   - 可见性
   - 系统缓存
+description: "逻辑复制的工作流是一个三层流水线："
 ---
 
 # pgoutput_change 到 HeapTupleSatisfiesVisibility 的函数调用栈分析

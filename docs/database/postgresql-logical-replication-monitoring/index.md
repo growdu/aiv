@@ -1,3 +1,6 @@
+---
+description: "监控逻辑复制这件事，\"看 pg_stat_subscription 一眼够不够？\"——不够。原因有三："
+---
 # PostgreSQL 逻辑复制的监控：六张视图 + 一组可执行 SQL，把 publisher/subscriber 的速率与健康度彻底看透
 
 | 编写人 | 编写内容 | 编写时间 |

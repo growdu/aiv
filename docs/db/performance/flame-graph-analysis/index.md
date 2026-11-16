@@ -13,6 +13,7 @@ tags:
   - 性能分析
   - profiling
   - 调优方法论
+description: "火焰图(Flame Graph)是 Brendan Gregg 在 2011 年提出的一种调用栈可视化方式。它把 profiler(perf、async-profiler、bpftrace...)采样的调用栈数据,渲染成一张\"金字塔\":"
 ---
 
 # 火焰图怎么看:从一张图到优化方向的完整方法论

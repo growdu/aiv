@@ -1,3 +1,6 @@
+---
+description: "PostgreSQL 当前内建逻辑复制主要覆盖表级 DML 复制。logical decoding 的本质是从 WAL 中提取持久化变更，转成更高层可理解的变更流；复制槽保证“按源端发生顺序”向客户端提供变化序列。([PostgreSQL][1])"
+---
 # 逻辑复制支持DDL概要设计
 
 ## 1. 背景与目标

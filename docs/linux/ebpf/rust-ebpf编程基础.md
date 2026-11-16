@@ -1,3 +1,6 @@
+---
+description: "用 Rust 写 eBPF 程序：aya 框架的下载依赖、编译与加载，一步步走通。"
+---
 # rust ebpf编程
 
 rust中有一个ebpf编程框架aya，其地址为https://github.com/aya-rs/aya。

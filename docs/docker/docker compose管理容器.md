@@ -1,3 +1,6 @@
+---
+description: "使用docker-compose部署code-server容器开发环境。"
+---
 # docker compose管理容器
 
 使用docker-compose部署code-server容器开发环境。

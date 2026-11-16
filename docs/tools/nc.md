@@ -1,3 +1,6 @@
+---
+description: "NC（netcat）被称为网络工具中的瑞士军刀，体积小巧，但功能强大。"
+---
 # netcat(nc)
 
 ## 简介

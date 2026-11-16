@@ -1,3 +1,6 @@
+---
+description: "可以看到成功调用了caller中main函数，同时由于先导入caller.sh文件，后再声明var1变量，最终打印出var1变量值为call。"
+---
 # shell脚本进阶
 
 ## 跨脚本文件调用函数

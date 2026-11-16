@@ -13,6 +13,7 @@ tags:
   - dsm
   - dsa
   - 源码分析
+description: "PostgreSQL 是多进程架构:一个 postmaster 守护进程 + N 个 backend 子进程(每个客户端连接一个)。多进程比多线程麻烦的地方在于 —— 进程间内存默认是隔离的,但 PG 有很多状态必须所有进程都看见:"
 ---
 
 # PostgreSQL 共享内存机制:原理、使用与开发

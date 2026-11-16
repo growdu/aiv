@@ -1,3 +1,6 @@
+---
+description: "如果你正处理\"我这表卡在 i 状态好久没动了\"、\"apply worker 看 pg_stat_subscription 但表就是不同步\"、\"库里堆了一堆 sub_xxx_sync_xxxx slot 怎么办\"这些事——本文就是给你写的。"
+---
 # PostgreSQL 逻辑复制表的生命周期：从 `pg_replication_slots` 到 `pg_subscription_rel` 的全景图
 
 | 编写人 | 编写内容 | 编写时间 |

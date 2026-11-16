@@ -1,3 +1,6 @@
+---
+description: "fastgtpu 插件的加载与初始化：VLIB 初始化函数、线程创建、udp 端口注册、发包队列与收包回调的调用链。"
+---
 # fastgtpu插件加载
 
 ## 初始化

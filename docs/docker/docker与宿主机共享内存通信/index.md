@@ -1,3 +1,6 @@
+---
+description: "docker中的进程要与宿主机使用共享内存通信，需要在启动容器的时候指定<font color=\"red\">“--ipc=host”</font>选项。然后再编写相应的共享内存的程序，一个跑在宿主机上，另一个跑在docker上面。"
+---
 # docker与宿主机共享内存通信
 
 docker中的进程要与宿主机使用共享内存通信，需要在启动容器的时候指定<font color="red">“--ipc=host”</font>选项。然后再编写相应的共享内存的程序，一个跑在宿主机上，另一个跑在docker上面。

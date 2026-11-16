@@ -1,3 +1,6 @@
+---
+description: "python 环境搭建：装 anaconda、用 conda 建各版本环境，以及 django 项目的创建与运行。"
+---
 # python环境搭建
 
 ## 下载anaconda

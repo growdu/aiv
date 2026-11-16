@@ -1,3 +1,6 @@
+---
+description: "先在同一个docker上启动模拟phy和模拟UE，同时抓下一个全流程的包，后续用于pktgen打流回放。"
+---
 # fastup模拟UE测试
 
 ## 测试流程

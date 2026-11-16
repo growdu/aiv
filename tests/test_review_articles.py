@@ -55,8 +55,19 @@ MD_LINK_RE = re.compile(r"\[[^\]]*\]\([^)]*\)")
 URL_RE = re.compile(r"https?://\S+")
 
 
+#: front matter 块（``---\n……\n---\n``）——源文件的头，不是正文。
+FRONT_MATTER_RE = re.compile(r"^---\r?\n.*?\r?\n---\r?\n", re.DOTALL)
+
+
 def article_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+    """文章**正文**（剥掉 front matter）。
+
+    源文件的 front matter 里现在有 ``description``（阶段 1 给每篇文章补的
+    摘要），但正文断言盯的是「正文的第一行是不是那个 H1」——front matter
+    不是正文的一部分，剥掉再断。
+    """
+    text = path.read_text(encoding="utf-8")
+    return FRONT_MATTER_RE.sub("", text, count=1)
 
 
 def paragraphs(text: str) -> list[str]:
