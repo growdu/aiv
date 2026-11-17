@@ -469,6 +469,14 @@
     {
       "file": "review/scope/2026-11-14-scope-classification.md",
       "form": "docs"
+    },
+    {
+      "file": "aiv/人格规范.md",
+      "form": "docs"
+    },
+    {
+      "file": "docs/life/aiv/人格规范.md",
+      "form": "docs"
     }
   ],
   "updated": "2026-11-17",
