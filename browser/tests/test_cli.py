@@ -5,6 +5,7 @@ import json
 import pytest
 
 from browser import cli
+from browser.flows import douyin as douyin_flow
 from browser.plan import PlanError
 
 
@@ -59,6 +60,47 @@ def test_the_mark_command_is_a_template_not_a_hard_coded_call():
     assert "{episode}" in cli.DEFAULT_MARK_TEMPLATE
     assert "{url}" in cli.DEFAULT_MARK_TEMPLATE
     assert "{python}" in cli.DEFAULT_MARK_TEMPLATE
+
+
+# -- 选择器表的默认值 -------------------------------------------------------
+
+
+@pytest.mark.parametrize("command,expected", [
+    ("douyin-publish", "douyin.json"),
+    ("bilibili-draft", "bilibili.json"),
+])
+def test_each_platform_help_names_its_own_selectors_table(command, expected, capsys):
+    """`--help` 里说的选择器表，必须就是这个命令真正会读的那张。
+
+    挡的是「帮助文本写 A、代码读 B」：默认值在代码里是对的
+    （不给 ``--selectors`` 就回落到本平台的表），但帮助文本统一写成了
+    视频号那张——人照着帮助做，就会给抖音命令传一张视频号的选择器表。
+    """
+    parser = cli.build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args([command, "ep01", "--help"])
+    out = capsys.readouterr().out
+    assert expected in out
+    assert "channels.json" not in out
+
+
+def test_the_platform_default_selectors_tables_exist():
+    """各平台的默认选择器表必须在磁盘上真的存在。
+
+    少了文件不会在导入时报错——要等浏览器都开起来了才炸。
+    """
+    for table in (cli.DEFAULT_SELECTORS, cli.DEFAULT_BILIBILI_SELECTORS,
+                  cli.DEFAULT_DOUYIN_SELECTORS):
+        assert table.is_file(), f"选择器表不存在：{table}"
+
+
+def test_the_douyin_command_and_the_flow_agree_on_the_default_table():
+    """命令行与流程模块必须指向同一张默认表。
+
+    两处各写一遍路径，改了一处忘了另一处，就会在运行时读到别人的表。
+    """
+    assert cli.DEFAULT_DOUYIN_SELECTORS == douyin_flow.DEFAULT_SELECTORS_PATH
+    assert cli.DEFAULT_DOUYIN_SELECTORS.name == "douyin.json"
 
 
 def test_main_turns_a_flow_error_into_a_nonzero_exit(monkeypatch, capsys):

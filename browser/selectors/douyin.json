@@ -1,0 +1,48 @@
+{
+  "_comment": [
+    "抖音创作者中心（creator.douyin.com）的页面结构与接口表。",
+    "**数据全是 2026-11-17 实测的**（EP02 csn-total-ordering 真发出去那一条）：",
+    "选择器从当时的 DOM 抄的，接口路径从平台自己的请求里抓的。",
+    "抖音没有开放平台凭据（个人主体批不下来，见 publish/capabilities/douyin.toml），",
+    "所以这一档走**网页后台 + 浏览器自动化**，与视频号同一套路。"
+  ],
+
+  "origin": "https://creator.douyin.com",
+
+  "upload_path": "/creator-micro/content/upload",
+  "post_path": "/creator-micro/content/post/video?enter_from=publish_page",
+  "works_path": "/creator-micro/content/manage?tab=works",
+
+  "publish_path": "/web/api/media/aweme/create_v2/",
+
+  "limits": {
+    "_comment": "平台硬上限（实测：标题计数器 0/30、正文计数器 0 / 1000）。",
+    "title_chars": 30,
+    "description_chars": 1000,
+    "topics_max": 5,
+    "topic_chars": 15
+  },
+
+  "selectors": {
+    "video_file_input": [
+      "input[type=file][accept*=\"video\"]"
+    ],
+    "title_input": [
+      "input[placeholder*=\"填写作品标题\"]"
+    ],
+    "description_editor": [
+      "div[contenteditable=true]",
+      "[contenteditable=true]"
+    ],
+    "publish_button": [
+      "button:text-is(\"发布\")",
+      "button:has-text(\"发布\")"
+    ],
+    "upload_failed_marker": [
+      "text=上传失败"
+    ],
+    "work_count_marker": [
+      "text=/作品 \\(\\d+\\)/"
+    ]
+  }
+}

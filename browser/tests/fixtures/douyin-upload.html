@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>抖音上传页替身</title>
+</head>
+<body>
+<p>本地假页面：照着抖音上传页的关键节点搭的（文件框、标题框、描述富文本、
+  两个字数计数器、发布按钮）。发布按钮会真的 POST 到
+  <code>/web/api/media/aweme/create_v2/</code>——本地服务器回一个假的
+  <code>item_id</code>，这样「监听发布响应 → 读出作品 id」那段能真的跑一遍。</p>
+
+<input id="video" type="file" accept="video/mp4,video/*">
+<span id="upload-state">上传成功</span>
+
+<div>
+  <input id="title" placeholder="填写作品标题，为作品获得更多流量">
+  <span id="title-count">0/30</span>
+</div>
+
+<div id="desc" contenteditable="true" data-placeholder="添加作品简介"></div>
+<div id="desc-count">0 / 1000</div>
+
+<button id="publish">发布</button>
+<div id="result"></div>
+
+<script>
+function count(text) { return Array.from(text).length; }
+
+document.getElementById('video').addEventListener('change', function () {
+  document.getElementById('upload-state').textContent = '上传成功';
+});
+
+document.getElementById('title').addEventListener('input', function () {
+  document.getElementById('title-count').textContent = count(this.value) + '/30';
+});
+
+document.getElementById('desc').addEventListener('input', function () {
+  document.getElementById('desc-count').textContent = count(this.innerText) + ' / 1000';
+});
+
+document.getElementById('publish').addEventListener('click', async function () {
+  const response = await fetch('/web/api/media/aweme/create_v2/', {method: 'POST'});
+  const payload = await response.json();
+  document.getElementById('result').textContent =
+    '已发表 ' + payload.item_id + ' status_code=' + payload.status_code;
+});
+</script>
+</body>
+</html>
