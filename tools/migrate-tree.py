@@ -535,6 +535,20 @@ def _article_title(path):
     return _read_title(path)
 
 
+def _md_link_target(path):
+    """把链接目标里会破坏 Markdown 链接语法的字符转义掉。
+
+    **为什么要转义**：Markdown 的链接目标写成 ``[标题](目标)`` 时，目标里
+    不能直接出现未转义的右括号 —— 否则链接在那里就断了。站上有一篇的
+    文件名带括号（``Postgres中postmaster代码解析(--boot和--single).md``），
+    生成的目录页链接就会断成两截。
+
+    转成 %28 / %29 / %20：既能过 CommonMark，GitHub 上也认；
+    站内查链工具会 ``unquote`` 再解析，落到磁盘上的真文件。
+    """
+    return path.replace("(", "%28").replace(")", "%29").replace(" ", "%20")
+
+
 def _write_index(rel, title, parent_cn, description, articles, table):
     """写一个 `_index.md`。已存在就只更新文章清单那一段。"""
     path = os.path.join(DOCS, rel)
@@ -568,7 +582,10 @@ def _write_index(rel, title, parent_cn, description, articles, table):
             link = os.path.relpath(new_rel, here).replace(os.sep, "/")
             if not link.startswith("."):
                 link = "./" + link
+            link = _md_link_target(link)
             title = _article_title(os.path.join(DOCS, new_rel)) or name
+            # 标题里的方括号会提前结束链接文字
+            title = title.replace("[", "\\[").replace("]", "\\]")
             lines.append(f"- [{title}]({link})")
         lines.append("")
     body = "\n".join(lines)
