@@ -73,12 +73,36 @@ def text(ctx: cairo.Context, s: str, x: float, y: float, size: float,
     ctx.show_text(s)
 
 
-def text_width(ctx: cairo.Context, s: str, size: float) -> float:
+def text_width(ctx: cairo.Context, s: str, size: float,
+               bold: bool = False) -> float:
     """量一行字的宽度。
 
     **也要走 `fonts.select_font`**：不选字体的话，量的是 ctx 上「上一个」
     字体，而且 hinting 没关——在 Linux 上量出来的宽度会跟 macOS 对不上。
+
+    `bold` 要跟着画的时候一致：粗体的字宽不一样，量细体、画粗体，
+    就会把「放不下」量成「放得下」。
     """
-    fonts.select_font(ctx)
+    fonts.select_font(ctx, bold=bold)
     ctx.set_font_size(size)
     return ctx.text_extents(s).width
+
+
+def text_box_width(ctx: cairo.Context, labels, size: float,
+                   bold: bool = False, padding: float = 12.0) -> float:
+    """按最长的那一行字，反算一个能把它装下的框有多宽。
+
+    **给的是「字 + 两侧留白」的宽度**，不是字宽本身。
+
+    为什么要有这个：芯片的宽度常常是写死的比例，而操作名（INSERT /
+    UPDATE / COMMIT）是数据——写死的宽度遇上更长的字，字就溢出芯片。
+    溢出去的笔画落在芯片旁边的底色上，等于看不见：白字压浅灰底是
+    1.05:1，读出来是「OMMIT」加半个 T。
+
+    **字要放得下就加宽框，不缩字**：同一行里的芯片是同一件事的几种
+    说法，字号必须一样，缩字会让这一行字号参差。
+    """
+    if not labels:
+        return 0.0
+    widest = max(text_width(ctx, str(label), size, bold=bold) for label in labels)
+    return widest + 2 * padding

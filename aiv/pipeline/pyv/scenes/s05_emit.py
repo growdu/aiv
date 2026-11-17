@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pyv import easing
 from pyv import scene_layout
-from pyv.draw import arrow, rounded_rect, stroke_rect, text
+from pyv.draw import arrow, rounded_rect, stroke_rect, text, text_box_width
 from pyv.palette import COLORS
 from pyv.params import Params
 
@@ -27,8 +27,14 @@ MARKER_COLORS = ("#F6AD55", "#4FD1C5", "#8FAADC")
 EMIT_START = 0.42
 EMIT_DURATION = 0.36
 
+#: 芯片的**最小**宽度。实际宽度还要按最长的那个操作名反算
+#: （见 `chip_width`）——操作名是数据，写死的宽度遇上更长的字就溢出。
 CHIP_W_RATIO = 0.065
 CHIP_GAP_RATIO = 0.008
+#: 芯片里的字与芯片边缘的留白。
+CHIP_PADDING = 12.0
+#: 芯片里的字有多大。
+CHIP_TEXT_SIZE = 28
 
 #: 起飞时「整组发出」标签与箭头的让位速度（相对飞行进度）。
 #:
@@ -67,6 +73,18 @@ def emit_slot(params=None) -> list[str]:
     return []
 
 
+def chip_width(ctx, ops, w: int) -> float:
+    """一块芯片该有多宽。
+
+    **按最长的那个操作名反算，字放不下就把芯片加宽**：操作名是数据，
+    长短不一（提交那两个字比插入宽）——字号一样时缩字会让这一行参差；
+    加宽芯片则是一排一样宽，节奏不变。最小宽度仍是 `CHIP_W_RATIO`。
+    """
+    need = text_box_width(ctx, ops, CHIP_TEXT_SIZE, bold=True,
+                          padding=CHIP_PADDING)
+    return max(w * CHIP_W_RATIO, need)
+
+
 def render(ctx, t: float, w: int, h: int, params=None) -> None:
     p = Params(params, "s05")
     if h > w:
@@ -83,9 +101,13 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     panel_x = w * 0.06
     panel_w = w * 0.46
     row_top = h * 0.30
-    row_h = h * 0.135
-    row_gap = h * 0.055
-    chip_w = w * CHIP_W_RATIO
+    # 行区的高度是**按底部留白倒推的**：第三行的底边要离段尾那句结论
+    # （h*0.86）留出空当——之前行高设到 h*0.135，第三行底边落在
+    # h*0.815（880 px），结论句的字顶就在 890 px，只差 10 px，
+    # 看着像压在一起。
+    row_h = h * 0.13
+    row_gap = h * 0.05
+    chip_w = chip_width(ctx, [op for _, ops in slots for op in ops], w)
     chip_gap = w * CHIP_GAP_RATIO
 
     text(ctx, p["buffer_label"], panel_x, h * 0.245, 36, COLORS["accent"], bold=True)
@@ -142,7 +164,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
             # 「盖住但还透出来」才是事故。
             rounded_rect(ctx, cx, cy, chip_w, chip_h, 9,
                          "#FFFFFF" if is_commit else color)
-            text(ctx, op, cx + chip_w / 2, cy + chip_h * 0.70, 28,
+            text(ctx, op, cx + chip_w / 2, cy + chip_h * 0.70, CHIP_TEXT_SIZE,
                  COLORS["primary"] if is_commit else "#FFFFFF",
                  anchor="center", bold=True)
 

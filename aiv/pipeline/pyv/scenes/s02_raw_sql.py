@@ -20,6 +20,18 @@ from pyv.params import Params
 REQUIRED = ("title", "ddl_text", "source_label", "wal_label", "target_label",
             "caption")
 
+#: 两端盒子的宽。**盒子要装得下那一段文本**：芯片是盒子里的一块白底，
+#: 文本再宽一点就会从芯片边上溢出去——白字压深蓝底，等于看不见。
+BOX_W_RATIO = 0.32
+#: 芯片与盒子边缘的留白（画幅比例）。之前是 0.05，芯片只剩 499 px，
+#: 而「ALTER TABLE t ADD COLUMN c int;」28 px 实测就是 499 px——
+#: 左右一点留白都没有，文首压住左边框、文末被右边框切成一半。
+CHIP_INSET_RATIO = 0.012
+#: 芯片里的字与芯片边缘的留白。
+CHIP_PADDING = 12.0
+#: 芯片里的字有多大（装不下就往下收）。
+CHIP_TEXT_SIZE = 28
+
 
 def render(ctx, t: float, w: int, h: int, params=None) -> None:
     p = Params(params, "s02")
@@ -33,11 +45,13 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
 
     box_y = h * 0.30
     box_h = h * 0.30
-    box_w = w * 0.31
+    box_w = w * BOX_W_RATIO
+    inset = w * CHIP_INSET_RATIO
+    chip_w = box_w - 2 * inset
 
     # ---- 两端 ----
     for index, (label, x) in enumerate((
-            (str(p["source_label"]), w * 0.07),
+            (str(p["source_label"]), w * 0.06),
             (str(p["target_label"]), w * 0.62))):
         appear = easing.ease_out_cubic(
             max(0.0, min(1.0, (t - 0.08 - index * 0.18) * 3.0))
@@ -49,14 +63,16 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         # 里面就是那一段文本
         chip_y = box_y + h * 0.12
         chip_h = h * 0.11
-        rounded_rect(ctx, x + w * 0.025, chip_y, box_w - w * 0.05, chip_h, 10,
+        rounded_rect(ctx, x + inset, chip_y, chip_w, chip_h, 10,
                      "#FFFFFF", alpha=0.92 * appear)
-        text(ctx, ddl, x + box_w / 2, chip_y + chip_h * 0.68, 28,
-             COLORS["primary"], anchor="center", alpha=appear)
+        # 放不下就把字号往下收——宁可字小一点，也不能从芯片边上溢出去。
+        scene_layout.line(ctx, ddl, x + box_w / 2, chip_y + chip_h * 0.68,
+                          chip_w - 2 * CHIP_PADDING, CHIP_TEXT_SIZE,
+                          COLORS["primary"], anchor="center", alpha=appear)
 
     # ---- 中间：写进日志，原样发过去 ----
     lane_y = box_y + box_h * 0.5
-    arrow(ctx, w * 0.39, lane_y, w * 0.61, lane_y, COLORS["accent"], 7, 24)
+    arrow(ctx, w * 0.40, lane_y, w * 0.60, lane_y, COLORS["accent"], 7, 24)
     text(ctx, p["wal_label"], w * 0.50, lane_y - h * 0.045, 38, COLORS["accent"],
          anchor="center", bold=True)
 
