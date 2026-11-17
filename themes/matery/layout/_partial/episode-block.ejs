@@ -132,7 +132,11 @@ var episodeFigure = (typeof figure !== 'undefined' && figure) ? figure : null;
     <% } %>
 
     <% if (episodePrev || episodeNext) { %>
-    <nav class="episode-nav">
+    <%# 用 <div> 而不是 <nav>：Materialize 按**元素名**给 nav 上样式
+        （nav{height:64px;line-height:64px;background-color:#ee6e73}），
+        这一块会被渲染成一条红色横条、白字，在文章正中间非常突兀。
+        参见 tests/test_content_nav_not_materialize_navbar.py。 %>
+    <div class="episode-nav">
       <% if (episodePrev) { %>
       <a class="episode-nav-item" href="<%- url_for(episodePrev.url) %>">上一期 <%= episodePrev.episode_label %></a>
       <% } %>
@@ -140,7 +144,7 @@ var episodeFigure = (typeof figure !== 'undefined' && figure) ? figure : null;
       <a class="episode-nav-item" href="<%- url_for(episodeNext.url) %>">下一期 <%= episodeNext.episode_label %></a>
       <% } %>
       <a class="episode-nav-item episode-nav-all" href="<%- url_for('/videos/') %>">全部期号</a>
-    </nav>
+    </div>
     <% } %>
 
   </div>

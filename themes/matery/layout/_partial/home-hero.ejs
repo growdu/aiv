@@ -101,7 +101,12 @@
 </div>
 
     <% if (_heroPosts.length) { %>
-    <nav class="home-hero__featured" aria-label="代表作">
+    <%# 用 <section> 而不是 <nav>：Materialize 按**元素名**给 nav 上样式
+        （nav{height:64px;line-height:64px;background-color:#ee6e73}），
+        那一块会被压成 64px 高、行高 64px，卡片溢出首屏盒子，
+        底下的统计条正好盖在代表作卡片上。参见
+        tests/test_content_nav_not_materialize_navbar.py。 %>
+    <section class="home-hero__featured" aria-label="代表作">
       <% _heroPosts.forEach(function (post) {
            var _cats = (post.categories && post.categories.data) || [];
            var _cat = _cats.length ? _cats[0].name : '';
@@ -112,7 +117,7 @@
         <span class="home-hero__card-date"><%= post.date ? post.date.format('YYYY-MM-DD') : '' %></span>
       </a>
       <% }); %>
-    </nav>
+    </section>
     <% } %>
   </div>
 </section>
