@@ -304,6 +304,120 @@ def find_toutiao_plan(packages_dir: Path, content_id: str) -> ToutiaoPlan:
     )
 
 
+@dataclass
+class DouyinPlan:
+    """一期内容在抖音上的发布计划。
+
+    **抖音的包结构（实测 2026-11-17）**：
+
+    | 项 | 视频号 | B站 | 抖音 |
+    | --- | --- | --- | --- |
+    | 标题 | `title.txt` | `title.txt` | `title.txt`（**只有标题**，没有摘要行） |
+    | 描述 | `description.txt` | `description.txt` | `description.txt` |
+    | 话题 | `topics.txt`，空格分隔 `#A #B` | `tags.txt`，逗号分隔、不带 `#` | `topics.txt`，空格分隔 `#A #B` |
+    | 封面 | `cover-4x3.jpg` + `cover-3x4.jpg` | `cover.jpg` | **`cover_3x4.jpg`（竖）+ `cover_4x3.jpg`（横）** |
+    | 成片 | `video.mp4` | `video.mp4` | `video.mp4`（**竖版 9:16 无品牌版**） |
+
+    抖音这一档要用**竖版无导流版**成片：带品牌字标与 ``growdu.cn`` 胶囊的那版
+    会撞在抖音「过度营销 + 站外引流」两条规则上（见 ``douyin/douyin/cli.py``）。
+    """
+
+    episode: str
+    package_dir: Path
+    title: str
+    description: str
+    topics: list[str] = field(default_factory=list)
+    video: Path | None = None
+    cover_vertical: Path | None = None
+    cover_horizontal: Path | None = None
+    status: str = "packaged"
+    published_url: str | None = None
+
+    def description_with_topics(self, *, separator: str = "\n") -> str:
+        """描述框里那一整段：正文 + 换行 + 话题。
+
+        抖音的网页后台是**两个框**（作品标题 / 作品描述），话题不是独立字段，
+        只能以 ``#话题`` 的形式写进描述框。
+        """
+        if not self.topics:
+            return self.description
+        tags = " ".join(f"#{topic}" for topic in self.topics)
+        if not self.description:
+            return tags
+        return f"{self.description}{separator}{tags}"
+
+    def has_all_files(self) -> bool:
+        """该有的文件是不是都在（成片是硬要求，封面是加分项）。"""
+        return bool(self.video and self.video.is_file())
+
+
+def load_douyin_plan(package_dir: Path) -> DouyinPlan:
+    """从抖音发布包目录读出发布计划。"""
+    root = Path(package_dir)
+    if not root.is_dir():
+        raise PlanError(f"发布包目录不存在：{root}")
+
+    meta: dict = {}
+    meta_path = root / "meta.json"
+    if meta_path.is_file():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            raise PlanError(f"meta.json 读不出来：{error}") from error
+
+    title = _read_text(root / "title.txt")
+    description = _read_text(root / "description.txt", required=False)
+    topics = parse_topics(_read_text(root / "topics.txt", required=False))
+
+    video = root / "video.mp4"
+    # 抖音有两个封面槽位（实测 2026-11-15）：竖封面 3:4、横封面 4:3。
+    cover_vertical = root / "cover_3x4.jpg"
+    cover_horizontal = root / "cover_4x3.jpg"
+
+    if not title:
+        raise PlanError(f"发布包里没有标题：{root / 'title.txt'}")
+
+    return DouyinPlan(
+        episode=str(meta.get("episode") or root.name),
+        package_dir=root,
+        title=title,
+        description=description,
+        topics=topics,
+        video=video if video.exists() else None,
+        cover_vertical=cover_vertical if cover_vertical.exists() else None,
+        cover_horizontal=cover_horizontal if cover_horizontal.exists() else None,
+        status=str(meta.get("status") or "packaged"),
+        published_url=meta.get("published_url"),
+    )
+
+
+def find_douyin_plan(packages_dir: Path, episode: str) -> DouyinPlan:
+    """在发布包目录里按期号找一期。
+
+    目录名就是期号（``csn-total-ordering``），但这里仍然逐个读 ``meta.json``
+    来认——**目录名不是契约**，元数据才是。
+    """
+    root = Path(packages_dir)
+    if not root.is_dir():
+        raise PlanError(f"发布包目录不存在：{root}")
+    for candidate in sorted(root.iterdir()):
+        if not candidate.is_dir():
+            continue
+        meta_path = candidate / "meta.json"
+        if not meta_path.is_file():
+            continue
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if meta.get("episode") == episode or candidate.name == episode:
+            return load_douyin_plan(candidate)
+    raise PlanError(
+        f"发布包里没有这一期：{episode}\n"
+        f"先出包：python3 -m douyin.cli package {episode}（目录 {root}）"
+    )
+
+
 def load_plan(package_dir: Path) -> PublishPlan:
     """从一个发布包目录读出发布计划。"""
     root = Path(package_dir)

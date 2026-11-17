@@ -29,26 +29,35 @@ from browser import doctor, probe
 from browser.driver import ActionError, PageDriver
 from browser.flows import bilibili as bilibili_flow
 from browser.flows import channels as channels_flow
+from browser.flows import douyin as douyin_flow
 from browser.flows import toutiao as toutiao_flow
 from browser.plan import PlanError, load_bilibili_plan, load_plan
+from browser.plan import find_douyin_plan
 from browser.plan import find_toutiao_plan
 from browser.session import BrowserSession, SessionConfig, default_profile_dir
 
 ToutiaoUploader = toutiao_flow.ToutiaoUploader
 ToutiaoError = toutiao_flow.ToutiaoError
+DouyinError = douyin_flow.DouyinError
 BROWSER_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BROWSER_ROOT.parent
 DEFAULT_PACKAGES = REPO_ROOT / "channels" / "out"
 DEFAULT_BILIBILI_PACKAGES = REPO_ROOT / "bilibili" / "out"
 DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "toutiao" / "out"
+DEFAULT_DOUYIN_PACKAGES = REPO_ROOT / "douyin" / "out"
 DEFAULT_OUTBOX = REPO_ROOT / "publish" / "outbox"
 DEFAULT_OUT = BROWSER_ROOT / "out"
 DEFAULT_SELECTORS = BROWSER_ROOT / "selectors" / "channels.json"
 DEFAULT_BILIBILI_SELECTORS = BROWSER_ROOT / "selectors" / "bilibili.json"
+DEFAULT_DOUYIN_SELECTORS = BROWSER_ROOT / "selectors" / "douyin.json"
 
 # 回填快照用的命令模板。**用 subprocess 调外部命令，不 import channels**——
 # 这样浏览器执行器可以给任意平台用，平台不会��进代码里。
 DEFAULT_MARK_TEMPLATE = "{python} -m channels.cli mark published {episode} --url {url}"
+
+#: 抖音这一档的回填命令（adapter 在 douyin/ 下，与 channels 平级）。
+DEFAULT_DOUYIN_MARK_TEMPLATE = (
+    "{python} -m douyin.cli mark published {episode} --url {url}")
 
 
 def _package_dir(episode: str, override: str | None) -> Path:
@@ -495,6 +504,110 @@ def cmd_toutiao_images(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+# -- 抖音（创作者中心发表） ------------------------------------------------
+
+
+def cmd_douyin_publish(args: argparse.Namespace) -> int:
+    """抖音：传成片 → 填标题与描述 → **发表**。
+
+    **抖音没有开放平台凭据**（个人主体批不下来），所以这一档走网页后台，
+    与视频号同一套路。
+
+    **发表是不可逆的外部可见动作**：默认会先填好、拍张截图、问一句才点。
+    ``--dry-run`` 则只填不发表。
+    """
+    episode = args.episode
+    packages_dir = (Path(args.packages_dir).expanduser().resolve()
+                    if args.packages_dir else DEFAULT_DOUYIN_PACKAGES)
+    plan = find_douyin_plan(packages_dir, episode)
+
+    description = plan.description_with_topics()
+    problems = douyin_flow.check_limits(
+        plan.title, description, plan.topics,
+        douyin_flow.DouyinConfig.load(
+            Path(args.selectors) if args.selectors else DEFAULT_DOUYIN_SELECTORS).limits)
+    if problems:
+        for problem in problems:
+            print(f"ERROR  {problem}", file=sys.stderr)
+        raise PlanError(f"文案没过抖音的字数限制，不填进页面：{plan.package_dir}")
+
+    out_dir = Path(args.out).expanduser().resolve() if args.out else DEFAULT_OUT / "douyin" / episode
+    out_dir.mkdir(parents=True, exist_ok=True)
+    selectors = (Path(args.selectors) if args.selectors else DEFAULT_DOUYIN_SELECTORS)
+
+    with _open_cdp_session(args) as session:
+        flow = douyin_flow.DouyinFlow(
+            PageDriver(session.page, timeout_ms=args.timeout,
+                       shot_dir=Path(args.shot_dir) if args.shot_dir else None),
+            douyin_flow.DouyinConfig.load(selectors),
+        )
+        flow.open_upload()
+        flow.upload_video(plan.video)
+        flow.wait_form_ready()
+        flow.fill_text(plan.title, description)
+        counters = flow.read_counters()
+        shot = out_dir / "filled.png"
+        try:
+            session.page.screenshot(path=str(shot), full_page=True)
+        except Exception:  # noqa: BLE001
+            shot = None
+
+        print("== 填好的内容 ==")
+        print(f"  标题：{plan.title}（{counters.get('30', '?')}/30）")
+        print(f"  描述：{len(description)} 字（{counters.get('1000', '?')}/1000）")
+        print(f"  话题：{' '.join('#' + topic for topic in plan.topics)}")
+        print("  封面：没设——平台用成片里的帧当默认封面")
+        if shot:
+            print(f"\n截图：{shot}")
+
+        if args.dry_run:
+            print("\n**--dry-run：没有发表。** 页面还开着，人可以自己看一眼再点发布。")
+            (out_dir / "dry-run.json").write_text(
+                json.dumps({"episode": episode, "counters": counters,
+                            "screenshot": str(shot) if shot else None},
+                           ensure_ascii=False, indent=2), encoding="utf-8")
+            return 0
+
+        if not args.yes:
+            print()
+            print("== 这一步会真的发表出去，收不回来 ==")
+            try:
+                answer = input("确认发表？输入 yes 继续：").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\n取消。", file=sys.stderr)
+                return 1
+            if answer.lower() != "yes":
+                print("取消。")
+                return 1
+
+        item_id = flow.submit()
+        url = douyin_flow.public_url(item_id)
+        status = flow.verify_published(plan.title)
+
+    summary = {"episode": episode, "item_id": item_id, "published_url": url,
+               "platform_status": status, "counters": counters}
+    (out_dir / "publish.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"\nOK 已发表：{url}")
+    print(f"平台侧状态：{status or '（没读出来，去内容管理看一眼）'}")
+    _mark_douyin_published(episode, url, args)
+    return 0
+
+
+def _mark_douyin_published(episode: str, url: str, args: argparse.Namespace) -> None:
+    """回填抖音的发布状态（走外部命令，执行器不 import adapter）。"""
+    template = getattr(args, "mark_cmd", None) or DEFAULT_DOUYIN_MARK_TEMPLATE
+    command = template.format(python=sys.executable, episode=episode, url=url)
+    cwd = Path(getattr(args, "mark_cwd", None) or (REPO_ROOT / "douyin")).resolve()
+    print(f"回填状态：{command}（cwd={cwd}）")
+    result = subprocess.run(shlex.split(command), cwd=str(cwd))
+    if result.returncode != 0:
+        print(f"ERROR 回填失败（退出码 {result.returncode}）——"
+              f"状态快照还是 packaged，别当成已发布。", file=sys.stderr)
+        raise SystemExit(result.returncode)
+
+
 # -- 入口 -------------------------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
@@ -502,7 +615,8 @@ def build_parser() -> argparse.ArgumentParser:
                                      description="用 Playwright 驱动真实 Chromium 做平台投稿")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    def add_common(p: argparse.ArgumentParser) -> None:
+    def add_common(p: argparse.ArgumentParser,
+                   default_selectors: Path = DEFAULT_SELECTORS) -> None:
         p.add_argument("--profile", default=None,
                        help="浏览器 profile 目录（登录态放这里）")
         p.add_argument("--headless", action="store_true",
@@ -510,7 +624,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--slow-mo", type=int, default=0,
                        help="每个动作放慢多少毫秒，调试时用")
         p.add_argument("--selectors", default=None,
-                       help=f"选择器表路径，默认 {DEFAULT_SELECTORS}")
+                       help=f"选择器表路径，默认 {default_selectors}")
         p.add_argument("--timeout", type=int, default=20000,
                        help="单步等元素多久（毫秒）")
         p.add_argument("--shot-dir", default=None, help="失败截图放哪")
@@ -555,7 +669,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_bili = sub.add_parser("bilibili-draft",
                              help="传片 + 填表 + 存草稿（B站，**不投稿**）")
-    add_common(p_bili)
+    add_common(p_bili, DEFAULT_BILIBILI_SELECTORS)
     p_bili.add_argument("episode")
     p_bili.add_argument("--package", default=None,
                         help="B站 发布包目录，默认 bilibili/out/<期号>")
@@ -585,6 +699,27 @@ def build_parser() -> argparse.ArgumentParser:
                        help="连没有图的也重存一遍（默认跳过：没有图就没有要补的东西）")
     p_tt.set_defaults(func=cmd_toutiao_images)
 
+    p_dy = sub.add_parser("douyin-publish",
+                           help="抖音：传成片 + 填表 + 发表（创作者中心）")
+    add_common(p_dy, DEFAULT_DOUYIN_SELECTORS)
+    p_dy.add_argument("episode", help="期号，例如 csn-total-ordering")
+    p_dy.add_argument("--packages-dir", default=None,
+                      help="抖音发布包目录，默认 douyin/out")
+    p_dy.add_argument("--out", default=None,
+                      help="产物目录，默认 browser/out/douyin/<期号>")
+    p_dy.add_argument("--cdp", default=None,
+                      help="挂到已经在跑的浏览器上，"
+                           "例如 http://127.0.0.1:9334（不给就自己起一个）")
+    p_dy.add_argument("--dry-run", action="store_true",
+                      help="只填表不发表（页面留着，人自己看一眼）")
+    p_dy.add_argument("--yes", action="store_true",
+                      help="跳过发表前的确认（无人值守时用）")
+    p_dy.add_argument("--mark-cmd", default=None,
+                      help="回填状态的命令模板")
+    p_dy.add_argument("--mark-cwd", default=None,
+                      help="跑回填命令时的工作目录")
+    p_dy.set_defaults(func=cmd_douyin_publish)
+
     return parser
 
 
@@ -594,7 +729,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return args.func(args)
     except (PlanError, channels_flow.FlowError, bilibili_flow.FlowError,
-            ToutiaoError) as error:
+            ToutiaoError, DouyinError) as error:
         print(f"ERROR {error}", file=sys.stderr)
         return 1
     except ActionError as error:
