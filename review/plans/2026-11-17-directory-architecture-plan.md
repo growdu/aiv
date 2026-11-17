@@ -833,6 +833,9 @@ def list_capabilities(*, platforms_dir=None) -> list:
 `default_capabilities_dir` **删掉**（不留旧名——留着就会有人继续用旧路径）。
 模块头 docstring 里的「读 `publish/capabilities/<platform>.toml`」也要改。
 
+**`__all__` 里那一项也要换**——`capability.py:87` 写着 `"default_capabilities_dir"`，
+改成 `"default_platforms_dir"`（留着旧名，`from publishkit import *` 照样能拿到旧函数）。
+
 - [ ] **Step 3: 改配置与命令行**
 
 `publish/publishkit/schedule.py`：
@@ -841,6 +844,10 @@ def list_capabilities(*, platforms_dir=None) -> list:
 - `resolve_config(..., platforms_dir=None, ...)`；默认值 `root / "platforms"`。
 - `discover_repo_root()` 的锚点从「含 `publish/capabilities` 的那一层」改成
   「含 `publish/publishkit` 的那一层」——能力声明散了，原锚点失效了。
+- **`schedule.py:466` 那条报错信息里的路径拼法也要改**：
+  `config.capabilities_dir / "{}.toml".format(platform_filter)` 指的是
+  「一个目录下的一个 toml 文件」，现在文件在平台目录里，得改成
+  `config.platforms_dir / platform_filter / "capability.toml"`。
 
 `publish/publishkit/cli.py`：
 
@@ -885,6 +892,8 @@ def load_limits(platform: str, platforms_dir: Path | None = None) -> dict:
 
 `video/pipeline/pyv/preflight.py` 的 `_load_media` 同样改（`base / platform / "capability.toml"`），
 `check_video(info, platform, capabilities_dir=None)` 的参数改名 `platforms_dir`。
+**`preflight.py:20` 的 import 也要跟着改**：
+`from pyv.epmeta import CAPABILITIES_DIR, Finding, MetaError` → `PLATFORMS_DIR`。
 
 **`REPO_ROOT` 在这两个文件里怎么推的，要保持深度不变**——`aiv/` → `video/` 是同深度，
 `Path(__file__).resolve().parents[N]` 的层数不用动。
