@@ -37,11 +37,11 @@ KNOWN_BARE_URL_ARTICLES = frozenset({
     "docs/source-tracks/postgresql/getting-started/database-specialization-taxonomy/index.md",
     "docs/source-tracks/postgresql/extensions-perf/postgresql-community-gems/index.md",
     "docs/life/road/左耳朵耗子的话——关于技术的一些思考.md",
-    "docs/linux/ebpf/rust-ebpf编程基础.md",
-    "docs/linux/linux下RANDOM和uuid的区别.md",
-    "docs/linux/linux内存管理指北.md",
-    "docs/linux/linux系统接口.md",
-    "docs/network/【网络】MTU相关网络丢包问题分析处理.md",
+    "docs/source-tracks/linux/memory-and-linking/ebpf/rust-ebpf编程基础.md",
+    "docs/source-tracks/linux/daily-ops/linux下RANDOM和uuid的区别.md",
+    "docs/source-tracks/linux/memory-and-linking/linux内存管理指北.md",
+    "docs/source-tracks/linux/kernel-internals/linux系统接口.md",
+    "docs/source-tracks/linux/networking/【网络】MTU相关网络丢包问题分析处理.md",
     "docs/tools/clash-meta-mihomo-install-guide.md",
     "docs/tools/clash-meta-user-guide.md",
     "docs/vue/html简单教程.md",
@@ -341,7 +341,7 @@ def test_the_two_tptc_articles_are_merged_into_one():
 
 # --- IPv6 上网不稳定 ------------------------------------------------------
 
-IPV6 = DOCS_ROOT / "network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"
+IPV6 = DOCS_ROOT / "source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"
 
 
 def test_the_ipv6_article_has_a_title_and_an_info_table():
@@ -526,7 +526,7 @@ def test_only_one_ipv6_article_with_this_title():
                           path.read_text(encoding="utf-8", errors="replace"), re.M)
         if match and match.group(1).strip() == title:
             same.append(path.relative_to(REPO_ROOT).as_posix())
-    assert same == ["docs/network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"], (
+    assert same == ["docs/source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"], (
         f"全树有多篇同名文章：{same}")
 
 
