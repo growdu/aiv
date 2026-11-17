@@ -1338,6 +1338,48 @@ Expected: **FAIL**——规格文档里还写着旧路径，守卫会把它们�
 | `review/README.md` | 路径引用 |
 | `review/specs/2026-11-13-content-review-design.md` | 若有路径引用则改；**本次的目录架构设计稿不改**（它描述的就是这次迁移） |
 
+- [ ] **Step 5b: 全仓扫 `publish/outbox` 与 `publish/capabilities` 的活引用**
+
+Task 3、Task 4 改的是**代码里算路径的地方**；这一条扫的是**注释、docstring、
+help 文本、规格与站点文章里还写着旧路径的地方**。改完这一条，
+Task 7 Step 3 的第一条 grep 才是干净的。
+
+```bash
+git grep -n 'publish/outbox\|publish/capabilities' -- . \
+  ':!review/plans' ':!review/specs' ':!publish/plans' ':!docs/blog' \
+  ':!video/pipeline/plans' ':!video/review/plans' ':!video/review/specs'
+```
+
+排除掉的是**计划类文档目录**（本设计稿、本计划稿、上游的历史计划、
+`publish/plans/` 里的旧实施计划、`video/pipeline/plans/` 与 `video/review/plans/`
+里的历史计划）——它们记录的就是搬迁前的仓库，刻意不改（设计稿 §4.8）。
+
+改法：
+
+| 现在写的 | 改成 |
+| --- | --- |
+| `publish/outbox/` | `platforms/<plat>/outbox/` |
+| `publish/capabilities/<plat>.toml` | `platforms/<plat>/capability.toml` |
+| `publish/capabilities/` | `platforms/` |
+
+**已知的落点**（Task 3、Task 4 之外还会漏掉的）：
+
+| 位置 | 说明 |
+| --- | --- |
+| `browser/browser/__init__.py`、`browser/browser/flows/toutiao.py`、`browser/browser/flows/bilibili.py`、`browser/browser/cli.py` 的 docstring | 旧路径写进了模块说明里 |
+| `browser/docs/00-设计.md` | 表格与正文里的旧路径 |
+| `browser/selectors/toutiao.json` | `_selectors_note` 里的旧路径 |
+| `tools/patch-theme.py` **与** `themes/matery/layout/_partial/post-publish.ejs` | **两处要改成一模一样的文字**——前者是模板源，后者是已落地的产物；只改一处，下次跑 `patch-theme.py` 会把旧注释写回去 |
+| `.github/workflows/hexo.yml` | 注释里的旧路径 |
+| `README.md` | 能力声明表、发布快照表、目录清单表、幂等键那几行（Task 3/4 只改代码，不碰 README） |
+| `platforms/wechat/docs/*.md`、`platforms/toutiao/docs/*.md` | 各平台自己的活文档（含试点记录——它们指的是会搬走的真文件，**要改**） |
+| `platforms/<plat>/*.py`（各平台包里的 `__init__.py`、`package.py`、`snapshot.py`、`state.py`、`capability.py`、`contract.py`） | docstring 里的旧路径 |
+| `platforms/<plat>/tests/*.py` | docstring 与注释里的旧路径 |
+| `publish/publishkit/*.py` | Task 3/4 改了代码；**docstring 里剩下的旧路径**在这里 |
+| `publish/spec/*.md` | Step 2 一起改 |
+
+**改完再跑一遍那条 grep，除排除项外必须为空。**
+
 - [ ] **Step 6: 上游计划里那一处指向真实文件的路径**
 
 `review/plans/2026-11-17-内容分类与结构重构.md` 第 305、470 行指向
@@ -1457,16 +1499,23 @@ Expected: 出现 `--platforms-dir 路径`（不再是 `--capabilities-dir`）。
 - [ ] **Step 3: 兜底 grep（应为空）**
 
 ```bash
-git grep -n 'publish/outbox\|publish/capabilities' -- . ; echo "退出码 $?（1 = 干净）"
-git grep -n '"weixin/"\|weixin/secrets\|/weixin$' -- . ; echo "退出码 $?（1 = 干净）"
-git grep -n -P '(?<!life/)aiv/' -- . | grep -v 'plans/\|directory-architecture-' ; echo "退出码 $?（1 = 干净）"
+EXCL=(':!review/plans' ':!review/specs' ':!publish/plans' ':!docs/blog' \
+      ':!video/pipeline/plans' ':!video/review/plans' ':!video/review/specs')
+
+git grep -n 'publish/outbox\|publish/capabilities' -- . "${EXCL[@]}"; echo "退出码 $?（1 = 干净）"
+git grep -n '"weixin/"\|weixin/secrets\|/weixin$' -- . "${EXCL[@]}"; echo "退出码 $?（1 = 干净）"
+git grep -n -P '(?<!life/)aiv/' -- . "${EXCL[@]}" \
+  | grep -v 'aiv/index.html\|aiv/背景音乐规范.md'; echo "退出码 $?（1 = 干净）"
 ```
 
-第三条的白名单：`plans/` 下的历史计划、本设计稿与本计划稿、以及
-`docs/` 里那 8 处指向 `life/aiv/` 专题页的站点链接（它们前面是 `./` 或 `../`，
-正则的 `(?<!life/)` 拦不住——所以这里用排除法核对）。
+**排除项是「计划类文档目录」**——本设计稿、本计划稿、`review/plans/` 与
+`publish/plans/` 里的历史计划、`video/pipeline/plans/` 与 `video/review/plans/`
+里的历史计划。它们记录的是搬迁前的仓库，刻意不改（设计稿 §4.8）。
 
-**逐条人工看第三条的输出**，确认剩下的每一处都是「有意保留」。
+第三条末尾那层 `grep -v` 是**站点链接**：8 处指向 `life/aiv/` 专题页的链接
+写的是 `aiv/index.html` 与 `aiv/背景音乐规范.md`，它们前面是 `./` 或 `../`，
+正则的 `(?<!life/)` 拦不住——但这些字面量**一个字都不能改**（全局约束）。
+除这两条字面量外，第三条实测**必须为空**。
 
 - [ ] **Step 4: 确认旧目录真的没了**
 
@@ -1480,15 +1529,26 @@ Expected: 全部报「No such file or directory」。
 
 ```bash
 find platforms/*/outbox -name '*.json' | wc -l   # 必须是 567
-git diff --stat HEAD~5 -- 'publish/outbox' | tail -3
 ```
 
-Expected: 567；diff 里只有删除行、没有新增行（说明是纯粹的重命名）。
+**名字没变**：快照文件名是幂等键，改名等于换键。逐个核对：
+
+```bash
+git log --oneline --diff-filter=R --name-status -- 'platforms/*/outbox/*.json' \
+  | grep -E '^R[0-9]+' | awk '{print $2, $3}' | awk '{print $2}' | sed 's|.*/||' | sort > /tmp/after-names.txt
+git show --stat --oneline <Task 4 那个提交> -- 'publish/outbox' | grep -E '^ publish/outbox/' \
+  | sed 's|.*/||' | sort > /tmp/before-names.txt
+diff /tmp/before-names.txt /tmp/after-names.txt && echo "567 个文件名一个都没变"
+```
+
+Expected: 567；两份文件名清单**完全一致**。
 
 - [ ] **Step 6: 与基线比对**
 
 ```bash
-diff /tmp/baseline/status.txt /tmp/after-status.txt && echo "发布历史一致"
+# status.txt 的前两行随日历周变（本周：2026-W47 / 本周还没有记录。），
+# 基线也是这么采的——比对时从第 3 行开始
+diff <(tail -n +3 /tmp/baseline/status.txt) <(tail -n +3 /tmp/after-status.txt) && echo "发布历史一致"
 diff /tmp/baseline/candidates.txt /tmp/after-candidates.txt && echo "候选集一致"
 python3 tools/build-publish-index.py
 python3 -c "
