@@ -484,6 +484,52 @@ def test_narration_gaps_stay_below_the_silence_threshold():
 # ---------------------------------------------------------------- 抽帧
 
 
+def test_every_scene_gets_a_mid_frame_and_a_late_frame(monkeypatch, tmp_path):
+    """每段抽两帧：段中点 + 段尾。
+
+    只抽段中点会把「结论还在淡入」当成「漏字」——实测 ep06 的 s02：
+    段中点上结论框已经画出来了，框里的字还没显影。
+    """
+    grabbed: list[float] = []
+
+    def fake_grab(video, t, out):
+        grabbed.append(t)
+        out.write_bytes(b"png")
+        return True
+
+    monkeypatch.setattr(review, "_grab", fake_grab)
+    monkeypatch.setattr(review, "_keyframe_times", lambda video: [])
+    video = tmp_path / "x.mp4"
+    video.write_bytes(b"mp4")
+    media = review.Media(episode="test-ep", video=video,
+                          storyboard=_storyboard(duration=10.0),
+                          narration=None, bgm=None)
+    frames = review.extract_frames(media, tmp_path)
+    assert [frame.kind for frame in frames] == ["scene", "late"]
+    assert [round(frame.time, 3) for frame in frames] == [5.0, 8.5]
+
+
+def test_expected_text_flattens_nested_params():
+    """契约里的文案不只在顶层。
+
+    `s03.modes` 是 `[["KEY SHARE", "FOR KEY SHARE"], …]`，只取顶层字符串，
+    清单会漏掉一半以上该有的字——「字对不对」这一问就无从回答。
+    """
+    from pyv import contract as contract_mod
+
+    segment = contract_mod.Segment(
+        id="s03",
+        renderer="pyv.scenes.s03_lock_modes",
+        sentences=(0,),
+        params={"title": "MVCC 之上", "modes": [["KEY SHARE", "FOR KEY SHARE"]],
+                "matrix": [[True, False]]},
+    )
+    text = review._expected_text([segment], "s03")
+    assert "MVCC 之上" in text
+    assert "KEY SHARE" in text
+    assert "FOR KEY SHARE" in text
+
+
 def test_vv_05_flags_a_long_keyframe_gap(monkeypatch):
     from pyv import preflight
 

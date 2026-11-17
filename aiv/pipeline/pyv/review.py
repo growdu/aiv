@@ -83,6 +83,14 @@ BLANK_FRAME_STDDEV = 3.0
 SUBTITLE_BAND_RATIO = 0.16
 SUBTITLE_DARK_LUMA = 110
 SUBTITLE_DARK_RATIO = 0.0008
+#: 每个视觉段抽几帧、在段的哪个位置抽。
+#:
+#: **为什么不止段中点一帧**：实测 `s02` 的段中点（9.524 s）上，结论框已经
+#: 画出来了，框里的字却还没显影——结论在段内 48% 处才开始淡入，
+#: 84% 才完全显影，段中点正好落在淡入的第一帧（alpha ≈ 0.17）。
+#: 只抽中点，审核就会把「动画中间态」当成「漏字」。
+#: 段尾帧（85%）补上这个洞。
+SCENE_FRAME_POINTS = (("mid", 0.50), ("late", 0.85))
 #: 正文区间里旁白静音超过这个秒数 → warn。
 #:
 #: **0.6 s 是拍脑袋的，实测不是。** 六期旁白共 74 处句间间隙，全部落在
@@ -207,7 +215,7 @@ class Frame:
     time: float
     scene_id: str
     path: Path
-    kind: str          # "scene"（段中点）或 "keyframe"（编码关键帧）
+    kind: str          # "scene"（段中点）/"late"（段尾）/"keyframe"（编码关键帧）
     subtitle: str = ""
     expected: str = ""
 
@@ -627,15 +635,32 @@ def _scene_at(storyboard: Storyboard | None, t: float) -> str:
     return ""
 
 
+def _flatten_strings(value) -> list[str]:
+    """把 params 里（可能嵌着列表的）字符串值按顺序摊平。
+
+    契约里的文案不只在顶层：`s03.modes` 是 `[["KEY SHARE", "FOR KEY SHARE"], …]`，
+    `s05.bit_labels` 同理。只取顶层字符串，出来的清单会漏掉一半以上
+    该有的字——「字对不对」这一问就无从回答。
+    """
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if isinstance(value, (list, tuple)):
+        values: list[str] = []
+        for item in value:
+            values.extend(_flatten_strings(item))
+        return values
+    return []
+
+
 def _expected_text(segments: list[contract_mod.Segment], scene_id: str) -> str:
-    """这段**应该**出现什么文案：从契约的 params 抽所有字符串值。"""
+    """这段**应该**出现什么文案：从契约的 params 抽所有字符串值（含嵌套）。"""
     for segment in segments:
         if segment.id != scene_id:
             continue
-        values = []
+        values: list[str] = []
         for value in segment.params.values():
-            if isinstance(value, str) and value.strip():
-                values.append(value.strip())
+            values.extend(_flatten_strings(value))
         return " / ".join(values)
     return ""
 
@@ -643,10 +668,11 @@ def _expected_text(segments: list[contract_mod.Segment], scene_id: str) -> str:
 def extract_frames(media: Media, out_dir: Path,
                    materials: Materials | None = None,
                    keyframe_limit: int = 12) -> list[Frame]:
-    """抽帧：每个视觉段 1 帧（段中点）+ 关键帧。
+    """抽帧：每个视觉段 2 帧（段中点 + 段尾）+ 关键帧。
 
-    抽帧是**稀疏**的：逐帧扫描在完整版（2.6 万帧）上不可行，
-    而段中点是最可能「画面已画完、字幕已烧上」的时刻，
+    抽帧是**稀疏**的：逐帧扫描在完整版（2.6 万帧）上不可行。
+    段中点是最可能「画面已画完、字幕已烧上」的时刻，
+    段尾帧补上「结论还在淡入」的时段（见 `SCENE_FRAME_POINTS`），
     关键帧往往正好落在段边界——段边界最容易出错。
     """
     if media.video is None or not media.video.is_file():
@@ -661,16 +687,17 @@ def extract_frames(media: Media, out_dir: Path,
         for scene in storyboard.scenes:
             if scene.type != "code" or scene.duration <= 0:
                 continue
-            t = (scene.start + scene.end) / 2
-            index += 1
-            path = out_dir / f"{index:02d}_{scene.id}_mid.png"
-            if _grab(media.video, t, path):
-                frames.append(Frame(
-                    index=index, time=t, scene_id=scene.id, path=path,
-                    kind="scene",
-                    subtitle=_subtitle_at(storyboard, t),
-                    expected=_expected_text(segments, scene.id),
-                ))
+            for label, ratio in SCENE_FRAME_POINTS:
+                t = scene.start + scene.duration * ratio
+                index += 1
+                path = out_dir / f"{index:02d}_{scene.id}_{label}.png"
+                if _grab(media.video, t, path):
+                    frames.append(Frame(
+                        index=index, time=t, scene_id=scene.id, path=path,
+                        kind="scene" if label == "mid" else "late",
+                        subtitle=_subtitle_at(storyboard, t),
+                        expected=_expected_text(segments, scene.id),
+                    ))
 
     for t in _keyframe_times(media.video)[:keyframe_limit]:
         index += 1
@@ -961,6 +988,9 @@ def check_video(episode: str, out_dir: Path | None = None) -> Report:
 
 # ---------------------------------------------------------------- 抽帧清单
 
+#: 清单里的类型名：给人看的，不是给代码看的。
+KIND_LABELS = {"scene": "段中点", "late": "段尾", "keyframe": "关键帧"}
+
 
 def build_frame_manifest(frames: list[Frame],
                          materials: Materials | None = None) -> str:
@@ -976,13 +1006,17 @@ def build_frame_manifest(frames: list[Frame],
         "每一帧对着三件事看：**画面上有没有该有的字**、**字对不对**、"
         "**这一帧讲不讲得清**。",
         "",
+        "**段中点**是画面画得最完整的时刻，**段尾**是结论淡入完之后的样子"
+        "（只看段中点会把动画中间态当成漏字）。",
+        "",
         "| 帧 | 类型 | 时间码 | 视觉段 | 应有文案 | 口播 | 文件 |",
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for frame in frames:
         expected = frame.expected or _expected_text(segments, frame.scene_id)
         lines.append(
-            f"| {frame.index} | {frame.kind} | {frame.time:.3f}s | "
+            f"| {frame.index} | {KIND_LABELS.get(frame.kind, frame.kind)} | "
+            f"{frame.time:.3f}s | "
             f"{frame.scene_id or '—'} | {expected or '—'} | "
             f"{frame.subtitle or '—'} | `{frame.path.name}` |"
         )
