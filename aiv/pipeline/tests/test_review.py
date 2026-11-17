@@ -432,6 +432,58 @@ def test_vv_06_accepts_a_good_mix(monkeypatch):
     assert review.vv_06_mix(media) == []
 
 
+def test_vv_04_says_so_when_it_cannot_run(monkeypatch):
+    """规则跑不动的时候必须说话。
+
+    静默返回空列表和「查了没问题」在报告里长得一模一样——
+    混起来就成了假装绿。
+    """
+    monkeypatch.setattr(review, "_probe_duration", lambda path: None)
+    notes: list[str] = []
+    media = review.Media(episode="test-ep", video=Path("/tmp/x.mp4"),
+                          storyboard=_storyboard(duration=12.0),
+                          narration=None, bgm=None)
+    assert review.vv_04_duration(media, notes) == []
+    assert notes and "VV-04" in notes[0]
+
+
+def test_brand_frames_are_not_judged_as_blank():
+    """品牌片是共享素材，片头第一帧的黑场是淡入，不是漏画。
+
+    拿 VV-01 去判它，每期都会报一条假警。
+    """
+    brand = review.Frame(index=1, time=0.0, scene_id="brand_intro",
+                         path=Path("/tmp/x.png"), kind="keyframe")
+    body = review.Frame(index=2, time=5.0, scene_id="s01",
+                        path=Path("/tmp/y.png"), kind="scene")
+    assert review._is_brand_frame(brand)
+    assert not review._is_brand_frame(body)
+
+
+def test_narration_gaps_stay_below_the_silence_threshold():
+    """阈值是**量出来的**，不是拍的。
+
+    六期旁白共 74 处句间间隙，实测全部落在 0.25~0.748 s。
+    阈值必须高于这个最大值，否则会把正常的换气报成「静音」——
+    这条测试就是钉住它的：阈值一降，这里就红。
+    """
+    if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+        pytest.skip("本机缺 ffmpeg 或 ffprobe")
+    from pyv import align
+
+    worst = 0.0
+    for episode in episodes.EPISODE_ORDER:
+        spans = align.detect_sentences(episodes.narration_path(episode))
+        for (_, prev_end), (next_start, _) in zip(spans, spans[1:]):
+            worst = max(worst, next_start - prev_end)
+    assert worst < review.NARRATION_SILENCE_S, (
+        f"实测最大句间间隙 {worst:.3f}s ≥ 阈值 {review.NARRATION_SILENCE_S}s："
+        "阈值会误报正常的换气")
+
+
+# ---------------------------------------------------------------- 抽帧
+
+
 def test_vv_05_flags_a_long_keyframe_gap(monkeypatch):
     from pyv import preflight
 

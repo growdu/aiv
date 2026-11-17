@@ -84,7 +84,15 @@ SUBTITLE_BAND_RATIO = 0.16
 SUBTITLE_DARK_LUMA = 110
 SUBTITLE_DARK_RATIO = 0.0008
 #: 正文区间里旁白静音超过这个秒数 → warn。
-NARRATION_SILENCE_S = 0.6
+#:
+#: **0.6 s 是拍脑袋的，实测不是。** 六期旁白共 74 处句间间隙，全部落在
+#: 0.25~0.748 s，中位数 0.427 s——0.6 s 卡在自然分布的尾巴里，
+#: 会把约两成的正常换气报成「静音」。
+#:
+#: 1.0 s 比实测最大值高 34%，远小于一句口播的中位时长 2.17 s——
+#: 它只会在「少了一句」的时候响。一致性由
+#: `test_narration_gaps_stay_below_the_silence_threshold` 钉住。
+NARRATION_SILENCE_S = 1.0
 #: 成片时长与时间轴的容差。
 DURATION_TOLERANCE_S = 0.15
 #: 关键帧最大间隔（B站《文件上传预处理》：至少 10 秒一个）。
@@ -700,7 +708,8 @@ def _frame_pixels(path: Path):
         return image.convert("RGB")
 
 
-def vv_01_blank_frames(frames: list[Frame]) -> list[Signal]:
+def vv_01_blank_frames(frames: list[Frame],
+                      notes: list[str] | None = None) -> list[Signal]:
     """抽到的帧近乎纯色 → 画面漏画或黑场。"""
     from PIL import ImageStat
 
@@ -725,7 +734,8 @@ def vv_01_blank_frames(frames: list[Frame]) -> list[Signal]:
                    hits[0][0].scene_id, detail)]
 
 
-def vv_02_missing_subtitle(frames: list[Frame]) -> list[Signal]:
+def vv_02_missing_subtitle(frames: list[Frame],
+                           notes: list[str] | None = None) -> list[Signal]:
     """帧的底部字幕带里没有暗色像素 → 字幕可能没烧上。
 
     **判据**：字幕是深蓝字（`#1B2A47`）配白描边，落在白色背景上；
@@ -738,7 +748,8 @@ def vv_02_missing_subtitle(frames: list[Frame]) -> list[Signal]:
             continue
         try:
             image = _frame_pixels(frame.path)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            _note(notes, f"第{frame.index}帧的像素读不出来（{exc}）：VV-02 少判一帧")
             continue
         width, height = image.size
         band_top = int(height * (1 - SUBTITLE_BAND_RATIO))
@@ -759,7 +770,17 @@ def vv_02_missing_subtitle(frames: list[Frame]) -> list[Signal]:
                    hits[0][0].subtitle[:40], detail)]
 
 
-def vv_03_narration_silence(media: Media) -> list[Signal]:
+def _note(notes: list[str] | None, text: str) -> None:
+    """记一条「这条规则没跑成」的原因。
+
+    **规则跑不动的时候必须说话。** 静默返回空列表和「查了没问题」
+    在报告里长得一模一样——混起来就成了假装绿。
+    """
+    if notes is not None:
+        notes.append(text)
+
+
+def vv_03_narration_silence(media: Media, notes: list[str] | None = None) -> list[Signal]:
     """正文区间里旁白中间静音。
 
     查的是**旁白文件**而不是成片混音：成片有 BGM 铺底，
@@ -772,7 +793,8 @@ def vv_03_narration_silence(media: Media) -> list[Signal]:
         return []
     try:
         spans = align.detect_sentences(media.narration)
-    except (OSError, ValueError, subprocess.SubprocessError):
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        _note(notes, f"旁白断句读不出来（{exc}）：VV-03 跳过")
         return []
     gaps = []
     for (_, prev_end), (next_start, _) in zip(spans, spans[1:]):
@@ -786,12 +808,13 @@ def vv_03_narration_silence(media: Media) -> list[Signal]:
                    f"{gaps[0][0]:.2f}s", "", detail)]
 
 
-def vv_04_duration(media: Media) -> list[Signal]:
+def vv_04_duration(media: Media, notes: list[str] | None = None) -> list[Signal]:
     """成片时长与时间轴对不上。"""
     if media.video is None or media.storyboard is None:
         return []
     duration = _probe_duration(media.video)
     if duration is None:
+        _note(notes, "成片时长读不出来（ffprobe 没装或读不了这个文件）：VV-04 跳过")
         return []
     expected = media.storyboard.duration
     if abs(duration - expected) <= DURATION_TOLERANCE_S:
@@ -801,7 +824,7 @@ def vv_04_duration(media: Media) -> list[Signal]:
     return [Signal("VV-04", VIDEO_LAYER, ERROR, f"{duration:.3f}s", "", detail)]
 
 
-def vv_05_keyframes(media: Media) -> list[Signal]:
+def vv_05_keyframes(media: Media, notes: list[str] | None = None) -> list[Signal]:
     """关键帧最大间隔。"""
     if media.video is None:
         return []
@@ -809,9 +832,11 @@ def vv_05_keyframes(media: Media) -> list[Signal]:
 
     try:
         gaps = preflight.keyframe_gaps(media.video)
-    except (RuntimeError, OSError):
+    except (RuntimeError, OSError) as exc:
+        _note(notes, f"关键帧读不出来（{exc}）：VV-05 跳过")
         return []
     if not gaps:
+        _note(notes, "一个关键帧都没读到：VV-05 跳过（成片可能没有视频轨）")
         return []
     worst = max(gaps)
     if worst <= MAX_KEYFRAME_GAP_S:
@@ -822,7 +847,7 @@ def vv_05_keyframes(media: Media) -> list[Signal]:
     return [Signal("VV-05", VIDEO_LAYER, WARN, f"{worst:.3f}s", "", detail)]
 
 
-def vv_06_mix(media: Media) -> list[Signal]:
+def vv_06_mix(media: Media, notes: list[str] | None = None) -> list[Signal]:
     """混音电平。判定直接调 `bgm.py`，不重写。"""
     if media.video is None or media.narration is None or media.bgm is None:
         return []
@@ -837,6 +862,7 @@ def vv_06_mix(media: Media) -> list[Signal]:
                                         body_start, body_end)
         findings = bgm_rules.check_mix(report)
     except (OSError, RuntimeError, ValueError) as exc:
+        _note(notes, f"混音量不出来（{exc}）：VV-06 跳过")
         return []
     hits = [f for f in findings if f.level == bgm_rules.ERROR]
     if not hits:
@@ -845,7 +871,7 @@ def vv_06_mix(media: Media) -> list[Signal]:
     return [Signal("VV-06", VIDEO_LAYER, WARN, "混音", "", detail)]
 
 
-def vv_07_platform(media: Media) -> list[Signal]:
+def vv_07_platform(media: Media, notes: list[str] | None = None) -> list[Signal]:
     """平台技术门槛。判定直接调 `preflight.py`，平台清单只有一个来源。"""
     if media.video is None:
         return []
@@ -853,13 +879,15 @@ def vv_07_platform(media: Media) -> list[Signal]:
 
     try:
         info = preflight.probe(media.video)
-    except (RuntimeError, OSError, FileNotFoundError):
+    except (RuntimeError, OSError, FileNotFoundError) as exc:
+        _note(notes, f"成片参数读不出来（{exc}）：VV-07 跳过")
         return []
     hits = []
     for platform in epmeta.PLATFORM_SPECS:
         try:
             findings = preflight.check_video(info, platform)
-        except (OSError, ValueError):
+        except (OSError, ValueError) as exc:
+            _note(notes, f"平台 {platform} 的门槛读不出来（{exc}）：VV-07 少判一个平台")
             continue
         for finding in findings:
             if finding.level == preflight.ERROR:
@@ -877,6 +905,16 @@ VIDEO_CHECKS = (
 )
 
 
+def _is_brand_frame(frame: Frame) -> bool:
+    """这一帧落在品牌片头/片尾里。
+
+    品牌片是**共享素材**（`aiv/brand/clips/` 下的固定片子），不是这一期
+    渲染出来的。片头第一帧是黑场（淡入），那是设计，不是漏画——
+    拿 VV-01 去判它，每期都会报一条假警。
+    """
+    return frame.scene_id.startswith("brand")
+
+
 def check_video(episode: str, out_dir: Path | None = None) -> Report:
     """跑成片层。
 
@@ -889,21 +927,35 @@ def check_video(episode: str, out_dir: Path | None = None) -> Report:
     if media.video is None:
         return report
 
-    frames = extract_frames(media, out_dir or (FRAMES_DIR / episode),
-                            materials=load_materials(episode))
+    target_dir = out_dir or (FRAMES_DIR / episode)
+    materials = load_materials(episode)
+    frames = extract_frames(media, target_dir, materials=materials)
     if frames:
-        report.note(f"抽了 {len(frames)} 帧 → {out_dir or (FRAMES_DIR / episode)}")
+        manifest = write_frame_manifest(frames, target_dir, materials)
+        report.note(f"抽了 {len(frames)} 帧 → {target_dir}；清单 → {manifest}")
     else:
         report.note("没抽到帧：VV-01、VV-02 跳过")
 
+    body_frames = [frame for frame in frames if not _is_brand_frame(frame)]
+    skipped = len(frames) - len(body_frames)
+    if skipped:
+        report.note(f"{skipped} 帧在品牌片头/片尾里，不判 VV-01、VV-02"
+                    "（品牌片是共享素材，片头的黑场是淡入，不是漏画）")
+
     for check in VIDEO_CHECKS:
-        for signal in check(frames):
+        skipped: list[str] = []
+        for signal in check(body_frames, skipped):
             report.add(signal)
+        for text in skipped:
+            report.note(text)
 
     for check in (vv_03_narration_silence, vv_04_duration, vv_05_keyframes,
                   vv_06_mix, vv_07_platform):
-        for signal in check(media):
+        skipped: list[str] = []
+        for signal in check(media, skipped):
             report.add(signal)
+        for text in skipped:
+            report.note(text)
     return report
 
 
