@@ -870,3 +870,15 @@ def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
             break
     else:
         raise AssertionError("既没有 video/README.md 也没有 aiv/README.md")
+
+
+# --- 草稿箱守卫 ------------------------------------------------------------
+
+
+def test_the_draft_box_exists_and_says_how_it_works():
+    """草稿箱是两条流水线的共同入口，它的约定必须写在仓库里。"""
+    readme = REPO / "drafts" / "README.md"
+    assert readme.is_file(), "drafts/README.md 不见了"
+    text = readme.read_text(encoding="utf-8")
+    for keyword in ("drafts/", "review/", "docs/", "video/", "platforms/"):
+        assert keyword in text, f"草稿箱的约定里没提到 {keyword}"
