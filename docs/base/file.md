@@ -572,5 +572,5 @@ rmdir /q /s d:\testlogs
   那篇讲的是「数据库怎么把这件事做快」。
 - [04 存储抽象层 SMGR](../source-tracks/postgresql/storage-engine/learning-path/04-storage-abstraction.md)——
   PG 怎么在 OS 文件系统之上加一层自己的存储抽象。
-- [分布式存储需要解决的问题](../cluster/分布式存储需要解决的问题.md)——
+- [分布式存储需要解决的问题](../distributed/foundations/分布式存储需要解决的问题.md)——
   从单机文件走到多副本，要额外解决哪些问题。

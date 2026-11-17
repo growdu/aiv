@@ -168,10 +168,10 @@ REVIEWED_ARTICLES = (
     "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
     "docs/source-tracks/postgresql/transaction-mvcc/learning-path/06-heap-and-mvcc.md",
     "docs/source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
-    "docs/cluster/分布式一致性协议.md",
+    "docs/distributed/foundations/分布式一致性协议.md",
     "docs/base/file.md",
-    "docs/cluster/corosync/corosync-down网卡仍处于多数派/index.md",
-    "docs/cluster/kingbase/tptc.md",
+    "docs/distributed/field-notes/corosync-down网卡仍处于多数派/index.md",
+    "docs/distributed/ha-and-dr/tptc.md",
     "docs/source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
     "docs/source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
 )

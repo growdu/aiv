@@ -27,13 +27,13 @@ DOCS_ROOT = REPO_ROOT / "docs"
 REVIEW_ROOT = REPO_ROOT / "review"
 TOOL = REPO_ROOT / "tools" / "review-check.py"
 
-COROSYNC = DOCS_ROOT / "cluster/corosync/corosync-down网卡仍处于多数派/index.md"
+COROSYNC = DOCS_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派/index.md"
 
 # 已知的「裸 URL 吞中文」文章清单：这些还没修，是后续批次的待办。
 # 清单里的文章修好了，这条守卫照样绿（子集判断）；清单外的文章中招，这条会红。
 KNOWN_BARE_URL_ARTICLES = frozenset({
     "docs/chatgpt/chatgpt使用.md",
-    "docs/cluster/DCF/一文读懂openguass dcf网络模块.md",
+    "docs/distributed/consensus/一文读懂openguass dcf网络模块.md",
     "docs/source-tracks/postgresql/getting-started/database-specialization-taxonomy/index.md",
     "docs/source-tracks/postgresql/extensions-perf/postgresql-community-gems/index.md",
     "docs/life/road/左耳朵耗子的话——关于技术的一些思考.md",
@@ -226,7 +226,7 @@ def test_no_new_article_swallows_chinese_into_a_url():
 
 # --- 两地三中心（tptc.md 与 tptc_improve.md 合并后） ------------------------
 
-TPTC = DOCS_ROOT / "cluster/kingbase/tptc.md"
+TPTC = DOCS_ROOT / "distributed/ha-and-dr/tptc.md"
 
 
 def test_the_disaster_recovery_levels_match_the_standard():
@@ -326,7 +326,7 @@ def test_the_two_tptc_articles_are_merged_into_one():
                           path.read_text(encoding="utf-8", errors="replace"), re.M)
         if match and match.group(1).strip() == title:
             same.append(path.relative_to(REPO_ROOT).as_posix())
-    assert same == ["docs/cluster/kingbase/tptc.md"], f"全树有多篇同名文章：{same}"
+    assert same == ["docs/distributed/ha-and-dr/tptc.md"], f"全树有多篇同名文章：{same}"
 
     assert not (DOCS_ROOT / "cluster/kingbase/tptc_improve.md").exists(), (
         "tptc_improve.md 又被建回来了")
