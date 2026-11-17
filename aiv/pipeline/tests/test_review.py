@@ -405,6 +405,33 @@ def test_vv_07_maps_a_platform_failure_to_an_error(monkeypatch):
     assert signals[0].severity == review.ERROR
 
 
+def test_vv_06_flags_a_bad_mix(monkeypatch):
+    """混音不合格 → 命中。判据调 `bgm.py`，这里只验接缝。"""
+    from pyv import bgm
+
+    monkeypatch.setattr(bgm, "measure_mix", lambda *args, **kwargs: object())
+    monkeypatch.setattr(bgm, "check_mix", lambda report: [
+        bgm.Finding("bgm.mix-duck-depth", bgm.ERROR,
+                    "稳态 duck 深度实测 3.20 dB，应为 18.0 ± 1.0 dB")])
+    media = review.Media(episode="test-ep", video=Path("/tmp/x.mp4"),
+                          storyboard=_storyboard(duration=12.0),
+                          narration=Path("/tmp/n.mp3"), bgm=Path("/tmp/b.wav"))
+    signals = review.vv_06_mix(media)
+    assert _rules(signals) == {"VV-06"}
+
+
+def test_vv_06_accepts_a_good_mix(monkeypatch):
+    from pyv import bgm
+
+    monkeypatch.setattr(bgm, "measure_mix", lambda *args, **kwargs: object())
+    monkeypatch.setattr(bgm, "check_mix", lambda report: [
+        bgm.Finding("bgm.mix-info", bgm.WARNING, "差一点点")])
+    media = review.Media(episode="test-ep", video=Path("/tmp/x.mp4"),
+                          storyboard=_storyboard(duration=12.0),
+                          narration=Path("/tmp/n.mp3"), bgm=Path("/tmp/b.wav"))
+    assert review.vv_06_mix(media) == []
+
+
 def test_vv_05_flags_a_long_keyframe_gap(monkeypatch):
     from pyv import preflight
 
