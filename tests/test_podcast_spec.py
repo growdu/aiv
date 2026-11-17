@@ -78,7 +78,7 @@ EV_SOURCE_PATH_MIN = 6
 EV_FUNCTION_REF_MIN = 1
 EV_DIAGRAM_MIN = 1
 EV_SPEECH_RATE = 7.19
-EV_DRAFT_P90 = 22_609
+EV_DRAFT_P90 = 22_304
 
 # --- 长视频三档的阈值（契约八 §3.1）--------------------------------------
 #
@@ -125,9 +125,8 @@ PLANNED_PATHS = {
 # 否则 `publishkit/episode.py`（模块记法）、`/feed.xml`（站点 URL）、
 # `:year/:month/:day/:title/`（permalink 模板）都会被误判。
 REPO_TOP_DIRS = {
-    "bilibili", "browser", "channels", "docs", "douyin",
-    "platforms", "public", "publish", "review", "scripts", "source", "tests",
-    "themes", "tools", "toutiao", "video", "weixin",
+    "browser", "drafts", "platforms", "public", "publish", "review",
+    "scripts", "source", "tests", "themes", "tools", "video",
 }
 
 # **生成目录**：`.gitignore` 里的 `/source/`（只放行 `source/all/` 与
@@ -789,7 +788,7 @@ def test_draft_p90_constant_matches_the_docs_distribution():
 
     rows = _markdown_table(_spec_text(), "指标")
     row = _row_with(rows, 0, "EV-06")
-    assert "22,609" in row[3], f"EV-06 的依据栏必须写出 22,609，实为：{row[3]!r}"
+    assert "22,304" in row[3], f"EV-06 的依据栏必须写出 22,304，实为：{row[3]!r}"
 
 
 # --- 平台矩阵 -------------------------------------------------------------
@@ -880,5 +879,6 @@ def test_the_draft_box_exists_and_says_how_it_works():
     readme = REPO / "drafts" / "README.md"
     assert readme.is_file(), "drafts/README.md 不见了"
     text = readme.read_text(encoding="utf-8")
-    for keyword in ("drafts/", "review/", "docs/", "video/", "platforms/"):
+    for keyword in ("drafts/", "review/", "docs/", "video/", "platforms/",
+                    "不再参与任何派生", "真相只在"):
         assert keyword in text, f"草稿箱的约定里没提到 {keyword}"

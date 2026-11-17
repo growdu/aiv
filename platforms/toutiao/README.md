@@ -70,7 +70,7 @@
 
 ## 三档自动化
 
-能力模型 `publish/capabilities/toutiao.toml` 里的 `automation` 是数据，**换档改一行**：
+能力模型 `platforms/toutiao/capability.toml` 里的 `automation` 是数据，**换档改一行**：
 
 | 档 | 前提 | 行为 |
 | --- | --- | --- |
@@ -178,7 +178,7 @@ cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli status
 选项写在命令名前后都行。
 
 ⚠️ **只指 `--out-dir` 是不够的**：`convert` 会把状态快照写进仓库里的
-`publish/outbox/<slug>__toutiao.json`——**那个文件是被 git 跟踪的**，
+`platforms/toutiao/outbox/<slug>__toutiao.json`——**那个文件是被 git 跟踪的**，
 而快照里的 `package_dir` 会变成相对你那个 `--out-dir` 的路径。
 结果就是仓库里多出一处改动，它指向的包却根本不在仓库里。
 只在仓库里试跑，就**别传** `--out-dir`；要让仓库完全不动，

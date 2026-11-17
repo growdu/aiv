@@ -24,6 +24,9 @@ tags:
 画面上写什么、什么写进契约、什么留在渲染代码里，
 以及「参数缺失当场报错」这条规矩为什么不能商量。
 
+那份契约现在住在 `video/contracts/`——
+与 `platforms/` 同级，是仓库根级的视频模块。
+
 ## 相关
 
 - [一个仓库，三条产线](../platform-overview/one-repo-three-pipelines.md) — 视频线在整体架构里的位置

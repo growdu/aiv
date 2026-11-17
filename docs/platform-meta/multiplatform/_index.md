@@ -24,6 +24,10 @@ tags:
 为什么「一个平台一份声明文件」能顶掉五套 if-else，以及
 「加平台 = 加一份声明，不改代码」到底意味着什么。
 
+那份声明现在住在 `platforms/<plat>/capability.toml`——
+目录名就是平台 id，也是 Python 包名；平台自己的发布快照住在
+同目录下的 `outbox/`。
+
 ## 相关
 
 - [内容单元与内容契约](../content-model/content-unit-and-contract.md) — 分发链路的输入长什么样

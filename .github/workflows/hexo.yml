@@ -96,7 +96,7 @@ jobs:
         # 这一步非零退出——「漏归类」不许悄悄发生。
         run: python3 tools/build-learning-path.py
       - name: Build publish index
-        # publish/outbox 的发布状态 → 站点用的发布索引（文章页的「这篇还发到了」）。
+        # platforms/<plat>/outbox 的发布状态 → 站点用的发布索引（文章页的「这篇还发到了」）。
         run: python3 tools/build-publish-index.py
       - name: Build podcast index
         # 母稿的期号字段 → 站点用的期号索引（母稿页顶部那一块期号区块）。

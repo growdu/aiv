@@ -42,16 +42,15 @@
                                          │              │
                                          └──────┬───────┘
                                                 │ publish/publishkit（契约层，平台无关）
-                                    ┌───────────┴────────────┐
-                                    ▼                        ▼
-                     publish/capabilities/*.toml    publish/outbox/*.json
-                     （平台能力 = 数据）              （发布结果快照 = 幂等键）
-                                    │                        │
-                     ┌──────────────┼────────────────────────┘
-                     ▼              ▼            ▼            ▼
-                  wechat/        toutiao/    channels/    bilibili/
-                  （公众号）      （头条号）   （视频号）     （B 站）
-                  四个都在 platforms/ 下（目录名即包名），各自一套 adapter：切片 → 清单 → 出包/API → 人工/自动发布
+                                                │ 读 platforms/<plat>/capability.toml（平台能力 = 数据）
+                                                │ 写 platforms/<plat>/outbox/*.json（发布结果快照 = 幂等键）
+                                                ▼
+                                           platforms/
+                             ┌─────────────┬───────────┬───────────┬────────────┬─────┐
+                             ▼             ▼           ▼           ▼            ▼
+                          wechat/      toutiao/     douyin/    channels/    bilibili/
+                          （公众号）   （头条号）   （抖音）   （视频号）   （B 站）
+                          目录名即包名，各自一套 adapter：切片 → 清单 → 出包/API → 人工/自动发布
 ```
 
 ### 三条产线的分工
@@ -60,7 +59,7 @@
 | --- | --- | --- | --- |
 | 技术站点 | `docs/` | 静态站 `public/` | `docs/` |
 | 品牌视频 AIV | `video/contracts/*.json` + 口播稿 + 旁白 | 1920×1080 成片 | 契约 + 规范文档 |
-| 多平台分发 | `source/_posts/` 内容单元 + 能力声明 | 草稿 / 出包 / 已发链接 | `docs/`（内容）+ `publish/outbox/`（状态） |
+| 多平台分发 | `source/_posts/` 内容单元 + 能力声明 | 草稿 / 出包 / 已发链接 | `docs/`（内容）+ `platforms/<plat>/outbox/`（状态） |
 
 ---
 
@@ -76,10 +75,10 @@
 | **视频生产层** | `video/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
 | **审核层** | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | 只读 `docs/`、`video/` 的契约与产物 |
 | **发布契约层** | `publish/publishkit/` | 内容契约 / 能力模型 / manifest / 调度 | **不认识任何平台** |
-| **平台适配层** | `platforms/wechat/` `platforms/toutiao/` `platforms/channels/` `platforms/bilibili/` | 平台切片、渲染、出包、发布、状态 | 只认 TOML 与 manifest JSON |
+| **平台适配层** | `platforms/<plat>/`（每个平台一个目录：wechat / toutiao / douyin / channels / bilibili） | 平台切片、渲染、出包、发布、状态 | 只认 TOML 与 manifest JSON |
 
 **依赖方向是单向的**：平台层不 import 契约层，契约层不 import 平台层。
-两边唯一的接缝是**同一份 `capabilities/*.toml`** 与**同一份 manifest JSON**。
+两边唯一的接缝是**同一份 `platforms/<plat>/capability.toml`** 与**同一份 manifest JSON**。
 这条规矩由 `publish/tests/test_capability_compat.py` 之类的一致性测试守住。
 
 ### 2.2 站点构建链
@@ -143,7 +142,7 @@
 | 模块 | 职责 |
 | --- | --- |
 | `contract.py` | 内容契约：母稿 front matter 的字段表与格式规则（扁平 `key: value` + 单层列表） |
-| `capability.py` | 能力模型：读 `publish/capabilities/<platform>.toml`，严格校验后交给 adapter |
+| `capability.py` | 能力模型：读 `platforms/<platform>/capability.toml`，严格校验后交给 adapter |
 | `manifest.py` | 发布清单：一个内容单元 × 一个平台的纯数据（可重放、无时间戳、无凭据） |
 | `schedule.py` | 调度层：候选集、选题规则、ISO 周键、调度状态文件 |
 | `cli.py` | 命令行入口：`schedule weekly/status/candidates`、`publish <content_id> --platform <id>` |
@@ -152,8 +151,8 @@
 
 | 路径 | 内容 |
 | --- | --- |
-| `publish/capabilities/*.toml` | 平台限额与自动化档位（**数据不是代码**，平台规则变了改这里） |
-| `publish/outbox/*.json` | 发布结果快照（幂等键 + 站点发布索引的数据源） |
+| `platforms/<plat>/capability.toml` | 平台限额与自动化档位（**数据不是代码**，平台规则变了改这里） |
+| `platforms/<plat>/outbox/*.json` | 发布结果快照（幂等键 + 站点发布索引的数据源） |
 | `publish/schedule.json` | 调度状态，按周键幂等 |
 | `publish/spec/*.md` | 契约规格（架构设计 / 调度 / 视频发布） |
 | `publish/deploy/*.template` | crontab、launchd、GitHub Action 模板 |
@@ -161,18 +160,20 @@
 
 ### 2.5 平台适配层
 
-四个 adapter **同构布局**，彼此独立：
+五个 adapter **同构布局**，彼此独立：
 
 | 平台 | 目录 | 形态 | 自动化档位 |
 | --- | --- | --- | --- |
 | 微信公众号 | `platforms/wechat/` | 图文 → 草稿箱（`draft/add`） | 自动生成 + 自动进草稿箱，**发表由人点**（账号无发表接口权限） |
 | 今日头条 | `platforms/toutiao/` | 图文 → 头条版排版包 / 半自动出包 | `manual`（能力声明）：出包 + 人工发（账号未认证，API 权限开不了） |
+| 抖音 | `platforms/douyin/` | 视频 → 竖版切片 + 人工发布清单 | `manual`：个人主体拿不到 API 凭据 |
 | 微信视频号 | `platforms/channels/` | 视频 → 切片 + 人工发布清单 | `manual`：视频号无普通创作者发布接口 |
 | 哔哩哔哩 | `platforms/bilibili/` | 视频 → 投稿包 + 字幕 | `manual`（`ARC_BASE` 权限开通后可转 `api_publish`） |
 
 每个 adapter 的典型模块：`assets.py`（素材）、`contract.py`（平台契约）、
 `render.py`/`package.py`（渲染/打包）、`state.py`（状态）、`snapshot.py`（快照）、
-`notify.py`（通知）、`cli.py`（命令行），外加 `docs/`（设计与实施计划）与 `tests/`。
+`notify.py`（通知）、`cli.py`（命令行），外加 `capability.toml`（能力声明）、
+`outbox/`（发布快照）、`docs/`（设计与实施计划）与 `tests/`。
 
 公众号线最成熟：`platforms/wechat/` 20 个模块，覆盖 Markdown 解析、封面、标题裁剪、
 超长文章拆分、SVG/代码高亮、mermaid、合集与分类、品牌图文，已跑到草稿箱。
@@ -183,7 +184,7 @@
 
 1. **母稿唯一**：任何平台产物都能从 `content_id` 重建；真相只在 `docs/`。
 2. **可重放 vs 有状态**：切片与渲染是纯函数，随便重跑；只有「发布」有状态，
-   幂等键由 `publish/outbox/` 与 `publish/schedule.json` 承载。
+   幂等键由 `platforms/<plat>/outbox/` 与 `publish/schedule.json` 承载。
 3. **不静默成功**：平台的「成功」必须是**被显式确认过**的成功。发重了比发慢了糟糕得多。
 4. **能力即数据**：平台限额与自动化档位在 TOML 里，不在 Python 里。
 5. **只有一处接缝**：契约层与 adapter 互不 import，认的是同一份 TOML 与同一份 manifest JSON。
@@ -197,12 +198,12 @@
 | 契约 | 文件 | 生产者 | 消费者 |
 | --- | --- | --- | --- |
 | 内容契约（front matter） | `docs/**` 的 front matter | 作者 | sync-hexo → Hexo → 各 adapter |
-| 平台能力 | `publish/capabilities/<id>.toml` | 手写（对着平台文档复核） | publishkit + adapter |
+| 平台能力 | `platforms/<id>/capability.toml` | 手写（对着平台文档复核） | publishkit + adapter |
 | 发布清单 manifest | JSON（内存/落盘） | publishkit | adapter |
 | 视觉分镜契约 | `video/contracts/<EP>.json` | 作者 | pyv 渲染引擎 |
 | 发布元数据 | `video/publish/<EP>.json` | 手写 | `pyv publish check` + 各平台 adapter |
 | 抽帧清单 | `video/review/frames/<EP>/frames.md` | 审核工具 | 审核记录（逐帧复核） |
-| 发布结果快照 | `publish/outbox/<content>__<platform>.json` | adapter | 幂等判定 + 站点发布索引 |
+| 发布结果快照 | `platforms/<platform>/outbox/<content>__<platform>.json` | adapter | 幂等判定 + 站点发布索引 |
 | 调度状态 | `publish/schedule.json` | 调度层 | 调度层（周键幂等） |
 
 ---
@@ -219,8 +220,9 @@
 | `video/` | 视频生产线（规范 + 契约 + 代码） | ✅ 产物除外 |
 | `video/build/`、`video/out/` | 片段与成片 | ❌ |
 | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | ✅ 帧除外 |
-| `publish/` | 契约层、调度、能力声明、outbox | ✅ |
-| `platforms/wechat/` `platforms/toutiao/` `platforms/channels/` `platforms/bilibili/` | 平台 adapter | ✅ |
+| `drafts/` | 草稿箱（新稿先落这里，审完留底稿；底稿不参与派生） | ✅ |
+| `publish/` | 契约层与调度（发布契约规格、能力模型加载、manifest、周键） | ✅ |
+| `platforms/<plat>/` | 平台 adapter（每个平台一个目录，含能力声明 `capability.toml` 与发布快照 `outbox/`） | ✅ |
 | `requirements/` | 依赖清单（按模块分文件） | ✅ |
 | `.github/workflows/` | `hexo.yml`（构建部署）、`contracts.yml`（契约闸门） | ✅ |
 
@@ -325,14 +327,15 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | 审校 | 文档侧（`review/`）与视频侧（`video/review/`）两套机制都落地了；视频侧六期文本层跑完，成片层只有本机有成片的 EP06 跑过 |
 | 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；候选集由母稿 `platforms` 决定 |
 
-**平台与契约层的关系**（四个平台，两个档位）：
+**平台与契约层的关系**（五个平台，两个档位）：
 
 | 平台 | 能力声明 | 幂等键写在哪 | 自动化停在哪 |
 | --- | --- | --- | --- |
-| 公众号 | `wechat.toml` | `publish/outbox/`（入库） | 草稿箱（人工发表） |
-| 头条号 | `toutiao.toml` | `publish/outbox/`（入库） | 出包（人工上传） |
-| 视频号 | `channels.toml` | `publish/outbox/`（入库） | 出包 + 人工发布清单 |
-| B 站 | `bilibili.toml` | `publish/outbox/`（入库） | 投稿包（`ARC_BASE` 未开通） |
+| 公众号 | `platforms/wechat/capability.toml` | `platforms/wechat/outbox/`（入库） | 草稿箱（人工发表） |
+| 头条号 | `platforms/toutiao/capability.toml` | `platforms/toutiao/outbox/`（入库） | 出包（人工上传） |
+| 抖音 | `platforms/douyin/capability.toml` | `platforms/douyin/outbox/`（入库） | 出包（人工上传，个人主体拿不到 API 凭据） |
+| 视频号 | `platforms/channels/capability.toml` | `platforms/channels/outbox/`（入库） | 出包 + 人工发布清单 |
+| B 站 | `platforms/bilibili/capability.toml` | `platforms/bilibili/outbox/`（入库） | 投稿包（`ARC_BASE` 未开通） |
 
 **还没就绪的三处**（详见各 spec 的「待验证项」）：
 
@@ -357,4 +360,4 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | [`video/review/README.md`](video/review/README.md) | 视频审校：文本层 `VT-*` 与成片层 `VV-*`、抽帧方法、一期一条记录 |
 | [`review/README.md`](review/README.md) | 博客内容审校：文档侧的同构机制（`tools/review-check.py`） |
 | [`video/人格规范.md`](video/%E4%BA%BA%E6%A0%BC%E8%A7%84%E8%8C%83.md) | 小象是谁、怎么想、怎么讲（9 条可机检规则） |
-| `platforms/wechat/docs/`、`platforms/toutiao/docs/`、`platforms/channels/docs/`、`platforms/bilibili/docs/` | 各平台 adapter 的设计与实施计划 |
+| `platforms/<plat>/docs/` | 各平台 adapter 的设计与实施计划（wechat / toutiao / douyin / channels / bilibili） |
