@@ -200,11 +200,11 @@ def _checklist(
     return "\n".join(lines)
 
 
-def _bilibili_limits_loader(capabilities_dir: str | Path | None):
-    """能力声明的读法。默认读仓库里那份 `publish/capabilities/`。"""
-    if capabilities_dir is None:
+def _bilibili_limits_loader(platforms_dir: str | Path | None):
+    """能力声明的读法。默认读仓库里那份 `platforms/`。"""
+    if platforms_dir is None:
         return epmeta.load_limits
-    base = Path(capabilities_dir)
+    base = Path(platforms_dir)
 
     def load(platform: str) -> dict:
         return epmeta.load_limits(platform, base)
@@ -246,7 +246,7 @@ def preflight_findings(
     meta: epmeta.EpisodeMeta,
     info: preflight.VideoInfo,
     episode: str,
-    capabilities_dir: str | Path | None = None,
+    platforms_dir: str | Path | None = None,
 ) -> list:
     """出包前的预检：文案层 + 技术层。
 
@@ -256,14 +256,14 @@ def preflight_findings(
         _bilibili_only(meta),
         contract_episode=episode,
         duration=info.duration,
-        limits_loader=_bilibili_limits_loader(capabilities_dir),
+        limits_loader=_bilibili_limits_loader(platforms_dir),
     )
     findings = _for_bilibili(findings)
     findings.extend(
         preflight.check_video(
             info,
             "bilibili",
-            Path(capabilities_dir) if capabilities_dir is not None else None,
+            Path(platforms_dir) if platforms_dir is not None else None,
         )
     )
     return findings
@@ -275,7 +275,7 @@ def build_package(
     video: str | Path,
     out_root: str | Path,
     subtitle_events: Sequence[subtitle.SubtitleEventLike] | None = None,
-    capabilities_dir: str | Path | None = None,
+    platforms_dir: str | Path | None = None,
     outbox_dir: str | Path | None = None,
 ) -> PackageResult:
     """出一期在B站上的发布包。
@@ -292,7 +292,7 @@ def build_package(
         raise FileNotFoundError(f"成片不存在：{video_path}")
 
     info = preflight.probe(video_path)
-    findings = preflight_findings(meta, info, episode, capabilities_dir)
+    findings = preflight_findings(meta, info, episode, platforms_dir)
     errors = [f for f in findings if f.level == epmeta.ERROR]
     if errors:
         # 有硬约束违规就不出包——宁可现在报错，也不要出一个发不出去的包。
@@ -421,7 +421,7 @@ def build_package(
         published_url=published_url,
         reason=reason,
         # 档位从**同一份**能力声明里读——写死的话，改完 TOML 快照还在说旧档位。
-        automation=snapshot.automation_of(capabilities_dir),
+        automation=snapshot.automation_of(platforms_dir),
     )
     return PackageResult(
         episode=episode,

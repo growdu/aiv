@@ -15,7 +15,7 @@ def _encode(path: Path, seconds: int = 3, size: str = "1920x1080") -> Path:
     """造一段合法的小视频。
 
     尺寸、像素格式与 faststart 都按视频平台自己的门槛来
-    （`publish/capabilities/douyin.toml` 的 `[media]`）：
+    （`platforms/douyin/capability.toml` 的 `[media]`）：
     出包前要过技术预检，fixture 自己不合规的话，
     测到的就只剩预检，而不是出包。
 

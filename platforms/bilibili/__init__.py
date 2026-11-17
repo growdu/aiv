@@ -5,7 +5,7 @@
 
 本包与 `platforms/channels/` 平级、互不引用，也不 import 契约层或 `platforms/wechat/` 的包。
 只读 `video/publish/<EP>.json`（这一期怎么自我介绍）与
-`publish/capabilities/bilibili.toml`（平台认什么）。
+`platforms/bilibili/capability.toml`（平台认什么）。
 
 `pyv` 住在 `video/pipeline/` 下面，没有装成 wheel，所以这里把它挂上 `sys.path`——
 adapter 只**读** `pyv.epmeta` 与 `pyv.preflight`，不修改 video 侧的任何东西。

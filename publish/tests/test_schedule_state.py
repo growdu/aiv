@@ -43,11 +43,13 @@ def make_config(tmp_path, *, capabilities=None):
     """一份指向临时目录的配置（语料、状态、outbox 全在 tmp_path 里）。"""
     root = tmp_path / "blog"
     root.mkdir(parents=True, exist_ok=True)
-    caps = tmp_path / "capabilities"
+    caps = tmp_path / "platforms"
     caps.mkdir(parents=True, exist_ok=True)
     for name, text in (capabilities or {"toutiao": DOCUMENT_TOML}).items():
-        (caps / "{}.toml".format(name)).write_text(text, encoding="utf-8")
-    return resolve_config(repo_root=root, capabilities_dir=caps)
+        platform = caps / name
+        platform.mkdir(parents=True, exist_ok=True)
+        (platform / "capability.toml").write_text(text, encoding="utf-8")
+    return resolve_config(repo_root=root, platforms_dir=caps)
 
 
 class RecordingPublisher:

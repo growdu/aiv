@@ -27,8 +27,9 @@
 ===  ==========================================
 
 **调度器只做调度**：选内容、写周键、记失败。它**不 import 任何平台
-adapter 的模块**（§11.1）——平台怎么发，由 ``publish/capabilities/*.toml``
-的 ``[adapter].command`` 决定，调度器只把那条命令调起来。
+adapter 的模块**（§11.1）——平台怎么发，由
+``platforms/<platform>/capability.toml`` 的 ``[adapter].command`` 决定，
+调度器只把那条命令调起来。
 
 这一期只驱动文档类平台（能力模型里 ``kind == "document"``）。
 """
@@ -165,10 +166,10 @@ def _common_options() -> _Parser:
         help="调度状态文件（默认：<状态目录>/schedule.json）",
     )
     parser.add_argument(
-        "--capabilities-dir",
+        "--platforms-dir",
         metavar="路径",
         default=argparse.SUPPRESS,
-        help="能力声明目录（默认：<仓库>/publish/capabilities）",
+        help="平台目录（默认：<仓库>/platforms）",
     )
     parser.add_argument(
         "--secrets",
@@ -284,7 +285,7 @@ def _config_from_args(args) -> ScheduleConfig:
         state_dir=getattr(args, "state_dir", None),
         posts_dir=getattr(args, "posts_dir", None),
         outbox_dir=getattr(args, "outbox_dir", None),
-        capabilities_dir=getattr(args, "capabilities_dir", None),
+        platforms_dir=getattr(args, "platforms_dir", None),
         schedule_file=getattr(args, "schedule_file", None),
         secrets=getattr(args, "secrets", None),
     )
@@ -570,7 +571,7 @@ def publish_one(
 
 def _capability_for(config: ScheduleConfig, platform: str):
     """读一个平台的能力声明，并确认它是文档类平台。"""
-    capability = load_capability(platform, capabilities_dir=config.capabilities_dir)
+    capability = load_capability(platform, platforms_dir=config.platforms_dir)
     if capability.kind != "document":
         raise ScheduleConfigError(
             "{} 是视频平台，这一期调度器只驱动文档类平台".format(platform)

@@ -396,7 +396,7 @@ def test_vv_07_maps_a_platform_failure_to_an_error(monkeypatch):
         size_bytes=1000)
     monkeypatch.setattr(preflight, "probe", lambda path: info)
     monkeypatch.setattr(preflight, "check_video",
-                        lambda info, platform, capabilities_dir=None: [
+                        lambda info, platform, platforms_dir=None: [
                             Finding("preflight.resolution", "error", "太小了")])
     media = review.Media(episode="test-ep", video=Path("/tmp/x.mp4"),
                           storyboard=None, narration=None, bgm=None)

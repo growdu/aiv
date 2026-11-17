@@ -166,7 +166,7 @@ def web_fields(copy: DouyinCopy) -> tuple[str, str]:
 def check_text_length(text: str, limits: dict) -> list[str]:
     """拼装后的 `text` 不能超过平台写明的上限。
 
-    `limits` 是 `publish/capabilities/douyin.toml` 的 `[limits]` 段。
+    `limits` 是 `platforms/douyin/capability.toml` 的 `[limits]` 段。
     缺 `text_chars` 就**不查**——能力声明被改坏时，宁可不查也不要瞎报。
 
     这条量的是**开放平台 API 那个 `text` 字段**（三段拼起来的整段）。

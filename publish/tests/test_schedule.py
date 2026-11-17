@@ -155,7 +155,7 @@ def test_week_window_crosses_the_year_boundary():
 def test_config_defaults_to_the_repository_layout(tmp_path):
     """没有环境变量时：仓库根从 cwd 往上找，状态目录在 ``publish/``。"""
     root = tmp_path / "blog"
-    (root / "publish" / "capabilities").mkdir(parents=True)
+    (root / "publish" / "publishkit").mkdir(parents=True)
     (root / "source" / "_posts").mkdir(parents=True)
 
     config = resolve_config(repo_root=root)
@@ -165,7 +165,7 @@ def test_config_defaults_to_the_repository_layout(tmp_path):
     assert config.schedule_file == root / "publish" / "schedule.json"
     assert config.outbox_dir == root / "publish" / "outbox"
     assert config.posts_dir == root / "source" / "_posts"
-    assert config.capabilities_dir == root / "publish" / "capabilities"
+    assert config.platforms_dir == root / "platforms"
     assert config.secrets_file == root / "platforms" / "wechat" / "secrets.json"
 
 
@@ -199,7 +199,7 @@ def test_command_line_options_override_the_environment(tmp_path):
         state_dir=tmp_path / "other-state",
         outbox_dir=tmp_path / "other-outbox",
         posts_dir=tmp_path / "other-posts",
-        capabilities_dir=tmp_path / "other-caps",
+        platforms_dir=tmp_path / "other-caps",
         schedule_file=tmp_path / "other-schedule.json",
         secrets=tmp_path / "other-secrets.json",
         environ=env,
@@ -209,14 +209,14 @@ def test_command_line_options_override_the_environment(tmp_path):
     assert config.state_dir == tmp_path / "other-state"
     assert config.outbox_dir == tmp_path / "other-outbox"
     assert config.posts_dir == tmp_path / "other-posts"
-    assert config.capabilities_dir == tmp_path / "other-caps"
+    assert config.platforms_dir == tmp_path / "other-caps"
     assert config.schedule_file == tmp_path / "other-schedule.json"
     assert config.secrets_file == tmp_path / "other-secrets.json"
 
 
 def test_repo_root_is_discovered_from_the_working_directory(tmp_path, monkeypatch):
     root = tmp_path / "blog"
-    (root / "publish" / "capabilities").mkdir(parents=True)
+    (root / "publish" / "publishkit").mkdir(parents=True)
     deep = root / "a" / "b"
     deep.mkdir(parents=True)
     monkeypatch.chdir(deep)
@@ -496,10 +496,13 @@ def test_the_snapshot_name_matches_the_files_already_in_the_repository():
 
 
 def _capability_dir(tmp_path, **tomls):
-    directory = tmp_path / "capabilities"
+    """摆几份能力声明：新布局是 ``<平台名>/capability.toml``。"""
+    directory = tmp_path / "platforms"
     directory.mkdir(parents=True, exist_ok=True)
     for name, text in tomls.items():
-        (directory / "{}.toml".format(name)).write_text(text, encoding="utf-8")
+        platform = directory / name
+        platform.mkdir(parents=True, exist_ok=True)
+        (platform / "capability.toml").write_text(text, encoding="utf-8")
     return directory
 
 
@@ -532,7 +535,7 @@ def test_only_document_platforms_are_driven(tmp_path):
     """视频平台走它们自己那套 CLI——不进这一期的候选集。"""
     config = resolve_config(
         repo_root=tmp_path,
-        capabilities_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML, channels=VIDEO_TOML),
+        platforms_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML, channels=VIDEO_TOML),
     )
 
     platforms = target_platforms(config)
@@ -544,7 +547,7 @@ def test_a_video_platform_is_refused_loudly(tmp_path):
     """点名要一个视频平台 → 报错，不静默跳过、更不假装发过了。"""
     config = resolve_config(
         repo_root=tmp_path,
-        capabilities_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML, channels=VIDEO_TOML),
+        platforms_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML, channels=VIDEO_TOML),
     )
 
     with pytest.raises(ScheduleConfigError) as error:
@@ -556,7 +559,7 @@ def test_a_video_platform_is_refused_loudly(tmp_path):
 def test_an_unknown_platform_is_refused_loudly(tmp_path):
     config = resolve_config(
         repo_root=tmp_path,
-        capabilities_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML),
+        platforms_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML),
     )
 
     with pytest.raises(ScheduleConfigError):
@@ -661,7 +664,7 @@ def test_the_adapter_runs_inside_the_platforms_directory(monkeypatch):
     # 用仓库里真实的 toutiao 能力声明与真实的 resolve_config()，只换掉 subprocess.run
     config = resolve_config(repo_root=REPO_ROOT)
     capability = load_capability("toutiao",
-                                  capabilities_dir=REPO_ROOT / "publish" / "capabilities")
+                                  platforms_dir=REPO_ROOT / "platforms")
     cli.invoke_adapter(config, capability, "some-content-id", 300)
     assert captured["cwd"] == str(REPO_ROOT / "platforms")
     assert captured["argv"][:3] == ["python3", "-m", "toutiao.cli"]

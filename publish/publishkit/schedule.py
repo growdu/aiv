@@ -4,7 +4,7 @@
 交给平台 adapter（``publish/spec/06-发布计划与调度.md`` §一）。
 
 **它不 import 任何平台 adapter 的模块**（§11.1 的接缝原则）：平台怎么发，
-由 ``publish/capabilities/<platform>.toml`` 的 ``[adapter].command`` 决定。
+由 ``platforms/<platform>/capability.toml`` 的 ``[adapter].command`` 决定。
 
 四块东西：
 
@@ -107,7 +107,7 @@ class ScheduleConfig:
     outbox_dir: Path
     state_dir: Path
     schedule_file: Path
-    capabilities_dir: Path
+    platforms_dir: Path
     secrets_file: Path
 
 
@@ -117,7 +117,7 @@ def resolve_config(
     state_dir=None,
     posts_dir=None,
     outbox_dir=None,
-    capabilities_dir=None,
+    platforms_dir=None,
     schedule_file=None,
     secrets=None,
     environ=None,
@@ -172,24 +172,28 @@ def resolve_config(
             if schedule_file is not None
             else state / "schedule.json"
         ),
-        capabilities_dir=(
-            Path(capabilities_dir)
-            if capabilities_dir is not None
-            else root / "publish" / "capabilities"
+        platforms_dir=(
+            Path(platforms_dir)
+            if platforms_dir is not None
+            else root / "platforms"
         ),
         secrets_file=secret_path,
     )
 
 
 def discover_repo_root(start: Path) -> Path:
-    """从 ``start`` 往上找含有 ``publish/capabilities`` 的那一层。
+    """从 ``start`` 往上找含有 ``publish/publishkit`` 的那一层。
 
-    找不到就用 ``start`` 本身——调用方马上会因为「能力声明目录不存在」
+    找不到就用 ``start`` 本身——调用方马上会因为「平台目录不存在」
     而报配置错误，那比在这里猜一个路径好。
+
+    **锚点是契约层自己的包目录，不是能力声明目录**：能力声明现在住在
+    ``platforms/<plat>/capability.toml``，散在平台目录里，没有一个
+    公共的「能力声明目录」可以当锚点了。
     """
     current = Path(start).resolve()
     for candidate in [current] + list(current.parents):
-        if (candidate / "publish" / "capabilities").is_dir():
+        if (candidate / "publish" / "publishkit").is_dir():
             return candidate
     return current
 
@@ -448,7 +452,7 @@ def target_platforms(config: ScheduleConfig, platform_filter=None) -> list:
     ``platform_filter`` 给定时只留那一个平台（CLI 的 ``--platform``）；
     给了一个视频平台就**报错**——不许静默跳过，更不许假装发过了。
     """
-    capabilities = list_capabilities(capabilities_dir=config.capabilities_dir)
+    capabilities = list_capabilities(platforms_dir=config.platforms_dir)
     documents = [cap for cap in capabilities if cap.kind == "document"]
     if platform_filter:
         chosen = [cap for cap in documents if cap.id == platform_filter]
@@ -463,7 +467,7 @@ def target_platforms(config: ScheduleConfig, platform_filter=None) -> list:
             raise ScheduleConfigError(
                 "找不到平台 {!r} 的能力声明：{}".format(
                     platform_filter,
-                    config.capabilities_dir / "{}.toml".format(platform_filter),
+                    config.platforms_dir / platform_filter / "capability.toml",
                 )
             )
         return chosen

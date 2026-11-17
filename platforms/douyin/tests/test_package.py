@@ -332,12 +332,14 @@ def test_the_checklist_uses_the_limit_from_the_capability_file(meta, video,
                                                                tmp_path):
     """清单里的上限**跟着能力声明走**，不写死 1000。
 
-    写死的话，改了 `publish/capabilities/douyin.toml` 的 `text_chars`，
+    写死的话，改了 `platforms/douyin/capability.toml` 的 `text_chars`，
     清单还在说 1000——两处数字打架，人照着清单发，文案却被闸门拦下。
     """
-    capabilities = tmp_path / "capabilities"
+    capabilities = tmp_path / "platforms"
     capabilities.mkdir()
-    (capabilities / "douyin.toml").write_text(
+    platform = capabilities / "douyin"
+    platform.mkdir()
+    (platform / "capability.toml").write_text(
         "[limits]\n"
         "text_chars = 300\n"
         "title_chars = 55\n"
@@ -346,7 +348,7 @@ def test_the_checklist_uses_the_limit_from_the_capability_file(meta, video,
         "topic_chars = 15\n",
         encoding="utf-8")
 
-    result = _package(meta, video, tmp_path, capabilities_dir=capabilities)
+    result = _package(meta, video, tmp_path, platforms_dir=capabilities)
     checklist = (result.dir / "publish.md").read_text(encoding="utf-8")
     assert "上限 300" in checklist
     assert "1000" not in checklist

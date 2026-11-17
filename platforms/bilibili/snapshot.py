@@ -39,17 +39,16 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def automation_of(capabilities_dir: str | Path | None = None) -> str:
+def automation_of(platforms_dir: str | Path | None = None) -> str:
     """当前档位：从能力声明的顶层 `automation` 读。
 
-    **不写死 "manual"**——档位由 `publish/capabilities/bilibili.toml` 说了算，
+    **不写死 "manual"**——档位由 `platforms/bilibili/capability.toml` 说了算，
     写死的话，改完 TOML 快照还在说旧档位，那是静默的假话。
     """
     import tomllib
 
-    base = Path(capabilities_dir) if capabilities_dir else (
-        REPO_ROOT / "publish" / "capabilities")
-    path = base / "bilibili.toml"
+    base = Path(platforms_dir) if platforms_dir else REPO_ROOT / "platforms"
+    path = base / "bilibili" / "capability.toml"
     if not path.is_file():
         raise RuntimeError(f"能力声明不存在：{path}")
     data = tomllib.loads(path.read_text(encoding="utf-8"))

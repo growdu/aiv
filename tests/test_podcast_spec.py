@@ -812,14 +812,14 @@ def test_platform_capabilities_referenced_in_the_matrix_exist():
     )
 
     for capability in ("bilibili", "channels", "douyin", "toutiao"):
-        assert (REPO / "publish/capabilities" / f"{capability}.toml").exists(), (
-            f"能力声明缺失：{capability}.toml"
+        assert (REPO / "platforms" / capability / "capability.toml").exists(), (
+            f"能力声明缺失：{capability}/capability.toml"
         )
 
 
 def test_spec_marks_youtube_as_not_yet_supported():
     """YouTube 没有能力声明，规格里必须把它标成未接入，不能当成已有渠道。"""
-    assert not (REPO / "publish/capabilities/youtube.toml").exists(), (
+    assert not (REPO / "platforms/youtube/capability.toml").exists(), (
         "若已接入 YouTube，请先更新本守卫与规格的矩阵"
     )
     text = _spec_text()

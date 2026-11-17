@@ -152,10 +152,15 @@ def workspace(tmp_path):
         encoding="utf-8",
     )
 
-    caps = root / "publish" / "capabilities"
+    caps = root / "platforms"
     caps.mkdir(parents=True)
-    (caps / "fake.toml").write_text(CAPABILITY_TOML, encoding="utf-8")
-    (caps / "fakevideo.toml").write_text(VIDEO_CAPABILITY_TOML, encoding="utf-8")
+    fake = caps / "fake"
+    fake.mkdir()
+    (fake / "capability.toml").write_text(CAPABILITY_TOML, encoding="utf-8")
+    fakevideo = caps / "fakevideo"
+    fakevideo.mkdir()
+    (fakevideo / "capability.toml").write_text(
+        VIDEO_CAPABILITY_TOML, encoding="utf-8")
 
     package = root / "platforms" / "fakeadapter"
     package.mkdir(parents=True)
@@ -180,8 +185,8 @@ def workspace(tmp_path):
             return [
                 "--repo-root",
                 str(self.root),
-                "--capabilities-dir",
-                str(self.root / "publish" / "capabilities"),
+                "--platforms-dir",
+                str(self.root / "platforms"),
                 *args,
             ]
 
@@ -564,8 +569,8 @@ def test_the_module_entry_point_works(workspace):
             "--dry-run",
             "--repo-root",
             str(workspace.root),
-            "--capabilities-dir",
-            str(workspace.root / "publish" / "capabilities"),
+            "--platforms-dir",
+            str(workspace.root / "platforms"),
         ],
         cwd=str(repo_root / "publish"),
         env=environment,

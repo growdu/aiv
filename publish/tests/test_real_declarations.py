@@ -1,6 +1,6 @@
 """仓库里那份真实的能力声明，必须指向真实存在的 adapter。
 
-契约层读的是 ``publish/capabilities/*.toml``，调度器按 ``[adapter].command``
+契约层读的是 ``platforms/<plat>/capability.toml``，调度器按 ``[adapter].command``
 去调 adapter 的 CLI。这两层之间**没有 import**（接缝原则，规格 §11.1），
 所以「声明里写的那个 adapter 到底在不在」没有编译器替我们把关——
 只能靠测试。
@@ -12,6 +12,7 @@
 
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 from publishkit import list_capabilities, load_capability
@@ -122,9 +123,21 @@ def test_every_adapter_command_names_a_module_that_exists():
         )
 
 
-def test_every_id_matches_its_file_name():
-    for capability in CAPABILITIES:
-        assert capability.path.stem == capability.id
+def test_every_platform_directory_is_named_after_its_id():
+    """平台目录名 = 能力声明里的 id = Python 包名。
+
+    能力声明现在住在**平台自己的目录**里（``platforms/<plat>/capability.toml``），
+    文件名统一叫 ``capability.toml``——**「这个平台到底是哪个」不再由文件名
+    回答，而由目录名回答**。所以这条不变量从「id == 文件名」搬到了
+    「id == 目录名」。
+    """
+    platforms = REPO_ROOT / "platforms"
+    for directory in sorted(p for p in platforms.iterdir() if p.is_dir()):
+        declaration = directory / "capability.toml"
+        assert declaration.is_file(), f"{directory.name}/ 缺 capability.toml"
+        data = tomllib.loads(declaration.read_text(encoding="utf-8"))
+        assert data["id"] == directory.name, (
+            f"{directory.name}/ 的能力声明里 id 是 {data['id']!r}，两者必须一致")
 
 
 def test_every_platform_can_be_loaded_by_id():

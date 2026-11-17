@@ -22,7 +22,7 @@ from pathlib import Path
 
 __all__ = ["OUTBOX_DIR", "snapshot_name", "write_snapshot", "outbox_dir_from_env"]
 
-#: 仓库里那份 outbox 目录（与 publish/capabilities、publish/outbox 同级）。
+#: 仓库里那份 outbox 目录（与 platforms/、publish/outbox 同级）。
 OUTBOX_DIR = Path(__file__).resolve().parents[2] / "publish" / "outbox"
 
 #: 快照的字段就是这些，多一个少一个都会被契约测试抓住。

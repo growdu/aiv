@@ -21,7 +21,8 @@ AIV_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = AIV_ROOT.parent
 PUBLISH_DIR = AIV_ROOT / "publish"
 # 能力声明是契约层的数据文件。pyv 只**读**它，不 import 契约层的任何包。
-CAPABILITIES_DIR = REPO_ROOT / "publish" / "capabilities"
+# 声明住在平台自己的目录里：platforms/<plat>/capability.toml
+PLATFORMS_DIR = REPO_ROOT / "platforms"
 
 ERROR = "error"
 WARNING = "warning"
@@ -169,10 +170,10 @@ def load_meta(episode: str, root: Path | None = None) -> EpisodeMeta:
     )
 
 
-def load_limits(platform: str, capabilities_dir: Path | None = None) -> dict:
+def load_limits(platform: str, platforms_dir: Path | None = None) -> dict:
     """读平台能力声明的 [limits] 段。"""
-    base = Path(capabilities_dir) if capabilities_dir else CAPABILITIES_DIR
-    path = base / f"{platform}.toml"
+    base = Path(platforms_dir) if platforms_dir else PLATFORMS_DIR
+    path = base / platform / "capability.toml"
     if not path.is_file():
         raise MetaError(f"能力声明不存在：{path}")
     data = tomllib.loads(path.read_text(encoding="utf-8"))

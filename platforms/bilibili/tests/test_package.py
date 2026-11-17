@@ -311,15 +311,18 @@ def test_the_snapshot_reads_the_automation_from_the_capability_file(meta, video,
 
     写死的话，改完 TOML 快照还在说旧档位——那是静默的假话。
     """
-    caps = tmp_path / "capabilities"
+    caps = tmp_path / "platforms"
     caps.mkdir()
-    source = Path(__file__).resolve().parents[3] / "publish" / "capabilities" / "bilibili.toml"
-    (caps / "bilibili.toml").write_text(
+    source = (Path(__file__).resolve().parents[3] / "platforms" / "bilibili"
+              / "capability.toml")
+    platform = caps / "bilibili"
+    platform.mkdir()
+    (platform / "capability.toml").write_text(
         source.read_text(encoding="utf-8").replace('automation = "manual"', 'automation = "api_publish"'),
         encoding="utf-8",
     )
 
-    package.build_package("ep02", meta, video, tmp_path / "out", capabilities_dir=caps)
+    package.build_package("ep02", meta, video, tmp_path / "out", platforms_dir=caps)
     data = json.loads((outbox / "ep02__bilibili.json").read_text(encoding="utf-8"))
     assert data["automation"] == "api_publish"
 

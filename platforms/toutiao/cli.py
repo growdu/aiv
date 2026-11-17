@@ -549,7 +549,7 @@ def _add_common_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--outbox-dir", type=Path, default=argparse.SUPPRESS,
                         help="状态快照目录（默认：publish/outbox）")
     parser.add_argument("--capability", type=Path, default=argparse.SUPPRESS,
-                        help="平台能力声明（默认：publish/capabilities/toutiao.toml）")
+                        help="平台能力声明（默认：platforms/toutiao/capability.toml）")
     parser.add_argument("--state-file", type=Path, default=argparse.SUPPRESS,
                         help="幂等状态文件（默认：platforms/toutiao/out/state.json）")
     parser.add_argument("--source-url", default=argparse.SUPPRESS,

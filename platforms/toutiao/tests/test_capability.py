@@ -62,11 +62,11 @@ def test_default_capability_path_is_in_the_repo():
     """路径必须落在仓库根下 —— 只断言片段名的话，任意位置的同名文件都能蒙混过关。"""
     repo_root = Path(toutiao.__file__).resolve().parents[2]
     path = default_capability_path()
-    assert path.name == "toutiao.toml"
-    assert path.parent.name == "capabilities"
-    assert path.parent.parent.name == "publish"
-    assert path == repo_root / "publish" / "capabilities" / "toutiao.toml"
-    assert path.is_file(), "publish/capabilities/toutiao.toml 必须存在"
+    assert path.name == "capability.toml"
+    assert path.parent.name == "toutiao"
+    assert path.parent.parent.name == "platforms"
+    assert path == repo_root / "platforms" / "toutiao" / "capability.toml"
+    assert path.is_file(), "platforms/toutiao/capability.toml 必须存在"
 
 
 def test_load_capability_reads_every_field():

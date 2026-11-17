@@ -160,7 +160,7 @@ def _checklist(episode: str, copy: contract.DouyinCopy,
     topics = contract.topics_line(copy.topics)
     web_title, web_description = contract.web_fields(copy)
     # **上限写能力声明里的那个数**，不写死 1000：写死的话，改了
-    # `publish/capabilities/douyin.toml` 的 text_chars，清单还在说 1000——
+    # `platforms/douyin/capability.toml` 的 text_chars，清单还在说 1000——
     # 两处数字打架，人照着清单发，文案却被闸门拦下。
     limit = limits.get("text_chars")
     limit_text = f"，上限 {limit}" if isinstance(limit, int) and limit > 0 else ""
@@ -256,11 +256,11 @@ def _checklist(episode: str, copy: contract.DouyinCopy,
     return "\n".join(lines)
 
 
-def _douyin_limits_loader(capabilities_dir: str | Path | None):
-    """能力声明的读法。默认读仓库里那份 `publish/capabilities/`。"""
-    if capabilities_dir is None:
+def _douyin_limits_loader(platforms_dir: str | Path | None):
+    """能力声明的读法。默认读仓库里那份 `platforms/`。"""
+    if platforms_dir is None:
         return epmeta.load_limits
-    base = Path(capabilities_dir)
+    base = Path(platforms_dir)
 
     def load(platform: str) -> dict:
         return epmeta.load_limits(platform, base)
@@ -321,13 +321,13 @@ def _limits_or_empty(limits_loader, platform: str) -> dict:
 
 def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
                        episode: str,
-                       capabilities_dir: str | Path | None = None,
+                       platforms_dir: str | Path | None = None,
                        limits: dict | None = None) -> list:
     """出包前的预检：文案层 + 技术层 + 抖音专属层。
 
     返回的 finding 里 `error` 的必须先改，`warning` 的要写进清单。
     """
-    limits_loader = _douyin_limits_loader(capabilities_dir)
+    limits_loader = _douyin_limits_loader(platforms_dir)
     findings = epmeta.check_meta(
         _douyin_only(meta),
         contract_episode=episode,
@@ -335,7 +335,7 @@ def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
         limits_loader=limits_loader,
     )
     findings = _for_douyin(findings)
-    findings.extend(preflight.check_video(info, "douyin", capabilities_dir))
+    findings.extend(preflight.check_video(info, "douyin", platforms_dir))
 
     if limits is None:
         limits = _limits_or_empty(limits_loader, "douyin")
@@ -348,7 +348,7 @@ def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
 
 def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
                   out_root: str | Path,
-                  capabilities_dir: str | Path | None = None,
+                  platforms_dir: str | Path | None = None,
                   outbox_dir: str | Path | None = None) -> PackageResult:
     """出一期在抖音上的发布包。"""
     copy = contract.slice_copy(meta)
@@ -358,8 +358,8 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
         raise FileNotFoundError(f"成片不存在：{video_path}")
 
     info = preflight.probe(video_path)
-    limits = _limits_or_empty(_douyin_limits_loader(capabilities_dir), "douyin")
-    findings = preflight_findings(meta, info, episode, capabilities_dir, limits)
+    limits = _limits_or_empty(_douyin_limits_loader(platforms_dir), "douyin")
+    findings = preflight_findings(meta, info, episode, platforms_dir, limits)
     errors = [f for f in findings if f.level == epmeta.ERROR]
     if errors:
         # 有硬约束违规就不出包——宁可现在报错，也不要出一个发不出去的包。

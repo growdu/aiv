@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CAPABILITIES = REPO_ROOT / "publish" / "capabilities"
+CAPABILITIES = REPO_ROOT / "platforms"
 
 PLATFORMS = ("channels", "bilibili", "douyin")
 
@@ -87,7 +87,7 @@ MEDIA_KEYS = {platform: tuple(pinned) for platform, pinned in MEDIA_PINNED.items
 
 
 def _load(platform: str) -> dict:
-    path = CAPABILITIES / f"{platform}.toml"
+    path = CAPABILITIES / platform / "capability.toml"
     assert path.is_file(), f"缺少能力声明：{path}"
     return tomllib.loads(path.read_text(encoding="utf-8"))
 

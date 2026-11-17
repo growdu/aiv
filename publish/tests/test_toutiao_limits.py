@@ -15,7 +15,7 @@ from pathlib import Path
 from publishkit.capability import load_capability_file
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DECLARATION = REPO_ROOT / "publish" / "capabilities" / "toutiao.toml"
+DECLARATION = REPO_ROOT / "platforms" / "toutiao" / "capability.toml"
 
 #: 2026-11-13 实测出来的限额。原样抄在这里，而不是从文件里读出来再断言
 #: 自己——那只是把文件内容抄了一遍，测不出「被改回去了」。

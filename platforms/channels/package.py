@@ -176,11 +176,11 @@ def _checklist(episode: str, copy: contract.ChannelsCopy,
     return "\n".join(lines)
 
 
-def _channels_limits_loader(capabilities_dir: str | Path | None):
-    """能力声明的读法。默认读仓库里那份 `publish/capabilities/`。"""
-    if capabilities_dir is None:
+def _channels_limits_loader(platforms_dir: str | Path | None):
+    """能力声明的读法。默认读仓库里那份 `platforms/`。"""
+    if platforms_dir is None:
         return epmeta.load_limits
-    base = Path(capabilities_dir)
+    base = Path(platforms_dir)
 
     def load(platform: str) -> dict:
         return epmeta.load_limits(platform, base)
@@ -212,7 +212,7 @@ def _for_channels(findings: list) -> list:
 
 def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
                        episode: str,
-                       capabilities_dir: str | Path | None = None) -> list:
+                       platforms_dir: str | Path | None = None) -> list:
     """出包前的预检：文案层 + 技术层。
 
     返回的 finding 里 `error` 的必须先改，`warning` 的要写进清单。
@@ -221,16 +221,16 @@ def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
         _channels_only(meta),
         contract_episode=episode,
         duration=info.duration,
-        limits_loader=_channels_limits_loader(capabilities_dir),
+        limits_loader=_channels_limits_loader(platforms_dir),
     )
     findings = _for_channels(findings)
-    findings.extend(preflight.check_video(info, "channels", capabilities_dir))
+    findings.extend(preflight.check_video(info, "channels", platforms_dir))
     return findings
 
 
 def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
                   out_root: str | Path,
-                  capabilities_dir: str | Path | None = None,
+                  platforms_dir: str | Path | None = None,
                   outbox_dir: str | Path | None = None) -> PackageResult:
     """出一期在视频号上的发布包。"""
     copy = contract.slice_copy(meta)
@@ -239,7 +239,7 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
         raise FileNotFoundError(f"成片不存在：{video_path}")
 
     info = preflight.probe(video_path)
-    findings = preflight_findings(meta, info, episode, capabilities_dir)
+    findings = preflight_findings(meta, info, episode, platforms_dir)
     errors = [f for f in findings if f.level == epmeta.ERROR]
     if errors:
         # 有硬约束违规就不出包——宁可现在报错，也不要出一个发不出去的包。

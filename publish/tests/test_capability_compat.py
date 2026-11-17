@@ -6,7 +6,7 @@
 **解法不是改 platforms/wechat/，而是在契约层加这条兼容性测试**（规格 §5.3）——
 它**只读** platforms/wechat/，不改它一个字节；任一边漂移，测试立刻红。
 
-今天它生效了：``publish/capabilities/wechat.toml`` 已进仓库（2026-11-13），
+今天它生效了：``platforms/wechat/capability.toml`` 已进仓库（2026-11-13），
 公众号的能力声明不再是散在几个分支上的口头约定。
 
 > **值从哪来**：以 ``platforms/wechat/`` 的常量为准。规格 §5 的示例里写的是
@@ -25,8 +25,7 @@ from publishkit import load_capability_file
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WEIXIN_DIR = REPO_ROOT / "platforms" / "wechat"
-CAPABILITIES_DIR = REPO_ROOT / "publish" / "capabilities"
-WECHAT_CAPABILITY = CAPABILITIES_DIR / "wechat.toml"
+WECHAT_CAPABILITY = REPO_ROOT / "platforms" / "wechat" / "capability.toml"
 
 
 def _wechat_posts():
@@ -58,7 +57,7 @@ def test_wechat_limits_match_the_weixin_constants():
 
     if not WECHAT_CAPABILITY.is_file():
         pytest.skip(
-            "publish/capabilities/wechat.toml 还没进仓库（平台能力声明分散在"
+            "platforms/wechat/capability.toml 还没进仓库（平台能力声明分散在"
             "几个分支上，见规格 §12）——那份文件落地后本条开始生效"
         )
 

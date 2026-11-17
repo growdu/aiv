@@ -9,7 +9,7 @@ if str(REPO_ROOT / "platforms") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "platforms"))
 
 SOURCE_POSTS = REPO_ROOT / "source" / "_posts"
-CAPABILITIES = REPO_ROOT / "publish" / "capabilities"
+CAPABILITIES = REPO_ROOT / "platforms" / "toutiao"
 
 #: The directories inside the repository that the commands write into when
 #: they are not told otherwise.  ``publish/outbox/`` holds tracked

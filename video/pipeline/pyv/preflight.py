@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
 
-from pyv.epmeta import CAPABILITIES_DIR, Finding, MetaError
+from pyv.epmeta import PLATFORMS_DIR, Finding, MetaError
 
 ERROR = "error"
 WARNING = "warning"
@@ -191,9 +191,9 @@ def has_faststart(video: str | Path) -> bool:
     return boxes.index("moov") < boxes.index("mdat")
 
 
-def _load_media(platform: str, capabilities_dir: Path | None) -> dict:
-    base = Path(capabilities_dir) if capabilities_dir else CAPABILITIES_DIR
-    path = base / f"{platform}.toml"
+def _load_media(platform: str, platforms_dir: Path | None) -> dict:
+    base = Path(platforms_dir) if platforms_dir else PLATFORMS_DIR
+    path = base / platform / "capability.toml"
     if not path.is_file():
         raise MetaError(f"能力声明不存在：{path}")
     data = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -201,9 +201,9 @@ def _load_media(platform: str, capabilities_dir: Path | None) -> dict:
 
 
 def check_video(info: VideoInfo, platform: str,
-                capabilities_dir: Path | None = None) -> list[Finding]:
+                platforms_dir: Path | None = None) -> list[Finding]:
     """按平台能力声明判定一条成片。"""
-    media = _load_media(platform, capabilities_dir)
+    media = _load_media(platform, platforms_dir)
     findings: list[Finding] = []
     target = platform
 

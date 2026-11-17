@@ -24,7 +24,7 @@ from publishkit.capability import load_capability_file
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOUTIAO_DIR = REPO_ROOT / "platforms" / "toutiao"
-REAL_DECLARATION = REPO_ROOT / "publish" / "capabilities" / "toutiao.toml"
+REAL_DECLARATION = REPO_ROOT / "platforms" / "toutiao" / "capability.toml"
 
 BASE_TOML = """\
 id = "toutiao"
@@ -65,13 +65,18 @@ def _adapter_loader():
     return load_capability
 
 
-def _read_by_both(tmp_path, text, filename="toutiao.toml"):
+def _read_by_both(tmp_path, text, platform="toutiao"):
     """Feed one declaration to both readers.
 
     Returns ``(contract, adapter)``; each entry is ``("ok", capability)``
     or ``("rejected", message)``.
+
+    声明按新布局摆：``<tmp_path>/<平台名>/capability.toml``——**目录名就是
+    注册表的名字**，契约层拿它核对 ``id``。
     """
-    path = tmp_path / filename
+    directory = tmp_path / platform
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "capability.toml"
     path.write_text(text, encoding="utf-8")
 
     loader = _adapter_loader()
@@ -165,7 +170,7 @@ def test_both_readers_reject_the_same_broken_declarations(tmp_path, label, text)
     ("label", "text", "strict_one"),
     [
         (
-            "id 与文件名不一致",
+            "id 与目录名不一致",
             BASE_TOML.replace('id = "toutiao"', 'id = "other"'),
             "contract",
         ),
@@ -184,7 +189,7 @@ def test_both_readers_reject_the_same_broken_declarations(tmp_path, label, text)
         ),
     ],
     ids=[
-        "id_not_matching_the_filename",
+        "id_not_matching_the_directory_name",
         "extra_key_in_the_adapter_table",
         "typo_in_a_limit_key",
     ],

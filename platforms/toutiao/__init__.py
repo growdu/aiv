@@ -4,7 +4,7 @@
 平台 adapter 契约，与 `platforms/wechat/` 平级、互不引用。
 
 接缝只有两处：
-  1. `publish/capabilities/toutiao.toml` —— 平台限额与自动化档位（数据）
+  1. `platforms/toutiao/capability.toml` —— 平台限额与自动化档位（数据）
   2. 一份发布清单 manifest JSON —— 调度层交给本包的内容单元与目标平台
 
 权威文档：

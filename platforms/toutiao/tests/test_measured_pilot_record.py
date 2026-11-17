@@ -3,7 +3,7 @@
 两份文件在说同一件事：
 
 * ``platforms/toutiao/docs/02-试点记录.md`` §R2 —— 实测看到的原话与数字；
-* ``publish/capabilities/toutiao.toml`` —— 限额落在哪。
+* ``platforms/toutiao/capability.toml`` —— 限额落在哪。
 
 它们对不上，就是有人改了一边忘了另一边。而限额改错了**不会报错**：
 平台不会提示「你把封面切竖了」，只会把封面再裁一次上下两半。

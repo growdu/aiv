@@ -1,6 +1,6 @@
 """Read the Toutiao capability declaration.
 
-The platform limits live in ``publish/capabilities/toutiao.toml`` -- data,
+The platform limits live in ``platforms/toutiao/capability.toml`` -- data,
 not code.  The adapter reads them at runtime so that a platform rule change
 is a TOML edit and never a code change.
 
@@ -104,7 +104,7 @@ class Capability:
 
 def default_capability_path() -> Path:
     """The declaration shipped with the repository."""
-    return _REPO_ROOT / "publish" / "capabilities" / "toutiao.toml"
+    return _REPO_ROOT / "platforms" / "toutiao" / "capability.toml"
 
 
 # --- 字段校验 -----------------------------------------------------------

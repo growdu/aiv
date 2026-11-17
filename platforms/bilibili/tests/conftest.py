@@ -14,7 +14,7 @@ from pyv import epmeta  # noqa: E402
 def _encode(path: Path, seconds: int = 3) -> Path:
     """造一段合法的小视频。
 
-    参数按 B 站自己的门槛来（`publish/capabilities/bilibili.toml` 的 `[media]`）：
+    参数按 B 站自己的门槛来（`platforms/bilibili/capability.toml` 的 `[media]`）：
     B 站不设最小分辨率，但设了 `max_keyframe_gap_s = 10`。
     夹具自己不合格的话，测到的就只剩预检，而不是出包。
     """
