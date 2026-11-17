@@ -235,14 +235,30 @@ def _package_and_record(args, capability, article, store):
     写的是 ``drafted``；重出包会把那份记录写回 ``packaged``，等于把
     「草稿已在平台上」从账上抹掉。内容变了才重出包——那时平台上的草稿
     已经旧了，本来就该重走一遍。
+
+    ``--packages-only`` 走的是另一条路：**只出包，不写快照、不碰状态**。
+    它解决的是一个具体的问题——发布包是本地产物（``toutiao/out/`` 在
+    .gitignore 里），清一次就没了；但账本里那篇仍然是「drafted」，
+    ``convert`` 认定「内容没变、跳过」，于是包再也回不来。
+    要给已在平台上的草稿补图，就得先把包重新生出来，而这一步
+    **不能动账**：动了账，「草稿已在平台上」这件事就被抹掉了。
     """
     fp = fingerprint(article.body)
+    if getattr(args, "packages_only", False):
+        # 只出包：指纹门在这里不起作用——包没了就得重出，与内容变没变无关。
+        package = write_package(
+            article, capability, args.out_dir, args.posts_dir, args.source_url,
+            fetch_remote=getattr(args, "fetch_remote", False),
+        )
+        return package, None, store.get(article.content_id)
+
     state = store.get(article.content_id)
     if not needs_publish(fp, state):
         return None, None, state
 
     package = write_package(
-        article, capability, args.out_dir, args.posts_dir, args.source_url
+        article, capability, args.out_dir, args.posts_dir, args.source_url,
+        fetch_remote=getattr(args, "fetch_remote", False),
     )
     snapshot = write_snapshot(package, args.outbox_dir)
 
@@ -295,7 +311,10 @@ def _convert(args) -> tuple:
     ))
     print("图片：{} 张".format(len(result.article.images)))
     print("发布包：{}".format(package.package_dir))
-    print("状态快照：{}".format(snapshot))
+    if snapshot is None:
+        print("账本未动（--packages-only）：快照与状态文件都没写")
+    else:
+        print("状态快照：{}".format(snapshot))
     for note in result.article.notes:
         print("  ! {}".format(note))
     # 出包本身成功了，但状态文件坏过：这次运行不算干净。
@@ -558,6 +577,12 @@ def build_parser() -> argparse.ArgumentParser:
                          help="文章在 source/_posts 下的相对路径（去掉 .md）")
     convert.add_argument("--all", dest="all_posts", action="store_true",
                          help="把整个语料一次性出包")
+    convert.add_argument("--packages-only", dest="packages_only", action="store_true",
+                         help="只出包：不写快照、不碰状态文件"
+                              "（给已在平台上的草稿补东西时用这一档）")
+    convert.add_argument("--fetch-remote", dest="fetch_remote", action="store_true",
+                         help="把正文里的外链图也下载下来打进包里"
+                              "（默认不下载：出包不依赖网络，下不到的还是人工处理）")
     convert.set_defaults(func=cmd_convert)
 
     publish = sub.add_parser("publish", help="产出发布包（API 权限开通后才会真正上传）",

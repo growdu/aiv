@@ -157,6 +157,153 @@ def load_bilibili_plan(package_dir: Path) -> BilibiliPlan:
     )
 
 
+@dataclass
+class ToutiaoImage:
+    """正文里的一张图。
+
+    ``number`` 是**切片器给的图号**（正文里占位符写的是【图N】），
+    不是文件在包里的序号——外链图没有文件，但它的号照样占着。
+
+    ``path`` 为 None 有两种原因：图本来就是外链（出包不下载外链图），
+    或者本地图转不出来（Pillow 读不了 / 压不进上限）。
+    两种都要人工补，草稿里那个占位符就该留着。
+    """
+
+    number: int
+    path: Path | None = None
+    source: str | None = None
+
+
+@dataclass
+class ToutiaoPlan:
+    """一篇文章在头条号上的发布计划。
+
+    **头条号的包结构与视频号、B站都不一样**（实测 2026-11-17）：
+
+    | 项 | 视频号 | B站 | 头条号 |
+    | --- | --- | --- | --- |
+    | 正文 | `description.txt` | `description.txt` | **`article.html`**（带排版的 HTML） |
+    | 图片 | 视频本身 | 封面 | **`images/NN.webp`**（正文图，按图号命名） |
+    | 封面 | `cover-4x3.jpg` + `cover-3x4.jpg` | `cover.jpg` | **`cover.webp`**（单图，452:352） |
+    | 机器可读信息 | `meta.json` | `meta.json` | **`meta.json`** |
+
+    字数口径（平台的：非 ASCII 逐字 + ASCII 每两个折一个）由出包时算好放在
+    ``meta.json`` 里——**执行器不重算**，那套口径只有 adapter 里有。
+    """
+
+    content_id: str
+    package_dir: Path
+    title: str
+    digest: str = ""
+    body_html: str = ""
+    body_chars: int = 0
+    platform_chars: int = 0
+    images: tuple[ToutiaoImage, ...] = ()
+    cover: Path | None = None
+
+    def image_paths(self) -> dict[int, Path]:
+        """图号 → 本地文件。只给真的有文件的那几张。"""
+        return {
+            image.number: image.path
+            for image in self.images
+            if image.path is not None and image.path.is_file()
+        }
+
+    def missing_images(self) -> list[int]:
+        """哪些图号没有本地文件（外链图 / 转不出来的图）。"""
+        return [
+            image.number
+            for image in self.images
+            if image.path is None or not image.path.is_file()
+        ]
+
+
+def load_toutiao_plan(package_dir: Path) -> ToutiaoPlan:
+    """从头条号发布包目录读出发布计划。"""
+    root = Path(package_dir)
+    if not root.is_dir():
+        raise PlanError(f"发布包目录不存在：{root}")
+
+    meta: dict = {}
+    meta_path = root / "meta.json"
+    if meta_path.is_file():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            raise PlanError(f"meta.json 读不出来：{error}") from error
+
+    # title.txt 是两行：第一行标题，第二行摘要（出包时写的）。
+    title_file = root / "title.txt"
+    if not title_file.is_file():
+        raise PlanError(f"发布包里没有标题：{title_file}")
+    title_lines = title_file.read_text(encoding="utf-8").splitlines()
+    title = title_lines[0].strip() if title_lines else ""
+    digest = title_lines[1].strip() if len(title_lines) > 1 else ""
+    if not title:
+        raise PlanError(f"发布包里没有标题：{title_file}")
+
+    body_html = _read_text(root / "article.html", required=False)
+    images: list[ToutiaoImage] = []
+    for entry in meta.get("images") or []:
+        number = int(entry.get("number") or 0)
+        if number < 1:
+            continue
+        relative = entry.get("file")
+        path = (root / relative) if relative else None
+        images.append(
+            ToutiaoImage(
+                number=number,
+                path=path if path is not None and path.is_file() else None,
+                source=entry.get("source"),
+            )
+        )
+
+    cover_relative = meta.get("cover")
+    cover = (root / cover_relative) if cover_relative else None
+    if cover is not None and not cover.is_file():
+        cover = None
+
+    return ToutiaoPlan(
+        content_id=str(meta.get("content_id") or root.name),
+        package_dir=root,
+        title=title,
+        digest=digest or str(meta.get("digest") or ""),
+        body_html=body_html,
+        body_chars=int(meta.get("body_chars") or 0),
+        platform_chars=int(meta.get("platform_chars") or 0),
+        images=tuple(sorted(images, key=lambda image: image.number)),
+        cover=cover,
+    )
+
+
+def find_toutiao_plan(packages_dir: Path, content_id: str) -> ToutiaoPlan:
+    """在发布包目录里按 content id 找一篇。
+
+    **为什么扫目录而不是按名字拼路径**：content id 里带斜杠（``ai/claude安装教程``），
+    包目录名是它把斜杠换成横杠的结果——那条规则是 adapter 的知识，
+    执行器不 import adapter，所以这里读每个包的 ``meta.json`` 来认。
+    """
+    root = Path(packages_dir)
+    if not root.is_dir():
+        raise PlanError(f"发布包目录不存在：{root}")
+    for candidate in sorted(root.iterdir()):
+        if not candidate.is_dir():
+            continue
+        meta_path = candidate / "meta.json"
+        if not meta_path.is_file():
+            continue
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if meta.get("content_id") == content_id:
+            return load_toutiao_plan(candidate)
+    raise PlanError(
+        f"发布包里没有这一篇：{content_id}\n"
+        f"先出包：python3 -m toutiao.cli convert --all --packages-only（目录 {root}）"
+    )
+
+
 def load_plan(package_dir: Path) -> PublishPlan:
     """从一个发布包目录读出发布计划。"""
     root = Path(package_dir)

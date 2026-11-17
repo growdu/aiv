@@ -41,16 +41,19 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 from .assets import (
     AssetNotFound,
+    AssetUnreachable,
     ImageTooLarge,
     RemoteAsset,
     UnreadableImage,
     can_make_cover,
+    fetch_remote_asset,
     is_remote,
     make_cover,
     prepare_image,
@@ -226,6 +229,7 @@ def write_package(
     package_root: Path,
     posts_dir: Path,
     source_url: str = "https://growdu.cn",
+    fetch_remote: bool = False,
 ) -> PackageResult:
     """Write the manual publish package for one article.
 
@@ -240,6 +244,14 @@ def write_package(
     The pictures that need a human -- remote, missing, unreadable or too
     big -- never break the package.  They are listed in the checklist
     with their URL or path, and the article goes out anyway.
+
+    ``fetch_remote`` decides what happens to a **remote** picture (one the
+    post links to instead of shipping it).  By default it is *not*
+    downloaded: packaging stays free of the network, on purpose -- CI has
+    no outside network and a package must not fall over because somebody
+    else's picture server is down.  With the flag on, the picture is
+    downloaded, converted and packed like any other; the ones that cannot
+    be fetched still fall back to the "a human has to do this" list.
 
     Only the ``manual`` automation may take this path.  The upgrade
     route is a one-line TOML edit, so that edit must not quietly
@@ -288,13 +300,45 @@ def write_package(
         body_images.append((number, article.images[number - 1]))
 
     prepared = []
+    #: 跟 ``prepared`` 一一对应的图号。meta.json 里要说清「哪个占位符对应哪个文件」，
+    #: 光有文件没有号，对不上位置。
+    prepared_numbers = []
     remote: list[str] = []
     unreadable: list[str] = []
     oversized: list[str] = []
     for number, relative in body_images:
         if is_remote(relative):
-            # 外链图不下载 —— 出包不依赖网络，交给人工。
-            remote.append(relative)
+            if not fetch_remote:
+                # 外链图不下载 —— 出包不依赖网络，交给人工。
+                remote.append(relative)
+                continue
+            # 显式要下载的那一档：下得到就当本地图处理（下不到还是人工）。
+            try:
+                data = fetch_remote_asset(relative)
+            except AssetUnreachable:
+                remote.append(relative)
+                continue
+            try:
+                with tempfile.NamedTemporaryFile(suffix=".img", delete=False) as handle:
+                    handle.write(data)
+                    downloaded = Path(handle.name)
+            except OSError:
+                remote.append(relative)
+                continue
+            try:
+                info = prepare_image(
+                    downloaded, images_dir / "{:02d}.webp".format(number), limits.image_bytes
+                )
+            except UnreadableImage:
+                remote.append(relative)
+                continue
+            except ImageTooLarge:
+                oversized.append(relative)
+                continue
+            finally:
+                downloaded.unlink(missing_ok=True)
+            prepared.append(info)
+            prepared_numbers.append(number)
             continue
         try:
             source = resolve_asset(relative, posts_dir)
@@ -321,6 +365,7 @@ def write_package(
             oversized.append(relative)
             continue
         prepared.append(info)
+        prepared_numbers.append(number)
 
     # 封面取「第一张能裁出合规封面的正文图」—— 第一张裁不动、第二张能裁时
     # 要用第二张。判定用的是已转好的 webp：prepare_image() 压不进时会缩一半，
@@ -482,6 +527,38 @@ def write_package(
     if notes:
         readme += "\n## 切片备注\n\n" + "\n".join("- " + note for note in notes) + "\n"
     (package_dir / "README.md").write_text(readme, encoding="utf-8")
+
+    # 机器可读的一份。README 是给人看的清单，这一份是给**执行器**看的
+    # （浏览器那个包按你的惯例会读 meta.json）：字数口径、图号与文件的对应
+    # 关系都在这里。执行器不 import 本 adapter，也不重算平台字数——
+    # 平台的字数口径只有这里算得对（见 wordcount.py）。
+    (package_dir / "meta.json").write_text(
+        json.dumps(
+            {
+                "content_id": article.content_id,
+                "platform": capability.id,
+                "title": article.title,
+                "digest": article.digest,
+                "body_chars": len(rendered.text),
+                "platform_chars": platform_word_count(rendered.text),
+                "images": [
+                    {
+                        "number": number,
+                        "file": "images/{:02d}.webp".format(number)
+                        if number in prepared_numbers else None,
+                        "source": relative,
+                    }
+                    for number, relative in body_images
+                ],
+                "cover": "cover.webp" if cover_written else None,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     # 「packaged」不是「已发布」：manual 档下这一篇还在等一个人把它传上去，
     # 快照里要说清楚，免得站点索引把它当成已发。

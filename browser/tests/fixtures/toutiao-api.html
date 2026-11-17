@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>头条接口替身</title>
+</head>
+<body>
+<p>本地假页面：把 fetch 换成替身，记下每次调用就返回 canned 响应。</p>
+<script>
+// 替身 fetch：把调用记进 window.__calls，然后回 canned 响应。
+// **不联网**——测试要的是那段 JS 胶水代码（base64 → File → FormData、
+// URLSearchParams 编码），不是头条号的真接口。
+window.__calls = [];
+window.fetch = async (url, options) => {
+  const record = {url: String(url), method: (options && options.method) || 'GET'};
+  if (options && options.body && typeof FormData !== 'undefined'
+      && options.body instanceof FormData) {
+    const file = options.body.get('image');
+    record.kind = 'upload';
+    record.filename = file ? file.name : null;
+    record.size = file ? file.size : 0;
+    record.type = file ? file.type : null;
+  } else if (options && options.body) {
+    record.kind = 'publish';
+    const params = new URLSearchParams(options.body);
+    record.fields = {};
+    for (const [key, value] of params.entries()) record.fields[key] = value;
+  } else {
+    record.kind = 'other';
+  }
+  window.__calls.push(record);
+  const body = record.kind === 'upload'
+    ? {code: 0, message: 'success', data: {
+        image_uri: 'tos-cn-i-test/uri',
+        image_url: 'https://img.example/x~tplv-obj.image',
+        image_width: 312, image_height: 200,
+        image_mime_type: 'image/webp', image_type: 1}}
+    : {code: 0, data: {content: 'ok'}};
+  return {status: 200, text: async () => JSON.stringify(body)};
+};
+</script>
+</body>
+</html>
