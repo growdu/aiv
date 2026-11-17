@@ -216,4 +216,4 @@ cd "$(git rev-parse --show-toplevel)" && python3 -m pytest platforms/toutiao/tes
 - **通知措辞必须区分三种状态**：「待上传」/「待你点发表」/「已发布」——
   含糊说「已发布」是发布场景里最贵的 bug
 - **不 import `platforms/wechat/`**，也不 import `publish/` 的包——契约只通过
-  `capabilities/toutiao.toml` 与 manifest JSON 传递
+  `platforms/toutiao/capability.toml` 与 manifest JSON 传递
