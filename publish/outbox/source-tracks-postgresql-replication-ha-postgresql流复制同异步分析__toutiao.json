@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/replication-ha/postgresql流复制同异步分析",
+  "draft_id": "7708376317443523108",
+  "package_dir": "toutiao/out/source-tracks-postgresql-replication-ha-postgresql流复制同异步分析",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "postgresql流复制同异步分析",
+  "updated_at": "2026-11-15T20:43:57+08:00"
+}

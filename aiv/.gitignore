@@ -47,6 +47,16 @@ __pycache__/
 # 下面这些是「换台机器要跑出片就必须有」的东西。删掉任何一条，
 # `aiv/pipeline/tests/test_assets_are_tracked.py` 会变红。
 
+# 抽帧的**清单**要入库，帧本身不入库。
+#
+# 帧是产物（跟着本机的成片走）；清单是「这一期抽了哪些帧、每帧该有
+# 什么文案」的对照表——审核记录里的判断要能对着它复核，所以它入库。
+# 放行顺序要紧：先放行目录（git 才会往里走），再拦内容，最后放行清单。
+!review/frames/
+review/frames/**
+!review/frames/*/
+!review/frames/*/frames.md
+
 # 旁白（六期）。没有它就对齐不了、渲染不了。
 !narration_*.mp3
 

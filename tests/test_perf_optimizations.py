@@ -38,7 +38,7 @@ COVER_EJS = THEME_LAYOUT / "_partial" / "bg-cover-content.ejs"
 PATCH_THEME = REPO / "tools" / "patch-theme.py"
 IMG_FILTER = REPO / "scripts" / "img-dimensions.js"
 
-SAMPLE_PNG = REPO / "docs" / "db" / "logical_decode" / "pa_decode" / "image.png"
+SAMPLE_PNG = REPO / "docs" / "source-tracks" / "postgresql" / "logical-replication" / "pa_decode" / "image.png"
 SAMPLE_JPG = REPO / "docs" / "network" / "ipv6_img" / "07-55785c722b16.jpg"
 
 

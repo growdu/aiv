@@ -110,13 +110,54 @@ def test_s05_bench_draws_a_range_not_a_single_precise_value():
     import pyv.scenes.s05_bench as s05
 
     params = _params_for("pyv.scenes.s05_bench")
-    marks = s05.scale(1000.0)
+    marks = s05.scale(1000.0, 120.0)
     unit = marks["unit"]
     assert marks["serial_end"] - marks["x0"] == pytest.approx(unit)
     assert marks["range_x"] - marks["x0"] == pytest.approx(unit * 2)
     assert marks["range_end"] - marks["x0"] == pytest.approx(unit * 5)
     assert marks["range_x"] > marks["serial_end"], "区间必须整体落在串行基线之外"
     assert params["callout"] == "2–5 倍", "画面上的倍数必须与口播一致"
+
+
+def test_s05_bench_starts_on_the_same_left_margin_as_its_title():
+    """刻度轨道、条与标签要跟标题、说明行在同一条左边距上。
+
+    这一段出过一次版面塌陷：轨道的原点写成了 `unit * TRACK_X`，
+    而 `unit` 已经是像素量纲（w*UNIT_W），乘出来是 12 px——
+    标签与条贴死画幅左边，标题行却在 w*0.06 处，两样东西不在一条
+    左边距上，整张图重心偏左，右侧空出近半幅。
+
+    这条测试量的是**画面上真正落墨的最左像素**，不是常量：
+    常量对了、绘制时又乘错一遍，它照样绿。
+    """
+    import pyv.scenes.s05_bench as s05
+    from pyv.palette import COLORS, hex_to_rgb
+
+    w, h = 1920, 1080
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+    ctx = cairo.Context(surface)
+    ctx.set_source_rgb(*hex_to_rgb(COLORS["bg"]))
+    ctx.paint()
+    s05.render(ctx, 0.6, w, h, _params_for("pyv.scenes.s05_bench"))
+
+    bg = bytes(int(round(c * 255)) for c in hex_to_rgb(COLORS["bg"]))
+    stride = surface.get_stride()
+    data = surface.get_data()
+
+    def leftmost_ink(y0: int, y1: int) -> int:
+        for x in range(w):
+            for y in range(y0, y1):
+                off = y * stride + x * 4
+                if data[off:off + 3] != bg:
+                    return x
+        raise AssertionError(f"y∈[{y0},{y1}) 一行墨都没落")
+
+    title_x = leftmost_ink(90, 160)          # 标题行
+    label_x = leftmost_ink(292, 332)         # 「串行解码」标签行
+    assert abs(title_x - label_x) <= 2, (
+        f"标签落墨在 x={label_x}，标题在 x={title_x}——不在同一条左边距上"
+    )
+    assert label_x > 40, "标签几乎贴死画幅左边，左边距没有留出来"
 
 
 def test_s04_separates_reader_from_walsender():

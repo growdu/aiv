@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/replication-ha/pg_walreceiver",
+  "draft_id": "7708376871846674980",
+  "package_dir": "toutiao/out/source-tracks-postgresql-replication-ha-pg_walreceiver",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "pg_walreceiver",
+  "updated_at": "2026-11-15T20:43:57+08:00"
+}

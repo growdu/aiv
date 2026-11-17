@@ -87,6 +87,14 @@ jobs:
       - name: Build video pages
         # AIV 的口播稿 → 站上的视频内容单元与合集页。
         run: python3 tools/build-video-pages.py
+      - name: Build learning path
+        # 全站文章 → 赛道 + 阶段的学习路径页（/learning/ 和每条赛道一页）。
+        # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物）、
+        # 必须在 build-video-pages.py 之后（那 6 期视频内容单元也是文章，
+        # 要一起归类）、必须在 hexo generate 之前（页面要进产物）。
+        # 规则在仓库根的 data/learning-path.json，文章一条都没归上的话
+        # 这一步非零退出——「漏归类」不许悄悄发生。
+        run: python3 tools/build-learning-path.py
       - name: Build publish index
         # publish/outbox 的发布状态 → 站点用的发布索引（文章页的「这篇还发到了」）。
         run: python3 tools/build-publish-index.py
@@ -383,6 +391,14 @@ jobs:
         run: python3 tools/sync-hexo.py
       - name: Build video pages
         run: python3 tools/build-video-pages.py
+      - name: Build learning path
+        # 全站文章 → 赛道 + 阶段的学习路径页（/learning/ 和每条赛道一页）。
+        # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物）、
+        # 必须在 build-video-pages.py 之后（那 6 期视频内容单元也是文章）、
+        # 必须在 hexo generate 之前（页面要进产物）。
+        # 这一步跑在 root: /blog/ 改写之后，所以生成的页面里的站内链接
+        # 自带 /blog 前缀——镜像站上不会 404。
+        run: python3 tools/build-learning-path.py
       - name: Build publish index
         run: python3 tools/build-publish-index.py
       - name: Build podcast index

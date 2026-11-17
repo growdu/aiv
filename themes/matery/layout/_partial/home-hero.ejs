@@ -23,7 +23,7 @@
   var _heroData = (site.data && site.data.featured) || {};
   var _heroSlugs = _heroData.hero || [];
 
-  // 文章的 permalink 形如 2026/08/18/db/postgresql/learning-path/03-query-pipeline/
+  // 文章的 permalink 形如 2026/08/18/source-tracks/postgresql/index-and-query/learning-path/03-query-pipeline/
   // —— **没有前导斜杠**（url_for 之后才有）。清单里写的是 <相对路径>，
   // 所以这里把日期段剥掉再匹配。
   var _slugOf = function (p) {
@@ -50,6 +50,29 @@
              placeholder="按标题或分类搜索…" autocomplete="off" spellcheck="false" />
       <ul class="home-hero__search-results" id="homeSearchResults" hidden></ul>
       <p class="home-hero__search-hint">按标题搜索 · 全文搜索用顶部导航</p>
+    </div>
+
+    <%# 「从这里开始」——全站文章的学习路径总览。
+        徽章只盖到 9 个分类，读者从一篇文章落地之后没有「下一篇读什么」的
+        可靠去处；这一条就是那个去处。用 <div> 而不是 <nav>：Materialize
+        按元素名给 nav 上样式，会把它压成一条红条。
+
+        数字取自 tools/build-learning-path.py 生成的 source/_data/learning.json，
+        不在模板里写死——文章总数会变，写死的话哪天对不上也没人知道。 %>
+    <%
+      var _lp = (site.data && site.data.learning) || null;
+      var _lpTracks = _lp && _lp.tracks ? _lp.tracks.length : 0;
+      var _lpTotal = _lp && _lp.total ? _lp.total : 0;
+      var _lpHint = _lpTracks
+        ? (_lpTracks + ' 条赛道 · ' + _lpTotal + ' 篇文章 · 每条都排好了顺序')
+        : '按赛道和阶段排好顺序，从这里挑一条走';
+    %>
+    <div class="home-hero__start">
+      <a class="home-hero__start-link" href="<%- url_for('/learning/') %>">
+        <i class="fas fa-map-signs"></i>
+        <span class="home-hero__start-label">从这里开始</span>
+        <span class="home-hero__start-hint"><%= _lpHint %></span>
+      </a>
     </div>
 
     <div class="home-hero__badges"><%

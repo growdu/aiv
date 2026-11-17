@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/transaction-mvcc/postgresql-latch-mechanism",
+  "draft_id": "7708375036335227455",
+  "package_dir": "toutiao/out/source-tracks-postgresql-transaction-mvcc-postgresql-latch-mechanism",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL Latch 机制详解",
+  "updated_at": "2026-11-15T20:43:41+08:00"
+}

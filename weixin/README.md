@@ -101,7 +101,7 @@ cd weixin && python3 -m wechat.cli convert <slug>
 | `status` | 查看所有文章的状态 |
 
 `<slug>` 是文章相对 `source/_posts/` 的路径去掉 `.md`，例如
-`db/postgresql/postgresql-logical-replication-add-guc`。
+`source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc`。
 
 全局选项（`--posts-dir` / `--out-dir` / `--source-url` / `--category-tag` /
 `--max-length`）写在子命令前后都行。

@@ -1,6 +1,6 @@
 # 审校：两地三中心
 
-- 原文：`docs/cluster/kingbase/tptc.md`
+- 原文：docs/cluster/kingbase/tptc.md
 - 范围：全文
 - 目标读者：做数据库集群高可用／两地三中心容灾设计的工程师，
   以及想弄清「监管到底要求什么」的金融行业从业者

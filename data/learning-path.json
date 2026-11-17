@@ -1,0 +1,835 @@
+{
+  "version": 1,
+  "updated": "2026-11-17",
+  "note": "学习路径的分类规则表。**这里是人工策展的部分**，tools/build-learning-path.py 按它把每篇文章落到「赛道 + 阶段」。改这个文件就能改路径，不用改代码。\n\n规则从上往下第一条命中即生效；track_match 决定文章属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**每篇文章都该有一条自己的规则**：fallback_stage 只是防崩溃的兜底（没有专属规则的文章会落进去），守卫测试 tests/test_learning_path.py 钉住它是空的 —— 加了新文章，就得给它写规则。\n\n`platform-meta/`（平台元数据赛道：讲这个站本身怎么造）目前**临时挂在「博客与自媒体」这条赛道下** —— 按语义它属于「把内容变成作品：建站、排版、传播、视频生产线」，等赛道树整体重排时再决定要不要单独立一条赛道。\n\n可用的匹配键：path_prefix（前缀）、path_regex（正则）、path_exact（全等）、category（分类）、tag（标签）、title_contains（标题含）、any / all（组合）、catch_all（无条件，只能写在最后一个阶段）。",
+  "tracks": [
+    {
+      "id": "db-internals",
+      "title": "数据库内核",
+      "icon": "fas fa-database",
+      "summary": "从「会用 PostgreSQL」到「读得懂、还改得动它的源码」",
+      "audience": "想往数据库内核方向走的人。默认你已经会写 SQL，没读过内核源码。",
+      "goal": "走完这条线，你能独立读懂一条 SQL 在 PostgreSQL 里的完整轨迹，能定位一次 WAL 落盘的完整链路，能说清楚 MVCC 与锁的每一个落点。",
+      "track_match": [
+        {
+          "path_prefix": "source-tracks/postgresql/"
+        },
+        {
+          "path_prefix": "video/"
+        }
+      ],
+      "fallback_stage": "L8",
+      "stages": [
+        {
+          "id": "L1",
+          "title": "起步与全景",
+          "goal": "先知道它是什么、怎么跑起来、整体长什么样 —— 这一阶段不碰源码细节。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/postgresql/getting-started/"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "存储引擎：页、文件与内存",
+          "goal": "数据落在哪、怎么读进来、内存怎么分 —— 存储这一层的地基。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/postgresql/storage-engine/"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "索引与查询管线",
+          "goal": "一条 SQL 从解析到执行，中间经过哪些层；索引为什么快。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/postgresql/index-and-query/"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "事务、MVCC 与并发",
+          "goal": "隔离级别到底靠什么实现，行锁在哪一层加上去的。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/postgresql/transaction-mvcc/"
+            },
+            {
+              "path_exact": "video/row-lock"
+            },
+            {
+              "path_exact": "video/csn-total-ordering"
+            }
+          ]
+        },
+        {
+          "id": "L5",
+          "title": "WAL、checkpoint 与恢复",
+          "goal": "一次提交落盘了什么，崩了以后怎么爬起来。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/postgresql/wal-and-recovery/"
+            },
+            {
+              "path_exact": "video/wal-interleave"
+            }
+          ]
+        },
+        {
+          "id": "L6",
+          "title": "复制与高可用",
+          "goal": "备库怎么追主库、怎么切、复制槽是干什么的。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/postgresql/replication-ha/"
+            }
+          ]
+        },
+        {
+          "id": "L7",
+          "title": "逻辑复制与流式（站内最厚的一块）",
+          "goal": "把 WAL 变成一条可订阅的变更流：解码、重组、Apply、并行。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/postgresql/logical-replication/"
+            },
+            {
+              "path_exact": "video/pg-parallel-decode"
+            },
+            {
+              "path_exact": "video/parallel-apply"
+            },
+            {
+              "path_exact": "video/structured-ddl"
+            }
+          ]
+        },
+        {
+          "id": "L8",
+          "title": "扩展、性能与生态",
+          "goal": "把内核之外的东西补齐：扩展怎么写、扩展生态里有哪些能打的、性能怎么观测和调，以及别的数据库长什么样。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/postgresql/extensions-perf/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "distributed",
+      "title": "分布式与集群",
+      "icon": "fas fa-sitemap",
+      "summary": "一致性协议、高可用选型，以及那些真在机房里的故障现场",
+      "audience": "做数据库/中间件高可用，或者想搞懂 Raft、DCF 这类协议的人。",
+      "goal": "走完这条线，你能说清一套分布式方案在网络分区下会怎么退化，能自己判断什么时候该上 Paxos/Raft，什么时候同步复制就够。",
+      "track_match": [
+        {
+          "path_prefix": "cluster/"
+        },
+        {
+          "path_prefix": "openguass/"
+        }
+      ],
+      "fallback_stage": "L4",
+      "stages": [
+        {
+          "id": "L1",
+          "title": "分布式基础",
+          "goal": "先把问题定义清楚：分布式要解决什么、要付出什么。",
+          "match": [
+            {
+              "path_regex": "^cluster/(分布式一致性协议|分布式存储需要解决的问题|分布式系统设计必知必会|常用分布式实现架构|常用分布式解决方案|C语言实现分布式自增有序的唯一ID生成算法-snowflake算法|C语言雪花算法,记一次雪花算法的实现)$"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "一致性协议",
+          "goal": "Raft 与 DCF 怎么选主、怎么记账、怎么在分区时保证不脑裂。",
+          "match": [
+            {
+              "path_prefix": "cluster/raft/"
+            },
+            {
+              "path_prefix": "cluster/DCF/"
+            },
+            {
+              "path_prefix": "cluster/zookeeper/"
+            },
+            {
+              "path_regex": "^cluster/raft协议动态调整quorum$"
+            },
+            {
+              "path_regex": "^cluster/分布式集群动态调整quorum值方案对比$"
+            },
+            {
+              "path_prefix": "openguass/"
+            },
+            {
+              "path_regex": "^cluster/corosync/(corosync源码阅读|corosync-qdevice详解|corosync-qdevice源码阅读|corosy-qdevice源码阅读|totem协议详解|disk-paxos详解|libqb源码详解|corosync-qdevice中ffsplit与lsm算法的区别|corosync多仲裁方案设计)$"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "高可用方案与选型",
+          "goal": "同城双活、两地三中心、主从切换 —— 每种方案的成本和故障半径。",
+          "match": [
+            {
+              "path_prefix": "cluster/ha/"
+            },
+            {
+              "path_prefix": "cluster/postgresql/"
+            },
+            {
+              "path_prefix": "cluster/kingbase/"
+            },
+            {
+              "path_prefix": "cluster/oracle/"
+            },
+            {
+              "path_regex": "^cluster/(Patroni详解|主流分布式高可用方案|分布式数据库高可用方案设计|两地三中心技术指标分析|从两地三中心到OceanBase的多地多中心 - 墨天轮|multi_cluster|基于corosync的分布式应用程序开发方案分析)$"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "实战与故障现场",
+          "goal": "真在机房里踩过的坑：仲裁怎么配、网络割裂了怎么办、多地多中心怎么落。",
+          "match": [
+            {
+              "path_prefix": "cluster/corosync/"
+            },
+            {
+              "path_prefix": "cluster/multi_cluster/"
+            },
+            {
+              "path_exact": "cluster/repmgr网络割裂问题"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "linux-network",
+      "title": "Linux 与网络",
+      "icon": "fas fa-server",
+      "summary": "操作系统底座：内存、进程、内核模块，加上 TCP/IP 与网络协议",
+      "audience": "做底层开发、或者想把「性能问题」追到操作系统的人。",
+      "goal": "走完这条线，你能用 GDB 和 perf 把一个「系统卡了」的问题定位到具体的内核路径。",
+      "track_match": [
+        {
+          "path_prefix": "linux/"
+        },
+        {
+          "path_prefix": "network/"
+        },
+        {
+          "path_prefix": "storage/"
+        },
+        {
+          "path_prefix": "protocol/"
+        },
+        {
+          "path_prefix": "computer_communication/"
+        },
+        {
+          "path_prefix": "programmer_self_cultivation/"
+        }
+      ],
+      "fallback_stage": "L5",
+      "stages": [
+        {
+          "id": "L1",
+          "title": "Linux 入门与日常操作",
+          "goal": "命令、目录、脚本、SSH —— 每天都要用的那部分先扎实。",
+          "match": [
+            {
+              "path_regex": "^linux/(linux目录介绍|linux常用高级命令|shell使用|解决SSH连接Linux超时自动断开|linux下svn吐血指北|本地git仓库|centos搭建离线仓库|银河麒麟V10 远程桌面_银河麒麟v10远程桌面-CSDN博客)$"
+            },
+            {
+              "path_regex": "^linux/(logrotate机制详解|git指北|git高级指北|linux下RANDOM和uuid的区别)$"
+            },
+            {
+              "path_prefix": "computer_communication/"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "内存与动态链接",
+          "goal": "进程地址空间、分配器、库的装载与链接 —— 程序为什么会 OOM。",
+          "match": [
+            {
+              "path_prefix": "linux/ebpf/"
+            },
+            {
+              "path_regex": "^linux/(linux内存管理指北|内存管理之dlmalloc|linux cache指北|linux巨页内存指北|不得不知道的linux库的装载、链接)$"
+            },
+            {
+              "path_regex": "^base/(design-pattern|sql)$"
+            },
+            {
+              "path_regex": "^programmer_self_cultivation/"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "内核机制与驱动",
+          "goal": "内核怎么调度、字符设备怎么写、模块怎么加载。",
+          "match": [
+            {
+              "path_regex": "^linux/(linux内核指北|linux内核模块指北|linux字符设备指北|linux锁指北|linux系统接口|kconfig和kbuild指北|gcc attribute指北|uboot指北|linux数据预取|linuxUIO指北|linux ptp指北|linux socket编程指北)$"
+            },
+            {
+              "path_regex": "^linux/(kernel)$"
+            },
+            {
+              "path_regex": "^linux/(kernel/qemu-busybox调试linux|cpu-affinity-top-guide)$"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "网络协议与抓包",
+          "goal": "TCP/IP 到底怎么跑，MTU 为什么会把人坑到外网不通。",
+          "match": [
+            {
+              "path_prefix": "network/"
+            },
+            {
+              "path_prefix": "protocol/"
+            },
+            {
+              "path_regex": "^linux/(vlan使用指北|抓包指北)$"
+            }
+          ]
+        },
+        {
+          "id": "L5",
+          "title": "存储与文件系统",
+          "goal": "本地文件怎么组织，NFS/Samba 怎么配。",
+          "match": [
+            {
+              "path_prefix": "storage/"
+            },
+            {
+              "path_regex": "^linux/lvm详解$"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dataplane",
+      "title": "数据面：DPDK · VPP",
+      "icon": "fas fa-bolt",
+      "summary": "用户态网卡、巨页、无锁队列，以及在这上面写业务",
+      "audience": "做网络设备、高性能网关或者音视频传输的人。",
+      "goal": "走完这条线，你能独立搭起一套 DPDK/VPP 环境，并说清楚每个性能瓶颈出在哪一层。",
+      "track_match": [
+        {
+          "path_prefix": "dpdk/"
+        },
+        {
+          "path_prefix": "vpp/"
+        }
+      ],
+      "fallback_stage": "L4",
+      "stages": [
+        {
+          "id": "L1",
+          "title": "环境与入门",
+          "goal": "先把环境搭起来，跑通第一个包。",
+          "match": [
+            {
+              "path_regex": "^dpdk/(day1|dpdk常用接口指北|dpdk相关|用户态驱动-UIOVFIO|linux大页内存|交叉编译|抓包|pktgen|pktgen编译使用|ptpclient|l3fwd|dpdk之kni使用)$"
+            },
+            {
+              "path_regex": "^dpdk/(lx2160使用dpdk|nxp运行vpp|nxp测试报告)$"
+            },
+            {
+              "path_regex": "^vpp/(vpp使用说明文档|vpp开发指南|vpp调试指北|vpp日志系统)$"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "架构与核心数据结构",
+          "goal": "buffer、ring、vector 怎么串起来，报文在网卡和用户态之间怎么走。",
+          "match": [
+            {
+              "path_regex": "^vpp/(vpp主要数据结构|vpp buffer接口|vpp vector指北|vpp代码流程图)$"
+            },
+            {
+              "path_regex": "^dpdk/(dpdk无锁队列实现|vpp与dpdk的关系)$"
+            },
+            {
+              "path_regex": "^vpp/(vpp发包测试说明文档|vpp抓包)$"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "插件与业务开发",
+          "goal": "在这套栈上写出自己的转发/处理逻辑。",
+          "match": [
+            {
+              "path_regex": "^dpdk/(vpp|vpp使用|vpp使用kni|vpp插件开发)$"
+            },
+            {
+              "path_regex": "^vpp/(fastup插件加载|fastup-kni设计实现说明文档|fastup适配ptp方案|cdu_nxp2160_ptp1588v2实现方案|fastgtpu配置及cli说明文档)$"
+            },
+            {
+              "path_regex": "^dpdk/(fastupkni功能测试)$"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "测试、验证与性能",
+          "goal": "压测怎么打、结果怎么读、瓶颈在哪一层。",
+          "match": [
+            {
+              "path_regex": "^dpdk/fastup"
+            },
+            {
+              "path_regex": "^vpp/(fastup|fatsup|vpp-ip分片测试验证|vpp多网口转发)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-tools",
+      "title": "AI 与工具",
+      "icon": "fas fa-robot",
+      "summary": "先弄懂 AI 怎么工作，再把它变成你自己的杠杆",
+      "audience": "想把 AI 用进日常工作的人。默认你会用搜索和浏览器，还没系统用过 AI。",
+      "goal": "走完这条线，你知道 AI 到底怎么做到的，能挑出该用的那一款工具，也知道自己被它替代的是哪一段工作。",
+      "track_match": [
+        {
+          "path_prefix": "ai/"
+        },
+        {
+          "path_prefix": "chatgpt/"
+        }
+      ],
+      "fallback_stage": "L4",
+      "stages": [
+        {
+          "id": "L1",
+          "title": "AI 是什么、怎么工作的",
+          "goal": "先弄懂它到底怎么做到的 —— 不神秘化，也不妖魔化。",
+          "match": [
+            {
+              "path_regex": "^ai/(01_开场白目录|02_|03_|04_|05_|06_|07_|08_|09_|10_|11_|12_|13_|14_|15_|16_|17_)"
+            },
+            {
+              "path_prefix": "chatgpt/"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "AI 工具箱",
+          "goal": "把它接进你的日常：装好、配好、知道它能替人做哪一步。",
+          "match": [
+            {
+              "path_regex": "^ai/(01-ai常用工具和开发框架|20_|22_)"
+            },
+            {
+              "path_regex": "^ai/claude(/|$)"
+            },
+            {
+              "path_regex": "^ai/claude安装教程($|/)"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "把 AI 变成杠杆",
+          "goal": "从「用 AI 干活」到「靠 AI 放大自己的能力」—— 同样的时间，产出差一个量级。",
+          "match": [
+            {
+              "path_regex": "^ai/(18_|19_)"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "AI 视频平台设计",
+          "goal": "AI 生成视频的平台怎么设计：竞品怎么拆、选型怎么定、架构怎么搭。",
+          "match": [
+            {
+              "path_prefix": "ai/ai_video/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engineering",
+      "title": "工程与语言",
+      "icon": "fas fa-code",
+      "summary": "语言、构建、容器、测试、前端 —— 写得出、交付得了",
+      "audience": "想补齐工程基本功，或者在陌生语言/工具链里快速上手的人。",
+      "goal": "走完这条线，你能在一天内跑起一个陌生语言的项目，能读懂它的构建脚本，并给它加上自动化测试。",
+      "track_match": [
+        {
+          "path_prefix": "language/"
+        },
+        {
+          "path_prefix": "vue/"
+        },
+        {
+          "path_prefix": "docker/"
+        },
+        {
+          "path_prefix": "code/"
+        },
+        {
+          "path_prefix": "es/"
+        },
+        {
+          "path_prefix": "edit/"
+        },
+        {
+          "path_prefix": "page/"
+        },
+        {
+          "path_prefix": "web/"
+        },
+        {
+          "path_prefix": "go_web/"
+        },
+        {
+          "path_prefix": "base/"
+        },
+        {
+          "path_prefix": "alg/"
+        },
+        {
+          "path_prefix": "faq/"
+        },
+        {
+          "path_prefix": "opc/"
+        },
+        {
+          "path_prefix": "tools/"
+        }
+      ],
+      "fallback_stage": "L4",
+      "stages": [
+        {
+          "id": "L1",
+          "title": "计算机基础与语言入门",
+          "goal": "数据结构、编译工具链、内存、版本控制 —— 语言的底子和天天要用的那几个基础工具。",
+          "match": [
+            {
+              "path_prefix": "language/python/"
+            },
+            {
+              "path_prefix": "language/rust/"
+            },
+            {
+              "path_regex": "^language/(C语言内存使用血与泪教训|c语言变长数组|程序基本构造|词法分析与语法分析教程|软件质量|autoconf使用|cmake使用指南|如何阅读autotool管理的C语言项目)$"
+            },
+            {
+              "path_prefix": "alg/"
+            },
+            {
+              "path_regex": "^base/(data-struct|design-pattern)$"
+            },
+            {
+              "path_prefix": "page/how-to-learn-program"
+            },
+            {
+              "path_prefix": "base/"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "工程化：编译、测试、调试",
+          "goal": "Make/CMake、单测、调试器、代码注释工具。",
+          "match": [
+            {
+              "path_prefix": "code/"
+            },
+            {
+              "path_prefix": "edit/"
+            },
+            {
+              "path_prefix": "faq/"
+            },
+            {
+              "path_prefix": "opc/"
+            },
+            {
+              "path_exact": "tools/shell常用脚本"
+            },
+            {
+              "path_exact": "tools/shell脚本进阶"
+            },
+            {
+              "path_exact": "tools/Shell脚本的简单排错法及调试程序bashdb"
+            },
+            {
+              "path_exact": "tools/bashdb安装及调试shell脚本"
+            },
+            {
+              "path_exact": "tools/如何调试bash脚本"
+            },
+            {
+              "path_exact": "tools/doxygen使用指南"
+            },
+            {
+              "path_exact": "tools/不得不会的代码注释工具——doxygen"
+            },
+            {
+              "path_exact": "tools/cunit单元测试使用"
+            },
+            {
+              "path_exact": "tools/vim + ctags + cscope = 强大的IDE_ctags cscope"
+            },
+            {
+              "path_exact": "tools/nc"
+            },
+            {
+              "path_exact": "tools/你一定要知道的黑客小技巧"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "容器与环境",
+          "goal": "Docker 把环境问题关进盒子里；自建服务（code-server、媒体中心）也是这一层的事。",
+          "match": [
+            {
+              "path_prefix": "docker/"
+            },
+            {
+              "path_exact": "tools/code-server"
+            },
+            {
+              "path_exact": "tools/codeserver_docker"
+            },
+            {
+              "path_exact": "tools/那些你不得不会的提高工作效率的软件神器"
+            },
+            {
+              "path_exact": "tools/Jellyfin+Kodi打造个人媒体中心"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "Web、前端与搜索",
+          "goal": "前端框架、页面技术栈、Elasticsearch 文件搜索，以及上网和检索的工具。",
+          "match": [
+            {
+              "path_prefix": "vue/"
+            },
+            {
+              "path_prefix": "es/"
+            },
+            {
+              "path_prefix": "web/"
+            },
+            {
+              "path_prefix": "go_web/"
+            },
+            {
+              "path_regex": "^page/(Csharp|devExpress|gui|java|pdf|pdf-coordinate|pdfParse|python|read-pdfbox-source-code|regexp|ssh)$"
+            },
+            {
+              "path_exact": "tools/15 个提高 Google 搜索效率的小技巧 - 少数派"
+            },
+            {
+              "path_exact": "tools/clash-meta-mihomo-install-guide"
+            },
+            {
+              "path_exact": "tools/clash-meta-user-guide"
+            },
+            {
+              "path_exact": "tools/leanote使用教程"
+            },
+            {
+              "path_exact": "tools/一文教你选择局域网文件服务器"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "life",
+      "title": "人生与成长",
+      "icon": "fas fa-yin-yang",
+      "summary": "学习方法、学业备考、经济周期与城市 —— 作为一个人的那部分",
+      "audience": "任何一个读者。这条赛道不需要技术背景。",
+      "goal": "走完这条线，你能有一套自己的复习/学习方法，并对当下的经济周期和自己的处境有一个不靠情绪的判断。",
+      "track_match": [
+        {
+          "path_regex": "^life/(?!aiv($|/))(?!blog-to-wechat($|/))"
+        },
+        {
+          "path_prefix": "stock/"
+        }
+      ],
+      "fallback_stage": "L4",
+      "stages": [
+        {
+          "id": "L1",
+          "title": "学习方法与自我认知",
+          "goal": "先诊断再动手 —— 这一套框架在后面每一条赛道里都能复用。",
+          "match": [
+            {
+              "path_prefix": "life/road/"
+            },
+            {
+              "path_prefix": "life/doctor_test/"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "学业与备考",
+          "goal": "高考各科方法论、大学的自学与考试计划。",
+          "match": [
+            {
+              "path_prefix": "life/gaokao/"
+            },
+            {
+              "path_prefix": "life/daxue/"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "经济周期与自我经营",
+          "goal": "下行周期里怎么调整预期；股票与金融的基本观察方法。",
+          "match": [
+            {
+              "path_prefix": "life/shehui/"
+            },
+            {
+              "path_prefix": "stock/"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "家乡与私人记录",
+          "goal": "不为了什么而写的那部分。",
+          "match": [
+            {
+              "path_prefix": "life/hometown/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blogging",
+      "title": "博客与自媒体",
+      "icon": "fas fa-pen-nib",
+      "summary": "把内容变成作品：建站、排版、传播、视频生产线",
+      "audience": "想把自己的输出沉淀下来、并且让更多人看到的人。",
+      "goal": "走完这条线，你能独立搭起一个自己的站点，把一篇文章同时变成图文、音频和视频，并且知道它们各自该怎么写。",
+      "track_match": [
+        {
+          "path_prefix": "blog/"
+        },
+        {
+          "path_prefix": "video_work/"
+        },
+        {
+          "path_regex": "^life/aiv($|/)"
+        },
+        {
+          "path_regex": "^life/blog-to-wechat($|/)"
+        },
+        {
+          "path_prefix": "platform-meta/"
+        }
+      ],
+      "fallback_stage": "L4",
+      "stages": [
+        {
+          "id": "L1",
+          "title": "把站搭起来",
+          "goal": "选型、部署、域名 —— 从零到能访问。",
+          "match": [
+            {
+              "path_regex": "^blog/(博客搭建指南|部署到服务器|阿里云ECS选购指南|重构方案)$"
+            },
+            {
+              "path_prefix": "platform-meta/platform-overview/"
+            },
+            {
+              "path_prefix": "platform-meta/build-pipeline/"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "内容与排版",
+          "goal": "Markdown、图、同名文章的多种版本怎么管。",
+          "match": [
+            {
+              "path_regex": "^blog/(mermaid|同名文章-html-与-md-版本管理|架构)$"
+            },
+            {
+              "path_prefix": "blog/mermaid/"
+            },
+            {
+              "path_prefix": "platform-meta/content-model/"
+            },
+            {
+              "path_prefix": "platform-meta/info-architecture/"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "传播与变现",
+          "goal": "同步到公众号、嵌入视频 —— 内容怎么走到站外。",
+          "match": [
+            {
+              "path_regex": "^blog/(同步到公众号方案|视频嵌入指南)$"
+            },
+            {
+              "path_regex": "^life/blog-to-wechat($|/)"
+            },
+            {
+              "path_prefix": "platform-meta/multiplatform/"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "视频生产线",
+          "goal": "母稿 → 口播稿 → 音频 → 画面，一期视频的九个环节。",
+          "match": [
+            {
+              "path_prefix": "video_work/"
+            },
+            {
+              "path_regex": "^life/aiv($|/)"
+            },
+            {
+              "path_prefix": "platform-meta/video-line/"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -27,6 +27,17 @@ NODE_LEFT = 0.05
 V_NODE_H_RATIO = 0.094      # 节点高（相对画面高度）
 V_NODE_GAP_RATIO = 0.042    # 节点之间的间隙（相对画面高度）
 
+# 节点与节点之间的点亮间隔（场景进度）
+NODE_STAGGER = 0.12
+# 一个节点亮起来有多快（斜率的倒数）
+NODE_SPEED = 2.4
+
+
+def _node_appear(t: float, index: int) -> float:
+    """第 index 个节点的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0, (t - NODE_STAGGER * index) * NODE_SPEED)))
+
 
 def render(ctx, t: float, w: int, h: int, params=None) -> None:
     p = Params(params, "s04")
@@ -52,8 +63,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
 
     for index, (label, sub, fill, fg, size) in enumerate(nodes):
         x = left + index * (node_w + gap)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - 0.12 * index) * 2.4)))
+        appear = _node_appear(t, index)
         rounded_rect(ctx, x, top, node_w, node_h, 16, fill, alpha=appear)
         if sub:
             text(ctx, label, x + node_w / 2, top + node_h * 0.44, size, fg,
@@ -63,10 +73,14 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         else:
             text(ctx, label, x + node_w / 2, top + node_h * 0.60, size, fg,
                  anchor="center", bold=True, alpha=appear)
+        # 箭头**跟着下一个节点一起亮**：箭头指着下一个节点，
+        # 用下一个节点的透明度才是实话——原来用的是**这一个**节点的，
+        # 于是第一个节点淡入的时候，它右边那条指向第二个节点的箭头
+        # 已经画出来了，而第二个节点还没出现。
         if index < len(nodes) - 1:
             arrow(ctx, x + node_w + 10, top + node_h / 2,
                   x + node_w + gap - 10, top + node_h / 2,
-                  COLORS["primary"], 6, 18, alpha=appear)
+                  COLORS["primary"], 6, 18, alpha=_node_appear(t, index + 1))
 
     text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
 
@@ -98,9 +112,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
 
     for index, (label, sub, fill, fg, size) in enumerate(nodes):
         node_y = y0 + index * (node_h + gap)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - 0.12 * index) * 2.4))
-        )
+        appear = _node_appear(t, index)
         rounded_rect(ctx, left, node_y, width, node_h, 16, fill, alpha=appear)
         if sub:
             scene_layout.line(ctx, label, center, node_y + node_h * 0.44,
@@ -112,8 +124,9 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
             scene_layout.line(ctx, label, center, node_y + node_h * 0.60,
                               width * 0.9, size, fg, bold=True, alpha=appear,
                               anchor="center")
+        # 箭头**跟着下一个节点一起亮**（与横版同一规矩）
         if index < len(nodes) - 1:
             arrow(ctx, center, node_y + node_h + h * 0.008,
                   center, node_y + node_h + gap - h * 0.008,
-                  COLORS["primary"], 6, 18, alpha=appear)
+                  COLORS["primary"], 6, 18, alpha=_node_appear(t, index + 1))
 
