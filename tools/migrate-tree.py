@@ -48,6 +48,7 @@ python3 -m pytest tests/ -q
 """
 
 import argparse
+import filecmp
 import json
 import os
 import re
@@ -408,12 +409,24 @@ def git(*args):
 
 
 def do_move(old_rel, new_rel):
-    """`git mv` 一个文件（保留文件历史）。目标已存在就跳过 —— 幂等。"""
+    """`git mv` 一个文件（保留文件历史）。目标已存在就跳过 —— 幂等。
+
+    **例外：目标已存在且两份内容逐字节相同** —— 这是同一篇文章在树上有
+    两个副本（`docs/cluster/raft协议动态调整quorum.md` 与
+    `docs/cluster/raft/raft协议动态调整quorum.md` 就是这么一对）。
+    留一份、删一份：内容一个字不丢，两个旧 URL 都重定向到合并后的那篇。
+    内容不同则**不动** —— 那不是副本，硬删就是丢内容。
+    """
     old_abs = os.path.join(DOCS, old_rel)
     new_abs = os.path.join(DOCS, new_rel)
     if not os.path.exists(old_abs):
         return "skip-missing"
     if os.path.exists(new_abs):
+        if (os.path.isfile(old_abs) and os.path.isfile(new_abs)
+                and filecmp.cmp(old_abs, new_abs, shallow=False)):
+            res = git("rm", "-f", os.path.join("docs", old_rel))
+            if res.returncode == 0:
+                return "merged-duplicate"
         return "skip-exists"
     os.makedirs(os.path.dirname(new_abs), exist_ok=True)
     r = git("mv", os.path.join("docs", old_rel), os.path.join("docs", new_rel))
@@ -533,7 +546,7 @@ def _projects(table):
 
 
 # 目录名 → 中文显示名。分类链与 URL 里的中文都靠它。
-TOP_DISPLAY_NAMES = {"source-tracks": "源码主线"}
+TOP_DISPLAY_NAMES = {"source-tracks": "源码主线", "distributed": "分布式与架构"}
 PROJECT_DISPLAY_NAMES = {"postgresql": "PostgreSQL", "linux": "Linux"}
 
 
@@ -553,9 +566,15 @@ def write_index_files(table, moves, report):
         parts = target_root.split("/")
 
         # 顶层：docs/<target_root 的第一段>/_index.md
+        #
+        # **落点只有一段时（`distributed/`）顶层页就是项目页** ——
+        # 写两遍会把「## 系列」那一节吃掉：第二遍写进去的正文里没有
+        # 「本系列文章」这一节，`_merge_article_section()` 遇到这种情况
+        # 一个字都不动，于是项目页的系列清单永远补不上。
         top = parts[0]
         top_cn = TOP_DISPLAY_NAMES.get(top, top)
-        if top not in tops_done:
+        single_segment = len(parts) == 1
+        if top not in tops_done and not single_segment:
             tops_done.add(top)
             made.append(_write_index(
                 f"{top}/_index.md", top_cn, top_cn,
@@ -587,19 +606,28 @@ def write_index_files(table, moves, report):
                 desc, _series_articles(moves, f"{proj_dir}/{slug}/"),
                 table))
             series_lines.append(f"- [{scn}](./{slug}/_index.md)")
+        # 「源码主线」是 `source-tracks/` 专属的说法；别的落点（`distributed/`）
+        # 叫「专题」。
+        kind = "源码主线" if target_root.startswith("source-tracks/") else "专题"
         made.append(_write_index(
             f"{proj_dir}/_index.md", proj_cn, proj_cn,
-            f"{proj_cn} 源码主线：{len(series_cn)} 个系列，由浅入深。",
+            f"{proj_cn} {kind}：{len(series_cn)} 个系列，由浅入深。",
             [], table, extra=["## 系列", ""] + series_lines + [""]))
     report.append(f"目录页：新建 {len(made)} 个")
     return made
 
 
 def _series_articles(moves, prefix):
-    """某个系列下的文章（按旧路径排序，稳定的顺序）。"""
+    """某个系列下的文章（按旧路径排序，稳定的顺序）。
+
+    同一篇合并后的副本只列一次 —— 两份旧文件逐字节相同，
+    合并成一篇之后目录页上不该出现两条一模一样的链接。
+    """
     out = []
+    seen = set()
     for old_rel, new_rel in moves.items():
-        if new_rel.startswith(prefix):
+        if new_rel.startswith(prefix) and new_rel not in seen:
+            seen.add(new_rel)
             out.append((old_rel, new_rel))
     out.sort()
     return out

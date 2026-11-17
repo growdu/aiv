@@ -129,10 +129,7 @@
       "goal": "走完这条线，你能说清一套分布式方案在网络分区下会怎么退化，能自己判断什么时候该上 Paxos/Raft，什么时候同步复制就够。",
       "track_match": [
         {
-          "path_prefix": "cluster/"
-        },
-        {
-          "path_prefix": "openguass/"
+          "path_prefix": "distributed/"
         }
       ],
       "fallback_stage": "L4",
@@ -143,7 +140,7 @@
           "goal": "先把问题定义清楚：分布式要解决什么、要付出什么。",
           "match": [
             {
-              "path_regex": "^cluster/(分布式一致性协议|分布式存储需要解决的问题|分布式系统设计必知必会|常用分布式实现架构|常用分布式解决方案|C语言实现分布式自增有序的唯一ID生成算法-snowflake算法|C语言雪花算法,记一次雪花算法的实现)$"
+              "path_prefix": "distributed/foundations/"
             }
           ]
         },
@@ -153,25 +150,7 @@
           "goal": "Raft 与 DCF 怎么选主、怎么记账、怎么在分区时保证不脑裂。",
           "match": [
             {
-              "path_prefix": "cluster/raft/"
-            },
-            {
-              "path_prefix": "cluster/DCF/"
-            },
-            {
-              "path_prefix": "cluster/zookeeper/"
-            },
-            {
-              "path_regex": "^cluster/raft协议动态调整quorum$"
-            },
-            {
-              "path_regex": "^cluster/分布式集群动态调整quorum值方案对比$"
-            },
-            {
-              "path_prefix": "openguass/"
-            },
-            {
-              "path_regex": "^cluster/corosync/(corosync源码阅读|corosync-qdevice详解|corosync-qdevice源码阅读|corosy-qdevice源码阅读|totem协议详解|disk-paxos详解|libqb源码详解|corosync-qdevice中ffsplit与lsm算法的区别|corosync多仲裁方案设计)$"
+              "path_prefix": "distributed/consensus/"
             }
           ]
         },
@@ -181,19 +160,13 @@
           "goal": "同城双活、两地三中心、主从切换 —— 每种方案的成本和故障半径。",
           "match": [
             {
-              "path_prefix": "cluster/ha/"
+              "path_prefix": "distributed/ha-and-dr/"
             },
             {
-              "path_prefix": "cluster/postgresql/"
+              "path_prefix": "distributed/distributed-storage/"
             },
             {
-              "path_prefix": "cluster/kingbase/"
-            },
-            {
-              "path_prefix": "cluster/oracle/"
-            },
-            {
-              "path_regex": "^cluster/(Patroni详解|主流分布式高可用方案|分布式数据库高可用方案设计|两地三中心技术指标分析|从两地三中心到OceanBase的多地多中心 - 墨天轮|multi_cluster|基于corosync的分布式应用程序开发方案分析)$"
+              "path_prefix": "distributed/selection/"
             }
           ]
         },
@@ -203,13 +176,7 @@
           "goal": "真在机房里踩过的坑：仲裁怎么配、网络割裂了怎么办、多地多中心怎么落。",
           "match": [
             {
-              "path_prefix": "cluster/corosync/"
-            },
-            {
-              "path_prefix": "cluster/multi_cluster/"
-            },
-            {
-              "path_exact": "cluster/repmgr网络割裂问题"
+              "path_prefix": "distributed/field-notes/"
             }
           ]
         }

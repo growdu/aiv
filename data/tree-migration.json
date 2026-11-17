@@ -7,12 +7,23 @@
     "PostgreSQL 源码修炼之路": "源码主线/PostgreSQL",
     "PostgreSQL 源码修炼之路:内核深度拆解专题": "源码主线/PostgreSQL",
     "PostgreSQL 逻辑解码完整目录": "源码主线/PostgreSQL/逻辑复制与流式",
+    "openGauss": "分布式与架构/一致性协议",
     "数据库": "源码主线/PostgreSQL",
     "数据库深入": "源码主线/PostgreSQL",
     "数据库深入/数据库": "源码主线/PostgreSQL",
-    "网络": "源码主线/Linux/网络协议与抓包"
+    "网络": "源码主线/Linux/网络协议与抓包",
+    "集群": "分布式与架构"
   },
   "dir_map": {
+    "cluster/DCF/": "distributed/consensus/",
+    "cluster/corosync/": "distributed/field-notes/",
+    "cluster/ha/": "distributed/ha-and-dr/",
+    "cluster/kingbase/": "distributed/ha-and-dr/",
+    "cluster/multi_cluster/": "distributed/field-notes/",
+    "cluster/oracle/": "distributed/ha-and-dr/",
+    "cluster/postgresql/": "distributed/distributed-storage/",
+    "cluster/raft/": "distributed/consensus/",
+    "cluster/zookeeper/": "distributed/consensus/",
     "db/benchmarksql/": "source-tracks/postgresql/extensions-perf/",
     "db/linux-shared-memory/": "source-tracks/postgresql/storage-engine/",
     "db/logical_decode/": "source-tracks/postgresql/logical-replication/",
@@ -25,6 +36,7 @@
     "linux/ebpf/": "source-tracks/linux/memory-and-linking/ebpf/",
     "linux/kernel/": "source-tracks/linux/kernel-internals/kernel/",
     "network/": "source-tracks/linux/networking/",
+    "openguass/": "distributed/consensus/",
     "pgsql/debug/": "source-tracks/postgresql/getting-started/",
     "pgsql/executor/": "source-tracks/postgresql/index-and-query/",
     "pgsql/extension/": "source-tracks/postgresql/extensions-perf/",
@@ -40,6 +52,7 @@
     "pgsql/storage/full_page_writes/": "source-tracks/postgresql/wal-and-recovery/full_page_writes/"
   },
   "drop_index": [
+    "cluster/_index.md",
     "db/_index.md",
     "db/benchmarksql/_index.md",
     "db/linux-shared-memory/_index.md",
@@ -50,9 +63,35 @@
     "db/postgresql/learning-path/_index.md",
     "linux/_index.md",
     "network/_index.md",
+    "openguass/_index.md",
     "pgsql/_index.md"
   ],
   "file_map": {
+    "cluster/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md": "distributed/foundations/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md",
+    "cluster/C语言雪花算法,记一次雪花算法的实现.md": "distributed/foundations/C语言雪花算法,记一次雪花算法的实现.md",
+    "cluster/Patroni详解.md": "distributed/ha-and-dr/Patroni详解.md",
+    "cluster/corosync/corosy-qdevice源码阅读.md": "distributed/consensus/corosy-qdevice源码阅读.md",
+    "cluster/corosync/corosync-qdevice中ffsplit与lsm算法的区别.md": "distributed/consensus/corosync-qdevice中ffsplit与lsm算法的区别.md",
+    "cluster/corosync/corosync-qdevice源码阅读.md": "distributed/consensus/corosync-qdevice源码阅读.md",
+    "cluster/corosync/corosync-qdevice详解.md": "distributed/consensus/corosync-qdevice详解.md",
+    "cluster/corosync/corosync多仲裁方案设计.md": "distributed/consensus/corosync多仲裁方案设计.md",
+    "cluster/corosync/corosync源码阅读.md": "distributed/consensus/corosync源码阅读.md",
+    "cluster/corosync/disk-paxos详解.md": "distributed/consensus/disk-paxos详解.md",
+    "cluster/corosync/libqb源码详解.md": "distributed/consensus/libqb源码详解.md",
+    "cluster/corosync/totem协议详解.md": "distributed/consensus/totem协议详解.md",
+    "cluster/ha/业界高可用解决方案.md": "distributed/selection/业界高可用解决方案.md",
+    "cluster/raft协议动态调整quorum.md": "distributed/consensus/raft协议动态调整quorum.md",
+    "cluster/两地三中心技术指标分析.md": "distributed/ha-and-dr/两地三中心技术指标分析.md",
+    "cluster/主流分布式高可用方案.md": "distributed/selection/主流分布式高可用方案.md",
+    "cluster/从两地三中心到OceanBase的多地多中心 - 墨天轮.md": "distributed/distributed-storage/从两地三中心到OceanBase的多地多中心 - 墨天轮.md",
+    "cluster/分布式一致性协议.md": "distributed/foundations/分布式一致性协议.md",
+    "cluster/分布式存储需要解决的问题.md": "distributed/foundations/分布式存储需要解决的问题.md",
+    "cluster/分布式数据库高可用方案设计.md": "distributed/selection/分布式数据库高可用方案设计.md",
+    "cluster/分布式系统设计必知必会.md": "distributed/foundations/分布式系统设计必知必会.md",
+    "cluster/分布式集群动态调整quorum值方案对比.md": "distributed/consensus/分布式集群动态调整quorum值方案对比.md",
+    "cluster/基于corosync的分布式应用程序开发方案分析.md": "distributed/selection/基于corosync的分布式应用程序开发方案分析.md",
+    "cluster/常用分布式实现架构.md": "distributed/foundations/常用分布式实现架构.md",
+    "cluster/常用分布式解决方案.md": "distributed/foundations/常用分布式解决方案.md",
     "database/citus-columnar-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/citus-columnar-deep-dive/index.md",
     "database/citus-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/citus-deep-dive/index.md",
     "database/cstore-fdw-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/cstore-fdw-deep-dive/index.md",
@@ -214,7 +253,7 @@
     "pgsql/wal机制浅析.md": "source-tracks/postgresql/wal-and-recovery/wal机制浅析.md",
     "pgsql/数据库崩溃恢复.md": "source-tracks/postgresql/wal-and-recovery/数据库崩溃恢复.md"
   },
-  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。",
+  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。",
   "out_map": {
     "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
     "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md"
@@ -261,6 +300,26 @@
         "networking": "网络协议与抓包：TCP/IP 到底怎么跑，MTU 为什么会把人坑到外网不通。"
       },
       "target_root": "source-tracks/linux"
+    },
+    {
+      "display_name": "分布式与架构",
+      "series": {
+        "consensus": "一致性协议",
+        "distributed-storage": "分布式存储",
+        "field-notes": "实战与故障现场",
+        "foundations": "分布式基础",
+        "ha-and-dr": "高可用与容灾",
+        "selection": "选型与对比"
+      },
+      "series_meta": {
+        "consensus": "一致性协议：Raft、DCF、totem、disk-paxos 与 ZooKeeper —— 主从怎么选、账怎么记、网络分区时会不会脑裂。",
+        "distributed-storage": "分布式存储：OceanBase 多地多中心、PostgreSQL 伪双写，以及数据怎么落盘、怎么压。",
+        "field-notes": "实战与故障现场：corosync 网卡 down、qnet 挂死、repmgr 网络割裂 —— 真在机房里踩过的坑。",
+        "foundations": "分布式基础：分布式要解决什么问题、要付出什么代价，基本架构形态是怎么分的。",
+        "ha-and-dr": "高可用与容灾：同城双活、两地三中心、Patroni 与 Oracle MAA —— 每种方案的成本与故障半径。",
+        "selection": "选型与对比：业界方案综述与横向对比 —— 读完知道该选哪条路。"
+      },
+      "target_root": "distributed"
     }
   ],
   "ref_rewrites": [
