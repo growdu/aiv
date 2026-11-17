@@ -850,8 +850,8 @@ def test_the_life_aiv_url_namespace_is_untouched():
         "voice/README.md",
     ]
     actual = sorted(p.relative_to(namespace).as_posix() for p in files)
-    # `expected` 按仓库约定的顺序写着，比较时再排一次——两边的顺序必须一致，
-    # 但顺序本身不是这条守卫要钉的东西，**文件名才是**。
+    # `expected` 按仓库里的文件名写着，比较前两边都排序一次——比的是文件名集合，
+    # 顺序不是这条守卫要钉的东西。
     assert actual == sorted(expected), (
         "docs/life/aiv/ 的文件名清单变了：多出 {}".format(
             sorted(set(actual) - set(expected))
