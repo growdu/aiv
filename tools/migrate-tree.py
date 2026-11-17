@@ -227,7 +227,7 @@ def _split_tail(raw):
     return head + "/", tail
 
 
-def rewrite_relative_links(moves, report):
+def rewrite_relative_links(moves, targets, report):
     """重写 `docs/` 里所有文章的相对链接。
 
     两种情况：
@@ -236,6 +236,11 @@ def rewrite_relative_links(moves, report):
 
     链接的「形状」（指目录还是指文件、末尾带不带 `index.html`）
     原样保留，只换路径。
+
+    **必须在搬迁之前跑**：解析一条相对链接要靠磁盘上真的有那个目标，
+    搬完之后旧目录已经空了，解析必然失败 —— 链接就会保持原样，
+    变成指向空目录的死链。`targets` 是「旧路径 → 新路径」的完整表
+    （文章 + 资源文件），链接的目标按它换算。
     """
     changed_files = 0
     changed_links = 0
@@ -252,7 +257,7 @@ def rewrite_relative_links(moves, report):
         def repl_link(m):
             nonlocal changed_links
             text_, raw = m.group(1), m.group(2)
-            new_raw = _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir=False)
+            new_raw = _rewrite_one(post_dir, new_post_dir, raw, targets, want_dir=False)
             if new_raw is None or new_raw == raw:
                 return m.group(0)
             changed_links += 1
@@ -261,7 +266,7 @@ def rewrite_relative_links(moves, report):
         def repl_image(m):
             nonlocal changed_links
             alt, raw = m.group(1), m.group(2)
-            new_raw = _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir=True)
+            new_raw = _rewrite_one(post_dir, new_post_dir, raw, targets, want_dir=True)
             if new_raw is None or new_raw == raw:
                 return m.group(0)
             changed_links += 1
@@ -540,8 +545,9 @@ def build_redirects(moves):
     return out
 
 
-def build_date_overrides(moves, dates_before):
+def build_date_overrides(moves, dates_before, out_map=None):
     """按**新路径**固化的日期表。"""
+    out_map = out_map or {}
     out = {}
     for old_rel, new_rel in sorted(moves.items()):
         # 重跑时旧路径已经不在树上，日期表里存的是**新路径** —— 两个键都认。
@@ -550,7 +556,8 @@ def build_date_overrides(moves, dates_before):
     for rel, date in dates_before.items():
         # 搬走的文章用新路径做键，旧路径那个键就是死的 —— 留着它，
         # 以后再搬一次会被当成「有记录」而跳过改写。
-        if rel not in out and rel not in moves:
+        # 移出 docs/ 的文件不再是站上的文章，不进表。
+        if rel not in out and rel not in moves and rel not in out_map:
             out[rel] = date
     return out
 
@@ -703,7 +710,12 @@ def main():
     dates_before = capture_dates(module)
     print(f"搬之前固化了 {len(dates_before)} 篇的日期")
 
-    # 2. 搬
+    # 2. 先改链接 —— 解析要对着旧树，搬完就解析不到了
+    targets = dict(moves)
+    targets.update(assets)
+    rewrite_relative_links(moves, targets, report)
+
+    # 3. 搬
     stats = {}
     for kind, old_rel, new_rel in actions:
         if kind == "in":
@@ -728,15 +740,13 @@ def main():
     report.append("搬运：" + "，".join(f"{k} {v}" for k, v in sorted(stats.items())))
     save_resolved(moves, assets)
 
-    # 3. 改链接（必须在搬完之后 —— 解析要用「新」的目录结构）
-    rewrite_relative_links(moves, report)
-
     # 4. 新目录页
     write_index_files(table, moves, report)
 
     # 5. 常量补丁
     redirects = build_redirects(moves)
-    date_overrides = build_date_overrides(moves, dates_before)
+    date_overrides = build_date_overrides(moves, dates_before,
+                                          table.get("out_map", {}))
     cat_redirects = build_category_redirects(table)
     for name, payload in (
         (DATE_FILE, date_overrides),
