@@ -11,6 +11,7 @@ tags:
   - 字幕
   - cairo
   - ffmpeg
+description: "这条线要解决的问题只有一个："
 ---
 
 # AIV 视频生产线：九个环节、唯一契约与入库边界
