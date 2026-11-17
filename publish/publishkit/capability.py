@@ -373,7 +373,12 @@ def default_platforms_dir() -> Path:
 
 
 def load_capability_file(path) -> Capability:
-    """Load and validate one capability declaration."""
+    """Load and validate one capability declaration.
+
+    声明里的 ``id`` 必须等于**它所在目录的名字**——
+    能力声明住在 ``<platforms_dir>/<id>/capability.toml``，目录名就是它在注册表里的名字。
+    文件名自由（统一叫 ``capability.toml``），目录名不自由。
+    """
     path = Path(path)
     try:
         with path.open("rb") as handle:
@@ -404,8 +409,8 @@ def load_capability_file(path) -> Capability:
     if path.parent.name != platform_id:
         # 目录名是注册表的名字，id 必须与它一致——否则「哪个平台」就有两个答案。
         raise CapabilityFileError(
-            "能力声明 id 与目录名不一致：{} 里的 id 是 {!r}".format(
-                path, platform_id
+            "能力声明 id 与目录名不一致：目录 {} 的 id 是 {!r}（文件 {}）".format(
+                path.parent.name, platform_id, path.name
             )
         )
 

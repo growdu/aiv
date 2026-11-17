@@ -130,9 +130,18 @@ def test_every_platform_directory_is_named_after_its_id():
     文件名统一叫 ``capability.toml``——**「这个平台到底是哪个」不再由文件名
     回答，而由目录名回答**。所以这条不变量从「id == 文件名」搬到了
     「id == 目录名」。
+
+    **产物目录不算平台。** `platforms/` 下被 git 忽略的目录（`__pycache__/`、
+    发布产物之类）没有能力声明是正常的——把它算进来就是**误报**，
+    而误报会让人开始怀疑守卫本身。与同文件下面那两段检查用**同一个判定**
+    （`_is_ignored`），排除规则也共用同一份集合。
     """
     platforms = REPO_ROOT / "platforms"
-    for directory in sorted(p for p in platforms.iterdir() if p.is_dir()):
+    ignored = _ignored_directories()
+    for directory in sorted(
+        p for p in platforms.iterdir()
+        if p.is_dir() and not _is_ignored(p, ignored)
+    ):
         declaration = directory / "capability.toml"
         assert declaration.is_file(), f"{directory.name}/ 缺 capability.toml"
         data = tomllib.loads(declaration.read_text(encoding="utf-8"))

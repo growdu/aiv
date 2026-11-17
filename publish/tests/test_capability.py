@@ -50,7 +50,13 @@ command = ["python3", "-m", "wechat.cli"]
 
 
 def write_toml(tmp_path: Path, name: str, text: str) -> Path:
-    """写一份能力声明，摆成新布局：``<tmp_path>/<平台名>/capability.toml``。"""
+    """写一份能力声明，摆成新布局：``<tmp_path>/<平台名>/capability.toml``。
+
+    ``name`` 必须是 ``<平台 id>.toml``——**目录名是从它推出来的**，
+    而目录名必须与声明里的 ``id`` 一致（契约层按目录名核对）。
+    写成别的名字就会得到「目录叫 A、id 叫 B」，然后被那条核对拒掉，
+    报错还指向那个没写错的 id。
+    """
     platform = name[: -len(".toml")] if name.endswith(".toml") else name
     directory = tmp_path / platform
     directory.mkdir(parents=True, exist_ok=True)
