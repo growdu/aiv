@@ -113,7 +113,7 @@ graph TD
 4. **复制与高可用**：[流复制与 WAL 日志](/2024/02/06/source-tracks/postgresql/replication-ha/postgresql%E2%80%94%E2%80%94%E6%B5%81%E5%A4%8D%E5%88%B6%E5%92%8Cwal%E6%97%A5%E5%BF%97%EF%BC%88%E5%85%AB%EF%BC%89/) → [同步流复制原理](/2023/05/17/source-tracks/postgresql/replication-ha/PostgreSQL%20%E5%90%8C%E6%AD%A5%E6%B5%81%E5%A4%8D%E5%88%B6%E5%8E%9F%E7%90%86%E5%92%8C%E4%BB%A3%E7%A0%81%E6%B5%85%E6%9E%90-%E9%98%BF%E9%87%8C%E4%BA%91%E5%BC%80%E5%8F%91%E8%80%85%E7%A4%BE%E5%8C%BA/) → [WalReceiver / WalSender 交互](/2023/05/17/pgsql/replication/PostgreSQL%E6%95%B0%E6%8D%AE%E5%BA%93%E5%A4%8D%E5%88%B6%E2%80%94%E2%80%94%E5%90%8E%E5%8F%B0%E4%B8%80%E7%AD%89%E5%85%AC%E6%B0%91%E8%BF%9B%E7%A8%8BWalReceiver&startup%E4%BA%A4%E4%BA%92_postgressql%20walreceive%E7%BA%BF%E7%A8%8B_%E8%82%A5%E5%8F%94%E8%8F%8C%E7%9A%84%E5%8D%9A%E5%AE%A2-CSDN%E5%8D%9A%E5%AE%A2/) → [repmgr 实现原理](/2024/02/19/source-tracks/postgresql/replication-ha/repmgr实现原理/) → [伪双写](/2026/01/15/distributed/distributed-storage/postgresql伪双写/)。
 5. **事务与并发控制**：[事务管理](/2026/03/03/distributed/distributed-storage/事务管理/) → [并发控制](/2022/04/13/source-tracks/postgresql/getting-started/pgsql_main_structure/) → [MVCC 源码解读](/2022/04/13/source-tracks/postgresql/getting-started/pgsql_main_structure/) → [锁等待排查](/2022/04/13/source-tracks/postgresql/getting-started/pgsql_main_structure/)。
 6. **逻辑解码与双向同步**：[逻辑复制源码分析](/2026/04/14/source-tracks/postgresql/logical-replication/逻辑复制源码分析/) → [PG15 逻辑复制支持 DDL](/2026/03/11/source-tracks/postgresql/logical-replication/pg15逻辑复制支持DDL/) → [pglogical 详解](/2026/03/06/source-tracks/postgresql/logical-replication/pglogical详解/) → [DDL-Replay 框架设计](/2026/07/27/source-tracks/postgresql/logical-replication/逻辑解码DDL-Replay框架设计/) → [AI 逻辑解码](/2026/03/06/source-tracks/postgresql/logical-replication/ai逻辑解码/)。
-7. **分布式一致性**：[Raft 重要概念](/2023/05/17/distributed/consensus/raft重要概念/) → [一文读懂 openGauss DCF 网络模块](/2023/05/26/cluster/DCF/一文读懂openguass%20dcf网络模块/) → [DCF 投票系统详解](/2023/05/22/distributed/consensus/dcf投票系统详解/) → [DCF 运行机制](/2023/12/23/distributed/consensus/dcf运行机制/) → [DCF 写入机制](/2023/05/22/distributed/consensus/dcf写入机制/) → [Raft 协议动态调整 quorum](/2022/10/25/distributed/consensus/raft协议动态调整quorum/)。
+7. **分布式一致性**：[Raft 重要概念](/2023/05/17/distributed/consensus/raft重要概念/) → [一文读懂 openGauss DCF 网络模块](/2023/05/26/distributed/consensus/一文读懂openguass%20dcf网络模块/) → [DCF 投票系统详解](/2023/05/22/distributed/consensus/dcf投票系统详解/) → [DCF 运行机制](/2023/12/23/distributed/consensus/dcf运行机制/) → [DCF 写入机制](/2023/05/22/distributed/consensus/dcf写入机制/) → [Raft 协议动态调整 quorum](/2022/10/25/distributed/consensus/raft协议动态调整quorum/)。
 
 ## 实战经验沉淀
 
@@ -128,7 +128,7 @@ graph TD
 1. [PostgreSQL 主结构](/2022/04/13/source-tracks/postgresql/getting-started/pgsql_main_structure/)
 2. [WAL 机制浅析](/2023/05/17/source-tracks/postgresql/wal-and-recovery/wal机制浅析/)
 3. [PostgreSQL 流复制与 WAL 日志](/2024/02/06/source-tracks/postgresql/replication-ha/postgresql%E2%80%94%E2%80%94%E6%B5%81%E5%A4%8D%E5%88%B6%E5%92%8Cwal%E6%97%A5%E5%BF%97%EF%BC%88%E5%85%AB%EF%BC%89/)
-4. [一文读懂 openGauss DCF 网络模块](/2023/05/26/cluster/DCF/一文读懂openguass%20dcf网络模块/)
+4. [一文读懂 openGauss DCF 网络模块](/2023/05/26/distributed/consensus/一文读懂openguass%20dcf网络模块/)
 5. [逻辑解码 DDL-Replay 框架设计](/2026/07/27/source-tracks/postgresql/logical-replication/逻辑解码DDL-Replay框架设计/)
 
 这五篇涵盖了存储、复制、分布式一致性与逻辑同步四条主线，足以勾勒出数据库内核的整体图景。
