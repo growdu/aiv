@@ -21,7 +21,7 @@ def _load() -> dict:
     return plistlib.loads(text.encode("utf-8"))
 
 
-def test_the_template_is_valid_plist():
+def test_the_job_has_the_expected_label():
     assert _load()["Label"] == "com.growdu.weixin.auto-draft"
 
 

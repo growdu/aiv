@@ -52,7 +52,7 @@ def test_the_three_templates_are_committed():
 # --- launchd -----------------------------------------------------------
 
 
-def test_the_template_is_valid_plist():
+def test_the_job_has_the_expected_label():
     assert _load_launchd()["Label"] == "com.growdu.publish.schedule"
 
 
