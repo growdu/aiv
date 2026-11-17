@@ -19,7 +19,7 @@
 `storyboard_wal-interleave.json`，规则整体跳过。跳过原因由
 `pyv/review.py` 的 note 记录，不当成「查过没问题」。
 
-`VT-01`~`VT-06` 六条规则本期均未命中。
+`VT-01`~`VT-07` 七条规则本期均未命中。
 
 ## 抽帧判断
 

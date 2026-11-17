@@ -135,6 +135,7 @@ python -m pyv.cli review frames --episode pg-parallel-decode --out /tmp/frames
 | `VT-04` | **近似重复句**（difflib ≥ 0.85，长度与中文字数门槛同 `AIF-05`） | warn | `AIF-05` |
 | `VT-05` | 口播里的**数字在母稿与出处表里找不到** | warn | 视频独有 |
 | `VT-06` | 口播句里的数字**在对应字幕里丢了** | warn | 视频独有 |
+| `VT-07` | **源字幕表**（`aiv/字幕-<主题>.md`）里有禁止词或单行超宽 | error | `timeline.BANNED_SUBSTRINGS` / `MAX_SUBTITLE_LINE` |
 
 `VT-01`~`VT-04` 与文档侧规则**一一对应且口径相同**——词表与阈值是**同一份常量**
 （`pyv/review.py` 从 `tools/review-check.py` 借词表时必须抄同一份字面量，
@@ -142,6 +143,11 @@ python -m pyv.cli review frames --episode pg-parallel-decode --out /tmp/frames
 
 **为什么视频侧没有 `AIF-03`（超长段落）**：口播稿一句一意群，段落级的长度判断
 换成**句长**（`persona.sentence-length` 已经在管），不重复造。
+
+**为什么 `VT-07` 查的是源字幕表而不是 storyboard**：`make validate` 查的是上一次
+`align` 出来的 storyboard。源字幕表改了但还没重跑 `align` 时，那个门禁看到的
+还是旧字幕——改完稿没重跑 align 就出片，是最常见的「改了但没生效」。
+禁止词与宽度阈值来自 `pyv/timeline.py`（唯一一份），审核层不另抄。
 
 #### 成片层
 
@@ -251,7 +257,7 @@ Agent 逐帧读 PNG，回答三个问题，写进记录：
 | 已有守卫 | 审核层做什么 |
 | --- | --- |
 | `persona.py`（9 条） | **并入**文本层报告（不重写），审核记录里与人格结论同表 |
-| `timeline.py`（字幕宽度/禁词） | 同上 |
+| `timeline.py`（字幕宽度/禁词） | `VT-07` **查源字幕表**（阈值与判定不重写），补上 storyboard 门禁看不到的那一半：源文件改了还没重跑 `align` |
 | `preflight.py`（平台门槛） | `VV-07` 调用，不重写 |
 | `bgm.py verify` | `VV-06` 调用，不重写 |
 | `inkbox.py` / `fingerprint.py` | **不进审核层**：它们在渲染层已经卡住了（渲染前就报错） |

@@ -181,6 +181,49 @@ def test_number_phrase_extraction_skips_meaningless_single_digits():
     assert review._number_phrases("32 核机器") == [("32", "核")]
 
 
+def test_vt_07_flags_a_banned_word_in_the_subtitle_table():
+    materials = _materials(["一句"], ["海量数据库很强"])
+    signals = review.vt_07_subtitle_format(materials)
+    assert _rules(signals) == {"VT-07"}
+    assert "禁止词" in signals[0].detail
+
+
+def test_vt_07_flags_a_subtitle_line_that_is_too_wide():
+    materials = _materials(["一句"], ["字" * 15])
+    signals = review.vt_07_subtitle_format(materials)
+    assert _rules(signals) == {"VT-07"}
+    assert "视觉宽度" in signals[0].detail
+
+
+def test_vt_07_accepts_a_clean_subtitle_table():
+    materials = _materials(["一句"], ["四个字够了"])
+    assert review.vt_07_subtitle_format(materials) == []
+
+
+def test_vt_07_follows_the_timeline_threshold(monkeypatch):
+    """阈值只有一份。
+
+    改了 `timeline.MAX_SUBTITLE_LINE`，规则跟着变——**不抄一份**。
+    抄一份的话，两边会漂。
+    """
+    from pyv import timeline
+
+    monkeypatch.setattr(timeline, "MAX_SUBTITLE_LINE", 3)
+    materials = _materials(["一句"], ["四个字够了"])
+    assert _rules(review.vt_07_subtitle_format(materials)) == {"VT-07"}
+
+
+def test_vt_07_checks_the_source_table_not_the_stale_storyboard():
+    """查的是**源字幕表**。
+
+    `make validate` 查的是上一次 align 出来的 storyboard；源文件改了
+    但没重跑 align 时，那个门禁看到的还是旧字幕。
+    """
+    materials = _materials(["一句"], ["字" * 15])
+    signals = review.vt_07_subtitle_format(materials)
+    assert signals[0].target == "第1句"
+
+
 def test_check_text_runs_every_text_rule():
     """文本层跑一遍，报出的信号编号都在已知的规则表里。"""
     report = review.check_text("pg-parallel-decode")

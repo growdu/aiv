@@ -42,7 +42,7 @@ WARN = "warn"
 INFO = "info"
 ERROR = "error"
 
-TEXT_RULES = ("VT-01", "VT-02", "VT-03", "VT-04", "VT-05", "VT-06")
+TEXT_RULES = ("VT-01", "VT-02", "VT-03", "VT-04", "VT-05", "VT-06", "VT-07")
 VIDEO_RULES = ("VV-01", "VV-02", "VV-03", "VV-04", "VV-05", "VV-06", "VV-07")
 
 # ---------------------------------------------------------------- 词表与阈值
@@ -475,6 +475,41 @@ def vt_06_subtitle_drops_number(materials: Materials) -> list[Signal]:
                    _excerpt(hits[0][2]), detail)]
 
 
+def vt_07_subtitle_format(materials: Materials) -> list[Signal]:
+    """字幕表（**源文件**）里的禁止词与超宽行。
+
+    **查的是源文件，不是 storyboard。** `make validate` 查的是上一次
+    `align` 出来的 storyboard——源字幕表改了但还没重跑 `align` 时，
+    那个门禁看到的还是旧字幕。改完稿没重跑 align 就出片，是最常见的
+    「改了但没生效」。
+
+    阈值与判据来自 `pyv/timeline.py`（唯一一份），这里只做遍历。
+    """
+    from pyv import timeline
+
+    hits = []
+    for index, subtitle in enumerate(materials.subtitles, 1):
+        lowered = subtitle.lower()
+        for word in timeline.BANNED_SUBSTRINGS:
+            if word.lower() in lowered:
+                hits.append((index, ERROR, f"含禁止词 {word!r}", subtitle))
+                break
+        for line in subtitle.splitlines():
+            stripped = line.strip()
+            width = timeline.display_width(stripped)
+            if width > timeline.MAX_SUBTITLE_LINE:
+                hits.append((index, ERROR,
+                             f"单行视觉宽度 {width:.1f} 超过 "
+                             f"{timeline.MAX_SUBTITLE_LINE}", subtitle))
+    if not hits:
+        return []
+    detail = (f"{len(hits)} 处字幕表格式问题："
+              + "、".join(f"第{index}句 {why}"
+                         for index, _severity, why, _text in hits[:8]))
+    return [Signal("VT-07", TEXT_LAYER, hits[0][1], f"第{hits[0][0]}句",
+                   _excerpt(hits[0][3]), detail)]
+
+
 TEXT_CHECKS = (
     vt_01_connectors,
     vt_02_vague,
@@ -482,6 +517,7 @@ TEXT_CHECKS = (
     vt_04_duplicate,
     vt_05_number_evidence,
     vt_06_subtitle_drops_number,
+    vt_07_subtitle_format,
 )
 
 

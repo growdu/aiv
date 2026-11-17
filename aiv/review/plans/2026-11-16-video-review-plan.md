@@ -31,12 +31,13 @@
   - `VT-04` 近似重复句
   - `VT-05` 数字在母稿与出处表里找不到
   - `VT-06` 字幕丢了口播里的数字
+  - `VT-07` 源字幕表里的禁止词与超宽行（阈值调 `pyv/timeline.py`）
 - [x] 并入 `persona.py` 的 9 条结论（不重写）
 - [x] `pyv/cli.py` 加 `review text` 子命令
 - [x] `Makefile` 加 `review-text` 目标
-- [x] 测试：六条规则各有注入缺陷验证
+- [x] 测试：七条规则各有注入缺陷验证
 
-**验收**：`make review-text EP=<期号>` 出报告；六条规则各自能被注入触发。
+**验收**：`make review-text EP=<期号>` 出报告；七条规则各自能被注入触发。
 
 ## Task 3：成片层与抽帧
 
