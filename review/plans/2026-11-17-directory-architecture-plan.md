@@ -979,6 +979,9 @@ def test_the_real_outbox_index_finds_every_snapshot():
 
 `REPO_ROOT` 与 `load_outbox_index` 按该文件现有 import 补。
 
+> `OutboxIndex.records` 是 **`(content_id, platform)` 二元组为键**的字典——
+> 实测 567 个快照文件对应 567 个不同的二元组，所以 `len(index.records) == 567` 成立。
+
 Run: `python3 -m pytest publish/tests/test_schedule.py::test_the_real_outbox_index_finds_every_snapshot -v`
 Expected: FAIL（`load_outbox_index` 现在只扫一个目录，索引到 0 条）。
 
@@ -1084,26 +1087,59 @@ def read_outbox():
 `PLATFORMS_DIR = REPO_ROOT / "platforms"`。
 
 **这两个工具的测试把 outbox 路径 monkeypatch 成临时目录**——所以路径写错时测试照样绿。
-必须补一条对**真实仓库**的断言（Review Focus 第 5 条）：
+必须补一条对**真实仓库**的断言（Review Focus 第 5 条）。**两个工具的返回形状不一样，断言写法也不一样**：
 
 ```python
+# tools/build-publish-index.py —— 返回 {content_id: [快照, …]}
 def test_read_outbox_finds_the_real_snapshots():
     records = read_outbox()
     assert sum(len(v) for v in records.values()) == 567
 ```
 
-放在各自已有的测试文件里（`tools/` 下的测试在哪就放哪；若没有，
+```python
+# tools/build-video-pages.py —— 返回 {(content_id, platform): 快照}
+def test_read_outbox_finds_the_real_snapshots():
+    records = read_outbox()
+    assert len(records) == 567
+```
+
+> **别把两条断言写成同一条**：`build-video-pages.py` 的 `records` 的值是**快照字典本身**，
+> `len(v)` 数的是快照里的字段数，不是快照条数——用 `sum(len(v) …)` 会得到几千，
+> 断言会假红。
+
+放在各自已有的测试文件里（`tools/` 下的测试在哪就放哪；`tools/` 目录下**没有**测试文件，
 放到 `tests/test_publish_visibility.py` 里——它已经在测发布相关的东西）。
 
 - [ ] **Step 6: 改 browser 与平台自己的快照模块**
 
 | 位置 | 改什么 |
 | --- | --- |
-| `browser/browser/cli.py` | `DEFAULT_OUTBOX = REPO_ROOT / "platforms"`（它是根，调用方按平台扫子目录） |
+| `browser/browser/cli.py` | `DEFAULT_OUTBOX = REPO_ROOT / "platforms" / "toutiao" / "outbox"` |
 | `platforms/wechat/snapshot.py` | `OUTBOX_DIR = Path(__file__).resolve().parents[2] / "platforms" / "wechat" / "outbox"` |
+| `platforms/bilibili/snapshot.py` | 同上，`"platforms" / "bilibili" / "outbox"` |
+| `platforms/channels/snapshot.py` | 同上，`"platforms" / "channels" / "outbox"` |
+| `platforms/douyin/snapshot.py` | 同上，`"platforms" / "douyin" / "outbox"` |
+| `platforms/toutiao/cli.py` | `DEFAULT_OUTBOX_DIR = _REPO_ROOT / "platforms" / "toutiao" / "outbox"` |
 | `platforms/toutiao/tests/conftest.py` | `OUTBOX_DIR = REPO_ROOT / "platforms" / "toutiao" / "outbox"` |
 | `platforms/douyin/tests/conftest.py` | `repo_outbox = REPO_ROOT / "platforms" / "douyin" / "outbox"` |
 | `platforms/wechat/tests/test_snapshot.py` | 断言 outbox 目录名的用例改成 `"wechat"` |
+
+> **browser 的 `DEFAULT_OUTBOX` 不是「平台根」——它是头条号那一个目录。**
+> `browser/browser/cli.py:435` 把它传给 `cmd_toutiao_images`，
+> 那条命令做的是 `outbox_dir.glob("*__toutiao.json")`——**单目录 glob**。
+> 改成 `<仓库>/platforms` 的话，glob 什么也找不到，
+> `toutiao images --all-posts` 会**静默地什么都不做**。
+> 所以默认必须是 `<仓库>/platforms/toutiao/outbox`。
+
+**还有 8 处 help 文本写着「默认 publish/outbox」**（`platforms/{bilibili,channels,douyin}/cli.py` 各 2 处，
+`platforms/toutiao/cli.py` 1 处），顺手改掉：
+
+| 位置 | 改成 |
+| --- | --- |
+| `platforms/bilibili/cli.py` | 「状态快照目录，默认 `platforms/bilibili/outbox`」 |
+| `platforms/channels/cli.py` | 「状态快照目录，默认 `platforms/channels/outbox`」 |
+| `platforms/douyin/cli.py` | 「状态快照目录，默认 `platforms/douyin/outbox`」 |
+| `platforms/toutiao/cli.py` | 「状态快照目录（默认：`platforms/toutiao/outbox`）」 |
 
 - [ ] **Step 7: 改 publish 测试里的真实仓库路径**
 
@@ -1134,7 +1170,9 @@ python3 tools/build-publish-index.py
 python3 tools/build-video-pages.py
 PYTHONPATH=publish python3 -m publishkit.cli schedule status > /tmp/after-status.txt
 PYTHONPATH=publish python3 -m publishkit.cli schedule candidates > /tmp/after-candidates.txt
-diff /tmp/baseline/status.txt /tmp/after-status.txt && echo "status 一致"
+# status.txt 的第 1 行是「本周：2026-W47」、第 2 行是「本周还没有记录。」
+# ——这两行随日历周变，比对时从第 3 行开始（基线也是这么采的）
+diff <(tail -n +3 /tmp/baseline/status.txt) <(tail -n +3 /tmp/after-status.txt) && echo "status 一致"
 diff /tmp/baseline/candidates.txt /tmp/after-candidates.txt && echo "candidates 一致"
 ```
 
