@@ -1,6 +1,6 @@
 # growdu · 博客与内容生产线
 
-> 一个仓库，三条产线：**技术站点**（growdu.cn）、**品牌视频**（AIV）、**多平台分发**（公众号 / 头条号 / 视频号 / B 站）。
+> 一个仓库，三条产线：**技术站点**（growdu.cn）、**品牌视频**（AIV）、**多平台分发**（公众号 / 头条号 / 抖音 / 视频号 / B 站）。
 > 共同的底座是 `docs/` —— 那里是所有内容的唯一真相。
 
 本文件是**仓库级总览**：讲清楚整体架构与模块划分。
@@ -166,7 +166,7 @@
 | --- | --- | --- | --- |
 | 微信公众号 | `platforms/wechat/` | 图文 → 草稿箱（`draft/add`） | 自动生成 + 自动进草稿箱，**发表由人点**（账号无发表接口权限） |
 | 今日头条 | `platforms/toutiao/` | 图文 → 头条版排版包 / 半自动出包 | `manual`（能力声明）：出包 + 人工发（账号未认证，API 权限开不了） |
-| 抖音 | `platforms/douyin/` | 视频 → 竖版切片 + 人工发布清单 | `manual`：个人主体拿不到 API 凭据 |
+| 抖音 | `platforms/douyin/` | 视频 → 竖版切片 + 出包 + 浏览器上传（后台可暂存 `drafted`，待你点发表） | `manual`：个人主体拿不到 API 凭据，走浏览器自动化 |
 | 微信视频号 | `platforms/channels/` | 视频 → 切片 + 人工发布清单 | `manual`：视频号无普通创作者发布接口 |
 | 哔哩哔哩 | `platforms/bilibili/` | 视频 → 投稿包 + 字幕 | `manual`（`ARC_BASE` 权限开通后可转 `api_publish`） |
 
@@ -333,7 +333,7 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | --- | --- | --- | --- |
 | 公众号 | `platforms/wechat/capability.toml` | `platforms/wechat/outbox/`（入库） | 草稿箱（人工发表） |
 | 头条号 | `platforms/toutiao/capability.toml` | `platforms/toutiao/outbox/`（入库） | 出包（人工上传） |
-| 抖音 | `platforms/douyin/capability.toml` | `platforms/douyin/outbox/`（入库） | 出包（人工上传，个人主体拿不到 API 凭据） |
+| 抖音 | `platforms/douyin/capability.toml` | `platforms/douyin/outbox/`（入库） | 出包 + 浏览器上传 + 人工确认发表（个人主体拿不到 API 凭据） |
 | 视频号 | `platforms/channels/capability.toml` | `platforms/channels/outbox/`（入库） | 出包 + 人工发布清单 |
 | B 站 | `platforms/bilibili/capability.toml` | `platforms/bilibili/outbox/`（入库） | 投稿包（`ARC_BASE` 未开通） |
 
