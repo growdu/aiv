@@ -565,7 +565,8 @@ def _projects(table):
 
 
 # 目录名 → 中文显示名。分类链与 URL 里的中文都靠它。
-TOP_DISPLAY_NAMES = {"source-tracks": "源码主线", "distributed": "分布式与架构"}
+TOP_DISPLAY_NAMES = {"source-tracks": "源码主线", "distributed": "分布式与架构",
+                     "engineering": "工程与语言"}
 PROJECT_DISPLAY_NAMES = {"postgresql": "PostgreSQL", "linux": "Linux"}
 
 
