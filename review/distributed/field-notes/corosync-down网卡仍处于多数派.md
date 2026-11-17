@@ -1,6 +1,6 @@
 # 审校：corosync down网卡仍处于多数派问题分析
 
-- 原文：docs/cluster/corosync/corosync-down网卡仍处于多数派/index.md
+- 原文：docs/distributed/field-notes/corosync-down网卡仍处于多数派/index.md
 - 范围：全文
 - 目标读者：做同城双中心数据库集群的运维与开发工程师（知道 corosync、
   SBD、fence 这些词，但未必读过 corosync 源码）
@@ -11,9 +11,9 @@
   而是期望，全文没有版本边界、没有一条可复现命令
 - 审校状态：已合入
 
-> 本篇已与 `review/cluster/corosync/corosync-down网卡仍处于多数派-1.md`
+> 本篇已与 `review/distributed/field-notes/corosync-down网卡仍处于多数派-1.md`
 > 合并（同目录的 `-1` 版是本篇的超集）。合并口径：正文留在本篇的路径
-> （`docs/cluster/corosync/corosync-down网卡仍处于多数派/index.md`），
+> （`docs/distributed/field-notes/corosync-down网卡仍处于多数派/index.md`），
 > `-1` 版独有的 knet 取舍说明与 `## 结论` 应急方案并入本篇，
 > `-1` 的 docs 目录、审校记录与索引行一并删除；`-1` 记录独有的待核事实
 > 与结论已搬进本篇的「事实待核」，核证工作没有丢。
@@ -146,7 +146,7 @@
       `corosync qnet挂死场景分析解决.md`、`corosync-qdevice使用.md`。
     - 原因：README 的「一句话定位」「一份可带走的产物」「一条自然的内容路径」。
 
-12. 位置：与 `docs/cluster/corosync/corosync-down网卡仍处于多数派-1/index.md` 的关系
+12. 位置：与 `docs/distributed/field-notes/corosync-down网卡仍处于多数派-1/index.md` 的关系
     - 问题：同目录下 `-1` 版是本篇的**超集**——它多了 knet 的取舍说明
       （「knet 目前传输层默认用 udp 单播，也支持 sctp」、测试环境观察到广播
       实为虚拟机抓包环境问题）、`## 结论` 一节，以及可执行的绕行方案
@@ -278,7 +278,7 @@
   `docs/network/【网络】MTU相关网络丢包问题分析处理.md` 7 处、
   `docs/tools/clash-meta-mihomo-install-guide.md` 5 处、
   `docs/tools/clash-meta-user-guide.md` 4 处、
-  `docs/cluster/corosync/corosync-down网卡仍处于多数派/index.md` 与
+  `docs/distributed/field-notes/corosync-down网卡仍处于多数派/index.md` 与
   `-1/index.md` 各 2 处，其余 9 篇各 1 处。本轮只改本篇与 `-1` 那两处，
   其余 26 处留给后续批次。
 - [x] `## 结论` 段不是有序列表 —— 实测渲染结果为
@@ -389,7 +389,7 @@
     `corosync qnet挂死场景分析解决.md`、`corosync-qdevice使用.md`
     （第 11 条）。带空格的路径按 `sync-hexo.py` 的解析规则写成字面空格
     （实测 `_resolve_link_target` 能解出真 permalink；写成 `%20` 反而解不出）。
-18. 合并处置：删除 `docs/cluster/corosync/corosync-down网卡仍处于多数派-1/`
+18. 合并处置：删除 `docs/distributed/field-notes/corosync-down网卡仍处于多数派-1/`
     目录、其审校记录与索引行；`-1` 记录独有的待核事实与结论已搬进本记录。
 
 正文改动后检查器信号：本篇由 **3 条 warn**（AIF-03 / AIF-05 / STR-04 之外的

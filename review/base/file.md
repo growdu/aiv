@@ -226,7 +226,7 @@
   （扩到更多语言属于扩写，不在本次改动范围里），改为在「延伸阅读」一节
   链到本仓库确实相关的三篇：`source-tracks/postgresql/extensions-perf/pg_io_调优`、
   `source-tracks/postgresql/storage-engine/learning-path/04-storage-abstraction`、
-  `cluster/分布式存储需要解决的问题`。
+  `distributed/foundations/分布式存储需要解决的问题`。
 
 ## 可补的技术证据或产物
 

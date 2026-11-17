@@ -309,7 +309,7 @@ mindmap
 | 数据库深入(旧) | [docs/db/](/categories/%E6%BA%90%E7%A0%81%E4%B8%BB%E7%BA%BF/PostgreSQL/) |
 | PostgreSQL(旧) | [docs/pgsql/(/categories/%E6%BA%90%E7%A0%81%E4%B8%BB%E7%BA%BF/PostgreSQL/) |
 | openGauss(旧) | [docs/openguass/(../openguass/index.html) |
-| 集群 / HA | [docs/cluster/(../cluster/index.html) |
+| 分布式与架构 | [docs/distributed/](/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%8E%E6%9E%B6%E6%9E%84/) |
 | Linux 内核 | [docs/source-tracks/linux/](/categories/%E6%BA%90%E7%A0%81%E4%B8%BB%E7%BA%BF/Linux/) |
 
 ## 参考

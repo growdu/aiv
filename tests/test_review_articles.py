@@ -197,9 +197,9 @@ def test_the_merged_article_is_the_only_one_with_this_title():
         f"全树有多篇同名文章：{same}")
 
     # -1 的目录、审校记录与索引行都不能回来
-    assert not (DOCS_ROOT / "cluster/corosync/corosync-down网卡仍处于多数派-1").exists(), (
+    assert not (DOCS_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派-1").exists(), (
         "-1 的 docs 目录又被建回来了")
-    assert not (REVIEW_ROOT / "cluster/corosync/corosync-down网卡仍处于多数派-1.md").exists(), (
+    assert not (REVIEW_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派-1.md").exists(), (
         "-1 的审校记录又被建回来了")
     index = (REVIEW_ROOT / "INDEX.md").read_text(encoding="utf-8")
     assert "corosync-down网卡仍处于多数派-1" not in index, (
@@ -328,9 +328,9 @@ def test_the_two_tptc_articles_are_merged_into_one():
             same.append(path.relative_to(REPO_ROOT).as_posix())
     assert same == ["docs/distributed/ha-and-dr/tptc.md"], f"全树有多篇同名文章：{same}"
 
-    assert not (DOCS_ROOT / "cluster/kingbase/tptc_improve.md").exists(), (
+    assert not (DOCS_ROOT / "distributed/ha-and-dr/tptc_improve.md").exists(), (
         "tptc_improve.md 又被建回来了")
-    assert not (REVIEW_ROOT / "cluster/kingbase/tptc_improve.md").exists(), (
+    assert not (REVIEW_ROOT / "distributed/ha-and-dr/tptc_improve.md").exists(), (
         "tptc_improve 的审校记录又被建回来了")
     # 只看进度表的**行**——正文里提到「并掉了 tptc_improve」是说明，不是条目。
     index = (REVIEW_ROOT / "INDEX.md").read_text(encoding="utf-8")

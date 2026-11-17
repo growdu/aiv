@@ -109,67 +109,67 @@
 | `blog/mermaid/mermaid图渲染问题诊断与修复.md` | 本文所有数字都来自真实渲染测量（headless Chrome + 生产环境 SVG 尺寸），不是估算。 | 本文所有数字都来自真实渲染测量（headless Chrome + 生产环境 SVG 尺寸），不是估算。 | ☐ |
 | `chatgpt/chatgpt使用.md` | ChatGPT 是什么、能用来干什么：代码相关的问题怎么问它，以及日常把它当助手用的几种典型场景。 | 可点击(高效率工具——chatgpt使用_growdu_real的博客-CSDN博客)在网络上访问本文。 | ☐ |
 | `chatgpt/newbing使用教程/index.md` | New Bing 使用教程：下载 Edge Dev、修改默认搜索引擎，让新版 Bing 的 AI 搜索在国内也能用。 | 点击这里下载edge dev。 | ☐ |
-| `cluster/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md` | 之前有人问我设计一个分布式的递增的唯一id生成。想了半天不知道，偶然一个同事说起snowflake算法，我百度了一下，很简单高效。 | 之前有人问我设计一个分布式的递增的唯一id生成。想了半天不知道，偶然一个同事说起snowflake算法，我百度了一下，很简单高效。 | ☐ |
-| `cluster/C语言雪花算法,记一次雪花算法的实现.md` | 作者最近在实现雪花算法生成主键，看了不少文章。个人觉得雪花算法的最大的优点是有序(减少数据库的页分裂页合并)。雪花算法本身很简单，但他依赖于时间，也就是机器或容器的时间一回拨就出现问题了。网上也出现了不少关于如何解决回拨的问题。我记录一下本次实现雪花主键的过程。 | 作者最近在实现雪花算法生成主键，看了不少文章。个人觉得雪花算法的最大的优点是有序(减少数据库的页分裂页合并)。雪花算法本身很简单，但他依赖于时间，也就是机器或容器的时间一回拨就出现问题了。网上也出现了不少关于如何解决回拨的问题。我记录一下本次实现雪花主键的过程。 | ☐ |
-| `cluster/Patroni详解.md` | Patroni 笔记：PostgreSQL 高可用方案里负责选主、故障切换与配置同步的那个组件（内容还在整理）。 | （没抽出来） | ☐ |
-| `cluster/raft协议动态调整quorum.md` | 按照当前raft协议实现，当n个节点的集群超过n/2个节点宕机时，集群将无法提供服务。如5个节点的集群，当有3个节点宕机时，集群将无法提供服务。 | 按照当前raft协议实现，当n个节点的集群超过n/2个节点宕机时，集群将无法提供服务。如5个节点的集群，当有3个节点宕机时，集群将无法提供服务。 | ☐ |
-| `cluster/repmgr网络割裂问题.md` | repmgr 在网络割裂场景下的问题：分布式存储里，主备之间失联时该由谁说了算。 | （没抽出来） | ☐ |
-| `cluster/两地三中心技术指标分析.md` | 延迟主要和网络系统（网络硬件等）以及距离有关。 | 延迟主要和网络系统（网络硬件等）以及距离有关。 | ☐ |
-| `cluster/主流分布式高可用方案.md` | 主流分布式高可用方案的分类与取舍（内容还在整理）。 | （没抽出来） | ☐ |
-| `cluster/从两地三中心到OceanBase的多地多中心 - 墨天轮.md` | 在金融行业，“两地三中心”是一个基本的合规要求，本文简单介绍一下金融行业容灾架构的\"两地三中心\"究竟是指什么，然后说明OceanBase实现的\"两地三中心\"甚至\"多地多中心\"有什么特点。 | 在金融行业，“两地三中心”是一个基本的合规要求，本文简单介绍一下金融行业容灾架构的"两地三中心"究竟是指什么，然后说明OceanBase实现的"两地三中心"甚至"多地多中心"有什么特点。 | ☐ |
-| `cluster/分布式一致性协议.md` | 当前业界主流的分布式一致性协议主要有下面这几个。本文回答两个问题：它们各自解决的是 同一类问题的哪一部分，以及选型时该看哪个。它们不是同一层次的替代品——先看清各自 解决的是问题的哪一部分： | 当前业界主流的分布式一致性协议主要有下面这几个。本文回答两个问题：它们各自解决的是 同一类问题的哪一部分，以及选型时该看哪个。它们不是同一层次的替代品——先看清各自 解决的是问题的哪一部分： | ☐ |
-| `cluster/分布式存储需要解决的问题.md` | 分布式存储绕不开的几个问题：数据一致性怎么保证、ACID 在多副本下还成不成立。 | （没抽出来） | ☐ |
-| `cluster/分布式数据库高可用方案设计.md` | 通俗的来说，分布式数据库高可用要求即使仅存一个集群节点，也需要对外提供服务。 | 通俗的来说，分布式数据库高可用要求即使仅存一个集群节点，也需要对外提供服务。 | ☐ |
-| `cluster/分布式系统设计必知必会.md` | 分布式系统设计的几个必知问题：并发、串行与并行、时序，以及数据一致性。 | （没抽出来） | ☐ |
-| `cluster/分布式集群动态调整quorum值方案对比.md` | 举例来说，一个包含5个节点的数据库集群，当集群挂掉3个节点后，因为不符合半数以上节点正常原则，数据库集群将无法对外提供服务，需要人为介入。但在数据库的实际使用场景中，我们期望即使只剩下一个节点也能对外提供服务。实际上，当5个集群节点挂掉2个节点后，应将剩下3个节点看成一个3节点的集群，动态调整对应… | 举例来说，一个包含5个节点的数据库集群，当集群挂掉3个节点后，因为不符合半数以上节点正常原则，数据库集群将无法对外提供服务，需要人为介入。但在数据库的实际使用场景中，我们期望即使只剩下一个节点也能对外提供服务。实际上，当5个集群节点挂掉2个节点后，应将剩下3个节点看成一个3节点的集群，动态调整对应… | ☐ |
-| `cluster/基于corosync的分布式应用程序开发方案分析.md` | 综上所述，并结合实际使用场景中遇到的各种问题，可得出如下结论： | 综上所述，并结合实际使用场景中遇到的各种问题，可得出如下结论： | ☐ |
-| `cluster/常用分布式实现架构.md` | 分布式架构根据各个分布式节点共享的内容分为如下几种： | 分布式架构根据各个分布式节点共享的内容分为如下几种： | ☐ |
-| `cluster/常用分布式解决方案.md` | c-raft集群开发需处理问题： | c-raft集群开发需处理问题： | ☐ |
-| `cluster/corosync/corosy-qdevice源码阅读.md` | corosync-qdevice 源码阅读笔记：qdevice 的投票与仲裁是怎么实现的（内容还在整理）。 | （没抽出来） | ☐ |
-| `cluster/corosync/corosync qnet挂死场景分析解决.md` | qnet挂死场景的矛盾点： | qnet挂死场景的矛盾点： | ☐ |
-| `cluster/corosync/corosync-cmap使用指南.md` | cmap是corosync的内存key/value存储。cmap提供了如下功能： | cmap是corosync的内存key/value存储。cmap提供了如下功能： | ☐ |
-| `cluster/corosync/corosync-qdevice中ffsplit与lsm算法的区别.md` | corosync-qdevice目前支持两种算法来设置corosync-qnetd如何为给定的节点或者分区提供投票的行为。 | corosync-qdevice目前支持两种算法来设置corosync-qnetd如何为给定的节点或者分区提供投票的行为。 | ☐ |
-| `cluster/corosync/corosync-qdevice使用.md` | qdevice要用途是让群集能够承受大于标准仲裁规则所允许的节点故障数量。在分布式一致性协议中，基于多数派quorum的协议解决脑裂等问题，因而当集群存活节点挂死超过一半时，集群将无法对外提供服务。qdevice提供仲裁机制，使集群在多数节点挂掉后仍然能提供服务。典型的如双节点集群发生网络分区后，… | qdevice要用途是让群集能够承受大于标准仲裁规则所允许的节点故障数量。在分布式一致性协议中，基于多数派quorum的协议解决脑裂等问题，因而当集群存活节点挂死超过一半时，集群将无法对外提供服务。qdevice提供仲裁机制，使集群在多数节点挂掉后仍然能提供服务。典型的如双节点集群发生网络分区后，… | ☐ |
-| `cluster/corosync/corosync-qdevice源码阅读.md` | corosync-qdevice 源码阅读笔记：网络投票算法、消息类型与 qnetd 仲裁的注册流程。 | （没抽出来） | ☐ |
-| `cluster/corosync/corosync-qdevice详解.md` | corosync-qdevice是corosync集群工具的一个组件，用于提供第三方仲裁服务。corosync-qdevice需与corosync-qnetd和corosync一起使用，无法单独运行。 | corosync-qdevice是corosync集群工具的一个组件，用于提供第三方仲裁服务。corosync-qdevice需与corosync-qnetd和corosync一起使用，无法单独运行。 | ☐ |
-| `cluster/corosync/corosync-qnetd投票机制.md` | corosync-qnetd是corosync的第三方仲裁机制，当corosync出现网络分区时，集群内部无法选择出quorate一方时，就会借助corosync-qnetd来进行辅助投票。 | corosync-qnetd是corosync的第三方仲裁机制，当corosync出现网络分区时，集群内部无法选择出quorate一方时，就会借助corosync-qnetd来进行辅助投票。 | ☐ |
-| `cluster/corosync/corosync使用.md` | corosync编译依赖libqb和kronosnet。 | corosync编译依赖libqb和kronosnet。 | ☐ |
-| `cluster/corosync/corosync多仲裁方案设计.md` | 当前corosync仲裁方式qnetd的现状如下： | 当前corosync仲裁方式qnetd的现状如下： | ☐ |
-| `cluster/corosync/corosync源码阅读.md` | corosync采用服务的方式设计，使用totem协议作为分布式一致性协议，使用libqb库进行进程间通信。 | corosync采用服务的方式设计，使用totem协议作为分布式一致性协议，使用libqb库进行进程间通信。 | ☐ |
-| `cluster/corosync/corosync编程指南.md` | corosync编译依赖libqb和kronosnet。基于ubuntu20.04编译。 | corosync编译依赖libqb和kronosnet。基于ubuntu20.04编译。 | ☐ |
-| `cluster/corosync/disk-paxos详解.md` | Disk Paxos使用处理器和磁盘网络实现可靠的分布式系统。 与原始 Paxos 算法一样，Disk Paxos 可以保证在任意非拜占庭故障的情况下保持一致性。 只要大多数磁盘可用，即使仅剩下一个节点也能保证进程可用，且保持一致性。 | Disk Paxos使用处理器和磁盘网络实现可靠的分布式系统。 与原始 Paxos 算法一样，Disk Paxos 可以保证在任意非拜占庭故障的情况下保持一致性。 只要大多数磁盘可用，即使仅剩下一个节点也能保证进程可用，且保持一致性。 | ☐ |
-| `cluster/corosync/libqb源码详解.md` | libqb分为客户端和服务端，除了网络通信外，如udp/tcp，libqb还支持本地ipc通信。 | libqb分为客户端和服务端，除了网络通信外，如udp/tcp，libqb还支持本地ipc通信。 | ☐ |
-| `cluster/corosync/sanlock实现共享corosync共享存储仲裁.md` | 为了使corosync集群支持少数派运行模式，需要引入第三方仲裁，同时为了节约机器资源，使用共享存储作为第三方仲裁。需要一种基于共享存储的算法机制来保证在corosync集群出现网络分区或者故障时，仲裁能给其中一个分区投票，使corosync集群继续供服务，并保证数据一致性。 | 为了使corosync集群支持少数派运行模式，需要引入第三方仲裁，同时为了节约机器资源，使用共享存储作为第三方仲裁。需要一种基于共享存储的算法机制来保证在corosync集群出现网络分区或者故障时，仲裁能给其中一个分区投票，使corosync集群继续供服务，并保证数据一致性。 | ☐ |
-| `cluster/corosync/totem协议详解.md` | 这个阶段是集群组建完成正常工作的状态，这个状态一个节点发送的消息其它节点都会全部有序提交给上层 | 这个阶段是集群组建完成正常工作的状态，这个状态一个节点发送的消息其它节点都会全部有序提交给上层 | ☐ |
-| `cluster/corosync/一台主机运行多个corosync代码分析.md` | corosync当前设计为一台机器只能运行一个corosyc实例，无法部署多个，是由如下两个部分决定的： | corosync当前设计为一台机器只能运行一个corosyc实例，无法部署多个，是由如下两个部分决定的： | ☐ |
-| `cluster/corosync/corosync-down网卡仍处于多数派/index.md` | 网卡 down 掉以后，corosync 已经和另外两个节点失去联系，却仍然报告自己是 quorate。 于是 fence 不动作，主库不停，跨中心的 observer 又把主库切到了灾备中心； 等网络恢复，两个中心各有一个主库。 | 网卡 down 掉以后，corosync 已经和另外两个节点失去联系，却仍然报告自己是 quorate。 于是 fence 不动作，主库不停，跨中心的 observer 又把主库切到了灾备中心； 等网络恢复，两个中心各有一个主库。 | ☐ |
-| `cluster/DCF/dcf写入机制.md` | dcf提供如下两个写入接口： | dcf提供如下两个写入接口： | ☐ |
-| `cluster/DCF/dcf投票系统详解.md` | DCF 投票系统详解：节点角色与投票模式的枚举定义，以及投票初始化的完整调用流程。 | （没抽出来） | ☐ |
-| `cluster/DCF/dcf运行机制.md` | dcf通过stream的概念来运行分布式协议，每个stream是一个完整的分布式实例。 每个stream可以由多个节点组成。 | dcf通过stream的概念来运行分布式协议，每个stream是一个完整的分布式实例。 每个stream可以由多个节点组成。 | ☐ |
-| `cluster/DCF/openguass dcf源码阅读.md` | openGauss DCF 源码阅读笔记：从 main 到 dcf_start、init_main_threads 的启动流程梳理。 | （没抽出来） | ☐ |
-| `cluster/DCF/一文读懂openguass dcf网络模块.md` | 通信模块主要是基于MEC实现（Message Exchange Component），提供整个DCF组件实例间通信能力，以及异步事件处理框架。主要功能有：可扩展的多种通信协议，单播、广播、环回的发送接口，消息异步处理的框架，支持多channel机制和多优先级队列，支持压缩和批量发送等mec主要通过… | 通信模块主要是基于MEC实现（Message Exchange Component），提供整个DCF组件实例间通信能力，以及异步事件处理框架。主要功能有：可扩展的多种通信协议，单播、广播、环回的发送接口，消息异步处理的框架，支持多channel机制和多优先级队列，支持压缩和批量发送等mec主要通过… | ☐ |
-| `cluster/DCF/常用压缩算法编程.md` | 压缩算法选择主要考虑三个方面： | 压缩算法选择主要考虑三个方面： | ☐ |
-| `cluster/ha/业界高可用解决方案.md` | 业界主流高可用方案的横向对照：Oracle RAC、Amazon Aurora、OceanBase 各自怎么做多活与容灾。 | （没抽出来） | ☐ |
-| `cluster/ha/ha元信息常见存储方式/index.md` | mysql MHA(Master High Availability)是mysql高可用一套相对成熟的解决方案。MHA 由 MHA 管理器和 MHA 节点组成。 | mysql MHA(Master High Availability)是mysql高可用一套相对成熟的解决方案。MHA 由 MHA 管理器和 MHA 节点组成。 | ☐ |
-| `cluster/ha/中移动数据库停库问题分析/index.md` | 同城双中心，主中心数据库停库，且未触发中心间切换。 | 同城双中心，主中心数据库停库，且未触发中心间切换。 | ☐ |
-| `cluster/ha/调整corosync网络波动时间操作文档/index.md` | 调整允许的corosync网络波动时间仅需修改repmgr.conf配置文件，重启kbha和repmgrd进程，无需停止数据库，也不影响上层业务运行。按如下步骤修改配置并重启服务，经过本次修改重启后，允许的网络波动时间将从20秒增加到50秒。 | 调整允许的corosync网络波动时间仅需修改repmgr.conf配置文件，重启kbha和repmgrd进程，无需停止数据库，也不影响上层业务运行。按如下步骤修改配置并重启服务，经过本次修改重启后，允许的网络波动时间将从20秒增加到50秒。 | ☐ |
-| `cluster/kingbase/kingbase两地三中心日常巡检.md` | 两地三中心运行一段时间后，需要定期巡检，观察集群状态是否正常，若有异常，需确认异常原因并及时处理。 ## 确认集群是否正常 | 两地三中心运行一段时间后，需要定期巡检，观察集群状态是否正常，若有异常，需确认异常原因并及时处理。 ## 确认集群是否正常 | ☐ |
-| `cluster/kingbase/tptc.md` | 一个中心整个机房被一束光纤挖断，数据库集群还在，数据也还在，客户端却连不上了； 或者反过来——中心之间那条链路抖动了一下，两个中心都认为自己还是主库， 于是同一个库同时有了两个写入方。前一种是「少了一半」，后一种是「多了半个」。 | 一个中心整个机房被一束光纤挖断，数据库集群还在，数据也还在，客户端却连不上了； 或者反过来——中心之间那条链路抖动了一下，两个中心都认为自己还是主库， 于是同一个库同时有了两个写入方。前一种是「少了一半」，后一种是「多了半个」。 | ☐ |
-| `cluster/multi_cluster/多地多中心方案调研/index.md` | 商业银行数据中心监管指引明确规定了商业银行数据中心的要求。 | 商业银行数据中心监管指引明确规定了商业银行数据中心的要求。 | ☐ |
-| `cluster/oracle/oracle_maa架构详解/index.md` | oracle maa架构分为青铜、白银、黄金、铂金四个级别，其中黄金又有四种实现方式。这里按照az（可用区，一般是同一个机房，组成一个数据库集群）、region（区域，一般是不同的城市，可能会有多个可用区）、rto、rpo来进行统计，其统计结果如下（从现有架构图中来看，oracle最多有4个可用区… | oracle maa架构分为青铜、白银、黄金、铂金四个级别，其中黄金又有四种实现方式。这里按照az（可用区，一般是同一个机房，组成一个数据库集群）、region（区域，一般是不同的城市，可能会有多个可用区）、rto、rpo来进行统计，其统计结果如下（从现有架构图中来看，oracle最多有4个可用区… | ☐ |
-| `cluster/oracle/oracle_site_guard详解/index.md` | Oracle Site Guard 是一个数据保护解决方案，用于实现数据中心级别的灾难恢复和故障转移。它可以保护 Oracle 数据库、应用服务器、中间件以及整个操作系统。 | Oracle Site Guard 是一个数据保护解决方案，用于实现数据中心级别的灾难恢复和故障转移。它可以保护 Oracle 数据库、应用服务器、中间件以及整个操作系统。 | ☐ |
-| `cluster/postgresql/haproxy使用extern-check支持伪双写配置验证.md` | 将如下配置文件添加到postgresql.conf, | 将如下配置文件添加到postgresql.conf, | ☐ |
-| `cluster/postgresql/haproxy支持postgresql伪双写.md` | 要达到双写，其实就是把备库收到的请求都转发或者路由到主库，这又分为两种方式: | 要达到双写，其实就是把备库收到的请求都转发或者路由到主库，这又分为两种方式: | ☐ |
-| `cluster/postgresql/postgresql伪双写.md` | 选择haproxy来实现。 | 选择haproxy来实现。 | ☐ |
-| `cluster/postgresql/事务管理.md` | 事务并发引发的问题如下： | 事务并发引发的问题如下： | ☐ |
-| `cluster/raft/c-raft分布式存储方案.md` | RAFT中将节点状态分为： | RAFT中将节点状态分为： | ☐ |
-| `cluster/raft/c-rart.md` | raft协议的完全异步C语言实现。 | raft协议的完全异步C语言实现。 | ☐ |
-| `cluster/raft/raft协议动态调整quorum.md` | 按照当前raft协议实现，当n个节点的集群超过n/2个节点宕机时，集群将无法提供服务。如5个节点的集群，当有3个节点宕机时，集群将无法提供服务。 | 按照当前raft协议实现，当n个节点的集群超过n/2个节点宕机时，集群将无法提供服务。如5个节点的集群，当有3个节点宕机时，集群将无法提供服务。 | ☐ |
-| `cluster/raft/raft重要概念.md` | raft将分布式一致性问题分解成两个独立的问题，分成两个大的步骤来进行数据处理。 | raft将分布式一致性问题分解成两个独立的问题，分成两个大的步骤来进行数据处理。 | ☐ |
-| `cluster/zookeeper/zookeeperC语言API编程指南.md` | zookeeper是用java语言编写的分布式集群，我们可以基于zookeeper搭建分布式应用。通常zookeeper作为服务器运行，分布式应用需要使用客户端API与zookeeper进行通信。 | zookeeper是用java语言编写的分布式集群，我们可以基于zookeeper搭建分布式应用。通常zookeeper作为服务器运行，分布式应用需要使用客户端API与zookeeper进行通信。 | ☐ |
-| `cluster/zookeeper/zookeeper主备集群demo.md` | 使用zookeeper搭建主备集群，要求实现如下功能： | 使用zookeeper搭建主备集群，要求实现如下功能： | ☐ |
-| `cluster/zookeeper/zookeeper使用说明文档.md` | 需对每一台zookeeper集群节点做如下操作： | 需对每一台zookeeper集群节点做如下操作： | ☐ |
-| `cluster/zookeeper/zookeeper安装部署教程.md` | 需对每一台zookeeper集群节点做如下操作： | 需对每一台zookeeper集群节点做如下操作： | ☐ |
+| `distributed/foundations/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md` | 之前有人问我设计一个分布式的递增的唯一id生成。想了半天不知道，偶然一个同事说起snowflake算法，我百度了一下，很简单高效。 | 之前有人问我设计一个分布式的递增的唯一id生成。想了半天不知道，偶然一个同事说起snowflake算法，我百度了一下，很简单高效。 | ☐ |
+| `distributed/foundations/C语言雪花算法,记一次雪花算法的实现.md` | 作者最近在实现雪花算法生成主键，看了不少文章。个人觉得雪花算法的最大的优点是有序(减少数据库的页分裂页合并)。雪花算法本身很简单，但他依赖于时间，也就是机器或容器的时间一回拨就出现问题了。网上也出现了不少关于如何解决回拨的问题。我记录一下本次实现雪花主键的过程。 | 作者最近在实现雪花算法生成主键，看了不少文章。个人觉得雪花算法的最大的优点是有序(减少数据库的页分裂页合并)。雪花算法本身很简单，但他依赖于时间，也就是机器或容器的时间一回拨就出现问题了。网上也出现了不少关于如何解决回拨的问题。我记录一下本次实现雪花主键的过程。 | ☐ |
+| `distributed/ha-and-dr/Patroni详解.md` | Patroni 笔记：PostgreSQL 高可用方案里负责选主、故障切换与配置同步的那个组件（内容还在整理）。 | （没抽出来） | ☐ |
+| `distributed/consensus/raft协议动态调整quorum.md` | 按照当前raft协议实现，当n个节点的集群超过n/2个节点宕机时，集群将无法提供服务。如5个节点的集群，当有3个节点宕机时，集群将无法提供服务。 | 按照当前raft协议实现，当n个节点的集群超过n/2个节点宕机时，集群将无法提供服务。如5个节点的集群，当有3个节点宕机时，集群将无法提供服务。 | ☐ |
+| `distributed/field-notes/repmgr网络割裂问题.md` | repmgr 在网络割裂场景下的问题：分布式存储里，主备之间失联时该由谁说了算。 | （没抽出来） | ☐ |
+| `distributed/ha-and-dr/两地三中心技术指标分析.md` | 延迟主要和网络系统（网络硬件等）以及距离有关。 | 延迟主要和网络系统（网络硬件等）以及距离有关。 | ☐ |
+| `distributed/selection/主流分布式高可用方案.md` | 主流分布式高可用方案的分类与取舍（内容还在整理）。 | （没抽出来） | ☐ |
+| `distributed/distributed-storage/从两地三中心到OceanBase的多地多中心 - 墨天轮.md` | 在金融行业，“两地三中心”是一个基本的合规要求，本文简单介绍一下金融行业容灾架构的\"两地三中心\"究竟是指什么，然后说明OceanBase实现的\"两地三中心\"甚至\"多地多中心\"有什么特点。 | 在金融行业，“两地三中心”是一个基本的合规要求，本文简单介绍一下金融行业容灾架构的"两地三中心"究竟是指什么，然后说明OceanBase实现的"两地三中心"甚至"多地多中心"有什么特点。 | ☐ |
+| `distributed/foundations/分布式一致性协议.md` | 当前业界主流的分布式一致性协议主要有下面这几个。本文回答两个问题：它们各自解决的是 同一类问题的哪一部分，以及选型时该看哪个。它们不是同一层次的替代品——先看清各自 解决的是问题的哪一部分： | 当前业界主流的分布式一致性协议主要有下面这几个。本文回答两个问题：它们各自解决的是 同一类问题的哪一部分，以及选型时该看哪个。它们不是同一层次的替代品——先看清各自 解决的是问题的哪一部分： | ☐ |
+| `distributed/foundations/分布式存储需要解决的问题.md` | 分布式存储绕不开的几个问题：数据一致性怎么保证、ACID 在多副本下还成不成立。 | （没抽出来） | ☐ |
+| `distributed/selection/分布式数据库高可用方案设计.md` | 通俗的来说，分布式数据库高可用要求即使仅存一个集群节点，也需要对外提供服务。 | 通俗的来说，分布式数据库高可用要求即使仅存一个集群节点，也需要对外提供服务。 | ☐ |
+| `distributed/foundations/分布式系统设计必知必会.md` | 分布式系统设计的几个必知问题：并发、串行与并行、时序，以及数据一致性。 | （没抽出来） | ☐ |
+| `distributed/consensus/分布式集群动态调整quorum值方案对比.md` | 举例来说，一个包含5个节点的数据库集群，当集群挂掉3个节点后，因为不符合半数以上节点正常原则，数据库集群将无法对外提供服务，需要人为介入。但在数据库的实际使用场景中，我们期望即使只剩下一个节点也能对外提供服务。实际上，当5个集群节点挂掉2个节点后，应将剩下3个节点看成一个3节点的集群，动态调整对应… | 举例来说，一个包含5个节点的数据库集群，当集群挂掉3个节点后，因为不符合半数以上节点正常原则，数据库集群将无法对外提供服务，需要人为介入。但在数据库的实际使用场景中，我们期望即使只剩下一个节点也能对外提供服务。实际上，当5个集群节点挂掉2个节点后，应将剩下3个节点看成一个3节点的集群，动态调整对应… | ☐ |
+| `distributed/selection/基于corosync的分布式应用程序开发方案分析.md` | 综上所述，并结合实际使用场景中遇到的各种问题，可得出如下结论： | 综上所述，并结合实际使用场景中遇到的各种问题，可得出如下结论： | ☐ |
+| `distributed/foundations/常用分布式实现架构.md` | 分布式架构根据各个分布式节点共享的内容分为如下几种： | 分布式架构根据各个分布式节点共享的内容分为如下几种： | ☐ |
+| `distributed/foundations/常用分布式解决方案.md` | c-raft集群开发需处理问题： | c-raft集群开发需处理问题： | ☐ |
+| `distributed/consensus/corosy-qdevice源码阅读.md` | corosync-qdevice 源码阅读笔记：qdevice 的投票与仲裁是怎么实现的（内容还在整理）。 | （没抽出来） | ☐ |
+| `distributed/field-notes/corosync qnet挂死场景分析解决.md` | qnet挂死场景的矛盾点： | qnet挂死场景的矛盾点： | ☐ |
+| `distributed/field-notes/corosync-cmap使用指南.md` | cmap是corosync的内存key/value存储。cmap提供了如下功能： | cmap是corosync的内存key/value存储。cmap提供了如下功能： | ☐ |
+| `distributed/consensus/corosync-qdevice中ffsplit与lsm算法的区别.md` | corosync-qdevice目前支持两种算法来设置corosync-qnetd如何为给定的节点或者分区提供投票的行为。 | corosync-qdevice目前支持两种算法来设置corosync-qnetd如何为给定的节点或者分区提供投票的行为。 | ☐ |
+| `distributed/field-notes/corosync-qdevice使用.md` | qdevice要用途是让群集能够承受大于标准仲裁规则所允许的节点故障数量。在分布式一致性协议中，基于多数派quorum的协议解决脑裂等问题，因而当集群存活节点挂死超过一半时，集群将无法对外提供服务。qdevice提供仲裁机制，使集群在多数节点挂掉后仍然能提供服务。典型的如双节点集群发生网络分区后，… | qdevice要用途是让群集能够承受大于标准仲裁规则所允许的节点故障数量。在分布式一致性协议中，基于多数派quorum的协议解决脑裂等问题，因而当集群存活节点挂死超过一半时，集群将无法对外提供服务。qdevice提供仲裁机制，使集群在多数节点挂掉后仍然能提供服务。典型的如双节点集群发生网络分区后，… | ☐ |
+| `distributed/consensus/corosync-qdevice源码阅读.md` | corosync-qdevice 源码阅读笔记：网络投票算法、消息类型与 qnetd 仲裁的注册流程。 | （没抽出来） | ☐ |
+| `distributed/consensus/corosync-qdevice详解.md` | corosync-qdevice是corosync集群工具的一个组件，用于提供第三方仲裁服务。corosync-qdevice需与corosync-qnetd和corosync一起使用，无法单独运行。 | corosync-qdevice是corosync集群工具的一个组件，用于提供第三方仲裁服务。corosync-qdevice需与corosync-qnetd和corosync一起使用，无法单独运行。 | ☐ |
+| `distributed/field-notes/corosync-qnetd投票机制.md` | corosync-qnetd是corosync的第三方仲裁机制，当corosync出现网络分区时，集群内部无法选择出quorate一方时，就会借助corosync-qnetd来进行辅助投票。 | corosync-qnetd是corosync的第三方仲裁机制，当corosync出现网络分区时，集群内部无法选择出quorate一方时，就会借助corosync-qnetd来进行辅助投票。 | ☐ |
+| `distributed/field-notes/corosync使用.md` | corosync编译依赖libqb和kronosnet。 | corosync编译依赖libqb和kronosnet。 | ☐ |
+| `distributed/consensus/corosync多仲裁方案设计.md` | 当前corosync仲裁方式qnetd的现状如下： | 当前corosync仲裁方式qnetd的现状如下： | ☐ |
+| `distributed/consensus/corosync源码阅读.md` | corosync采用服务的方式设计，使用totem协议作为分布式一致性协议，使用libqb库进行进程间通信。 | corosync采用服务的方式设计，使用totem协议作为分布式一致性协议，使用libqb库进行进程间通信。 | ☐ |
+| `distributed/field-notes/corosync编程指南.md` | corosync编译依赖libqb和kronosnet。基于ubuntu20.04编译。 | corosync编译依赖libqb和kronosnet。基于ubuntu20.04编译。 | ☐ |
+| `distributed/consensus/disk-paxos详解.md` | Disk Paxos使用处理器和磁盘网络实现可靠的分布式系统。 与原始 Paxos 算法一样，Disk Paxos 可以保证在任意非拜占庭故障的情况下保持一致性。 只要大多数磁盘可用，即使仅剩下一个节点也能保证进程可用，且保持一致性。 | Disk Paxos使用处理器和磁盘网络实现可靠的分布式系统。 与原始 Paxos 算法一样，Disk Paxos 可以保证在任意非拜占庭故障的情况下保持一致性。 只要大多数磁盘可用，即使仅剩下一个节点也能保证进程可用，且保持一致性。 | ☐ |
+| `distributed/consensus/libqb源码详解.md` | libqb分为客户端和服务端，除了网络通信外，如udp/tcp，libqb还支持本地ipc通信。 | libqb分为客户端和服务端，除了网络通信外，如udp/tcp，libqb还支持本地ipc通信。 | ☐ |
+| `distributed/field-notes/sanlock实现共享corosync共享存储仲裁.md` | 为了使corosync集群支持少数派运行模式，需要引入第三方仲裁，同时为了节约机器资源，使用共享存储作为第三方仲裁。需要一种基于共享存储的算法机制来保证在corosync集群出现网络分区或者故障时，仲裁能给其中一个分区投票，使corosync集群继续供服务，并保证数据一致性。 | 为了使corosync集群支持少数派运行模式，需要引入第三方仲裁，同时为了节约机器资源，使用共享存储作为第三方仲裁。需要一种基于共享存储的算法机制来保证在corosync集群出现网络分区或者故障时，仲裁能给其中一个分区投票，使corosync集群继续供服务，并保证数据一致性。 | ☐ |
+| `distributed/consensus/totem协议详解.md` | 这个阶段是集群组建完成正常工作的状态，这个状态一个节点发送的消息其它节点都会全部有序提交给上层 | 这个阶段是集群组建完成正常工作的状态，这个状态一个节点发送的消息其它节点都会全部有序提交给上层 | ☐ |
+| `distributed/field-notes/一台主机运行多个corosync代码分析.md` | corosync当前设计为一台机器只能运行一个corosyc实例，无法部署多个，是由如下两个部分决定的： | corosync当前设计为一台机器只能运行一个corosyc实例，无法部署多个，是由如下两个部分决定的： | ☐ |
+| `distributed/field-notes/corosync-down网卡仍处于多数派/index.md` | 网卡 down 掉以后，corosync 已经和另外两个节点失去联系，却仍然报告自己是 quorate。 于是 fence 不动作，主库不停，跨中心的 observer 又把主库切到了灾备中心； 等网络恢复，两个中心各有一个主库。 | 网卡 down 掉以后，corosync 已经和另外两个节点失去联系，却仍然报告自己是 quorate。 于是 fence 不动作，主库不停，跨中心的 observer 又把主库切到了灾备中心； 等网络恢复，两个中心各有一个主库。 | ☐ |
+| `distributed/consensus/dcf写入机制.md` | dcf提供如下两个写入接口： | dcf提供如下两个写入接口： | ☐ |
+| `distributed/consensus/dcf投票系统详解.md` | DCF 投票系统详解：节点角色与投票模式的枚举定义，以及投票初始化的完整调用流程。 | （没抽出来） | ☐ |
+| `distributed/consensus/dcf运行机制.md` | dcf通过stream的概念来运行分布式协议，每个stream是一个完整的分布式实例。 每个stream可以由多个节点组成。 | dcf通过stream的概念来运行分布式协议，每个stream是一个完整的分布式实例。 每个stream可以由多个节点组成。 | ☐ |
+| `distributed/consensus/openguass dcf源码阅读.md` | openGauss DCF 源码阅读笔记：从 main 到 dcf_start、init_main_threads 的启动流程梳理。 | （没抽出来） | ☐ |
+| `distributed/consensus/一文读懂openguass dcf网络模块.md` | 通信模块主要是基于MEC实现（Message Exchange Component），提供整个DCF组件实例间通信能力，以及异步事件处理框架。主要功能有：可扩展的多种通信协议，单播、广播、环回的发送接口，消息异步处理的框架，支持多channel机制和多优先级队列，支持压缩和批量发送等mec主要通过… | 通信模块主要是基于MEC实现（Message Exchange Component），提供整个DCF组件实例间通信能力，以及异步事件处理框架。主要功能有：可扩展的多种通信协议，单播、广播、环回的发送接口，消息异步处理的框架，支持多channel机制和多优先级队列，支持压缩和批量发送等mec主要通过… | ☐ |
+| `distributed/consensus/常用压缩算法编程.md` | 压缩算法选择主要考虑三个方面： | 压缩算法选择主要考虑三个方面： | ☐ |
+| `distributed/selection/业界高可用解决方案.md` | 业界主流高可用方案的横向对照：Oracle RAC、Amazon Aurora、OceanBase 各自怎么做多活与容灾。 | （没抽出来） | ☐ |
+| `distributed/ha-and-dr/ha元信息常见存储方式/index.md` | mysql MHA(Master High Availability)是mysql高可用一套相对成熟的解决方案。MHA 由 MHA 管理器和 MHA 节点组成。 | mysql MHA(Master High Availability)是mysql高可用一套相对成熟的解决方案。MHA 由 MHA 管理器和 MHA 节点组成。 | ☐ |
+| `distributed/ha-and-dr/中移动数据库停库问题分析/index.md` | 同城双中心，主中心数据库停库，且未触发中心间切换。 | 同城双中心，主中心数据库停库，且未触发中心间切换。 | ☐ |
+| `distributed/ha-and-dr/调整corosync网络波动时间操作文档/index.md` | 调整允许的corosync网络波动时间仅需修改repmgr.conf配置文件，重启kbha和repmgrd进程，无需停止数据库，也不影响上层业务运行。按如下步骤修改配置并重启服务，经过本次修改重启后，允许的网络波动时间将从20秒增加到50秒。 | 调整允许的corosync网络波动时间仅需修改repmgr.conf配置文件，重启kbha和repmgrd进程，无需停止数据库，也不影响上层业务运行。按如下步骤修改配置并重启服务，经过本次修改重启后，允许的网络波动时间将从20秒增加到50秒。 | ☐ |
+| `distributed/ha-and-dr/kingbase两地三中心日常巡检.md` | 两地三中心运行一段时间后，需要定期巡检，观察集群状态是否正常，若有异常，需确认异常原因并及时处理。 ## 确认集群是否正常 | 两地三中心运行一段时间后，需要定期巡检，观察集群状态是否正常，若有异常，需确认异常原因并及时处理。 ## 确认集群是否正常 | ☐ |
+| `distributed/ha-and-dr/tptc.md` | 一个中心整个机房被一束光纤挖断，数据库集群还在，数据也还在，客户端却连不上了； 或者反过来——中心之间那条链路抖动了一下，两个中心都认为自己还是主库， 于是同一个库同时有了两个写入方。前一种是「少了一半」，后一种是「多了半个」。 | 一个中心整个机房被一束光纤挖断，数据库集群还在，数据也还在，客户端却连不上了； 或者反过来——中心之间那条链路抖动了一下，两个中心都认为自己还是主库， 于是同一个库同时有了两个写入方。前一种是「少了一半」，后一种是「多了半个」。 | ☐ |
+| `distributed/field-notes/多地多中心方案调研/index.md` | 商业银行数据中心监管指引明确规定了商业银行数据中心的要求。 | 商业银行数据中心监管指引明确规定了商业银行数据中心的要求。 | ☐ |
+| `distributed/ha-and-dr/oracle_maa架构详解/index.md` | oracle maa架构分为青铜、白银、黄金、铂金四个级别，其中黄金又有四种实现方式。这里按照az（可用区，一般是同一个机房，组成一个数据库集群）、region（区域，一般是不同的城市，可能会有多个可用区）、rto、rpo来进行统计，其统计结果如下（从现有架构图中来看，oracle最多有4个可用区… | oracle maa架构分为青铜、白银、黄金、铂金四个级别，其中黄金又有四种实现方式。这里按照az（可用区，一般是同一个机房，组成一个数据库集群）、region（区域，一般是不同的城市，可能会有多个可用区）、rto、rpo来进行统计，其统计结果如下（从现有架构图中来看，oracle最多有4个可用区… | ☐ |
+| `distributed/ha-and-dr/oracle_site_guard详解/index.md` | Oracle Site Guard 是一个数据保护解决方案，用于实现数据中心级别的灾难恢复和故障转移。它可以保护 Oracle 数据库、应用服务器、中间件以及整个操作系统。 | Oracle Site Guard 是一个数据保护解决方案，用于实现数据中心级别的灾难恢复和故障转移。它可以保护 Oracle 数据库、应用服务器、中间件以及整个操作系统。 | ☐ |
+| `distributed/distributed-storage/haproxy使用extern-check支持伪双写配置验证.md` | 将如下配置文件添加到postgresql.conf, | 将如下配置文件添加到postgresql.conf, | ☐ |
+| `distributed/distributed-storage/haproxy支持postgresql伪双写.md` | 要达到双写，其实就是把备库收到的请求都转发或者路由到主库，这又分为两种方式: | 要达到双写，其实就是把备库收到的请求都转发或者路由到主库，这又分为两种方式: | ☐ |
+| `distributed/distributed-storage/postgresql伪双写.md` | 选择haproxy来实现。 | 选择haproxy来实现。 | ☐ |
+| `distributed/distributed-storage/事务管理.md` | 事务并发引发的问题如下： | 事务并发引发的问题如下： | ☐ |
+| `distributed/consensus/c-raft分布式存储方案.md` | RAFT中将节点状态分为： | RAFT中将节点状态分为： | ☐ |
+| `distributed/consensus/c-rart.md` | raft协议的完全异步C语言实现。 | raft协议的完全异步C语言实现。 | ☐ |
+| `distributed/consensus/raft协议动态调整quorum.md` | 按照当前raft协议实现，当n个节点的集群超过n/2个节点宕机时，集群将无法提供服务。如5个节点的集群，当有3个节点宕机时，集群将无法提供服务。 | 按照当前raft协议实现，当n个节点的集群超过n/2个节点宕机时，集群将无法提供服务。如5个节点的集群，当有3个节点宕机时，集群将无法提供服务。 | ☐ |
+| `distributed/consensus/raft重要概念.md` | raft将分布式一致性问题分解成两个独立的问题，分成两个大的步骤来进行数据处理。 | raft将分布式一致性问题分解成两个独立的问题，分成两个大的步骤来进行数据处理。 | ☐ |
+| `distributed/consensus/zookeeperC语言API编程指南.md` | zookeeper是用java语言编写的分布式集群，我们可以基于zookeeper搭建分布式应用。通常zookeeper作为服务器运行，分布式应用需要使用客户端API与zookeeper进行通信。 | zookeeper是用java语言编写的分布式集群，我们可以基于zookeeper搭建分布式应用。通常zookeeper作为服务器运行，分布式应用需要使用客户端API与zookeeper进行通信。 | ☐ |
+| `distributed/consensus/zookeeper主备集群demo.md` | 使用zookeeper搭建主备集群，要求实现如下功能： | 使用zookeeper搭建主备集群，要求实现如下功能： | ☐ |
+| `distributed/consensus/zookeeper使用说明文档.md` | 需对每一台zookeeper集群节点做如下操作： | 需对每一台zookeeper集群节点做如下操作： | ☐ |
+| `distributed/consensus/zookeeper安装部署教程.md` | 需对每一台zookeeper集群节点做如下操作： | 需对每一台zookeeper集群节点做如下操作： | ☐ |
 | `code/assemble-work/readme.md` | This is about assemble. | This is about assemble. | ☐ |
 | `code/c-sharp-work/readme.md` | This is some code using C#. | This is some code using C#. | ☐ |
 | `code/c-work/readme.md` | This directory include some works using C. | This directory include some works using C. | ☐ |
@@ -444,10 +444,10 @@
 | `network/vpn/MonoCloudios使用教程.md` | Rule-Based：常规代理模式，会依据代理规则进行分流代理，除国内 IP 都会走代理进行连接。 | Rule-Based：常规代理模式，会依据代理规则进行分流代理，除国内 IP 都会走代理进行连接。 | ☐ |
 | `network/vpn/MonoCloud安卓使用教程.md` | 请注意，知识库内提供的客户端版本可能不是最新的，且我们只提供了 arm64-v8a 版本（适用于目前市面上的绝大多数 Android 设备），若上述客户端不适合您的手机使用或者我们提供的文件版本较旧您需要更新的版本，可以在 Clash For Android 官方项目页内找到最新的最全版本的安装包… | 请注意，知识库内提供的客户端版本可能不是最新的，且我们只提供了 arm64-v8a 版本（适用于目前市面上的绝大多数 Android 设备），若上述客户端不适合您的手机使用或者我们提供的文件版本较旧您需要更新的版本，可以在 Clash For Android 官方项目页内找到最新的最全版本的安装包… | ☐ |
 | `opc/opc.md` | 继续开发完善，边实现过程记录到code.md，需要记录设计决策、偏离、权衡和待确认问题。 | 继续开发完善，边实现过程记录到code.md，需要记录设计决策、偏离、权衡和待确认问题。 | ☐ |
-| `openguass/opengauss dcf搭建 - 墨天轮.md` | openGauss 的搭建记录：不用 om 工具安装，以及 DCF 集群的 iplist、端口和数据目录怎么配。 | （没抽出来） | ☐ |
-| `openguass/openguass dcf启动详解.md` | dcf收到消息处理函数如下： | dcf收到消息处理函数如下： | ☐ |
-| `openguass/openguass升级机制.md` | openGauss 的升级机制：集群配置文件 cluster_config.xml 里都有哪些参数。 | （没抽出来） | ☐ |
-| `openguass/openguass架构详解.md` | openguass从postgresql演化而来，最主要的区别为：openguass是多线程架构，postgresql是多进程架构。除此而外，openguass还支持paxos分布式一致性协议。 | openguass从postgresql演化而来，最主要的区别为：openguass是多线程架构，postgresql是多进程架构。除此而外，openguass还支持paxos分布式一致性协议。 | ☐ |
+| `distributed/consensus/opengauss dcf搭建 - 墨天轮.md` | openGauss 的搭建记录：不用 om 工具安装，以及 DCF 集群的 iplist、端口和数据目录怎么配。 | （没抽出来） | ☐ |
+| `distributed/consensus/openguass dcf启动详解.md` | dcf收到消息处理函数如下： | dcf收到消息处理函数如下： | ☐ |
+| `distributed/consensus/openguass升级机制.md` | openGauss 的升级机制：集群配置文件 cluster_config.xml 里都有哪些参数。 | （没抽出来） | ☐ |
+| `distributed/consensus/openguass架构详解.md` | openguass从postgresql演化而来，最主要的区别为：openguass是多线程架构，postgresql是多进程架构。除此而外，openguass还支持paxos分布式一致性协议。 | openguass从postgresql演化而来，最主要的区别为：openguass是多线程架构，postgresql是多进程架构。除此而外，openguass还支持paxos分布式一致性协议。 | ☐ |
 | `page/Csharp.md` | sender最终会被转换为触发该事件的控件。 | sender最终会被转换为触发该事件的控件。 | ☐ |
 | `page/devExpress.md` | 对于各种控件的使用，需掌握以下几点： | 对于各种控件的使用，需掌握以下几点： | ☐ |
 | `page/gui.md` | 在 Ubuntu 上换主题和图标的步骤：下载主题与图标，再放进 /usr/share/themes 和 /usr/share/icons。 | （没抽出来） | ☐ |

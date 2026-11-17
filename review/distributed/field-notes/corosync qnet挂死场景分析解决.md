@@ -1,6 +1,6 @@
 # 审校：corosync qnet挂死场景分析解决
 
-- 原文：docs/cluster/corosync/corosync qnet挂死场景分析解决.md
+- 原文：docs/distributed/field-notes/corosync qnet挂死场景分析解决.md
 - 范围：全文
 - 目标读者：做双节点 / 同城双中心仲裁方案的工程师
   （知道 qdevice、qnetd 的角色，想搞清楚仲裁进程挂掉后的行为边界）
@@ -200,7 +200,7 @@
       汇总表（把三节点的四种组合和 n 节点的一般情形并成一张），
       再链到同目录 `corosync-qdevice使用.md`、
       `sanlock实现共享corosync共享存储仲裁.md`、
-      `docs/cluster/ha/中移动数据库停库问题分析/index.md`
+      `docs/distributed/ha-and-dr/中移动数据库停库问题分析/index.md`
       （一个真实的「失去多数派 → 停库」案例）。
     - 原因：README 的「一句话定位」「一份可带走的产物」「一条自然的内容路径」。
 

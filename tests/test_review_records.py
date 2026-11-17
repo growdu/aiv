@@ -284,8 +284,8 @@ def changed_paths(sha: str, *, extra_env: dict[str, str] | None = None) -> list[
     ``core.quotePath`` is false -- and that setting lives in the
     machine's git config: a developer often has it off, a CI runner
     keeps the default (true).  The same commit then reports
-    ``docs/cluster/分布式一致性协议.md`` on one machine and
-    ``"docs/cluster/\\350\\276\\205..."`` on the other, so comparing the
+    ``docs/distributed/foundations/分布式一致性协议.md`` on one machine and
+    ``"docs/distributed/foundations/\\350\\276\\205..."`` on the other, so comparing the
     record's path against that output matches on one machine and not on
     the other.  ``-z`` pins the output to raw bytes with NUL separators,
     independent of any git configuration.
@@ -420,7 +420,7 @@ def test_changed_paths_are_raw_even_when_git_quotes_non_ascii_paths():
     """单元：取「提交改了哪些文件」不能受 git 的路径转义影响。
 
     ``git show --name-only`` 默认把非 ASCII 路径 C 转义成
-    ``"docs/cluster/\\350\\276\\205..."``，除非 ``core.quotePath`` 是 false。
+    ``"docs/distributed/foundations/\\350\\276\\205..."``，除非 ``core.quotePath`` 是 false。
     那是**每台机器自己的** git 配置：开发机常关掉，CI runner 保持默认。
     两边对同一个提交给出的文本不同，路径比对必然一边成一边败。
 
