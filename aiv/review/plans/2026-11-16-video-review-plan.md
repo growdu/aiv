@@ -45,12 +45,14 @@
   - `Media` 与 `load_media(episode)`：成片 + 时间轴 + 旁白 + BGM
   - `VV-01` 抽帧近乎纯色
   - `VV-02` 底部字幕带没有暗色像素
-  - `VV-03` 正文区间旁白静音 > 0.6 s
+  - `VV-03` 正文区间旁白静音 > 1.0 s（阈值量出来的，见 README §3.2）
   - `VV-04` 成片时长与时间轴对不上
   - `VV-05` 关键帧间隔（调 `preflight.keyframe_gaps`）
   - `VV-06` 混音电平（调 `bgm.measure_mix` + `check_mix`）
   - `VV-07` 平台门槛（调 `preflight.check_video`）
-  - `extract_frames()` + 抽帧清单（Markdown）
+  - `extract_frames()` + 抽帧清单（Markdown）：
+    每段抽 2 帧（段中点 + 段尾 85%）加关键帧，
+    「应有文案」递归摊平契约 `params`
 - [x] `pyv/cli.py` 加 `review video` 与 `review frames` 子命令
 - [x] `Makefile` 加 `review-video` / `review-frames` 目标
 - [x] 测试：七条规则各有注入缺陷验证；产物缺失时显式「跳过」
@@ -70,6 +72,8 @@
 
 - [x] 六期文本层实跑，信号进记录
 - [ ] 六期抽帧，Agent 逐帧看，结论进记录（画面有没有漏字、文案对不对、讲不讲得清）
+      - [x] ep06（row-lock）：成片已产出，20 帧全部看过，结论进 `episodes/row-lock.md`
+      - [ ] ep01~ep05：本机没有成片产物，出片后补
 - [x] 有信号的地方列改稿/改代码建议，状态推到「建议中」
 - [x] `INDEX.md` 六行状态更新
 
