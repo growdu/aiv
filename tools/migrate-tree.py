@@ -872,6 +872,28 @@ def path_forms(rel):
     }
 
 
+def _replace_guarded(text, old_text, new_text):
+    """把 `old_text` 换成 `new_text`，但**不碰已经改写过的路径**。
+
+    搬家常常只是给路径加一段前缀
+    （`code/x.md` → `engineering/…/code/x.md`），于是「旧路径」也是「新路径」的尾巴。
+    第一遍改完之后，文件里剩下的旧片段全都长在新路径的肚子里 ——
+    再替一遍，前缀就叠成两截（`engineering/…/engineering/…/code/x.md`）。
+    所以旧片段前面要立一道门槛：前面正好是新前缀的地方，不替。
+
+    返回 `(新文本, 替了几处)`。
+    """
+    if old_text not in text:
+        return text, 0
+    prefix = ""
+    if len(new_text) > len(old_text) and new_text.endswith(old_text):
+        prefix = new_text[: -len(old_text)]
+    if prefix:
+        pattern = re.compile(r"(?<!" + re.escape(prefix) + r")" + re.escape(old_text))
+        return pattern.subn(lambda _m: new_text, text)
+    return text.replace(old_text, new_text), text.count(old_text)
+
+
 def rewrite_refs(targets, moves, report):
     """改写站点外部文件里硬编码的 docs 路径。
 
@@ -882,6 +904,7 @@ def rewrite_refs(targets, moves, report):
     （这正是 `DATE_OVERRIDES` 存在的意义），所以只换路径那一段。
     站上有两种写法 —— 中文未编码的、百分号编码的 —— 两种都要替。
     """
+
     total = 0
     for rel_file, form in targets:
         path = os.path.join(REPO, rel_file)
@@ -902,10 +925,8 @@ def rewrite_refs(targets, moves, report):
                     continue
                 pairs = [(old_form, new_form)]
             for old_text, new_text in pairs:
-                if old_text not in text:
-                    continue
-                hits += text.count(old_text)
-                text = text.replace(old_text, new_text)
+                text, n = _replace_guarded(text, old_text, new_text)
+                hits += n
         if text != original:
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(text)
