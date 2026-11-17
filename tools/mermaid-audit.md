@@ -734,7 +734,7 @@
   A[DecodingContextFindStartpoint<br/>(logical.c:635)] --> B[XLogReadRecord]
   ```
 
-# docs/linux/cpu-affinity-top-guide/index.md
+# docs/source-tracks/linux/kernel-internals/cpu-affinity-top-guide/index.md
 
 - **第 90 行**（块 #3，类型 `flowchart`，报错在块内第 5 行）
 

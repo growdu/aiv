@@ -1,7 +1,7 @@
 # 全树范围分类：哪些不是面向读者的技术文章
 
 - 日期：2026-11-14
-- 依据：`tools/review-check.py` 对 `docs/` 全树（628 篇）跑出的信号，加逐篇读原文的判断
+- 依据：`tools/review-check.py` 对 `docs/` 全树（632 篇）跑出的信号，加逐篇读原文的判断
 - 目的：把审校范围从「四支柱 282 篇」扩到全树之前，先把**不面向读者的技术文章**筛掉，
   免得把站点目录页、内部工作文档、命令速查表也按技术深度五要素去审。
 
@@ -9,7 +9,7 @@
 
 | 桶 | 含义 | 篇数 | 技术深度五要素 |
 | --- | --- | --- | --- |
-| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 104 | 不审 |
+| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 108 | 不审 |
 | 2 速查/清单/操作类 | 面向读者，但形态是命令表、步骤、清单，没有成篇解释 | 49 | 不适用 |
 | 3 非技术内容 | 面向读者，但写的是生活、备考、内部规范 | 38 | 不适用 |
 | 4 转载内容 | 标了来源、署名他人的转载稿 | 17 | 不按原创稿审改 |
@@ -46,10 +46,9 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 
 | 支柱 | 总数 | 非内容 | 速查操作 | 非技术 | 转载 | 技术文章 | warn | DEP-00 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| source-tracks | 216 | 15 | 8 | 0 | 0 | 193 | 179 | 31 |
+| source-tracks | 269 | 27 | 15 | 0 | 0 | 227 | 219 | 56 |
 | cluster | 62 | 8 | 0 | 0 | 0 | 54 | 54 | 29 |
 | life | 42 | 11 | 0 | 31 | 0 | 0 | 28 | 6 |
-| linux | 39 | 5 | 7 | 0 | 0 | 27 | 21 | 16 |
 | ai | 30 | 1 | 0 | 4 | 17 | 8 | 36 | 4 |
 | dpdk | 27 | 3 | 7 | 0 | 0 | 17 | 15 | 9 |
 | tools | 21 | 1 | 4 | 0 | 0 | 16 | 18 | 9 |
@@ -62,7 +61,6 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 | docker | 12 | 1 | 2 | 0 | 0 | 9 | 5 | 2 |
 | protocol | 12 | 2 | 0 | 0 | 0 | 10 | 9 | 7 |
 | blog | 11 | 2 | 0 | 0 | 0 | 9 | 5 | 2 |
-| network | 10 | 3 | 0 | 0 | 0 | 7 | 10 | 5 |
 | platform-meta | 10 | 7 | 0 | 0 | 0 | 3 | 8 | 7 |
 | storage | 6 | 2 | 0 | 0 | 0 | 4 | 4 | 2 |
 | edit | 5 | 1 | 1 | 0 | 0 | 3 | 5 | 4 |
@@ -83,16 +81,16 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 | pcap | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | src | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | wiki | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| **合计** | **628** | **104** | **49** | **38** | **17** | **420** | **503** | **215** |
+| **合计** | **632** | **108** | **49** | **38** | **17** | **420** | **512** | **219** |
 
 ## 排除清单
 
 下面三桶逐篇列出。**桶 4 = `docs/` 全集减去这份清单**，不单独列。
 契约测试守着两件事：清单里的路径不许悬空；审校记录的原文不许落在清单里。
 
-### 桶 1 非内容（104 篇）
+### 桶 1 非内容（108 篇）
 
-#### 站点目录页（59 篇）
+#### 站点目录页（63 篇）
 - `docs/ai/_index.md`
 - `docs/alg/_index.md`
 - `docs/base/_index.md`
@@ -117,9 +115,7 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/life/hometown/_index.md`
 - `docs/life/road/_index.md`
 - `docs/life/shehui/_index.md`
-- `docs/linux/_index.md`
 - `docs/mail/_index.md`
-- `docs/network/_index.md`
 - `docs/opc/_index.md`
 - `docs/openguass/_index.md`
 - `docs/page/_index.md`
@@ -134,6 +130,12 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/programmer_self_cultivation/_index.md`
 - `docs/protocol/_index.md`
 - `docs/source-tracks/_index.md`
+- `docs/source-tracks/linux/_index.md`
+- `docs/source-tracks/linux/daily-ops/_index.md`
+- `docs/source-tracks/linux/filesystem/_index.md`
+- `docs/source-tracks/linux/kernel-internals/_index.md`
+- `docs/source-tracks/linux/memory-and-linking/_index.md`
+- `docs/source-tracks/linux/networking/_index.md`
 - `docs/source-tracks/postgresql/_index.md`
 - `docs/source-tracks/postgresql/extensions-perf/_index.md`
 - `docs/source-tracks/postgresql/getting-started/_index.md`
@@ -166,10 +168,10 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/dpdk/vpp插件开发.md`
 - `docs/language/python/pytest/pytest进阶.md`
 - `docs/language/rust/rust设计原则.md`
-- `docs/linux/linux数据预取.md`
-- `docs/linux/shell使用.md`
-- `docs/network/C语言网络编程库选择.md`
-- `docs/network/mtu路径发现pmtu详解.md`
+- `docs/source-tracks/linux/kernel-internals/linux数据预取.md`
+- `docs/source-tracks/linux/daily-ops/shell使用.md`
+- `docs/source-tracks/linux/networking/C语言网络编程库选择.md`
+- `docs/source-tracks/linux/networking/mtu路径发现pmtu详解.md`
 - `docs/page/gui.md`
 - `docs/page/read-pdfbox-source-code.md`
 - `docs/source-tracks/postgresql/wal-and-recovery/Checkpoint.md`
@@ -206,8 +208,8 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 
 #### 只有外链的指北页（2 篇）
 
-- `docs/linux/linux内核指北.md`
-- `docs/linux/uboot指北.md`
+- `docs/source-tracks/linux/kernel-internals/linux内核指北.md`
+- `docs/source-tracks/linux/kernel-internals/uboot指北.md`
 
 ### 桶 2 速查/清单/操作类（49 篇）
 
@@ -234,13 +236,13 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/language/python/python跨平台下载离线安装包.md`
 - `docs/language/rust/使用mdbook编译html和pdf.md`
 - `docs/language/rust/搭建内网rust仓库.md`
-- `docs/linux/ebpf/oltp.md`
-- `docs/linux/git指北.md`
-- `docs/linux/git高级指北.md`
-- `docs/linux/linux常用高级命令.md`
-- `docs/linux/抓包指北.md`
-- `docs/linux/本地git仓库.md`
-- `docs/linux/解决SSH连接Linux超时自动断开.md`
+- `docs/source-tracks/linux/memory-and-linking/ebpf/oltp.md`
+- `docs/source-tracks/linux/daily-ops/git指北.md`
+- `docs/source-tracks/linux/daily-ops/git高级指北.md`
+- `docs/source-tracks/linux/daily-ops/linux常用高级命令.md`
+- `docs/source-tracks/linux/networking/抓包指北.md`
+- `docs/source-tracks/linux/daily-ops/本地git仓库.md`
+- `docs/source-tracks/linux/daily-ops/解决SSH连接Linux超时自动断开.md`
 - `docs/openguass/openguass升级机制.md`
 - `docs/page/python.md`
 - `docs/page/ssh.md`
