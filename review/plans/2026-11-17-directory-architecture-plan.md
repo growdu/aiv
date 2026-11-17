@@ -643,9 +643,11 @@ for path in sorted(ROOT.rglob("*")):
         continue
     new = original
     for old, plat in PLATFORMS:
-        # 先长后短：<plat>/<plat>/ → platforms/<plat>/，再 <plat>/ → platforms/<plat>/
-        new = re.sub(rf"{re.escape(old)}/{re.escape(plat)}/", f"platforms/{plat}/", new)
-        new = re.sub(rf"{re.escape(old)}/", f"platforms/{plat}/", new)
+        # 一遍吃掉两种形式：<old>/<plat>/ 与 <old>/。
+        # **必须单遍**——分成两条正则的话，第一遍产出的 platforms/<plat>/
+        # 会被第二遍再套一层，变成 platforms/platforms/<plat>/。
+        new = re.sub(rf"(?<!platforms/){re.escape(old)}/(?:{re.escape(plat)}/)?",
+                     f"platforms/{plat}/", new)
     if new != original:
         path.write_text(new, encoding="utf-8")
         changed.append(rel)
