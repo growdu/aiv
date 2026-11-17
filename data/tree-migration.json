@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "updated": "2026-11-17",
+  "note": "PostgreSQL 试点迁移表。dir_map = 整目录搬；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。",
+  "target_root": "source-tracks/postgresql",
+  "series": {
+    "getting-started": "起步与全景",
+    "storage-engine": "存储引擎",
+    "index-and-query": "索引与查询",
+    "transaction-mvcc": "事务与并发",
+    "wal-and-recovery": "WAL 与恢复",
+    "replication-ha": "复制与高可用",
+    "logical-replication": "逻辑复制与流式",
+    "extensions-perf": "扩展、性能与生态"
+  },
+  "dir_map": {
+    "pgsql/storage/": "source-tracks/postgresql/storage-engine/",
+    "pgsql/process/": "source-tracks/postgresql/storage-engine/",
+    "pgsql/replication/": "source-tracks/postgresql/replication-ha/",
+    "pgsql/repmgr/": "source-tracks/postgresql/replication-ha/",
+    "pgsql/ha/": "source-tracks/postgresql/replication-ha/",
+    "pgsql/meson-pg/": "source-tracks/postgresql/getting-started/",
+    "pgsql/pg_command/": "source-tracks/postgresql/getting-started/",
+    "pgsql/debug/": "source-tracks/postgresql/getting-started/",
+    "pgsql/executor/": "source-tracks/postgresql/index-and-query/",
+    "pgsql/kernel/": "source-tracks/postgresql/index-and-query/",
+    "pgsql/stats/": "source-tracks/postgresql/index-and-query/",
+    "pgsql/extension/": "source-tracks/postgresql/extensions-perf/",
+    "db/logical_decode/": "source-tracks/postgresql/logical-replication/",
+    "db/linux-shared-memory/": "source-tracks/postgresql/storage-engine/",
+    "db/performance/": "source-tracks/postgresql/extensions-perf/",
+    "db/benchmarksql/": "source-tracks/postgresql/extensions-perf/",
+    "db/postgresql/learning-path/": "source-tracks/postgresql/getting-started/"
+  },
+  "file_map": {
+    "pgsql/数据库崩溃恢复.md": "source-tracks/postgresql/wal-and-recovery/数据库崩溃恢复.md",
+    "pgsql/checkpoint机制浅析.md": "source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
+    "pgsql/wal机制浅析.md": "source-tracks/postgresql/wal-and-recovery/wal机制浅析.md",
+    "pgsql/PostgreSQL 时间线解析.md": "source-tracks/postgresql/wal-and-recovery/PostgreSQL 时间线解析.md",
+    "pgsql/pg_replication.md": "source-tracks/postgresql/replication-ha/pg_replication.md",
+    "pgsql/postgresql——流复制和wal日志（八）.md": "source-tracks/postgresql/replication-ha/postgresql——流复制和wal日志（八）.md",
+    "pgsql/pg源码对象管理.md": "source-tracks/postgresql/storage-engine/pg源码对象管理.md",
+    "pgsql/insert_data.md": "source-tracks/postgresql/index-and-query/insert_data.md",
+    "pgsql/storage/full_page_writes/index.md": "source-tracks/postgresql/wal-and-recovery/storage/full_page_writes/index.md",
+    "pgsql/pg_io_调优.md": "source-tracks/postgresql/extensions-perf/pg_io_调优.md",
+    "pgsql/sql_test.md": "source-tracks/postgresql/extensions-perf/sql_test.md",
+    "pgsql/pg_complie_and_run.md": "source-tracks/postgresql/getting-started/pg_complie_and_run.md",
+    "pgsql/pgsql_main_structure.md": "source-tracks/postgresql/getting-started/pgsql_main_structure.md",
+    "pgsql/Postgres中postmaster代码解析(--boot和--single).md": "source-tracks/postgresql/getting-started/Postgres中postmaster代码解析(--boot和--single).md",
+    "pgsql/postgresql基操.md": "source-tracks/postgresql/getting-started/postgresql基操.md",
+    "pgsql/postgresql启动流程.md": "source-tracks/postgresql/getting-started/postgresql启动流程.md",
+    "pgsql/postgresql源码编译.md": "source-tracks/postgresql/getting-started/postgresql源码编译.md",
+    "db/postgresql/learning-path/01-build-and-codebase.md": "source-tracks/postgresql/getting-started/postgresql/learning-path/01-build-and-codebase.md",
+    "db/postgresql/learning-path/02-process-architecture.md": "source-tracks/postgresql/getting-started/postgresql/learning-path/02-process-architecture.md",
+    "db/postgresql/learning-path/03-query-pipeline.md": "source-tracks/postgresql/index-and-query/postgresql/learning-path/03-query-pipeline.md",
+    "db/postgresql/learning-path/04-storage-abstraction.md": "source-tracks/postgresql/storage-engine/postgresql/learning-path/04-storage-abstraction.md",
+    "db/postgresql/learning-path/05-buffer-manager.md": "source-tracks/postgresql/storage-engine/postgresql/learning-path/05-buffer-manager.md",
+    "db/postgresql/learning-path/06-heap-and-mvcc.md": "source-tracks/postgresql/transaction-mvcc/postgresql/learning-path/06-heap-and-mvcc.md",
+    "db/postgresql/learning-path/07-btree-index.md": "source-tracks/postgresql/index-and-query/postgresql/learning-path/07-btree-index.md",
+    "db/postgresql/learning-path/08-locks-and-concurrency.md": "source-tracks/postgresql/transaction-mvcc/postgresql/learning-path/08-locks-and-concurrency.md",
+    "db/postgresql/learning-path/09-wal-and-recovery.md": "source-tracks/postgresql/wal-and-recovery/postgresql/learning-path/09-wal-and-recovery.md",
+    "db/postgresql/learning-path/10-advanced-topics.md": "source-tracks/postgresql/extensions-perf/postgresql/learning-path/10-advanced-topics.md",
+    "db/postgresql/learning-path/11-crash-recovery.md": "source-tracks/postgresql/wal-and-recovery/postgresql/learning-path/11-crash-recovery.md",
+    "db/postgresql/learning-path/12-physical-replication.md": "source-tracks/postgresql/replication-ha/postgresql/learning-path/12-physical-replication.md",
+    "db/postgresql/learning-path/13-logical-replication.md": "source-tracks/postgresql/logical-replication/postgresql/learning-path/13-logical-replication.md",
+    "db/postgresql/learning-path/14-column-store.md": "source-tracks/postgresql/extensions-perf/postgresql/learning-path/14-column-store.md",
+    "db/postgresql/part1.md": "source-tracks/postgresql/getting-started/postgresql/part1.md",
+    "db/postgresql/使用meson编译pg.md": "source-tracks/postgresql/getting-started/postgresql/使用meson编译pg.md",
+    "db/postgresql/pg常用函数.md": "source-tracks/postgresql/index-and-query/postgresql/pg常用函数.md",
+    "db/postgresql/postgresql-syscache-deep-dive/index.md": "source-tracks/postgresql/index-and-query/postgresql/postgresql-syscache-deep-dive/index.md",
+    "db/postgresql/postgresql-row-lock/index.md": "source-tracks/postgresql/transaction-mvcc/postgresql/postgresql-row-lock/index.md",
+    "db/postgresql/postgresql-shared-memory/index.md": "source-tracks/postgresql/storage-engine/postgresql/postgresql-shared-memory/index.md",
+    "db/postgresql/postgresql-create-replication-slot-deep-dive/index.md": "source-tracks/postgresql/replication-ha/postgresql/postgresql-create-replication-slot-deep-dive/index.md",
+    "db/postgresql/postgresql-community-gems/index.md": "source-tracks/postgresql/extensions-perf/postgresql/postgresql-community-gems/index.md",
+    "db/postgresql/postgresql-injection-points/index.md": "source-tracks/postgresql/extensions-perf/postgresql/postgresql-injection-points/index.md",
+    "db/postgresql/postgresql-injection-points-test-framework/index.md": "source-tracks/postgresql/extensions-perf/postgresql/postgresql-injection-points-test-framework/index.md",
+    "db/postgresql/postgresql-injection-points-test-unreachable/index.md": "source-tracks/postgresql/extensions-perf/postgresql/postgresql-injection-points-test-unreachable/index.md",
+    "db/postgresql/postgresql-flame-graph/index.md": "source-tracks/postgresql/extensions-perf/postgresql/postgresql-flame-graph/index.md",
+    "db/postgresql/逻辑复制性能测试.md": "source-tracks/postgresql/logical-replication/postgresql/逻辑复制性能测试.md",
+    "db/postgresql/pgoutput_change到HeapTupleSatisfiesVisibility调用栈分析/index.md": "source-tracks/postgresql/logical-replication/postgresql/pgoutput_change到HeapTupleSatisfiesVisibility调用栈分析/index.md",
+    "db/postgresql/postgresql-apply-leader-worker-code-analysis/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-apply-leader-worker-code-analysis/index.md",
+    "db/postgresql/postgresql-apply-parallel-lock-stream/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-apply-parallel-lock-stream/index.md",
+    "db/postgresql/postgresql-apply-parallel-worker-code-analysis/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-apply-parallel-worker-code-analysis/index.md",
+    "db/postgresql/postgresql-apply-parallel-worker/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-apply-parallel-worker/index.md",
+    "db/postgresql/postgresql-logical-replication-add-guc/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-logical-replication-add-guc/index.md",
+    "db/postgresql/postgresql-logical-replication-apply-parallel-tuning/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-logical-replication-apply-parallel-tuning/index.md",
+    "db/postgresql/postgresql-logical-replication-catalog-visibility/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-logical-replication-catalog-visibility/index.md",
+    "db/postgresql/postgresql-logical-replication-end-to-end/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-logical-replication-end-to-end/index.md",
+    "db/postgresql/postgresql-logical-replication-lsn-flow/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-logical-replication-lsn-flow/index.md",
+    "db/postgresql/postgresql-logical-replication-stream-publisher/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-logical-replication-stream-publisher/index.md",
+    "db/postgresql/postgresql-reorderbuffer-c-function-reference/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-reorderbuffer-c-function-reference/index.md",
+    "db/postgresql/postgresql-reorder-buffer-code-analysis/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-reorder-buffer-code-analysis/index.md",
+    "db/postgresql/postgresql-snapbuild-deep-dive/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-snapbuild-deep-dive/index.md",
+    "db/postgresql/postgresql-snapbuild-find-snapshot-deep-dive/index.md": "source-tracks/postgresql/logical-replication/postgresql/postgresql-snapbuild-find-snapshot-deep-dive/index.md",
+    "database/pg-challahscript-tips/index.md": "source-tracks/postgresql/extensions-perf/pg-challahscript-tips/index.md",
+    "database/pg-dont-do-this/index.md": "source-tracks/postgresql/extensions-perf/pg-dont-do-this/index.md",
+    "database/pg-duckdb-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/pg-duckdb-deep-dive/index.md",
+    "database/pg-stat-statements-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/pg-stat-statements-deep-dive/index.md",
+    "database/pgaudit-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/pgaudit-deep-dive/index.md",
+    "database/pgbackrest-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/pgbackrest-deep-dive/index.md",
+    "database/pgbench-internals/index.md": "source-tracks/postgresql/extensions-perf/pgbench-internals/index.md",
+    "database/postgresql-background-worker/index.md": "source-tracks/postgresql/getting-started/postgresql-background-worker/index.md",
+    "database/postgresql-catalog-snapshot-deep-dive/index.md": "source-tracks/postgresql/storage-engine/postgresql-catalog-snapshot-deep-dive/index.md",
+    "database/postgresql-catalog-storage/index.md": "source-tracks/postgresql/storage-engine/postgresql-catalog-storage/index.md",
+    "database/postgresql-core-features/index.md": "source-tracks/postgresql/getting-started/postgresql-core-features/index.md",
+    "database/postgresql-for-everything/index.md": "source-tracks/postgresql/getting-started/postgresql-for-everything/index.md",
+    "database/postgresql-history/index.md": "source-tracks/postgresql/getting-started/postgresql-history/index.md",
+    "database/postgresql-latch-mechanism/index.md": "source-tracks/postgresql/transaction-mvcc/postgresql-latch-mechanism/index.md",
+    "database/postgresql-libpq-mechanism/index.md": "source-tracks/postgresql/getting-started/postgresql-libpq-mechanism/index.md",
+    "database/postgresql-memory-management/index.md": "source-tracks/postgresql/storage-engine/postgresql-memory-management/index.md",
+    "database/postgresql-module-architecture/index.md": "source-tracks/postgresql/getting-started/postgresql-module-architecture/index.md",
+    "database/postgresql-mvcc/index.md": "source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md",
+    "database/postgresql-parallel-worker/index.md": "source-tracks/postgresql/transaction-mvcc/postgresql-parallel-worker/index.md",
+    "database/postgresql-partition-handling/index.md": "source-tracks/postgresql/index-and-query/postgresql-partition-handling/index.md",
+    "database/postgresql-rangevar-and-data-structures/index.md": "source-tracks/postgresql/index-and-query/postgresql-rangevar-and-data-structures/index.md",
+    "database/postgresql-read-a-row-deep-dive/index.md": "source-tracks/postgresql/index-and-query/postgresql-read-a-row-deep-dive/index.md",
+    "database/postgresql-read-catalog-table/index.md": "source-tracks/postgresql/index-and-query/postgresql-read-catalog-table/index.md",
+    "database/postgresql-row-lock-deep-dive/index.md": "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
+    "database/postgresql-running-xacts-snapshot/index.md": "source-tracks/postgresql/transaction-mvcc/postgresql-running-xacts-snapshot/index.md",
+    "database/postgresql-schema-search-path/index.md": "source-tracks/postgresql/getting-started/postgresql-schema-search-path/index.md",
+    "database/postgresql-senior-kernel-developer/index.md": "source-tracks/postgresql/getting-started/postgresql-senior-kernel-developer/index.md",
+    "database/postgresql-stream-execution-logic/index.md": "source-tracks/postgresql/index-and-query/postgresql-stream-execution-logic/index.md",
+    "database/postgresql-toast-deep-dive/index.md": "source-tracks/postgresql/storage-engine/postgresql-toast-deep-dive/index.md",
+    "database/postgresql-transaction-lifecycle/index.md": "source-tracks/postgresql/transaction-mvcc/postgresql-transaction-lifecycle/index.md",
+    "database/postgresql-user-capabilities/index.md": "source-tracks/postgresql/getting-started/postgresql-user-capabilities/index.md",
+    "database/postgresql-vs-sqlserver-partitioning/index.md": "source-tracks/postgresql/index-and-query/postgresql-vs-sqlserver-partitioning/index.md",
+    "database/postgresql-wal-record-types/index.md": "source-tracks/postgresql/wal-and-recovery/postgresql-wal-record-types/index.md",
+    "database/postgresql-logical-replication-ddl-dml-ordering/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering/index.md",
+    "database/postgresql-logical-replication-ddl-trigger-apply-worker/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
+    "database/postgresql-logical-replication-docker-setup/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-docker-setup/index.md",
+    "database/postgresql-logical-replication-end-to-end-flow/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md",
+    "database/postgresql-logical-replication-monitoring/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-monitoring/index.md",
+    "database/postgresql-logical-replication-options/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-options/index.md",
+    "database/postgresql-logical-replication-parallel-worker/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-parallel-worker/index.md",
+    "database/postgresql-logical-replication-partitioned-insert-flow/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-partitioned-insert-flow/index.md",
+    "database/postgresql-logical-replication-publish-via-partition-root/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-publish-via-partition-root/index.md",
+    "database/postgresql-logical-replication-reorderbuffer-transaction/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-reorderbuffer-transaction/index.md",
+    "database/postgresql-logical-replication-spill-deep-dive/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-spill-deep-dive/index.md",
+    "database/postgresql-logical-replication-streaming-spill/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-streaming-spill/index.md",
+    "database/postgresql-logical-replication-tables-lifecycle/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-tables-lifecycle/index.md",
+    "database/postgresql-logical-replication-throughput-benchmark/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-throughput-benchmark/index.md",
+    "database/postgresql-logical-replication-with-partitioned-tables/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-with-partitioned-tables/index.md",
+    "database/postgresql-logical-replication-worker-model/index.md": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md"
+  },
+  "out_map": {
+    "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
+    "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md"
+  },
+  "drop_index": [
+    "db/benchmarksql/_index.md",
+    "db/linux-shared-memory/_index.md",
+    "db/logical_decode/_index.md",
+    "db/postgresql/_index.md",
+    "db/postgresql/learning-path/_index.md",
+    "pgsql/_index.md"
+  ],
+  "category_redirects": {
+    "PostgreSQL": "源码主线/PostgreSQL",
+    "PostgreSQL 源码修炼之路:内核深度拆解专题": "源码主线/PostgreSQL",
+    "PostgreSQL 源码修炼之路": "源码主线/PostgreSQL",
+    "PostgreSQL 逻辑解码完整目录": "源码主线/PostgreSQL/逻辑复制与流式",
+    "PostgreSQL 共享内存机制(深入版)": "源码主线/PostgreSQL/存储引擎",
+    "BenchmarkSQL 基准测试": "源码主线/PostgreSQL/扩展、性能与生态"
+  },
+  "ref_rewrites": [
+    {
+      "file": "tools/sync-hexo.py",
+      "form": "docs"
+    },
+    {
+      "file": "tools/add-tags.py",
+      "form": "flat"
+    },
+    {
+      "file": "data/featured.json",
+      "form": "postid"
+    },
+    {
+      "file": "tools/templates/database.md",
+      "form": "permalink"
+    },
+    {
+      "file": "aiv/publish/row-lock.json",
+      "form": "permalink"
+    },
+    {
+      "file": "tests/test_episode_block.py",
+      "form": "docs"
+    },
+    {
+      "file": "tests/test_episode_block.py",
+      "form": "permalink"
+    },
+    {
+      "file": "tests/test_episode_block.py",
+      "form": "cid"
+    },
+    {
+      "file": "tests/test_podcast_spec.py",
+      "form": "docs"
+    },
+    {
+      "file": "tests/test_review_articles.py",
+      "form": "docs"
+    },
+    {
+      "file": "tests/test_home_first_screen.py",
+      "form": "postid"
+    },
+    {
+      "file": "tests/test_podcast_feed.py",
+      "form": "permalink"
+    },
+    {
+      "file": "publish/tests/test_episode.py",
+      "form": "docs"
+    },
+    {
+      "file": "publish/tests/test_episode.py",
+      "form": "cid"
+    },
+    {
+      "file": "publish/tests/test_manifest.py",
+      "form": "cid"
+    }
+  ],
+  "series_meta": {
+    "getting-started": "先知道它是什么、怎么跑起来、整体长什么样 —— 这一站不碰源码细节。",
+    "storage-engine": "页、文件与内存：数据在磁盘上长什么样，缓冲区与共享内存怎么管。",
+    "index-and-query": "一条 SQL 从解析到拿到结果，中间经过哪些索引与执行器结构。",
+    "transaction-mvcc": "事务、MVCC 与并发：可见性判断、行锁、闩锁与快照。",
+    "wal-and-recovery": "WAL、checkpoint 与恢复：写前日志怎么保证崩溃后能redo出来。",
+    "replication-ha": "复制与高可用：流复制、复制槽、主备切换与 repmgr。",
+    "logical-replication": "逻辑复制与流式：解码、apply、并行 apply 与 DDL 同步。",
+    "extensions-perf": "扩展、性能与生态：pgvector、pgbench、火焰图与周边工具链。"
+  }
+}

@@ -1,0 +1,745 @@
+#!/usr/bin/env python3
+"""按 `data/tree-migration.json` 把 `docs/` 里的文章搬到新目录树。
+
+**为什么需要它**：迁移不是「改个目录名」那么便宜。三件事会同时坏掉，
+而这三件事肉眼都看不出来：
+
+1. **日期**。`sync-hexo.py:606 git_date()` 走的是
+   `git log --all --reverse -- <路径>` —— 路径一变，最早的提交就是
+   「搬运」那一次，全站文章日期一起跳到搬运日，首页被冲垮，
+   重定向页也会写到错误的旧 URL（`write_redirects()` 用新文件的日期
+   拼旧 URL 的日期段）。**对策**：搬之前把 `git_date()` 的返回值按
+   **新路径**固化下来。
+2. **相对链接**。`sync-hexo.py:1407 rewrite_links()` 是在**编译时**
+   按「引用方所在的 docs 目录」解析每条相对链接的。文章一搬，
+   「同目录的兄弟」可能已经搬到另一个系列去了，链接就断。
+   **对策**：搬完把被搬文件里的相对链接按新位置重算一遍，
+   留在原地的文件里指向被搬文章的链接同样要改。
+3. **站点外部的硬编码路径**。`tools/` `data/` `tests/` `publish/`
+   里散着一百多处 docs 相对路径，搬完就失配。
+
+**幂等**：同一份迁移表重复跑不会搬第二次（`git mv` 之前先看目标在不在），
+所以中断了可以接着跑。
+
+## 怎么用
+
+```bash
+# 1. 先看要搬什么（默认就是 dry-run）
+python3 tools/migrate-tree.py
+
+# 2. 真搬
+python3 tools/migrate-tree.py --apply
+
+# 3. 搬完自检：日期逐篇比对、死链、图、测试
+python3 tools/capture-dates.py --check data/date-overrides.json
+python3 tools/check-internal-links.py
+python3 tools/check-mermaid.py
+python3 -m pytest tests/ -q
+```
+
+## 边界
+
+- **只搬 `docs/` 下的东西**。`internal/` 里的文件是「从 docs 移出去、
+  不发布」的，脚本只负责搬，不负责判断哪一篇该移出去 ——
+  那是 `data/tree-migration.json` 里的 `out_map` 表说了算。
+- **不改文章正文的意思**。脚本只重写链接文字和 front matter 里的
+  路径，正文一个字不动。
+- **不提交**。搬完的改动留在工作区，由人看过再提交。
+"""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from urllib.parse import quote, unquote
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DOCS = os.path.join(REPO, "docs")
+MIGRATION_FILE = "data/tree-migration.json"
+DATE_FILE = "data/date-overrides.json"
+
+# 图片链接（`![]()`）与普通链接分开处理：图片解析到的是**文件**，
+# 不存在 bundle 那套「index.md 代表整个目录」的规则。
+LINK_RE = re.compile(r"(?<!!)\[([^\]]*)\]\(([^)]+)\)")
+IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+
+EXTERNAL_PREFIXES = (
+    "http://", "https://", "data:", "mailto:", "tel:", "ftp://",
+    "javascript:", "about:", "//", "#",
+)
+
+
+# --------------------------------------------------------------------------
+# 迁移表
+# --------------------------------------------------------------------------
+
+
+def load_migration(path=None):
+    with open(os.path.join(REPO, path or MIGRATION_FILE), encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def effective_map(table):
+    """把 `dir_map` + `file_map` 摊平成一张「旧路径 → 新路径」的表。
+
+    `file_map` 优先于 `dir_map` —— 目录级规则是「整目录搬」，
+    文件级规则是「这一篇例外」。`out_map` 里的文件不进新树。
+    """
+    out = {}
+    for old_dir, new_dir in table.get("dir_map", {}).items():
+        prefix = old_dir.rstrip("/") + "/"
+        for rel in sorted(_walk_docs()):
+            if rel.startswith(prefix) and _is_article(rel):
+                out[rel] = new_dir.rstrip("/") + "/" + rel[len(prefix):]
+    out.update(table.get("file_map", {}))
+    for rel in table.get("out_map", {}):
+        out.pop(rel, None)
+    return out
+
+
+def _walk_docs():
+    """`docs/` 下所有文件（相对 docs/，正斜杠）。"""
+    out = []
+    for root, dirs, files in os.walk(DOCS):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for name in files:
+            rel = os.path.relpath(os.path.join(root, name), DOCS)
+            out.append(rel.replace(os.sep, "/"))
+    return out
+
+
+def _is_article(rel):
+    """算不算「一篇文章」（`_index.md` 是分类目录页，不算）。"""
+    ext = os.path.splitext(rel)[1].lower()
+    return ext in (".md", ".html", ".htm") and not rel.endswith("_index.md")
+
+
+# --------------------------------------------------------------------------
+# 日期
+# --------------------------------------------------------------------------
+
+
+def load_sync_hexo():
+    """把 `tools/sync-hexo.py` 当模块加载 —— 日期语义必须一模一样。"""
+    import importlib.util
+
+    os.chdir(REPO)
+    spec = importlib.util.spec_from_file_location(
+        "sync_hexo", os.path.join(REPO, "tools", "sync-hexo.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def capture_dates(module):
+    """当前 `docs/` 里每一篇文章的 `git_date()`。"""
+    table = {}
+    for rel in sorted(_walk_docs()):
+        if not _is_article(rel):
+            continue
+        table[rel] = module.git_date(os.path.join(DOCS, rel))
+    return table
+
+
+# --------------------------------------------------------------------------
+# 链接解析（与 sync-hexo.py 同规则）
+# --------------------------------------------------------------------------
+
+
+def _bundle_index(abs_dir):
+    for ext in ("index.md", "index.html", "index.htm", "_index.md"):
+        p = os.path.join(abs_dir, ext)
+        if os.path.isfile(p):
+            return p
+    return None
+
+
+def resolve_in_dir(target_dir_rel, tail, want_dir=False):
+    """链接落在 `target_dir_rel` 目录下的哪个文件上。
+
+    `tail` 是链接最后一节（`index.html` / `x.md` / 空串）。
+    返回 docs 相对路径，找不到返回 None。
+
+    规则与 `sync-hexo.py:_resolve_link_target()` 对齐：
+    - 目录型 bundle 用目录里的 `index.*` 代表；
+    - 链接写的是 `index.{md,html,htm}` 时，先当 bundle 目录看；
+    - 无后缀的链接试 `.md` / `.html` / `.htm`。
+    """
+    abs_dir = os.path.join(DOCS, target_dir_rel)
+    if not os.path.isdir(abs_dir):
+        return None
+    if want_dir or tail == "":
+        idx = _bundle_index(abs_dir)
+        return os.path.relpath(idx, DOCS).replace(os.sep, "/") if idx else None
+    if tail in ("index.md", "index.html", "index.htm"):
+        idx = _bundle_index(abs_dir)
+        return os.path.relpath(idx, DOCS).replace(os.sep, "/") if idx else None
+    ext = os.path.splitext(tail)[1].lower()
+    if ext in (".md", ".html", ".htm"):
+        cand = os.path.join(abs_dir, tail)
+        if os.path.isfile(cand):
+            return os.path.relpath(cand, DOCS).replace(os.sep, "/")
+        return None
+    for ext in (".md", ".html", ".htm"):
+        cand = os.path.join(abs_dir, tail + ext)
+        if os.path.isfile(cand):
+            return os.path.relpath(cand, DOCS).replace(os.sep, "/")
+    return None
+
+
+def resolve_link(post_dir_rel, raw):
+    """一条相对链接指向哪个文件（docs 相对路径）。
+
+    找不到就返回 None —— 这时链接文字保持原样。
+    """
+    if raw.startswith(EXTERNAL_PREFIXES) or raw.startswith("/"):
+        return None
+    raw_path = unquote(raw.split("#", 1)[0].split("?", 1)[0])
+    if not raw_path:
+        return None
+    head, tail = _split_tail(raw_path)
+    target_dir = os.path.normpath(os.path.join(post_dir_rel, head))
+    if target_dir.startswith("..") or os.path.isabs(target_dir):
+        return None
+    hit = resolve_in_dir(target_dir, tail)
+    if hit:
+        return hit
+    # 编译期自愈兜底：作者常写 `./<同级 bundle>/`，真实目标是上一级目录。
+    cleaned = raw_path.lstrip("./")
+    parent = os.path.dirname(post_dir_rel)
+    if parent and not parent.startswith(".."):
+        sib = os.path.normpath(os.path.join(parent, cleaned))
+        if not sib.startswith(".."):
+            hit = resolve_in_dir(os.path.dirname(sib), os.path.basename(sib))
+            if hit:
+                return hit
+    return None
+
+
+def _split_tail(raw):
+    """`../foo/index.html` → `("../foo/", "index.html")`；`../foo/` → `("../foo/", "")`。"""
+    if "/" not in raw:
+        return "", raw
+    head, tail = raw.rsplit("/", 1)
+    return head + "/", tail
+
+
+def rewrite_relative_links(moves, report):
+    """重写 `docs/` 里所有文章的相对链接。
+
+    两种情况：
+    - **被搬的文章**：链接的相对基准目录变了 → 重算；
+    - **留在原地的文章**：链接的目标被搬走了 → 重算。
+
+    链接的「形状」（指目录还是指文件、末尾带不带 `index.html`）
+    原样保留，只换路径。
+    """
+    changed_files = 0
+    changed_links = 0
+    for rel in sorted(_walk_docs()):
+        if not rel.endswith(".md"):
+            continue
+        path = os.path.join(DOCS, rel)
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+
+        post_dir = os.path.dirname(rel)
+        new_post_dir = os.path.dirname(moves.get(rel, rel))
+
+        def repl_link(m):
+            nonlocal changed_links
+            text_, raw = m.group(1), m.group(2)
+            new_raw = _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir=False)
+            if new_raw is None or new_raw == raw:
+                return m.group(0)
+            changed_links += 1
+            return f"[{text_}]({new_raw})"
+
+        def repl_image(m):
+            nonlocal changed_links
+            alt, raw = m.group(1), m.group(2)
+            new_raw = _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir=True)
+            if new_raw is None or new_raw == raw:
+                return m.group(0)
+            changed_links += 1
+            return f"![{alt}]({new_raw})"
+
+        new_text = IMAGE_RE.sub(repl_image, text)
+        new_text = LINK_RE.sub(repl_link, new_text)
+        if new_text != text:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(new_text)
+            changed_files += 1
+    report.append(f"链接改写：{changed_links} 条，动了 {changed_files} 个文件")
+    return changed_links
+
+
+def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir):
+    """重算一条相对链接。返回新的链接文字，或 None（不用改）。"""
+    if raw.startswith(EXTERNAL_PREFIXES) or raw.startswith("/"):
+        return None
+    raw_path = unquote(raw.split("#", 1)[0].split("?", 1)[0])
+    if not raw_path:
+        return None
+    suffix = raw[len(raw_path):] if raw.startswith(raw_path) else ""
+    head, tail = _split_tail(raw_path)
+    target_dir = os.path.normpath(os.path.join(post_dir, head))
+    if target_dir.startswith("..") or os.path.isabs(target_dir):
+        return None
+    hit = resolve_in_dir(target_dir, tail, want_dir=want_dir)
+    if not hit:
+        # 编译期自愈兜底那一路，先按原样解析，解析不到就不动。
+        cleaned = raw_path.lstrip("./")
+        parent = os.path.dirname(post_dir)
+        if parent and not parent.startswith(".."):
+            sib = os.path.normpath(os.path.join(parent, cleaned))
+            if not sib.startswith(".."):
+                hit = resolve_in_dir(os.path.dirname(sib), os.path.basename(sib),
+                                     want_dir=want_dir)
+        if not hit:
+            return None
+    new_hit = moves.get(hit, hit)
+    new_dir = os.path.dirname(new_hit)
+    rel = os.path.relpath(new_dir, new_post_dir) if new_post_dir else new_dir
+    rel = rel.replace(os.sep, "/")
+    if rel == ".":
+        rel = "./"
+    if not rel.endswith("/"):
+        rel += "/"
+    return rel + tail + suffix
+
+
+# --------------------------------------------------------------------------
+# 搬
+# --------------------------------------------------------------------------
+
+
+def git(*args):
+    return subprocess.run(
+        ["git"] + list(args), cwd=REPO, capture_output=True, text=True)
+
+
+def do_move(old_rel, new_rel):
+    """`git mv` 一个文件（保留文件历史）。目标已存在就跳过 —— 幂等。"""
+    old_abs = os.path.join(DOCS, old_rel)
+    new_abs = os.path.join(DOCS, new_rel)
+    if not os.path.exists(old_abs):
+        return "skip-missing"
+    if os.path.exists(new_abs):
+        return "skip-exists"
+    os.makedirs(os.path.dirname(new_abs), exist_ok=True)
+    r = git("mv", os.path.join("docs", old_rel), os.path.join("docs", new_rel))
+    if r.returncode != 0:
+        raise RuntimeError("git mv 失败：%s -> %s\n%s" % (old_rel, new_rel, r.stderr))
+    return "moved"
+
+
+def do_move_out(old_rel, new_rel):
+    """把文件从 `docs/` 移到仓库里的 `internal/`（不发布，但入库）。"""
+    old_abs = os.path.join(DOCS, old_rel)
+    new_abs = os.path.join(REPO, new_rel)
+    if not os.path.exists(old_abs):
+        return "skip-missing"
+    if os.path.exists(new_abs):
+        return "skip-exists"
+    os.makedirs(os.path.dirname(new_abs), exist_ok=True)
+    r = git("mv", os.path.join("docs", old_rel), new_rel)
+    if r.returncode != 0:
+        raise RuntimeError("git mv 失败：%s -> %s\n%s" % (old_rel, new_rel, r.stderr))
+    return "moved"
+
+
+def plan_moves(table):
+    """把迁移表摊平成一份「要执行的动作清单」。"""
+    moves = effective_map(table)
+    actions = []
+    for old_rel in sorted(moves):
+        actions.append(("in", old_rel, moves[old_rel]))
+    for old_rel, new_rel in sorted(table.get("out_map", {}).items()):
+        actions.append(("out", old_rel, new_rel))
+    for old_rel in sorted(table.get("drop_index", [])):
+        actions.append(("drop", old_rel, None))
+    return actions, moves
+
+
+def asset_moves(table, moves):
+    """随文章一起搬的资源文件（图片等）。
+
+    规则：凡是落在 `dir_map` 目录下的非文章文件，跟着目录一起搬 ——
+    图片的站内 URL 是 `images/<docs 相对路径>`，不跟着搬就会指向旧路径。
+    """
+    out = {}
+    for old_dir, new_dir in table.get("dir_map", {}).items():
+        prefix = old_dir.rstrip("/") + "/"
+        for rel in _walk_docs():
+            if not rel.startswith(prefix):
+                continue
+            if _is_article(rel):
+                continue
+            out[rel] = new_dir.rstrip("/") + "/" + rel[len(prefix):]
+    # 逐篇搬的文章旁边的资源文件（同一目录下的图片）
+    for old_rel, new_rel in moves.items():
+        old_dir = os.path.dirname(old_rel)
+        new_dir = os.path.dirname(new_rel)
+        for rel in _walk_docs():
+            if os.path.dirname(rel) != old_dir:
+                continue
+            if _is_article(rel) or rel in out:
+                continue
+            out[rel] = new_dir + "/" + os.path.basename(rel)
+    return out
+
+
+# --------------------------------------------------------------------------
+# 新目录页
+# --------------------------------------------------------------------------
+
+
+def write_index_files(table, moves, report):
+    """给新树写 `_index.md`。
+
+    每个目录页带 `cascade.categories` —— `sync-hexo.py:458
+    read_cascade_categories()` 靠它把分类链拼出来（源码主线 → PostgreSQL
+    → 存储引擎），三级分类页才会真的生成。
+    """
+    series_cn = table.get("series", {})
+    target_root = table.get("target_root", "source-tracks/postgresql")
+    made = []
+
+    # 顶层：docs/<target_root 的第一段>/_index.md
+    top = target_root.split("/")[0]
+    top_cn = {"source-tracks": "源码主线"}.get(top, top)
+    made.append(_write_index(
+        f"{top}/_index.md", top_cn, top_cn,
+        f"{top_cn}：按「一条主线走到底」的顺序组织的内容。",
+        [], table))
+
+    # 项目层
+    parts = target_root.split("/")
+    for depth in range(1, len(parts) + 1):
+        rel_dir = "/".join(parts[:depth])
+        if depth == 1:
+            continue
+        name = parts[depth - 1]
+        cn = "PostgreSQL" if name == "postgresql" else name
+        if depth == len(parts):
+            for slug, scn in series_cn.items():
+                desc = table.get("series_meta", {}).get(slug, f"{cn} 的{scn}方向。")
+                made.append(_write_index(
+                    f"{rel_dir}/{slug}/_index.md", scn, cn,
+                    desc, _series_articles(moves, f"{rel_dir}/{slug}/"),
+                    table))
+        else:
+            made.append(_write_index(
+                f"{rel_dir}/_index.md", cn, cn,
+                f"{cn} 主线。", [], table))
+    report.append(f"目录页：新建 {len(made)} 个")
+    return made
+
+
+def _series_articles(moves, prefix):
+    """某个系列下的文章（按旧路径排序，稳定的顺序）。"""
+    out = []
+    for old_rel, new_rel in moves.items():
+        if new_rel.startswith(prefix):
+            out.append((old_rel, new_rel))
+    out.sort()
+    return out
+
+
+def _write_index(rel, title, parent_cn, description, articles, table):
+    """写一个 `_index.md`。已存在就只更新文章清单那一段。"""
+    path = os.path.join(DOCS, rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    lines = [
+        "---",
+        f'title: "{title}"',
+        f'description: "{description}"',
+        "cascade:",
+        "  categories:",
+        f"    - {title}",
+        "tags:",
+        f"  - {title}",
+        "---",
+        "",
+        f"# {title}",
+        "",
+        description,
+        "",
+    ]
+    if articles:
+        lines.append("## 本系列文章")
+        lines.append("")
+        for old_rel, new_rel in articles:
+            name = os.path.basename(new_rel)
+            if name == "index.md":
+                name = os.path.basename(os.path.dirname(new_rel))
+            else:
+                name = os.path.splitext(name)[0]
+            lines.append(f"- [{name}](./{new_rel[len(rel) + len('/'):]})")
+        lines.append("")
+    body = "\n".join(lines)
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            old = fh.read()
+        if old == body:
+            return rel
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(body)
+    return rel
+
+
+# --------------------------------------------------------------------------
+# 常量补丁：REDIRECTS / DATE_OVERRIDES / CATEGORY_REDIRECTS
+# --------------------------------------------------------------------------
+
+
+def permalink_path(rel):
+    """一篇文章的 permalink 路径（不含日期段、不含扩展名）。
+
+    bundle（`.../index.md`）的 permalink 是它所在的目录。
+    """
+    if os.path.basename(rel) in ("index.md", "index.html", "index.htm"):
+        return os.path.dirname(rel)
+    return os.path.splitext(rel)[0]
+
+
+def build_redirects(moves):
+    """旧 permalink 路径 → 新 permalink 路径。"""
+    out = {}
+    for old_rel, new_rel in sorted(moves.items()):
+        out[permalink_path(old_rel)] = permalink_path(new_rel)
+    return out
+
+
+def build_date_overrides(moves, dates_before):
+    """按**新路径**固化的日期表。"""
+    out = {}
+    for old_rel, new_rel in sorted(moves.items()):
+        out[new_rel] = dates_before.get(old_rel, "2024-01-01 00:00:00")
+    for rel, date in dates_before.items():
+        if rel not in moves and rel not in out:
+            out[rel] = date
+    return out
+
+
+def build_category_redirects(table):
+    """旧分类 → 新分类。"""
+    return dict(table.get("category_redirects", {}))
+
+
+# --------------------------------------------------------------------------
+# 外部引用改写
+# --------------------------------------------------------------------------
+
+
+def path_forms(rel):
+    """一个 docs 相对路径的各种写法。
+
+    - `docs`：母稿路径，含扩展名（`db/postgresql/foo/index.md`）
+    - `flat`：编译产物 `source/_posts/` 里的路径（bundle 拍平成 `db/postgresql/foo.md`）
+    - `postid`：`source/_posts/` 路径去掉 `.md`
+    - `cid`：内容单元 id（`db/postgresql/foo`）
+    """
+    base = os.path.basename(rel)
+    if base in ("index.md", "index.html", "index.htm"):
+        parent = os.path.dirname(rel)
+        flat = (parent + ".md") if parent else "index.md"
+        cid = parent
+    else:
+        flat = rel
+        cid = os.path.splitext(rel)[0]
+    return {
+        "docs": rel,
+        "flat": flat,
+        "postid": os.path.splitext(flat)[0],
+        "cid": cid,
+    }
+
+
+def rewrite_refs(targets, moves, report):
+    """改写站点外部文件里硬编码的 docs 路径。
+
+    `targets` 是 `(文件, 路径形态)` 的清单；形态决定拿哪种写法去替换。
+
+    `permalink` 形态特殊一些：站内绝对地址带一段日期
+    （`/2023/09/14/pgsql/postgresql源码编译/`）。日期在迁移前后不变
+    （这正是 `DATE_OVERRIDES` 存在的意义），所以只换路径那一段。
+    站上有两种写法 —— 中文未编码的、百分号编码的 —— 两种都要替。
+    """
+    total = 0
+    for rel_file, form in targets:
+        path = os.path.join(REPO, rel_file)
+        if not os.path.exists(path):
+            report.append(f"外部引用：{rel_file} 不存在，跳过")
+            continue
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+        original = text
+        hits = 0
+        for old_rel, new_rel in sorted(moves.items()):
+            if form == "permalink":
+                pairs = _permalink_pairs(old_rel, new_rel)
+            else:
+                old_form = path_forms(old_rel)[form]
+                new_form = path_forms(new_rel)[form]
+                if old_form == new_form:
+                    continue
+                pairs = [(old_form, new_form)]
+            for old_text, new_text in pairs:
+                if old_text not in text:
+                    continue
+                hits += text.count(old_text)
+                text = text.replace(old_text, new_text)
+        if text != original:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            report.append(f"外部引用：{rel_file} 改了 {hits} 处")
+            total += hits
+    return total
+
+
+def _permalink_pairs(old_rel, new_rel):
+    """站内绝对地址里的路径段（中文原样 / 百分号编码，两种写法）。"""
+    old_perm = permalink_path(old_rel)
+    new_perm = permalink_path(new_rel)
+    if old_perm == new_perm:
+        return []
+    pairs = []
+    for old_text, new_text in (
+        ("/" + old_perm + "/", "/" + new_perm + "/"),
+        ("/" + quote(old_perm) + "/", "/" + quote(new_perm) + "/"),
+    ):
+        if old_text != new_text:
+            pairs.append((old_text, new_text))
+    return pairs
+
+
+# --------------------------------------------------------------------------
+# main
+# --------------------------------------------------------------------------
+
+
+def main():
+    ap = argparse.ArgumentParser(description="按迁移表搬 docs/ 目录")
+    ap.add_argument("--apply", action="store_true",
+                    help="真的搬（默认只报告）")
+    ap.add_argument("--map", default=MIGRATION_FILE, help="迁移表路径")
+    ap.add_argument("--skip-refs", action="store_true",
+                    help="不改外部引用（只搬 docs/ 内部）")
+    args = ap.parse_args()
+
+    table = load_migration(args.map)
+    actions, moves = plan_moves(table)
+    assets = asset_moves(table, moves)
+
+    print(f"迁移表：{args.map}")
+    print(f"  文章搬迁 {len(moves)} 篇，资源 {len(assets)} 个，"
+          f"移出 {len(table.get('out_map', {}))} 篇，"
+          f"删除目录页 {len(table.get('drop_index', []))} 个")
+    by_series = {}
+    for new_rel in moves.values():
+        key = "/".join(new_rel.split("/")[:3])
+        by_series[key] = by_series.get(key, 0) + 1
+    for key in sorted(by_series):
+        print(f"    {by_series[key]:4d}  {key}")
+
+    if not args.apply:
+        print("\n这是 dry-run。加 --apply 真搬。")
+        print("前 10 个动作：")
+        for kind, old, new in actions[:10]:
+            print(f"  [{kind}] {old} -> {new}")
+        return 0
+
+    if git("status", "--porcelain").stdout.strip():
+        print("工作区不干净，先提交或 stash 再跑迁移。", file=sys.stderr)
+        return 2
+
+    report = []
+
+    # 1. 搬之前先把日期固化下来（这一步的顺序不能变）
+    module = load_sync_hexo()
+    dates_before = capture_dates(module)
+    print(f"搬之前固化了 {len(dates_before)} 篇的日期")
+
+    # 2. 搬
+    stats = {}
+    for kind, old_rel, new_rel in actions:
+        if kind == "in":
+            r = do_move(old_rel, new_rel)
+        elif kind == "out":
+            r = do_move_out(old_rel, new_rel)
+        else:
+            abs_old = os.path.join(DOCS, old_rel)
+            if os.path.exists(abs_old):
+                res = git("rm", "-f", os.path.join("docs", old_rel))
+                r = "removed" if res.returncode == 0 else "failed"
+            else:
+                r = "skip-missing"
+        stats[r] = stats.get(r, 0) + 1
+    for old_rel, new_rel in sorted(assets.items()):
+        if os.path.basename(old_rel) == ".DS_Store":
+            git("rm", "-f", os.path.join("docs", old_rel))
+            stats["removed-junk"] = stats.get("removed-junk", 0) + 1
+            continue
+        r = do_move(old_rel, new_rel)
+        stats[r] = stats.get(r, 0) + 1
+    report.append("搬运：" + "，".join(f"{k} {v}" for k, v in sorted(stats.items())))
+
+    # 3. 改链接（必须在搬完之后 —— 解析要用「新」的目录结构）
+    rewrite_relative_links(moves, report)
+
+    # 4. 新目录页
+    write_index_files(table, moves, report)
+
+    # 5. 常量补丁
+    redirects = build_redirects(moves)
+    date_overrides = build_date_overrides(moves, dates_before)
+    cat_redirects = build_category_redirects(table)
+    for name, payload in (
+        (DATE_FILE, date_overrides),
+        ("data/redirects.json", redirects),
+        ("data/category-redirects.json", cat_redirects),
+    ):
+        with open(os.path.join(REPO, name), "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=2, sort_keys=True)
+    report.append(f"常量补丁：REDIRECTS +{len(redirects)} 条，"
+                  f"CATEGORY_REDIRECTS +{len(cat_redirects)} 条，"
+                  f"DATE_OVERRIDES 写进 {DATE_FILE}（{len(date_overrides)} 条）")
+
+    # 6. 外部引用
+    if not args.skip_refs:
+        targets = [(t["file"], t["form"]) for t in table.get("ref_rewrites", [])]
+        n = rewrite_refs(targets, moves, report)
+        report.append(f"外部引用：共改 {n} 处")
+
+    # 7. 自检：日期逐篇比对
+    drift = []
+    for old_rel, new_rel in sorted(moves.items()):
+        want = dates_before.get(old_rel)
+        got = module.git_date(os.path.join(DOCS, new_rel))
+        if got != want:
+            drift.append((old_rel, new_rel, want, got))
+    if drift:
+        print("\n⚠ 日期漂移：", file=sys.stderr)
+        for old_rel, new_rel, want, got in drift[:20]:
+            print(f"  {old_rel} → {new_rel}\n    原 {want}  现 {got}",
+                  file=sys.stderr)
+        return 1
+
+    print()
+    for line in report:
+        print("  " + line)
+    print("\n完成。还没提交 —— 先跑自检：")
+    print("  python3 tools/capture-dates.py --check data/date-overrides.json")
+    print("  python3 tools/check-internal-links.py")
+    print("  python3 tools/check-mermaid.py")
+    print("  python3 -m pytest tests/ -q")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
