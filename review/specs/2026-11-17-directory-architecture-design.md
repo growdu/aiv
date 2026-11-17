@@ -283,7 +283,7 @@ command = ["python3", "-m", "<平台 id>.cli"]
 | `video/review/` 六期记录、`video/review/README.md` | 路径引用 |
 | `publish/spec/*.md`（活的规格） | 路径引用。**注意**：根 `tests/test_podcast_spec.py` 会逐条核对规格里写的仓库路径是否存在——规格里的 `aiv/`、`weixin/` 不改，守卫就会红 |
 | `review/README.md`、`review/specs/`、`review/plans/` | 路径引用 |
-| `docs/platform-meta/**`（上游 2026-11-17 新增的六个系列） | **要改**：这些文章讲的是这个仓库自己的分层，文中引用了 `aiv/`、`weixin/`、`toutiao/` 等旧路径（见 `platform-overview/one-repo-three-pipelines.md` 的分层表）。它们是**活文档**，不是历史快照——改名后不改，文章就直接说错了 |
+| `docs/platform-meta/**`（上游 2026-11-17 新增的六个系列） | **要改**：这些文章讲的是这个仓库自己的分层，文中引用了 `aiv/`、`weixin/`、`toutiao/` 等旧路径（见 `platform-overview/one-repo-three-pipelines.md` 的分层表）。它们是**活文档**，不是历史快照——改名后不改，文章就直接说错了。具体的回写清单见 §8.2 |
 
 **不改（历史快照）**：
 
@@ -300,6 +300,14 @@ command = ["python3", "-m", "<平台 id>.cli"]
 2. 过总审核（文章看 `review/`，视频稿看 `video/review/` 的口径要求）。
 3. 通过后**复制**一份进 `docs/` 或 `video/`（相应位置），**草稿箱留底稿**。
 4. 平台版由 `platforms/<plat>/` 各自出包，落在 `platforms/<plat>/outbox/`。
+
+**草稿箱不进派生。** `docs/platform-meta/` 里那条「母稿唯一」的不变量说的是
+「真相只在 `docs/`」——如果 `drafts/` 里的稿子还能被拿去发布，
+或者改完之后两边不一致，它就变成了第二个真相源，母稿唯一这条就不成立了。
+所以规矩是：`drafts/` 是**底稿**，审校通过后**复制**一份进 `docs/`，
+底稿留在原地**不再参与任何派生**；下游的一切都从 `docs/` 的母稿重建。
+底稿的价值是「留个底」——能看出当初交上去的是什么、审校改了什么，
+不是「另一个可以编辑的产地」。
 
 ### 4.10 仓库外的部署
 
@@ -351,6 +359,12 @@ command = ["python3", "-m", "<平台 id>.cli"]
    - `grep -rn '"weixin/\|'"'"'weixin/' --include="*.py" --include="*.yml" --include="*.toml" --include="*.template" .`
 9. `platforms/<plat>/outbox/` 里的文件总数 = 567，且每个文件名仍满足
    `snapshot_name(content_id, platform) == path.name`。
+10. **回写到位**（§8.2）：
+    - `one-repo-three-pipelines.md` 里再 grep 不到 `` `aiv/` ``、`` `weixin/` ``
+      这些旧路径；
+    - 「平台总览」系列多出那篇《两条流水线，一个草稿箱》，
+      `tools/sync-hexo.py` 跑完站点能出这一页；
+    - `tests/test_learning_path.py` 绿（新文章没有落进 fallback 兜底）。
 
 ## 七、风险与注意
 
@@ -368,7 +382,57 @@ command = ["python3", "-m", "<平台 id>.cli"]
 | 历史文档里的旧路径会失效 | 历史计划不改；这是刻意的——它们是当时的快照 |
 | 本机 launchd job 与服务器 crontab 仍指旧路径 | 仓库改不到；见 §4.10，需要用户自己重装 |
 
-## 八、附：与上游「内容分类与结构重构」的关系
+## 八、与 `docs/platform-meta/` 的关系：参考什么、写回什么
+
+`docs/platform-meta/` 是**已经发表在站上的系列**，讲的是这个博客自己怎么造：
+六个系列（平台总览 / 内容模型 / 构建流水线 / 多平台分发 / 视频生产线 / 信息架构），
+已成稿三篇。工程文档回答「怎么改」，这一系列回答「为什么这么设计」。
+
+目录架构一改，**这个系列就是最先说错的地方**——它文中引用的正是旧目录名。
+所以它既是本次重构的**约束来源**，也是重构完成后**必须回写的地方**。
+
+### 8.1 要参考的既有结论（重构必须满足）
+
+| 出处 | 结论 | 本设计怎么满足 |
+| --- | --- | --- |
+| 平台总览 §三 | 依赖单向：契约层不认平台，平台层不引用契约层 | `publish/` 只留平台无关的部分；能力声明与快照随平台走，但**契约层不 import 任何平台** |
+| 平台总览 §三 | 平台之间**不是共用，是复制** | `platforms/<plat>/` 下每个平台仍是独立副本，不抽公共模块 |
+| 平台总览 §四·1 | 母稿唯一：真相只在 `docs/` | 草稿箱只留底稿、**不参与派生**（§4.9） |
+| 平台总览 §四·3 | 不静默成功：拿不准就停下来，让人看一眼 | 两条审核线（总审核在 `review/` + `video/review/`，平台审核在 `platforms/<plat>/` 内）都是「停下来」的闸门 |
+| 平台总览 §四·2 | 可重放 vs 有状态：切片渲染是纯函数，发布的幂等键单独落盘 | 幂等键就是快照文件名，**不改**；只改它所在的目录 |
+| 平台元数据 §一 | 入库的是事实，不入库的是产物 | `drafts/`（底稿）、`platforms/<plat>/outbox/`（发布记录）是事实，入库；`build/` `out/` 是产物，不入库 |
+| 内容模型 §一 | 三层模型：母稿 → 内容单元 → 平台产物 | 本设计**不动这三层**，只改母稿之外的目录摆放；草稿箱是母稿**之前**的一道工序，不是第四层 |
+
+一条划分上的补充：平台总览按**产出形态**分三条产线（站点 / 视频 / 分发），
+本设计按**内容类型**分两条流水线（文档流 / 视频流）。两者**正交**——
+文档流的下游既有站点（`docs/`）也有文本平台（公众号、头条），
+视频流的下游是视频平台。交叉点是分发层：一个内容单元可以既是站点文章，
+又是某一期视频的母稿。
+
+### 8.2 要回写的（搬完之后做，不属于代码迁移）
+
+| # | 位置 | 改什么 |
+| --- | --- | --- |
+| W1 | `docs/platform-meta/platform-overview/one-repo-three-pipelines.md` | ① mermaid 图里的 `aiv/contracts/` → `video/contracts/`；② §三分层表：视频生产层 `aiv/` → `video/`；平台适配层 `weixin/`、`toutiao/`、`douyin/`、`channels/`、`bilibili/` → `platforms/`（每个平台一个目录） |
+| W2 | `docs/platform-meta/platform-overview/` **新写一篇** | 《两条流水线，一个草稿箱》：目录架构本身——为什么视频独立成一条线、为什么平台收进 `platforms/` 按平台划分、草稿箱是什么、两条审核线怎么分工、以及这次为什么动了 `aiv/` 的名字。放「平台总览」系列，不另开新系列 |
+| W3 | `docs/platform-meta/platform-overview/_index.md` | 「本系列文章」列表加上 W2 |
+| W4 | `docs/platform-meta/multiplatform/_index.md`、`video-line/_index.md` | 这两个系列「尚未成稿」，它们各自规划的第一篇会写到旧路径：能力声明现在住在 `platforms/<plat>/capability.toml`（不在 `publish/capabilities/`），视觉分镜契约现在住在 `video/contracts/`。成稿时按新路径写 |
+
+**写回不是「改完就完」**，还有三道手续：
+
+1. **站点链路**：`docs/` → `source/_posts/` → `public/`，要跑 `tools/sync-hexo.py`；
+2. **学习路径策展**：`data/learning-path.json` 已有 `platform-meta/platform-overview/`
+   的前缀规则，新文章自动落位（不必改规则文件），但 `tests/test_learning_path.py`
+   的「没有文章靠 fallback 兜底」这条守卫要绿；
+3. **站点契约测试**：根 `tests/` 查死链与页内锚点，新文章里的相对链接要能解析。
+
+### 8.3 一条边界
+
+`docs/platform-meta/` 里那些**讲别的东西**的文章（构建流水线、内容模型）
+引用的是 `docs/` `source/` `public/` `tools/` `themes/`——这些目录本次不动，
+不用改。只有讲仓库自身分层的文章（平台总览）受影响。
+
+## 九、附：与上游「内容分类与结构重构」的关系
 
 上游 2026-11-17 拉进来一份独立的设计：`review/plans/2026-11-17-内容分类与结构重构.md`
 （把 `docs/` 下 577 篇排成五条赛道）。两份设计**范围不重叠**，但有三处要记着：
