@@ -102,6 +102,29 @@ def load_redirects(path="data/redirects.json"):
         return json.load(fh)
 
 
+def expand_out_map(table):
+    """把 `out_map` 摊平成「逐文件」。
+
+    键以 `/` 结尾 = **整目录**移出 `docs/`。
+
+    **为什么要整目录这一说**：`docs/dpdk/nxp测试报告/` 这种目录里，
+    除了 `index.md` 还有一包图片（`l3fwd_test/`、`vpp_image/`）。
+    只把 `index.md` 搬走，图片就留在 `docs/` 里继续发布 —— 站上
+    再没人引用它们（那篇已经移出去了），却还占着 `/images/` 下的地址。
+    整目录搬，文章和它的图片一起离开发布面。
+    """
+    out = {}
+    for old_rel, new_rel in sorted(table.get("out_map", {}).items()):
+        if old_rel.endswith("/"):
+            prefix = old_rel
+            for rel in sorted(_walk_docs()):
+                if rel.startswith(prefix):
+                    out[rel] = new_rel.rstrip("/") + "/" + rel[len(prefix):]
+        else:
+            out[old_rel] = new_rel
+    return out
+
+
 def effective_map(table):
     """把 `dir_map` + `file_map` 摊平成一张「旧路径 → 新路径」的表。
 
@@ -115,7 +138,7 @@ def effective_map(table):
             if rel.startswith(prefix) and _is_article(rel):
                 out[rel] = new_dir.rstrip("/") + "/" + rel[len(prefix):]
     out.update(table.get("file_map", {}))
-    for rel in table.get("out_map", {}):
+    for rel in expand_out_map(table):
         out.pop(rel, None)
     return out
 
@@ -504,7 +527,7 @@ def plan_moves(table):
     actions = []
     for old_rel in sorted(moves):
         actions.append(("in", old_rel, moves[old_rel]))
-    for old_rel, new_rel in sorted(table.get("out_map", {}).items()):
+    for old_rel, new_rel in sorted(expand_out_map(table).items()):
         actions.append(("out", old_rel, new_rel))
     for old_rel in sorted(table.get("drop_index", [])):
         actions.append(("drop", old_rel, None))
@@ -519,14 +542,18 @@ def asset_moves(table, moves):
 
     ``_index.md`` **不算资源**：它是分类链的载体（``cascade.categories``），
     搬走它等于把一个分类悄悄改名。被搬文章旁边的 ``_index.md`` 留在原地。
+
+    移出 `docs/` 的文件（`out_map`）不搬进新树 —— 它们由「移出」这条
+    动作自己带走（连图片一起，见 `expand_out_map`）。
     """
+    out_paths = expand_out_map(table)
     out = {}
     for old_dir, new_dir in table.get("dir_map", {}).items():
         prefix = old_dir.rstrip("/") + "/"
         for rel in _walk_docs():
             if not rel.startswith(prefix):
                 continue
-            if _is_article(rel) or _is_index_file(rel):
+            if _is_article(rel) or _is_index_file(rel) or rel in out_paths:
                 continue
             out[rel] = new_dir.rstrip("/") + "/" + rel[len(prefix):]
     # 逐篇搬的文章旁边的资源文件（同一目录下的图片）
@@ -538,7 +565,49 @@ def asset_moves(table, moves):
                 continue
             if _is_article(rel) or _is_index_file(rel) or rel in out:
                 continue
+            if rel in out_paths:
+                continue
             out[rel] = new_dir + "/" + os.path.basename(rel)
+    # bundle 目录跟着它的文章走（见 `_bundle_assets`）
+    out.update(_bundle_assets(moves, out_paths))
+    return out
+
+
+def _bundle_assets(moves, out_paths):
+    """一个 bundle 目录（`<目录>/index.md`）整体跟着它的文章走。
+
+    **为什么要有这一条**：bundle 目录里除了 `index.md` 常常还带着一包图片
+    （`dpdk/fastup测试报告/vpp_image/`）。两条别的规则都会让图片跟丢：
+
+    - `dir_map` 的「整目录搬」把图片送到**目录的默认落点**，
+      而文章是逐篇例外搬到别的系列的 —— 文章走了、图片留在原地，
+      `![](vpp_image/x.png)` 就断了；
+    - 「同一目录的资源跟着文章走」只认**直接**躺在同一目录的文件，
+      躺在子目录里的图片管不着。
+
+    规则：目录里**只有** `index.md` 这一篇文章时，这个目录（连同它的
+    子目录）整体跟着那篇文章走。目录里还有别的文章就不算 bundle ——
+    那些文章各有各的去处，目录不能整体打包。
+    """
+    out = {}
+    by_dir = {}
+    for rel in _walk_docs():
+        if _is_article(rel) and not _is_index_file(rel):
+            by_dir.setdefault(os.path.dirname(rel), []).append(rel)
+    for old_rel, new_rel in moves.items():
+        if os.path.basename(old_rel) != "index.md":
+            continue
+        old_dir = os.path.dirname(old_rel)
+        if not old_dir or len(by_dir.get(old_dir, [])) != 1:
+            continue
+        new_dir = os.path.dirname(new_rel)
+        prefix = old_dir.rstrip("/") + "/"
+        for rel in _walk_docs():
+            if not rel.startswith(prefix):
+                continue
+            if _is_article(rel) or _is_index_file(rel) or rel in out_paths:
+                continue
+            out[rel] = new_dir + "/" + rel[len(prefix):]
     return out
 
 
@@ -1052,7 +1121,7 @@ def main():
     # 5. 常量补丁
     redirects = build_redirects(moves, load_redirects())
     date_overrides = build_date_overrides(moves, dates_before,
-                                          table.get("out_map", {}))
+                                          expand_out_map(table))
     cat_redirects = build_category_redirects(table)
     for name, payload in (
         (DATE_FILE, date_overrides),

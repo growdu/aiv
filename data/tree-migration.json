@@ -1,6 +1,7 @@
 {
   "category_redirects": {
     "BenchmarkSQL 基准测试": "源码主线/PostgreSQL/扩展、性能与生态",
+    "DPDK": "源码主线/DPDK与VPP",
     "Docker": "工程与语言/容器与环境",
     "Elasticsearch": "工程与语言/Web、前端与搜索",
     "FAQ": "工程与语言/速查与清单",
@@ -12,6 +13,7 @@
     "PostgreSQL 源码修炼之路": "源码主线/PostgreSQL",
     "PostgreSQL 源码修炼之路:内核深度拆解专题": "源码主线/PostgreSQL",
     "PostgreSQL 逻辑解码完整目录": "源码主线/PostgreSQL/逻辑复制与流式",
+    "VPP": "源码主线/DPDK与VPP",
     "Vue": "工程与语言/Web、前端与搜索",
     "Web": "工程与语言/Web、前端与搜索",
     "openGauss": "分布式与架构/一致性协议",
@@ -51,6 +53,7 @@
     "db/sqlserver/": "source-tracks/postgresql/logical-replication/sqlserver/",
     "db/taos/": "source-tracks/postgresql/extensions-perf/",
     "docker/": "engineering/containers/",
+    "dpdk/": "source-tracks/dpdk/getting-started/",
     "edit/": "engineering/engineering-practice/",
     "es/": "engineering/web-and-frontend/",
     "faq/": "engineering/cheatsheets/",
@@ -76,6 +79,7 @@
     "pgsql/storage/": "source-tracks/postgresql/storage-engine/",
     "pgsql/storage/full_page_writes/": "source-tracks/postgresql/wal-and-recovery/full_page_writes/",
     "tools/": "engineering/engineering-practice/",
+    "vpp/": "source-tracks/dpdk/getting-started/",
     "vue/": "engineering/web-and-frontend/",
     "web/": "engineering/web-and-frontend/"
   },
@@ -106,7 +110,9 @@
     "page/_index.md",
     "tools/_index.md",
     "vue/_index.md",
-    "web/_index.md"
+    "web/_index.md",
+    "dpdk/_index.md",
+    "vpp/_index.md"
   ],
   "file_map": {
     "cluster/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md": "distributed/foundations/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md",
@@ -242,6 +248,27 @@
     "db/postgresql/逻辑复制性能测试.md": "source-tracks/postgresql/logical-replication/逻辑复制性能测试.md",
     "db/命名空间.md": "source-tracks/postgresql/getting-started/命名空间.md",
     "db/多数据库模式命名空间问题.md": "source-tracks/postgresql/getting-started/多数据库模式命名空间问题.md",
+    "dpdk/day1.md": "source-tracks/dpdk/getting-started/day1.md",
+    "dpdk/dpdk之kni使用.md": "source-tracks/dpdk/getting-started/dpdk之kni使用.md",
+    "dpdk/dpdk常用接口指北.md": "source-tracks/dpdk/getting-started/dpdk常用接口指北.md",
+    "dpdk/dpdk无锁队列实现.md": "source-tracks/dpdk/architecture/dpdk无锁队列实现.md",
+    "dpdk/dpdk相关/index.md": "source-tracks/dpdk/getting-started/dpdk相关/index.md",
+    "dpdk/fastup测试报告/index.md": "source-tracks/dpdk/testing-and-perf/fastup测试报告/index.md",
+    "dpdk/l3fwd/index.md": "source-tracks/dpdk/getting-started/l3fwd/index.md",
+    "dpdk/linux大页内存.md": "source-tracks/dpdk/getting-started/linux大页内存.md",
+    "dpdk/lx2160使用dpdk/index.md": "source-tracks/dpdk/getting-started/lx2160使用dpdk/index.md",
+    "dpdk/nxp运行vpp.md": "source-tracks/dpdk/getting-started/nxp运行vpp.md",
+    "dpdk/pktgen.md": "source-tracks/dpdk/getting-started/pktgen.md",
+    "dpdk/pktgen编译使用.md": "source-tracks/dpdk/getting-started/pktgen编译使用.md",
+    "dpdk/ptpclient.md": "source-tracks/dpdk/getting-started/ptpclient.md",
+    "dpdk/vpp.md": "source-tracks/dpdk/plugins-and-apps/vpp.md",
+    "dpdk/vpp与dpdk的关系.md": "source-tracks/dpdk/architecture/vpp与dpdk的关系.md",
+    "dpdk/vpp使用.md": "source-tracks/dpdk/plugins-and-apps/vpp使用.md",
+    "dpdk/vpp使用kni.md": "source-tracks/dpdk/plugins-and-apps/vpp使用kni.md",
+    "dpdk/vpp插件开发.md": "source-tracks/dpdk/plugins-and-apps/vpp插件开发.md",
+    "dpdk/交叉编译.md": "source-tracks/dpdk/getting-started/交叉编译.md",
+    "dpdk/抓包.md": "source-tracks/dpdk/getting-started/抓包.md",
+    "dpdk/用户态驱动-UIOVFIO/index.md": "source-tracks/dpdk/getting-started/用户态驱动-UIOVFIO/index.md",
     "linux/centos搭建离线仓库.md": "source-tracks/linux/daily-ops/centos搭建离线仓库.md",
     "linux/cpu-affinity-top-guide/index.md": "source-tracks/linux/kernel-internals/cpu-affinity-top-guide/index.md",
     "linux/gcc attribute指北.md": "source-tracks/linux/kernel-internals/gcc attribute指北.md",
@@ -304,12 +331,35 @@
     "tools/codeserver_docker.md": "engineering/containers/codeserver_docker.md",
     "tools/leanote使用教程.md": "engineering/web-and-frontend/leanote使用教程.md",
     "tools/一文教你选择局域网文件服务器.md": "engineering/web-and-frontend/一文教你选择局域网文件服务器.md",
-    "tools/那些你不得不会的提高工作效率的软件神器.md": "engineering/containers/那些你不得不会的提高工作效率的软件神器.md"
+    "tools/那些你不得不会的提高工作效率的软件神器.md": "engineering/containers/那些你不得不会的提高工作效率的软件神器.md",
+    "vpp/cdu_nxp2160_ptp1588v2实现方案.md": "source-tracks/dpdk/plugins-and-apps/cdu_nxp2160_ptp1588v2实现方案.md",
+    "vpp/fastgtpu配置及cli说明文档.md": "source-tracks/dpdk/plugins-and-apps/fastgtpu配置及cli说明文档.md",
+    "vpp/fastup-kni设计实现说明文档/index.md": "source-tracks/dpdk/plugins-and-apps/fastup-kni设计实现说明文档/index.md",
+    "vpp/fastup发包测试说明文档.md": "source-tracks/dpdk/testing-and-perf/fastup发包测试说明文档.md",
+    "vpp/fastup插件加载.md": "source-tracks/dpdk/plugins-and-apps/fastup插件加载.md",
+    "vpp/vpp buffer接口.md": "source-tracks/dpdk/architecture/vpp buffer接口.md",
+    "vpp/vpp vector指北.md": "source-tracks/dpdk/architecture/vpp vector指北.md",
+    "vpp/vpp-ip分片测试验证/index.md": "source-tracks/dpdk/testing-and-perf/vpp-ip分片测试验证/index.md",
+    "vpp/vpp主要数据结构.md": "source-tracks/dpdk/architecture/vpp主要数据结构.md",
+    "vpp/vpp代码流程图.md": "source-tracks/dpdk/architecture/vpp代码流程图.md",
+    "vpp/vpp使用说明文档.md": "source-tracks/dpdk/getting-started/vpp使用说明文档.md",
+    "vpp/vpp多网口转发.md": "source-tracks/dpdk/testing-and-perf/vpp多网口转发.md",
+    "vpp/vpp开发指南.md": "source-tracks/dpdk/getting-started/vpp开发指南.md",
+    "vpp/vpp抓包.md": "source-tracks/dpdk/architecture/vpp抓包.md",
+    "vpp/vpp日志系统.md": "source-tracks/dpdk/getting-started/vpp日志系统.md",
+    "vpp/vpp调试指北.md": "source-tracks/dpdk/getting-started/vpp调试指北.md"
   },
-  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。",
+  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。",
   "out_map": {
     "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
-    "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md"
+    "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md",
+    "dpdk/fastupkni功能测试.md": "internal/dpdk/fastupkni功能测试.md",
+    "dpdk/fastup时间规划.md": "internal/dpdk/fastup时间规划.md",
+    "dpdk/fastup模拟UE测试.md": "internal/dpdk/fastup模拟UE测试.md",
+    "dpdk/fastup测试优化完成情况.md": "internal/dpdk/fastup测试优化完成情况.md",
+    "dpdk/nxp测试报告/": "internal/dpdk/nxp测试报告/",
+    "vpp/fastup适配ptp方案.md": "internal/vpp/fastup适配ptp方案.md",
+    "vpp/fatsup-cpu间转发测试报告/": "internal/vpp/fatsup-cpu间转发测试报告/"
   },
   "projects": [
     {
@@ -391,6 +441,22 @@
         "web-and-frontend": "Web、前端与搜索：Vue、React、Elasticsearch 搜索界面与桌面打包。"
       },
       "target_root": "engineering"
+    },
+    {
+      "display_name": "DPDK与VPP",
+      "series": {
+        "architecture": "架构与核心数据结构",
+        "getting-started": "环境与入门",
+        "plugins-and-apps": "插件与业务开发",
+        "testing-and-perf": "测试、验证与性能"
+      },
+      "series_meta": {
+        "architecture": "架构与核心数据结构：buffer、ring、vector、无锁队列 —— 报文在网卡和用户态之间怎么走。",
+        "getting-started": "环境与入门：巨页、UIO/VFIO、编译、抓包与 pktgen —— 先把环境搭起来，跑通第一个包。",
+        "plugins-and-apps": "插件与业务开发：在这套栈上写出自己的转发/处理逻辑 —— fastup 插件、KNI 转发与 PTP 落地方案。",
+        "testing-and-perf": "测试、验证与性能：压测怎么打、结果怎么读 —— 丢包、错包与瓶颈出在哪一层。"
+      },
+      "target_root": "source-tracks/dpdk"
     }
   ],
   "ref_rewrites": [
