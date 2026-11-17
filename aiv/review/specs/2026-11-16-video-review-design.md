@@ -144,6 +144,13 @@ python -m pyv.cli review frames --episode pg-parallel-decode --out /tmp/frames
 **为什么视频侧没有 `AIF-03`（超长段落）**：口播稿一句一意群，段落级的长度判断
 换成**句长**（`persona.sentence-length` 已经在管），不重复造。
 
+**为什么只搬 `AIF-01`/`02`/`04`/`05`，不搬 `STR-*`/`MET-*`/`DEP-*`**：
+后三组判的是**文章形态**——开头 5 段有没有说明问题、结尾有没有可带走的产物、
+有没有「编写人 / 编写内容 / 编写时间」信息表。短视频里没有这些形态。
+实测（`python tools/review-check.py aiv/字幕-*.md`）：六期口播稿上 `AIF-*`
+一条都没报（搬过来的四条确实不用报），而 `STR-02`/`STR-03`/`MET-01` 每期都报，
+全是误报。**能搬的是「话怎么说的」，不能搬的是「文怎么组织的」。**
+
 **为什么 `VT-07` 查的是源字幕表而不是 storyboard**：`make validate` 查的是上一次
 `align` 出来的 storyboard。源字幕表改了但还没重跑 `align` 时，那个门禁看到的
 还是旧字幕——改完稿没重跑 align 就出片，是最常见的「改了但没生效」。
