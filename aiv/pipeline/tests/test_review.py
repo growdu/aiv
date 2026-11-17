@@ -763,6 +763,59 @@ def test_review_records_match_the_index():
         assert record.is_file()
 
 
+def _pending_items(record: Path) -> int:
+    """记录里「优先修改」中**还没改掉**的条数。
+
+    一条算「已改」有两个标记：`已改`（改完了，成片还没重出）与
+    `已合入`（改完、重出片、复审通过）。没写状态的算「待改」。
+    """
+    text = record.read_text(encoding="utf-8")
+    section = text.split("## 优先修改", 1)[1].split("\n## ", 1)[0]
+    lines = section.splitlines()
+    pending = 0
+    index = 0
+    while index < len(lines):
+        if not re.match(r"^\d+\.\s+位置：", lines[index]):
+            index += 1
+            continue
+        # 这一条的其余行（到下一条为止）里有没有「已改 / 已合入」
+        done = False
+        probe = index + 1
+        while probe < len(lines) and not re.match(r"^\d+\.\s+位置：", lines[probe]):
+            if re.match(r"^\s+- 状态：(已改|已合入)", lines[probe]):
+                done = True
+            probe += 1
+        if not done:
+            pending += 1
+        index = probe
+    return pending
+
+
+def test_the_index_pending_count_matches_the_records():
+    """进度表的「待确认项」一列 == 记录里还没改掉的条数。
+
+    **两处维护必然不一致**：改了记录忘了改表，或者改了表忘了改记录。
+    索引一旦是噪声，就没人再看它——所以由测试钉住。
+
+    「待确认项」记的是**还没改掉**的条数，不是「优先修改」的总条数：
+    已改的条目仍然留在记录里（它是改动的依据），但不再欠着。
+    """
+    index = (review.REVIEW_DIR / "INDEX.md").read_text(encoding="utf-8")
+    for episode in episodes.EPISODE_ORDER:
+        row = next(line for line in index.splitlines()
+                   if line.strip().startswith("|")
+                   and [c.strip() for c in line.strip("|").split("|")][1:2]
+                   == [episode])
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        assert cells[-2].isdigit(), f"{episode} 的「待确认项」列不是数字：{cells[-2]}"
+        pending = _pending_items(
+            review.REVIEW_DIR / "episodes" / f"{episode}.md")
+        assert int(cells[-2]) == pending, (
+            f"{episode}：进度表写着 {cells[-2]} 条待确认，"
+            f"记录里没改掉的是 {pending} 条——对一下"
+        )
+
+
 def test_review_records_are_not_published():
     """`aiv/review/` 只记录审核过程，不是对外发布内容。
 
