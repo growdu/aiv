@@ -548,7 +548,9 @@ def build_date_overrides(moves, dates_before):
         date = dates_before.get(old_rel) or dates_before.get(new_rel)
         out[new_rel] = date or "2024-01-01 00:00:00"
     for rel, date in dates_before.items():
-        if rel not in out and not any(rel == v for v in moves.values()):
+        # 搬走的文章用新路径做键，旧路径那个键就是死的 —— 留着它，
+        # 以后再搬一次会被当成「有记录」而跳过改写。
+        if rel not in out and rel not in moves:
             out[rel] = date
     return out
 
@@ -754,6 +756,10 @@ def main():
         report.append(f"外部引用：共改 {n} 处")
 
     # 7. 自检：日期逐篇比对
+    #    重新加载一遍 —— sync-hexo.py 在**导入时**就把 `data/` 下的表读进
+    #    内存了，而表是第 5 步才写的。不重载，断言拿到的是旧表，
+    #    `git_date()` 查不到新键就退回「仓库里找不到这个路径」。
+    module = load_sync_hexo()
     drift = []
     for old_rel, new_rel in sorted(moves.items()):
         want = dates_before.get(old_rel) or dates_before.get(new_rel)
