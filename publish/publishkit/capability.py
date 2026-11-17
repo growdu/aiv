@@ -410,7 +410,7 @@ def load_capability_file(path) -> Capability:
         # 目录名是注册表的名字，id 必须与它一致——否则「哪个平台」就有两个答案。
         raise CapabilityFileError(
             "能力声明 id 与目录名不一致：目录 {} 的 id 是 {!r}（文件 {}）".format(
-                path.parent.name, platform_id, path.name
+                path.parent.name, platform_id, path
             )
         )
 
