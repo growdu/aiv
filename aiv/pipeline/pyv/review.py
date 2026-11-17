@@ -1044,10 +1044,11 @@ def check_video(episode: str, out_dir: Path | None = None) -> Report:
                    if not _is_brand_frame(frame, media.storyboard)]
     skipped = len(frames) - len(body_frames)
     if skipped:
-        report.note(f"{skipped} 帧在品牌片头/片尾（含边界那一帧）里，"
+        report.note(f"{skipped} 帧在品牌片头/片尾里或紧邻其边界（过渡帧），"
                     "不判 VV-01、VV-02"
                     "（品牌片是共享素材：片头第一帧的黑场、"
-                    "片尾最后几十毫秒的白场都是淡入淡出，不是漏画）")
+                    "片尾最后几十毫秒的白场都是淡入淡出；"
+                    "边界那一帧可能落在正文段刚起的空白上——都不是漏画）")
 
     for check in VIDEO_CHECKS:
         skipped: list[str] = []
