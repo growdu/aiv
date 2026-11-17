@@ -15,7 +15,7 @@
 这几条对每个 task 都成立，实施时不得放宽：
 
 - **快照文件名 `<content_id>__<platform>.json` 一个字都不改**——它是幂等键，改名等于让已发过的内容被当成没发过。
-- **`docs/life/aiv/` 目录名、`life/aiv/…` 形式的 content id、指向 `life/aiv/` 专题页的站点链接（7 处 `aiv/index.html`）一个都不改**——URL 稳定性是硬约束（`publish/spec/00-架构设计.md` §7.4）。
+- **`docs/life/aiv/` 目录名、`life/aiv/…` 形式的 content id、指向 `life/aiv/` 专题页的站点链接（8 处 `aiv/index.html`，分布在 4 个文件里）一个都不改**——URL 稳定性是硬约束（`publish/spec/00-架构设计.md` §7.4）。
 - **567 个快照的正文不改**——`package_dir` 字段里的旧路径搬迁后会失效，但站点构建不读它，不重写历史发布记录。
 - **目录名 = 平台 id = Python 包名**：`wechat` `toutiao` `douyin` `bilibili` `channels`。五个能力声明文件统一叫 `capability.toml`。
 - **目录改名，标识符里的 AIV 保留**——`AIV_ROOT` 这类常量不改名（AIV 是品牌，还在用）；只有它指向的**目录路径**变。
@@ -31,7 +31,7 @@
 1. **读侧漏改 → 重复发布。** outbox 分平台之后，任何还在扫单一目录的读者都会把 567 条已发布记录看成「一篇都没发过」，调度器于是重发。→ Task 4 的守卫：真实仓库的 outbox 索引必须含 567 条；Task 0/Task 7 前后对比 `publishkit schedule status` 的「已发过（567）」。
 2. **adapter 子进程找不到包。** 压平之后内层包没了，`python3 -m toutiao.cli` 靠 cwd 在 `sys.path` 里找包；cwd 不跟着改，调度器一调 adapter 就失败。→ Task 2 的守卫：子进程 cwd 必须是 `<repo>/platforms`，且五个平台各自 `python3 -c "import <plat>.cli"` 要成功。
 3. **能力声明按 id 找不到目录。** 目录名与 toml 里的 `id` 不一致时，按 id 查目录就查不到。→ Task 3 的守卫：每个平台的目录名必须等于其 toml 里的 `id`。
-4. **URL 命名空间被误改 → 老链接全断。** 批量替换 `aiv/` 时误伤 `docs/life/aiv/` 目录、`life/aiv/…` content id，或 `docs/life/_index.md` 里指向 `life/aiv/` 专题页的 `./aiv/index.html` 链接。→ Task 1 的守卫 + Task 1 Step 4 的**两遍替换法**。
+4. **URL 命名空间被误改 → 老链接全断。** 批量替换 `aiv/` 时误伤 `docs/life/aiv/` 目录、`life/aiv/…` content id，或 `docs/life/_index.md` 里指向 `life/aiv/` 专题页的 `./aiv/index.html` 链接（**全仓 8 处，4 个文件**）。→ Task 1 的守卫 + Task 1 Step 4 的**占位符保护法**。
 5. **静默失败。** `tools/build-publish-index.py` 与 `tools/build-video-pages.py` 的测试把 outbox 路径 monkeypatch 成临时目录，路径写错时**测试照样全绿**，只有真跑构建才炸。→ Task 4 的守卫：直接对**真实仓库**调一次 `read_outbox()`，断言条数。
 
 ---
@@ -123,10 +123,28 @@ def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
         "docs/life/_index.md": "./aiv/index.html",
         "docs/life/blog-to-wechat/index.md": "../aiv/index.html",
         "docs/life/shehui/media-account/index.md": "../../aiv/index.html",
+        "docs/database/_index.md": "../life/aiv/index.html",
     }
     for path, link in links.items():
         text = (REPO_ROOT / path).read_text(encoding="utf-8")
         assert link in text, f"{path} 里的 {link} 链接不见了"
+
+    # 全仓点数：docs/ 里指向 life/aiv 专题页的链接一共 8 处（分处 4 个文件）
+    count = 0
+    for path in sorted((REPO_ROOT / "docs").rglob("*.md")):
+        count += path.read_text(encoding="utf-8").count("aiv/index.html")
+    assert count == 8, f"docs/ 里指向 life/aiv 专题页的链接变成 {count} 处（应为 8）"
+
+    # README 里讲解相对链接机制的那两处例子也是 URL 命名空间（搬前叫 aiv/README.md）
+    for name in ("video", "aiv"):
+        readme = REPO_ROOT / name / "README.md"
+        if readme.is_file():
+            text = readme.read_text(encoding="utf-8")
+            assert "../aiv/背景音乐规范.md" in text, f"{name}/README.md 里的链接例子不见了"
+            assert "../aiv/index.html" in text, f"{name}/README.md 里的链接例子不见了"
+            break
+    else:
+        raise AssertionError("既没有 video/README.md 也没有 aiv/README.md")
 ```
 
 - [ ] **Step 2: 跑测试确认它们现在会绿**
@@ -140,15 +158,20 @@ Expected: PASS（2 passed）。
 git mv aiv video
 ```
 
-- [ ] **Step 4: 替换路径引用（两遍法）**
+- [ ] **Step 4: 替换路径引用（占位符保护法）**
 
 **先看哪些形式必须保留：**
 
 | 形式 | 例子 | 处置 |
 | --- | --- | --- |
 | `life/aiv/…` | `docs/life/aiv/`、`life/aiv/voice/README`、`/growdu.cn/2026/11/12/life/aiv/` | **不动**（URL 命名空间与 content id） |
-| `docs/` 里的 `./aiv/` `../aiv/` `../../aiv/` | `[AIV 视频生产线](../aiv/index.html)` | **不动**（指向 life/aiv/ 专题页的站点链接） |
-| 其余 `aiv/…` | `aiv/pipeline/pyv/`、`aiv/字幕-行锁.md`、`aiv/contracts/` | **改成 `video/…`** |
+| 指向 `life/aiv/` 专题页的站内相对链接（**8 处**） | `[AIV 视频生产线](../aiv/index.html)`、`../aiv/背景音乐规范.md` | **不动**（站点链接，指向 `life/aiv/`） |
+| 其余 `aiv/…` | `aiv/pipeline/pyv/`、`aiv/字幕-行锁.md`、`aiv/contracts/`、`../../aiv/index.md`（在 `publish/spec/` 里指的是**仓库目录**） | **改成 `video/…`** |
+
+> 站内相对链接与仓库路径的区别**不能靠词形判断**——`publish/spec/00-架构设计.md` 里的
+> `../../aiv/` 指的是仓库根的 `aiv/` 目录（该换），`docs/life/` 里的 `../aiv/` 指的是
+> 站点上的 `life/aiv/` 专题页（不该换）。所以下面按**文件**逐个列出要保护的字面量，
+> 先占位保护、替换完再还原。
 
 用这个脚本跑一遍（放在仓库根执行）：
 
@@ -167,29 +190,39 @@ EXCLUDE = (
     "video/pipeline/plans/",
     "docs/blog/重构方案.md",          # 已发布的旧文章
 )
-# 这些文件里的 ./aiv/ 与 ../aiv/ 是站点链接（指向 life/aiv/ 专题页），要额外保护
-SITE_LINKS = (
-    "docs/life/_index.md",
-    "docs/life/blog-to-wechat/index.md",
-    "docs/life/shehui/media-account/index.md",
-)
+# 这些字面量是「站内相对链接」，指向 life/aiv/ 专题页——替换前先占位，替换完还原。
+# aiv/README.md 与 video/README.md 是同一个文件（搬前/搬后），两个名字都列上。
+PROTECTED = {
+    "docs/life/_index.md": ("./aiv/index.html",),
+    "docs/life/blog-to-wechat/index.md": ("../aiv/index.html",),
+    "docs/life/shehui/media-account/index.md": ("../../aiv/index.html",),
+    "docs/database/_index.md": ("../life/aiv/index.html",),
+    "aiv/README.md": ("../aiv/背景音乐规范.md", "../aiv/index.html"),
+    "video/README.md": ("../aiv/背景音乐规范.md", "../aiv/index.html"),
+}
+MARK = "\x00SL{}\x00"
 
 changed = []
-for path in ROOT.rglob("*"):
-    if not path.is_file() or ".git/" in str(path):
+for path in sorted(ROOT.rglob("*")):
+    if not path.is_file() or "/.git/" in f"/{path}":
         continue
     rel = path.as_posix()
     if rel.startswith(EXCLUDE):
         continue
     try:
-        text = path.read_text(encoding="utf-8")
+        original = path.read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError):
         continue
+    text = original
+    saved = []
+    for i, literal in enumerate(PROTECTED.get(rel, ())):
+        if literal in text:
+            text = text.replace(literal, MARK.format(i))
+            saved.append((i, literal))
     new = re.sub(r"(?<!life/)aiv/", "video/", text)
-    if rel in SITE_LINKS:
-        new = re.sub(r"(?<!\.\./)\./video/", "./aiv/", new)
-        new = re.sub(r"(?<!\.\./)\.\./video/", "../aiv/", new)
-    if new != text:
+    for i, literal in saved:
+        new = new.replace(MARK.format(i), literal)
+    if new != original:
         path.write_text(new, encoding="utf-8")
         changed.append(rel)
 print(f"改了 {len(changed)} 个文件")
@@ -197,7 +230,7 @@ PY
 ```
 
 > **`aiv/` 前面是 `life/` 的绝不换**——那是 URL 命名空间与 content id。
-> **`docs/` 里那 7 处 `aiv/index.html` 站点链接绝不换**——它们指向 `life/aiv/` 专题页。
+> **那 8 处站内相对链接绝不换**——它们指向 `life/aiv/` 专题页，脚本里逐个占位保护。
 
 - [ ] **Step 5: 替换独立出现的 `aiv` 词（不带斜杠的路径）**
 
@@ -1243,7 +1276,7 @@ git grep -n -P '(?<!life/)aiv/' -- . | grep -v 'plans/\|directory-architecture-'
 ```
 
 第三条的白名单：`plans/` 下的历史计划、本设计稿与本计划稿、以及
-`docs/` 里那 7 处指向 `life/aiv/` 专题页的站点链接（它们前面是 `./` 或 `../`，
+`docs/` 里那 8 处指向 `life/aiv/` 专题页的站点链接（它们前面是 `./` 或 `../`，
 正则的 `(?<!life/)` 拦不住——所以这里用排除法核对）。
 
 **逐条人工看第三条的输出**，确认剩下的每一处都是「有意保留」。
