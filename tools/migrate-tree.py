@@ -876,7 +876,13 @@ def rewrite_refs(targets, moves, report):
 
 
 def _permalink_pairs(old_rel, new_rel):
-    """站内绝对地址里的路径段（中文原样 / 百分号编码，两种写法）。"""
+    """站内绝对地址里的路径段（三种写法）。
+
+    站点上的地址有三种形态：中文原样、整段百分号编码（``quote()`` 的写法），
+    以及**只把空格编码成 ``%20``**、中文照旧的那种。第三种最常见也最容易漏
+    —— 文件名里带空格的文章（比如「一文读懂openguass dcf网络模块」）在
+    模板里就长这样，少了这一对，链接就会在搬家后指向一个不存在的地址。
+    """
     old_perm = permalink_path(old_rel)
     new_perm = permalink_path(new_rel)
     if old_perm == new_perm:
@@ -885,6 +891,8 @@ def _permalink_pairs(old_rel, new_rel):
     for old_text, new_text in (
         ("/" + old_perm + "/", "/" + new_perm + "/"),
         ("/" + quote(old_perm) + "/", "/" + quote(new_perm) + "/"),
+        ("/" + old_perm.replace(" ", "%20") + "/",
+         "/" + new_perm.replace(" ", "%20") + "/"),
     ):
         if old_text != new_text:
             pairs.append((old_text, new_text))

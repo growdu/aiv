@@ -222,7 +222,7 @@ mindmap
 | [openGaussCSN 全序保证机制](logical-replication/opengauss-csn-total-ordering/index.html) | 从源码看为什么并行解码能保证全局一致性 |
 | [openGauss 并行解码设计原理](logical-replication/opengauss-parallel-decoding-design/index.html) | 整体架构与并行策略 |
 
-**openGauss 全家桶** —— [完整目录(../openguass/index.html):
+**openGauss 全家桶** —— [完整目录(/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%8E%E6%9E%B6%E6%9E%84/%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/):
 - openGauss DCF 搭建详解
 - openGauss DCF 启动详解
 - openGauss 升级机制
