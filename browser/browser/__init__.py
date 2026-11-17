@@ -2,7 +2,7 @@
 
 这个包**不是 adapter**，是第三层：
 
-    aiv/publish/<EP>.json ──┐
+    video/publish/<EP>.json ──┐
                              ├─→ browser/ ─→ 真实浏览器 ─→ 平台页面
     channels/out/<EP>/    ──┘
 

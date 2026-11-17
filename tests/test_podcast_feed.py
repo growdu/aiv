@@ -190,7 +190,7 @@ def test_the_narration_audio_is_hosted_on_the_site(tmp_path, monkeypatch):
 
     hosted = tmp_path / "audio" / "narration_row-lock.mp3"
     assert hosted.is_file()
-    original = REPO_ROOT / "aiv" / "narration_row-lock.mp3"
+    original = REPO_ROOT / "video" / "narration_row-lock.mp3"
     assert hosted.stat().st_size == original.stat().st_size
 
 

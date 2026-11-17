@@ -6,7 +6,7 @@
     "channels",
     "bilibili",
     "browser",
-    "aiv/pipeline"
+    "video/pipeline"
   ],
   "venvPath": ".",
   "venv": ".venv",

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-for extra in (REPO_ROOT / "channels", REPO_ROOT / "aiv" / "pipeline"):
+for extra in (REPO_ROOT / "channels", REPO_ROOT / "video" / "pipeline"):
     if str(extra) not in sys.path:
         sys.path.insert(0, str(extra))
 

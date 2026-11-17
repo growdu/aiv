@@ -206,7 +206,7 @@ def test_the_cli_packages_and_marks_an_episode(tmp_path, monkeypatch, make_video
         },
     }, ensure_ascii=False), encoding="utf-8")
 
-    aiv_root = tmp_path / "aiv"
+    aiv_root = tmp_path / "video"
     (aiv_root / "out").mkdir(parents=True)
     make_video(aiv_root / "out" / "ep01.mp4")
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """把 AIV 的口播稿变成站上的视频页。
 
-**母稿是 ``aiv/字幕-<主题>.md``**——那一行一句的口播稿与字幕表，是这条线
-入库的唯一真相；画面契约在 ``aiv/contracts/<期号>.json``，发布状态在
+**母稿是 ``video/字幕-<主题>.md``**——那一行一句的口播稿与字幕表，是这条线
+入库的唯一真相；画面契约在 ``video/contracts/<期号>.json``，发布状态在
 ``publish/outbox/*.json``。
 
 生成的是**内容单元**（``source/_posts/video/<期号>.md``），不是页面：
@@ -10,7 +10,7 @@
 这也补上了规格 §9.3 说的那句话——站点是内容谱系的根，而视频此前
 在站上零呈现（video widget 关着、菜单无入口）。
 
-期号与口播稿的对应关系读的是 ``aiv/pipeline/Makefile``（那里的
+期号与口播稿的对应关系读的是 ``video/pipeline/Makefile``（那里的
 ``ifeq ($(EP),<期号>)`` 登记），**不另建一份映射表**——两个地方各记一遍
 就会漂。
 
@@ -38,7 +38,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-AIV_ROOT = REPO_ROOT / "aiv"
+AIV_ROOT = REPO_ROOT / "video"
 MAKEFILE = AIV_ROOT / "pipeline" / "Makefile"
 CONTRACTS_DIR = AIV_ROOT / "contracts"
 OUTBOX_DIR = REPO_ROOT / "publish" / "outbox"
@@ -137,10 +137,10 @@ def rewrite_links(body, script_to_permalink):
 
 
 def read_publish_meta(episode):
-    """这一期的发布元数据（``aiv/publish/<EP>.json``）。
+    """这一期的发布元数据（``video/publish/<EP>.json``）。
 
     **它是母版标题的出处**（视频发布契约 §4.3：「这一期的标题（母版标题）。
-    各平台文案默认从这里派生」）。画面契约 ``aiv/contracts/<EP>.json`` 里的
+    各平台文案默认从这里派生」）。画面契约 ``video/contracts/<EP>.json`` 里的
     title 是**画面标题**，两者不必相同——EP01 的画面标题是「openGauss 的并行
     逻辑解码」，母版标题是「PostgreSQL 18 并行逻辑解码」。
 

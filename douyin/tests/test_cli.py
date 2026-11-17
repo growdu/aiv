@@ -76,7 +76,7 @@ def test_the_missing_video_hint_reaches_the_terminal(tmp_path, monkeypatch, caps
     """
     from douyin import cli
 
-    monkeypatch.setattr(cli, "AIV_ROOT", tmp_path / "aiv")
+    monkeypatch.setattr(cli, "AIV_ROOT", tmp_path / "video")
     assert cli.main(["package", "structured-ddl"]) == 1
     err = capsys.readouterr().err
     assert "vertical" in err

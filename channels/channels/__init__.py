@@ -5,8 +5,8 @@
 
 本包与 `bilibili/` 平级、互不引用，也不 import 契约层或 `weixin/` 的包。
 
-`pyv` 住在 `aiv/pipeline/` 下面，没有装成 wheel，所以这里把它挂上 `sys.path`——
-adapter 只**读** `pyv.epmeta` 与 `pyv.preflight`，不修改 aiv 侧的任何东西。
+`pyv` 住在 `video/pipeline/` 下面，没有装成 wheel，所以这里把它挂上 `sys.path`——
+adapter 只**读** `pyv.epmeta` 与 `pyv.preflight`，不修改 video 侧的任何东西。
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 # channels/channels/__init__.py → parents[2] 是仓库根
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DIR = REPO_ROOT / "aiv" / "pipeline"
+PIPELINE_DIR = REPO_ROOT / "video" / "pipeline"
 
 if str(PIPELINE_DIR) not in sys.path:
     sys.path.insert(0, str(PIPELINE_DIR))

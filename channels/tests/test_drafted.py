@@ -142,7 +142,7 @@ def test_the_cli_marks_a_draft_and_writes_a_drafted_snapshot(
     from channels import cli
 
     publish_dir = _publish_meta(tmp_path)
-    aiv_root = tmp_path / "aiv"
+    aiv_root = tmp_path / "video"
     (aiv_root / "out").mkdir(parents=True)
     make_video(aiv_root / "out" / "ep01.mp4")
 

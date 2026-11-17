@@ -12,7 +12,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 for extra in (REPO_ROOT / "channels", REPO_ROOT / "bilibili",
               REPO_ROOT / "douyin",
-              REPO_ROOT / "aiv" / "pipeline"):
+              REPO_ROOT / "video" / "pipeline"):
     if str(extra) not in sys.path:
         sys.path.insert(0, str(extra))
 
@@ -55,7 +55,7 @@ def test_the_bilibili_subtitle_events_match_the_timeline_owner():
     from bilibili import subtitle
     from pyv.timeline import Storyboard
 
-    boards = sorted((REPO_ROOT / "aiv").glob("storyboard_*.json"))
+    boards = sorted((REPO_ROOT / "video").glob("storyboard_*.json"))
     if not boards:
         pytest.skip("本机没有 storyboard（它们是 gitignore 的本地产物）")
 

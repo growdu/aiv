@@ -16,11 +16,11 @@ from pyv import epmeta
 
 from douyin import notify, package, snapshot, state
 
-AIV_ROOT = Path(__file__).resolve().parents[2] / "aiv"
+AIV_ROOT = Path(__file__).resolve().parents[2] / "video"
 DEFAULT_OUT = Path(__file__).resolve().parents[1] / "out"
 WEBHOOK_ENV = "DOUYIN_WEBHOOK"
 
-#: 抖音这一档用**竖版 9:16**成片：`aiv/out/<EP>__vertical.mp4`。
+#: 抖音这一档用**竖版 9:16**成片：`video/out/<EP>__vertical.mp4`。
 #:
 #: 两个理由，都是抖音自己的规矩：
 #:
@@ -28,7 +28,7 @@ WEBHOOK_ENV = "DOUYIN_WEBHOOK"
 #: 2. **无品牌导流版**。竖版那一档**同时就是无品牌版**——不要品牌片、
 #:    落版去品牌名，画面里不出现站外域名（规格 §6.6.4）。
 #:
-#: 带品牌的那版（`aiv/out/<EP>.mp4`）有整屏「Growdu」字标与片尾的
+#: 带品牌的那版（`video/out/<EP>.mp4`）有整屏「Growdu」字标与片尾的
 #: `growdu.cn` / 订阅关注 / 点赞支持三胶囊，正好撞在抖音「过度营销信息 +
 #: 站外引流」这两条上。抖音这一档不能用它。
 VERTICAL_SUFFIX = "__vertical"
@@ -39,7 +39,7 @@ MISSING_VIDEO_HINT = (
     "      抖音这一档要用**竖版 9:16（无品牌导流版）**成片（规格 §6.6.4/§6.6.5）："
     "横版在抖音的信息流里吃亏；带品牌字标与 growdu.cn 胶囊的版本"
     "会被判「过度营销 + 站外引流」而限流。\n"
-    "      先出片：cd aiv/pipeline && make EP={episode} vertical"
+    "      先出片：cd video/pipeline && make EP={episode} vertical"
 )
 
 
@@ -177,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
     p_package = sub.add_parser("package")
     p_package.add_argument("episode")
     p_package.add_argument("--video", default=None,
-                           help="成片路径，默认 aiv/out/<期号>__vertical.mp4（竖版 9:16）")
+                           help="成片路径，默认 video/out/<期号>__vertical.mp4（竖版 9:16）")
     p_package.add_argument("--out", default=str(DEFAULT_OUT))
     p_package.add_argument("--outbox", default=None,
                            help="状态快照目录，默认 publish/outbox")

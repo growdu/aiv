@@ -52,7 +52,7 @@ music/
 ## 查台账
 
 ```bash
-cd aiv/pipeline
+cd video/pipeline
 python -m pyv.cli bgm library          # 台账自洽性（授权、指纹、角色）
 python -m pyv.cli bgm check --music <文件>   # 判单条曲子合不合格
 ```
@@ -77,7 +77,7 @@ python -m pyv.cli bgm check --music <文件>   # 判单条曲子合不合格
 ## 下载
 
 ```bash
-cd aiv/music
+cd video/music
 python3 scripts/fetch_music.py --list
 python3 scripts/fetch_music.py --id series-motif-01
 python3 scripts/fetch_music.py --all
@@ -103,7 +103,7 @@ python3 scripts/fetch_music.py --all
 曲子入库只是第一步，混完之后还要量一遍成片：
 
 ```bash
-cd aiv/pipeline
+cd video/pipeline
 python -m pyv.cli bgm verify \
     --video ../out/pg-parallel-decode.mp4 \
     --narration ../narration_pg-parallel-decode.mp3 \

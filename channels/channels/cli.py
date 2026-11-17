@@ -15,7 +15,7 @@ from pyv import epmeta
 
 from channels import notify, package, snapshot, state
 
-AIV_ROOT = Path(__file__).resolve().parents[2] / "aiv"
+AIV_ROOT = Path(__file__).resolve().parents[2] / "video"
 DEFAULT_OUT = Path(__file__).resolve().parents[1] / "out"
 WEBHOOK_ENV = "CHANNELS_WEBHOOK"
 
@@ -150,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p_package = sub.add_parser("package")
     p_package.add_argument("episode")
-    p_package.add_argument("--video", default=None, help="成片路径，默认 aiv/out/<期号>.mp4")
+    p_package.add_argument("--video", default=None, help="成片路径，默认 video/out/<期号>.mp4")
     p_package.add_argument("--out", default=str(DEFAULT_OUT))
     p_package.add_argument("--outbox", default=None,
                            help="状态快照目录，默认 publish/outbox")

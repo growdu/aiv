@@ -4,8 +4,8 @@
 函数怎么工作」，验不了「真实的成片和真实的文案凑在一起还成立」。
 
 这一层用**仓库里真实的东西**：
-- 成片 `aiv/out/<EP>__vertical.mp4`（本机产物，不入库，所以没有就跳过）
-- 元数据 `aiv/publish/<EP>.json`（入库的事实）
+- 成片 `video/out/<EP>__vertical.mp4`（本机产物，不入库，所以没有就跳过）
+- 元数据 `video/publish/<EP>.json`（入库的事实）
 
 跑的是真正的 `build_package`，不是拼出来的假象。
 """
@@ -18,7 +18,7 @@ import pytest
 from douyin import contract, package
 from pyv import epmeta, preflight
 
-AIV_ROOT = Path(__file__).resolve().parents[2] / "aiv"
+AIV_ROOT = Path(__file__).resolve().parents[2] / "video"
 EPISODES = ("csn-total-ordering", "parallel-apply", "pg-parallel-decode",
             "row-lock", "structured-ddl", "wal-interleave")
 
@@ -26,7 +26,7 @@ EPISODES = ("csn-total-ordering", "parallel-apply", "pg-parallel-decode",
 def _real_video(episode: str) -> Path | None:
     """抖音这一档真实发出去的那一版：竖版 9:16（同时也是无品牌导流版）。
 
-    刻意不用 `aiv/out/<EP>.mp4`（带品牌横版）——那不是抖音要发的东西，
+    刻意不用 `video/out/<EP>.mp4`（带品牌横版）——那不是抖音要发的东西，
     拿它出包，验的就不是要发的那条片子了。
     """
     path = AIV_ROOT / "out" / f"{episode}__vertical.mp4"

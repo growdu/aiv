@@ -12,7 +12,7 @@ name: Contracts
 #   - 契约层（publish/publishkit）：内容契约、能力模型、发布清单、调度
 #   - 头条号 / 公众号 adapter：切片、出包、草稿箱的规则
 #
-# 视频线（aiv）不在这里：它需要 cairo / ffmpeg / 字体这套系统依赖，
+# 视频线（video）不在这里：它需要 cairo / ffmpeg / 字体这套系统依赖，
 # 容器里装起来比重，且它的失败模式是「渲染不出片」而不是「契约被破」。
 
 on:

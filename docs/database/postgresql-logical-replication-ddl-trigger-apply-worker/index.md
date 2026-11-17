@@ -3,7 +3,7 @@ episode: parallel-apply
 episode_no: 4
 series: 数据库内核机制
 episode_hook: "发布端并行了，订阅端还在排队；难的不是并行接收，而是判断哪两条事务不能同时应用"
-episode_subtitle: aiv/字幕-并行apply.md
+episode_subtitle: video/字幕-并行apply.md
 episode_duration_s: "35.424"
 episode_license: "PostgreSQL BSD"
 episode_sources:

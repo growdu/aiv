@@ -25,7 +25,7 @@ episode: csn-total-ordering
 episode_no: 2
 series: 数据库内核机制
 episode_hook: "并发提交的时间是乱的，但只要给每次 commit 分配一个单调递增的号，订阅端就能自己排好序"
-episode_subtitle: aiv/字幕-CSN全序.md
+episode_subtitle: video/字幕-CSN全序.md
 episode_duration_s: "35.316"
 episode_license: "openGauss Mulan PSL v2"
 episode_sources:

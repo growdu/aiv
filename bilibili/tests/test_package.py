@@ -533,7 +533,7 @@ def test_the_cli_packages_and_marks_an_episode(tmp_path, monkeypatch, make_video
         encoding="utf-8",
     )
 
-    aiv_root = tmp_path / "aiv"
+    aiv_root = tmp_path / "video"
     (aiv_root / "out").mkdir(parents=True)
     make_video(aiv_root / "out" / "ep02.mp4")
     (aiv_root / "storyboard_ep02.json").write_text(
@@ -602,7 +602,7 @@ def test_the_cli_fails_loudly_when_the_video_is_missing(tmp_path, monkeypatch, c
         encoding="utf-8",
     )
 
-    aiv_root = tmp_path / "aiv"
+    aiv_root = tmp_path / "video"
     (aiv_root / "out").mkdir(parents=True)
 
     monkeypatch.setattr(cli, "AIV_ROOT", aiv_root)
@@ -651,7 +651,7 @@ def test_marking_drafted_keeps_it_unpublished(tmp_path, monkeypatch, make_video)
                      "tid": 230, "copyright": 1, "no_reprint": 1},
     }, ensure_ascii=False), encoding="utf-8")
 
-    aiv_root = tmp_path / "aiv"
+    aiv_root = tmp_path / "video"
     aiv_root.joinpath("out").mkdir(parents=True)
     make_video(aiv_root / "out" / "ep02.mp4")
 
@@ -692,7 +692,7 @@ def test_marking_published_without_a_url_is_refused(tmp_path, monkeypatch, capsy
                      "tid": 230, "copyright": 1, "no_reprint": 1},
     }, ensure_ascii=False), encoding="utf-8")
 
-    aiv_root = tmp_path / "aiv"
+    aiv_root = tmp_path / "video"
     aiv_root.joinpath("out").mkdir(parents=True)
     make_video(aiv_root / "out" / "ep02.mp4")
 

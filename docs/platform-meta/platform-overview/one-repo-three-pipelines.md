@@ -52,7 +52,7 @@ difficulty: 2
 flowchart TD
   D["docs/ 内容母稿"] --> S["source/_posts/ 内容单元"]
   S --> P["public/ 静态页面"]
-  D --> C["aiv/contracts/ 视觉分镜契约"]
+  D --> C["video/contracts/ 视觉分镜契约"]
   C --> V["成片"]
   S --> M["发布清单 manifest"]
   M --> W["公众号 / 头条号 / 抖音 / 视频号 / B 站"]
@@ -87,7 +87,7 @@ flowchart TD
 | 内容层 | `docs/` | 母稿、图片、分类元数据 | 无 |
 | 内容编译层 | `tools/`、`scripts/` | 编译、校验、主题补丁 | 只读 `docs/`，只写 `source/` |
 | 展示层 | `themes/matery/` | 模板、样式、静态资源 | Hexo 运行时 |
-| 视频生产层 | `aiv/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
+| 视频生产层 | `video/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
 | 发布契约层 | `publish/publishkit/` | 内容契约、能力模型、清单、调度 | **不认识任何平台** |
 | 平台适配层 | `weixin/`、`toutiao/`、`douyin/`、`channels/`、`bilibili/` | 切片、渲染、出包、发布 | 只认能力声明与发布清单 |
 

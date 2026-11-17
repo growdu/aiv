@@ -48,7 +48,7 @@ publish_index = load_tool("build-publish-index")
 
 
 def test_the_episode_registry_comes_from_the_makefile():
-    """期号与口播稿的对应关系只有一处真相：aiv/pipeline/Makefile。"""
+    """期号与口播稿的对应关系只有一处真相：video/pipeline/Makefile。"""
     episodes = video_pages.read_episode_scripts()
 
     assert "row-lock" in episodes
@@ -85,7 +85,7 @@ def test_the_permalink_follows_the_site_rule():
 
 def test_a_video_page_carries_its_kind_and_its_platforms(tmp_path, monkeypatch):
     """视频页是内容单元（kind: video），并带上它发到过的平台。"""
-    aiv = tmp_path / "aiv"
+    aiv = tmp_path / "video"
     (aiv / "contracts").mkdir(parents=True)
     (aiv / "pipeline").mkdir()
     (aiv / "字幕-行锁.md").write_text(
@@ -133,7 +133,7 @@ def test_the_video_pages_tool_does_not_write_the_series_page(tmp_path, monkeypat
     两个工具写同一个文件，谁赢要看流水线顺序；改了一处却没生效，
     排查起来最费时间。
     """
-    aiv = tmp_path / "aiv"
+    aiv = tmp_path / "video"
     (aiv / "contracts").mkdir(parents=True)
     (aiv / "pipeline").mkdir()
     (aiv / "字幕-行锁.md").write_text(

@@ -134,7 +134,7 @@ H3 2K 实测 **120 积分/秒**，35 秒就是 **4200 积分**——
 
 ## 四、为什么音视频不入库
 
-仓库根的 `.gitignore` 和 `aiv/.gitignore` 都把媒体挡在仓库外。
+仓库根的 `.gitignore` 和 `video/.gitignore` 都把媒体挡在仓库外。
 这不是洁癖，是算过账的：
 
 | 理由 | 说明 |
@@ -184,7 +184,7 @@ H3 2K 实测 **120 积分/秒**，35 秒就是 **4200 积分**——
 
 最小必需集入库（约 105 MB）：六期旁白 + 音色定标参照稿 + 形象原型与立绘 +
 品牌片头片尾与成品音轨 + 曲库两首（授权 CC0-1.0，指纹已核对）。
-`aiv/pipeline/tests/test_assets_are_tracked.py` 盯着这件事——
+`video/pipeline/tests/test_assets_are_tracked.py` 盯着这件事——
 必需素材一旦被 `.gitignore` 拦掉，测试立刻变红。
 
 ### 「可复现」的第二道考题：换台机器
@@ -206,7 +206,7 @@ H3 2K 实测 **120 积分/秒**，35 秒就是 **4200 积分**——
   不再静默画成豆腐块。
 - `make doctor` 一次报清「缺什么、怎么补」：Python 版本、四个第三方库、
   ffmpeg 的 libx264 与原生 aac、中文字体、每一期的旁白、曲库、立绘、品牌片。
-- `.github/workflows/aiv-pipeline.yml` 在 ubuntu 上真跑一遍测试——
+- `.github/workflows/video-pipeline.yml` 在 ubuntu 上真跑一遍测试——
   而且**不只是单元测试**：它用入库的真实旁白与 BGM **合成出一段成片**，
   再按规格核对（1920×1080 / 24fps / h264 yuv420p / aac 48kHz 立体声 /
   `video_track_timescale=24000`），并检查画面里真的有字幕、且中文字形
@@ -245,7 +245,7 @@ Linux 上出的片子与 macOS 上的**不是逐像素一致**——文案、字
 流水线也按期号切，忘了换稿会**当场报错**，而不是静悄悄地拿上一期的稿子出片：
 
 ```bash
-cd aiv/pipeline
+cd video/pipeline
 make EP=csn-total-ordering align      # 按这一期的旁白对齐出时间轴
 make EP=csn-total-ordering all         # validate → brand → render → compose
 ```
@@ -264,7 +264,7 @@ make EP=csn-total-ordering all         # validate → brand → render → compo
 | 《背景音乐规范》 | 18 | 曲库技术规格、授权白名单、指纹、角色、混音 duck 深度与电平差、真峰值、片头片尾的窗口闭环 |
 
 ```bash
-cd aiv/pipeline
+cd video/pipeline
 make persona     # 按《人格规范》检查口播稿
 make topics      # 按《选题库》的规则检查选题
 make bgm         # 按《背景音乐规范》检查曲库台账
