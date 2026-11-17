@@ -27,9 +27,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 __all__ = [
-    "AssetNotFound", "ImageTooLarge", "PreparedImage", "RemoteAsset",
-    "UnreadableImage", "can_make_cover", "is_remote", "make_cover",
-    "prepare_image", "resolve_asset",
+    "AssetNotFound", "AssetUnreachable", "ImageTooLarge", "PreparedImage",
+    "RemoteAsset", "UnreadableImage", "can_make_cover", "fetch_remote_asset",
+    "is_remote", "make_cover", "prepare_image", "resolve_asset",
 ]
 
 # The quality ladder ``prepare_image()`` walks down when the picture is too
@@ -37,6 +37,16 @@ __all__ = [
 # first, and it is cropped down afterwards.
 _QUALITIES = (85, 75, 65, 55)
 _COVER_QUALITY = 88
+
+#: 下载外链图时用的 UA。**很多图库按 UA 拦**（没有 UA 的请求拿到 403）。
+_FETCH_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36"
+)
+
+
+class AssetUnreachable(RuntimeError):
+    """外链图下载不下来（404 / 403 / 超时）。"""
 
 # The modes that carry an alpha band of their own.  A palette image keeps
 # its transparency in ``info`` instead -- see ``_flatten_on_white()``.
@@ -184,6 +194,55 @@ def _load_picture(src):
         raise UnreadableImage(
             "Pillow 解不开这个文件（可能已截断）：{}".format(src.name)
         ) from error
+
+
+def fetch_remote_asset(url: str, timeout: float = 15.0) -> bytes:
+    """下载一张外链图，返回它的字节。
+
+    **出包默认不下载外链图**（见 ``publish.py`` 的 ``fetch_remote`` 参数）：
+    打包这一步不依赖网络，是有意这么设计的——CI 里没有外网，
+    出包也不该因为别人的图挂了就不成。
+
+    这一条是给「显式要下载」的那一档用的。实测（2026-11-17）：
+    116 张外链图里 85 张能下到，31 张是死链或防盗链（403）。
+
+    **只有 403 才换 Referer 再试一遍**：防盗链的图换个 Referer 常常能通，
+    而死链（404）再试一次也是死链——每一张死链都白等一个超时，
+    一百多张图加起来就是几十分钟。
+
+    下不到就抛 :class:`AssetUnreachable`——**调用方要把它当「这张图还得人工处理」**，
+    不是当失败：一张图下不到，这篇文章照样能发，只是少一张图。
+    """
+    import urllib.error
+    import urllib.request
+
+    request = urllib.request.Request(url, headers={"User-Agent": _FETCH_UA})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            data = response.read()
+        if data:
+            return data
+        raise AssetUnreachable("外链图下载下来是空的：{}".format(url))
+    except urllib.error.HTTPError as error:
+        if error.code != 403:
+            raise AssetUnreachable(
+                "外链图下载不下来（HTTP {}）：{}".format(error.code, url)
+            ) from error
+    except (urllib.error.URLError, OSError) as error:
+        raise AssetUnreachable("外链图下载不下来：{}（{}）".format(url, error)) from error
+
+    # 到这儿是 403：换个 Referer 再试一次（防盗链常常就松口了）。
+    retry = urllib.request.Request(
+        url, headers={"User-Agent": _FETCH_UA, "Referer": "https://growdu.cn/"}
+    )
+    try:
+        with urllib.request.urlopen(retry, timeout=timeout) as response:
+            data = response.read()
+    except (urllib.error.URLError, OSError) as error:
+        raise AssetUnreachable("外链图下载不下来：{}（{}）".format(url, error)) from error
+    if not data:
+        raise AssetUnreachable("外链图下载下来是空的：{}".format(url))
+    return data
 
 
 def prepare_image(src: Path, dst: Path, max_bytes: int) -> PreparedImage:
