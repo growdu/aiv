@@ -374,7 +374,7 @@ TOPIC_RULES = {
     "分布式一致性": {
         "path_contains": [
             *DISTRIBUTED_DB_KERNEL,
-            # 原先是 cluster/分布式一致性协议.md，现在在分布式基础
+            # 「分布式一致性协议」那篇原先在 cluster 根目录，现在在「分布式基础」
             "distributed/foundations/分布式一致性协议",
         ],
         "title_contains": ["Raft", "DCF", "openGauss DCF", "分布式一致性"],
