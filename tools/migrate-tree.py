@@ -157,7 +157,7 @@ def _bundle_index(abs_dir):
     return None
 
 
-def resolve_in_dir(target_dir_rel, tail, want_dir=False):
+def resolve_in_dir(target_dir_rel, tail):
     """链接落在 `target_dir_rel` 目录下的哪个文件上。
 
     `tail` 是链接最后一节（`index.html` / `x.md` / 空串）。
@@ -167,11 +167,15 @@ def resolve_in_dir(target_dir_rel, tail, want_dir=False):
     - 目录型 bundle 用目录里的 `index.*` 代表；
     - 链接写的是 `index.{md,html,htm}` 时，先当 bundle 目录看；
     - 无后缀的链接试 `.md` / `.html` / `.htm`。
+
+    **只有 tail 为空才是「指目录」** —— 早先给图片链接开了个
+    「指目录」的旁路，结果 `![]({image_url})` 这种代码里的占位符
+    被当成了「指向本目录」，给一个跟链接无关的文档加了个 `./` 前缀。
     """
     abs_dir = os.path.join(DOCS, target_dir_rel)
     if not os.path.isdir(abs_dir):
         return None
-    if want_dir or tail == "":
+    if tail == "":
         idx = _bundle_index(abs_dir)
         return os.path.relpath(idx, DOCS).replace(os.sep, "/") if idx else None
     if tail in ("index.md", "index.html", "index.htm"):
@@ -227,7 +231,7 @@ def _split_tail(raw):
     return head + "/", tail
 
 
-def rewrite_relative_links(moves, targets, report):
+def rewrite_relative_links(moves, targets, report, categories=None):
     """重写 `docs/` 里所有文章的相对链接。
 
     两种情况：
@@ -257,7 +261,8 @@ def rewrite_relative_links(moves, targets, report):
         def repl_link(m):
             nonlocal changed_links
             text_, raw = m.group(1), m.group(2)
-            new_raw = _rewrite_one(post_dir, new_post_dir, raw, targets, want_dir=False)
+            new_raw = _rewrite_one(post_dir, new_post_dir, raw, targets,
+                                   want_dir=False, categories=categories)
             if new_raw is None or new_raw == raw:
                 return m.group(0)
             changed_links += 1
@@ -266,7 +271,8 @@ def rewrite_relative_links(moves, targets, report):
         def repl_image(m):
             nonlocal changed_links
             alt, raw = m.group(1), m.group(2)
-            new_raw = _rewrite_one(post_dir, new_post_dir, raw, targets, want_dir=True)
+            new_raw = _rewrite_one(post_dir, new_post_dir, raw, targets,
+                                   want_dir=True, categories=categories)
             if new_raw is None or new_raw == raw:
                 return m.group(0)
             changed_links += 1
@@ -282,7 +288,39 @@ def rewrite_relative_links(moves, targets, report):
     return changed_links
 
 
-def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir):
+def category_targets(table):
+    """解散的旧分类页 → 新分类地址。
+
+    旧分类页（`_index.md`）被删掉之后，指向它的链接得有地方去。
+    新分类页是**分类地址**（`/categories/xxx/`），不是一篇文章 ——
+    直接把链接指到新目录下的 `_index.md` 会生成一个不存在的
+    permalink（分类页不发成文章，只有 `/categories/` 下的地址是真的）。
+    """
+    out = {}
+    redirects = table.get("category_redirects", {})
+    for rel in table.get("drop_index", []):
+        path = os.path.join(DOCS, rel)
+        if not os.path.isfile(path):
+            continue
+        title = _read_title(path)
+        new = redirects.get(title)
+        if new:
+            out[rel] = "/categories/" + quote(new) + "/"
+    return out
+
+
+def _read_title(path):
+    """一个 markdown 文件 front matter 或首个 H1 里的标题。"""
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        text = fh.read()
+    m = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', text, re.MULTILINE)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
+    return m.group(1).strip() if m else ""
+
+
+def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir, categories=None):
     """重算一条相对链接。返回新的链接文字，或 None（不用改）。"""
     if raw.startswith(EXTERNAL_PREFIXES) or raw.startswith("/"):
         return None
@@ -294,7 +332,7 @@ def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir):
     target_dir = os.path.normpath(os.path.join(post_dir, head))
     if target_dir.startswith("..") or os.path.isabs(target_dir):
         return None
-    hit = resolve_in_dir(target_dir, tail, want_dir=want_dir)
+    hit = resolve_in_dir(target_dir, tail)
     if not hit:
         # 编译期自愈兜底那一路，先按原样解析，解析不到就不动。
         cleaned = raw_path.lstrip("./")
@@ -302,10 +340,12 @@ def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir):
         if parent and not parent.startswith(".."):
             sib = os.path.normpath(os.path.join(parent, cleaned))
             if not sib.startswith(".."):
-                hit = resolve_in_dir(os.path.dirname(sib), os.path.basename(sib),
-                                     want_dir=want_dir)
+                hit = resolve_in_dir(os.path.dirname(sib), os.path.basename(sib))
         if not hit:
             return None
+    # 指向一个被解散的分类页 —— 改指新分类地址
+    if categories and hit in categories:
+        return categories[hit] + suffix
     new_hit = moves.get(hit, hit)
     new_dir = os.path.dirname(new_hit)
     rel = os.path.relpath(new_dir, new_post_dir) if new_post_dir else new_dir
@@ -480,6 +520,13 @@ def _series_articles(moves, prefix):
     return out
 
 
+def _article_title(path):
+    """一篇文章的标题（front matter 优先，其次首个 H1）。"""
+    if not os.path.isfile(path):
+        return ""
+    return _read_title(path)
+
+
 def _write_index(rel, title, parent_cn, description, articles, table):
     """写一个 `_index.md`。已存在就只更新文章清单那一段。"""
     path = os.path.join(DOCS, rel)
@@ -503,13 +550,18 @@ def _write_index(rel, title, parent_cn, description, articles, table):
     if articles:
         lines.append("## 本系列文章")
         lines.append("")
+        here = os.path.dirname(rel)
         for old_rel, new_rel in articles:
             name = os.path.basename(new_rel)
             if name == "index.md":
                 name = os.path.basename(os.path.dirname(new_rel))
             else:
                 name = os.path.splitext(name)[0]
-            lines.append(f"- [{name}](./{new_rel[len(rel) + len('/'):]})")
+            link = os.path.relpath(new_rel, here).replace(os.sep, "/")
+            if not link.startswith("."):
+                link = "./" + link
+            title = _article_title(os.path.join(DOCS, new_rel)) or name
+            lines.append(f"- [{title}]({link})")
         lines.append("")
     body = "\n".join(lines)
     if os.path.exists(path):
@@ -713,7 +765,8 @@ def main():
     # 2. 先改链接 —— 解析要对着旧树，搬完就解析不到了
     targets = dict(moves)
     targets.update(assets)
-    rewrite_relative_links(moves, targets, report)
+    categories = category_targets(table)
+    rewrite_relative_links(moves, targets, report, categories)
 
     # 3. 搬
     stats = {}
