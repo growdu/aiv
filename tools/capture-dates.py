@@ -84,20 +84,29 @@ def capture(module):
 def load_map(map_path):
     """读迁移映射，取出「旧路径 → 新路径」的对照。
 
-    支持两种形态：
-    - `data/tree-migration.json` 里的 `file_map` / `dir_map`
+    支持三种形态：
+    - `data/migration-moves.json`（`{"articles": {旧: 新}, ...}`）——
+      **搬家时真正用的那张表**，搬完之后唯一可靠的对照
+    - `data/tree-migration.json`（`file_map` / `dir_map` / `out_map`）——
+      搬之前用的策展表
     - 单纯的两列对照 `{"old/path.md": "new/path.md"}`
+
+    搬完之后不要再用策展表展开 `dir_map`：旧路径已经不在磁盘上了，
+    展开出来是空的，日期断言会拿旧路径去比新文件，报出一堆「文件不在」，
+    而真问题被淹在里面。所以优先读 `migration-moves.json`。
     """
     with open(map_path, encoding="utf-8") as fh:
         raw = json.load(fh)
+    if "articles" in raw and isinstance(raw["articles"], dict):
+        return dict(raw["articles"])
     if "file_map" in raw or "dir_map" in raw:
-        mapping = dict(raw.get("file_map", {}))
-        for old_dir, new_dir in raw.get("dir_map", {}).items():
-            prefix = old_dir.rstrip("/") + "/"
-            for rel in article_keys():
-                if rel.startswith(prefix):
-                    mapping[rel] = new_dir.rstrip("/") + "/" + rel[len(prefix):]
-        return mapping
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "migrate_tree", os.path.join(REPO, "tools", "migrate-tree.py"))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.effective_map(raw)
     return dict(raw)
 
 
