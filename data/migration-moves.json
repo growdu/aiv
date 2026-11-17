@@ -339,6 +339,7 @@
     "cluster/ha/中移动数据库停库问题分析/img/standby_stop.png": "distributed/ha-and-dr/中移动数据库停库问题分析/img/standby_stop.png",
     "cluster/ha/中移动数据库停库问题分析/img/standby_to_quorate.png": "distributed/ha-and-dr/中移动数据库停库问题分析/img/standby_to_quorate.png",
     "cluster/ha/中移动数据库停库问题分析/img/standby_without_quorate.png": "distributed/ha-and-dr/中移动数据库停库问题分析/img/standby_without_quorate.png",
+    "cluster/multi_cluster.tar.gz": "distributed/field-notes/multi_cluster.tar.gz",
     "cluster/multi_cluster/多地多中心方案调研/image-1.png": "distributed/field-notes/多地多中心方案调研/image-1.png",
     "cluster/multi_cluster/多地多中心方案调研/image-2.png": "distributed/field-notes/多地多中心方案调研/image-2.png",
     "cluster/multi_cluster/多地多中心方案调研/image-3.png": "distributed/field-notes/多地多中心方案调研/image-3.png",

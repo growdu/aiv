@@ -265,6 +265,41 @@ TOPIC_DEFS = [
 # listed 10 posts instead of ~200).  Series directories are used as the
 # coarse rule and the individual article paths as the precise one; the
 # bare basenames still match because the migration kept the file names.
+#
+# One more set of fragments lives in DISTRIBUTED_DB_KERNEL (below): the
+# openGauss DCF / Raft articles used to sit in `cluster/DCF/` and
+# `cluster/raft/`, and after the distributed-block migration they are
+# neighbours of ZooKeeper and corosync articles inside one series — so
+# they can no longer be picked out by a directory name.
+
+#: The distributed-database kernel articles (openGauss DCF + Raft).
+#:
+#: They used to live in two directories -- ``cluster/DCF/`` and
+#: ``cluster/raft/`` -- and the database landing page whitelisted exactly
+#: those two directories.  After the distributed-block migration both
+#: groups sit in ``distributed/consensus/`` side by side with ZooKeeper,
+#: totem and corosync articles, which are *not* database-kernel
+#: material, so a directory name can no longer pick them out.
+#:
+#: The entries are exact article paths rather than directory prefixes:
+#: ``distributed/consensus/openguass dcf源码阅读.md`` (from
+#: ``cluster/DCF/``) and ``distributed/consensus/openguass dcf启动详解.md``
+#: (from ``openguass/``) differ by three characters, and only the
+#: former was ever whitelisted.
+DISTRIBUTED_DB_KERNEL = (
+    "distributed/consensus/c-raft分布式存储方案.md",
+    "distributed/consensus/c-rart.md",
+    "distributed/consensus/raft协议动态调整quorum.md",
+    "distributed/consensus/raft重要概念.md",
+    "distributed/consensus/dcf投票系统详解.md",
+    "distributed/consensus/dcf网络模块详解",
+    "distributed/consensus/dcf写入机制.md",
+    "distributed/consensus/dcf运行机制.md",
+    "distributed/consensus/openguass dcf源码阅读.md",
+    "distributed/consensus/一文读懂openguass dcf网络模块",
+    "distributed/consensus/常用压缩算法编程.md",
+)
+
 TOPIC_RULES = {
     "MVCC 与事务": {
         "path_contains": [
@@ -320,7 +355,10 @@ TOPIC_RULES = {
     },
     "高可用与复制": {
         "path_contains": [
-            "cluster/postgresql",
+            # 伪双写那一组，原先是 cluster/postgresql/ 下的四篇
+            "distributed/distributed-storage/haproxy",
+            "distributed/distributed-storage/postgresql伪双写",
+            "distributed/distributed-storage/事务管理",
             "source-tracks/postgresql/replication-ha",
         ],
         "title_contains": [
@@ -334,7 +372,11 @@ TOPIC_RULES = {
         ],
     },
     "分布式一致性": {
-        "path_contains": ["cluster/raft", "cluster/DCF", "cluster/分布式一致性"],
+        "path_contains": [
+            *DISTRIBUTED_DB_KERNEL,
+            # 原先是 cluster/分布式一致性协议.md，现在在分布式基础
+            "distributed/foundations/分布式一致性协议",
+        ],
         "title_contains": ["Raft", "DCF", "openGauss DCF", "分布式一致性"],
     },
     "性能调优": {
@@ -562,18 +604,18 @@ def collect_database_posts(section_titles, cascades):
             #   2. Posts under docs/source-tracks/postgresql/ — the PostgreSQL
             #      source-code main line (the cascade tags there are the series
             #      names: 存储引擎 / WAL 与恢复 / …, not "数据库").
-            #   3. Posts under docs/cluster/DCF/ and docs/cluster/raft/ — these
-            #      are distributed-DB kernel material (openGauss DCF, Raft),
-            #      even though their cascade is "集群". Whitelist them by path
-            #      rather than whole-sale pulling in "集群" (which would also
-            #      pull Patroni / snowflake / unrelated cluster tools).
+            #   3. The distributed-DB kernel articles (openGauss DCF, Raft) —
+            #      they used to live in docs/cluster/DCF/ and docs/cluster/raft/,
+            #      now they share one series with ZooKeeper / corosync articles,
+            #      so they are whitelisted one by one (DISTRIBUTED_DB_KERNEL).
+            #      Whitelisting them by path rather than whole-sale pulling in
+            #      the whole series keeps Patroni / snowflake / unrelated
+            #      cluster tools off this landing page.
             if (
                 "数据库" not in categories
                 and "PostgreSQL 源码修炼之路" not in categories
                 and not rel.startswith("source-tracks/postgresql/")
-                and not (
-                    rel.startswith("cluster/DCF/") or rel.startswith("cluster/raft/")
-                )
+                and not any(rel.startswith(p) for p in DISTRIBUTED_DB_KERNEL)
             ):
                 continue
             fdir = os.path.dirname(rel)

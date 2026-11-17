@@ -254,7 +254,7 @@
     "pgsql/wal机制浅析.md": "source-tracks/postgresql/wal-and-recovery/wal机制浅析.md",
     "pgsql/数据库崩溃恢复.md": "source-tracks/postgresql/wal-and-recovery/数据库崩溃恢复.md"
   },
-  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。",
+  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。",
   "out_map": {
     "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
     "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md"
