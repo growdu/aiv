@@ -283,12 +283,14 @@ command = ["python3", "-m", "<平台 id>.cli"]
 | `video/review/` 六期记录、`video/review/README.md` | 路径引用 |
 | `publish/spec/*.md`（活的规格） | 路径引用。**注意**：根 `tests/test_podcast_spec.py` 会逐条核对规格里写的仓库路径是否存在——规格里的 `aiv/`、`weixin/` 不改，守卫就会红 |
 | `review/README.md`、`review/specs/`、`review/plans/` | 路径引用 |
+| `docs/platform-meta/**`（上游 2026-11-17 新增的六个系列） | **要改**：这些文章讲的是这个仓库自己的分层，文中引用了 `aiv/`、`weixin/`、`toutiao/` 等旧路径（见 `platform-overview/one-repo-three-pipelines.md` 的分层表）。它们是**活文档**，不是历史快照——改名后不改，文章就直接说错了 |
 
 **不改（历史快照）**：
 
 - `publish/plans/`、`video/review/plans/`、`review/plans/` 里的历史计划与试点记录——
   它们记录的是当时的路径与当时的做法，是复盘材料，改了就失真。
-- `docs/` 下已发布的文章正文。
+- `docs/` 下已发布文章的**正文内容**。但有一条例外：**描述仓库自身架构的文章**
+  （`docs/platform-meta/**`）要跟着改路径引用，因为它讲的就是现在这套目录。
 
 ### 4.9 草稿箱
 
@@ -316,7 +318,7 @@ command = ["python3", "-m", "<平台 id>.cli"]
 ## 五、非目标
 
 - 不改任何平台适配层的业务逻辑（只改路径与 import）。
-- 不动 `docs/` 下的 1708 篇文章，不动 `docs/life/aiv/` 这条 URL 命名空间。
+- 不动 `docs/` 下 1708 篇文章的**正文内容**（描述仓库自身架构的 `docs/platform-meta/**` 除外，见 §4.8）；不动 `docs/life/aiv/` 这条 URL 命名空间。
 - 不改任何 `content_id`（`life/aiv/voice/README` 这类）——它是站点内容 id，映射到 URL。
 - 不重写 567 个快照的正文（`package_dir` 里的旧路径就让它过期）。
 - 不把 `drafts/` 真的用起来——这次只建目录与约定。
@@ -365,3 +367,25 @@ command = ["python3", "-m", "<平台 id>.cli"]
 | `video/` 下的产物（`build/` `out/`）有 271M | 随目录搬走，仍在 `.gitignore` 里 |
 | 历史文档里的旧路径会失效 | 历史计划不改；这是刻意的——它们是当时的快照 |
 | 本机 launchd job 与服务器 crontab 仍指旧路径 | 仓库改不到；见 §4.10，需要用户自己重装 |
+
+## 八、附：与上游「内容分类与结构重构」的关系
+
+上游 2026-11-17 拉进来一份独立的设计：`review/plans/2026-11-17-内容分类与结构重构.md`
+（把 `docs/` 下 577 篇排成五条赛道）。两份设计**范围不重叠**，但有三处要记着：
+
+1. **上游明确不动 `aiv/`。** 它在「零、范围」里写死了：`publish/` `aiv/` `tools/`
+   `themes/` `source/` `public/` `review/` `data/` 都**不重排、不改名、不重构**。
+   本设计把 `aiv/` 改成 `video/`，属于它划出去的那一块，两边不冲突。
+2. **`docs/life/aiv/` 的 URL 仍然稳。** 上游的试点阶段不动 `life/`
+   （「试点阶段不碰：`distributed/`、`engineering/`、`life/`、`notes/` —— 留在原地」），
+   所以本设计的「`docs/life/aiv/` 目录名不改」这条硬约束没有被上游打破。
+3. **`drafts/` 与上游那句「后续的文章也只能放到 `docs/` 下」**：
+   本设计的 `drafts/` 是**底稿区**，不是发布位置——稿子审完后**复制**一份进 `docs/`，
+   底稿留在 `drafts/`。发布出去的文章仍然只在 `docs/` 里，两条不矛盾。
+   上游还会新建一个根目录 `internal/`（放不该给读者看的东西），根目录清单因此多一个。
+
+上游这批提交里已经落地的东西跟本设计的交集只有一个：
+`docs/platform-meta/platform-overview/one-repo-three-pipelines.md` 讲的是同一个分层
+（视频生产层 / 发布契约层 / 平台适配层），但用的是旧目录名——按 §4.8 当活文档改路径即可，
+文章的分层结论不用动：上游那篇给「平台适配层」下的目录列的是
+`weixin/` `toutiao/` `douyin/` `channels/` `bilibili/`，本设计只是把这五个收进 `platforms/`。
