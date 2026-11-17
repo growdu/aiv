@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pyv import easing
 from pyv import scene_layout
-from pyv.draw import rounded_rect, stroke_rect, text
+from pyv.draw import rounded_rect, stroke_rect, text, text_box_width
 from pyv.palette import COLORS
 from pyv.params import Params
 
@@ -29,8 +29,26 @@ RECORD_STEP = 0.10
 RECORD_DELAY = 0.10
 
 # 槽内一块记录芯片的宽度与间距
+#: 芯片的**最小**宽度。实际宽度还要按最长的那个操作名反算
+#: （见 `chip_width`）——操作名是数据，写死的宽度遇上更长的字就溢出。
 CHIP_W_RATIO = 0.062
 CHIP_GAP_RATIO = 0.008
+#: 芯片里的字与芯片边缘的留白。
+CHIP_PADDING = 12.0
+#: 芯片里的字有多大。
+CHIP_TEXT_SIZE = 28
+
+
+def chip_width(ctx, ops, w: int) -> float:
+    """一块记录芯片该有多宽。
+
+    **按最长的操作名反算，字放不下就把芯片加宽**：操作名是数据，
+    长短不一（提交那两个字比插入宽）——字号一样时缩字会让这一行参差；
+    加宽芯片则是一排一样宽，节奏不变。最小宽度仍是 `CHIP_W_RATIO`。
+    """
+    need = text_box_width(ctx, ops, CHIP_TEXT_SIZE, bold=True,
+                          padding=CHIP_PADDING)
+    return max(w * CHIP_W_RATIO, need)
 
 
 def slot_index(txn_ids: list[str], txn_id: str) -> int:
@@ -57,10 +75,14 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     # ---- 槽位区 ----
     left = w * 0.06
     right = w * 0.94
-    row_top = h * 0.30
-    row_h = h * 0.145
-    row_gap = h * 0.055
-    chip_w = w * CHIP_W_RATIO
+    # 行区的高度是**按底部留白倒推的**：第三行的底边必须离段尾那句
+    # 结论（h*0.86，44 px 字顶约 h*0.824）留出空当——之前行高设到
+    # h*0.145，第三行底边落在 h*0.845，结论句的上半截压在面板上，
+    # 面板的描边横穿字头。
+    row_top = h * 0.275
+    row_h = h * 0.13
+    row_gap = h * 0.05
+    chip_w = chip_width(ctx, [op for _, _, op in records], w)
     chip_gap = w * CHIP_GAP_RATIO
     label_w = w * 0.15
 
@@ -101,8 +123,8 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         chip_y = y + row_h * 0.26
         chip_h = row_h * 0.48
         rounded_rect(ctx, x, chip_y, chip_w, chip_h, 9, color, alpha=appear)
-        text(ctx, op, x + chip_w / 2, chip_y + chip_h * 0.70, 28, "#FFFFFF",
-             anchor="center", bold=True, alpha=appear)
+        text(ctx, op, x + chip_w / 2, chip_y + chip_h * 0.70, CHIP_TEXT_SIZE,
+             "#FFFFFF", anchor="center", bold=True, alpha=appear)
 
     text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
 

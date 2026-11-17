@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 from pyv import easing
+from pyv import layout
 from pyv import scene_layout
 from pyv.draw import arrow, rounded_rect, text
 from pyv.palette import COLORS
@@ -24,10 +25,42 @@ REQUIRED = ("title", "worker_count", "worker_prefix", "dispatch", "commit_label"
 MARKER_COLORS = ("#F6AD55", "#4FD1C5", "#8FAADC", "#E9A0DC")
 
 # 分发与提交的时间节奏
-DISPATCH_STEP = 0.11
+#
+# **收得快一点**：原来提交通道里最后一块芯片要到 t=0.946 才亮齐，
+# 而收束句「并行的是执行，提交仍然按依赖顺序」从 t=0 就满不透明地写着——
+# 观众先读到结论，再等证据（抽帧时看得见：段中点那一帧，通道里只有
+# 一块芯片淡到 70%，结论句已经是实的）。
+# 现在最后一块芯片 t=0.693 亮齐，收束句随后浮出，还剩 0.31 个场景进度亮着。
+DISPATCH_STEP = 0.09
 DISPATCH_DELAY = 0.10
-COMMIT_STEP = 0.08
-COMMIT_DELAY = 0.42
+# 一块芯片亮起来有多快（斜率的倒数）
+DISPATCH_SPEED = 6.0
+COMMIT_STEP = 0.05
+COMMIT_DELAY = 0.40
+COMMIT_SPEED = 7.0
+
+
+def closing_ready(dispatch_count: int, commit_count: int) -> float:
+    """收束句最早能出场的时刻：执行线程与提交通道都亮齐之后。"""
+    dispatch = (DISPATCH_DELAY + DISPATCH_STEP * max(0, dispatch_count - 1)
+                + 1.0 / DISPATCH_SPEED)
+    commit = (COMMIT_DELAY + COMMIT_STEP * max(0, commit_count - 1)
+              + 1.0 / COMMIT_SPEED)
+    return max(dispatch, commit)
+
+
+def _dispatch_appear(t: float, order: int) -> float:
+    """执行线程里第 order 块事务芯片的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0,
+                     (t - DISPATCH_DELAY - DISPATCH_STEP * order) * DISPATCH_SPEED)))
+
+
+def _commit_appear(t: float, order: int) -> float:
+    """提交通道里第 order 块芯片的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0,
+                     (t - COMMIT_DELAY - COMMIT_STEP * order) * COMMIT_SPEED)))
 
 
 def worker_of(dispatch: list[list], txn_id: str) -> int:
@@ -64,9 +97,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     chip_w = w * 0.15
     chip_h = h * 0.062
     for order, (txn_id, worker_index) in enumerate(dispatch):
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - DISPATCH_DELAY - DISPATCH_STEP * order) * 3.0))
-        )
+        appear = _dispatch_appear(t, order)
         bx = box_x0 + worker_index * (box_w + box_gap)
         # 同一个线程里，事务按来的先后往下排
         stack = [row for row in dispatch
@@ -90,9 +121,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
 
     step = (lane_x1 - lane_x0) / len(commit_order)
     for order, txn_id in enumerate(commit_order):
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - COMMIT_DELAY - COMMIT_STEP * order) * 3.5))
-        )
+        appear = _commit_appear(t, order)
         cx = lane_x0 + (order + 0.5) * step
         color = MARKER_COLORS[dispatch.index(
             next(row for row in dispatch if row[0] == txn_id))
@@ -101,11 +130,18 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
                      color, alpha=appear)
         text(ctx, txn_id, cx, lane_y + chip_h * 0.22, 32, "#FFFFFF",
              anchor="center", bold=True, alpha=appear)
+        # 箭头**跟着下一块芯片一起亮**：它指着下一块芯片，
+        # 下一块还没出现时，箭头指着的就是空气。
         if order < len(commit_order) - 1:
             arrow(ctx, cx + chip_w / 2, lane_y, cx + step - chip_w / 2, lane_y,
-                  COLORS["accent"], 5, 18, alpha=appear)
+                  COLORS["accent"], 5, 18, alpha=_commit_appear(t, order + 1))
 
-    text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
+    # 收束句最后才出：提交通道里四块芯片都亮齐之后，它才浮出（见
+    # layout.closing_alpha）——从 t=0 就写死是「结论早于证据」。
+    closing = layout.closing_alpha(
+        t, closing_ready(len(dispatch), len(commit_order)))
+    text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"],
+         alpha=closing)
 
 
 def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
@@ -149,9 +185,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
         for order, (txn_id, worker_index) in enumerate(dispatch):
             if worker_index != index:
                 continue
-            appear = easing.ease_out_cubic(
-                max(0.0, min(1.0, (t - DISPATCH_DELAY - DISPATCH_STEP * order) * 3.0))
-            )
+            appear = _dispatch_appear(t, order)
             cx = chip_x0 + worker_rows.index(txn_id) * (chip_w + chip_gap)
             cy = box_y + (box_h - chip_h) / 2
             color = MARKER_COLORS[dispatch.index((txn_id, worker_index))
@@ -173,9 +207,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     lane_x1 = left + (len(commit_order) - 0.5) * step + lane_chip_w / 2
     rounded_rect(ctx, lane_x0, lane_y, lane_x1 - lane_x0, 6, 3, "#DCE1E8")
     for order, txn_id in enumerate(commit_order):
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - COMMIT_DELAY - COMMIT_STEP * order) * 3.5))
-        )
+        appear = _commit_appear(t, order)
         cx = left + (order + 0.5) * step
         color = MARKER_COLORS[dispatch.index(
             next(row for row in dispatch if row[0] == txn_id))
@@ -185,8 +217,9 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
         scene_layout.line(ctx, txn_id, cx, lane_y + chip_h * 0.22,
                           lane_chip_w - 16, 34, "#FFFFFF", anchor="center",
                           bold=True, alpha=appear)
+        # 箭头**跟着下一块芯片一起亮**（与横版同一规矩）
         if order < len(commit_order) - 1:
             arrow(ctx, cx + lane_chip_w / 2, lane_y,
                   cx + step - lane_chip_w / 2, lane_y, COLORS["accent"], 5, 18,
-                  alpha=appear)
+                  alpha=_commit_appear(t, order + 1))
 

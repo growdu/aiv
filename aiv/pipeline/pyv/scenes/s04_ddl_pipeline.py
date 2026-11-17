@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from pyv import easing
+from pyv import layout
 from pyv import scene_layout
 from pyv.draw import arrow, rounded_rect, text
 from pyv.palette import COLORS
@@ -24,8 +25,25 @@ REQUIRED = ("title", "steps", "caption")
 STEP_COLORS = ("#F6AD55", "#4FD1C5", "#8FAADC", "#E9A0DC", "#9AD19A")
 
 # 第 i 步在场景进度上的出现时刻
-STEP_STEP = 0.13
+#
+# **收得快一点**：原来第五步要淡到 t=0.91 才亮齐，收束句没有出场的时间；
+# 现在第五步 t=0.662 亮齐，收束句随后浮出。
+STEP_STEP = 0.09
 STEP_DELAY = 0.08
+# 一步亮起来有多快（斜率的倒数）
+STEP_SPEED = 4.5
+
+
+def closing_ready(count: int) -> float:
+    """收束句最早能出场的时刻：最后一步亮齐之后。"""
+    return STEP_DELAY + STEP_STEP * max(0, count - 1) + 1.0 / STEP_SPEED
+
+
+def _step_appear(t: float, index: int) -> float:
+    """第 index 步的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0,
+                     (t - STEP_DELAY - STEP_STEP * index) * STEP_SPEED)))
 
 # 竖版：一步一行的版式常量
 V_CARD_H_RATIO = 0.078      # 卡片高（相对画面高度）
@@ -56,9 +74,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
 
     for index, (name, desc) in enumerate(steps):
         cx = x0 + index * (box_w + gap)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - STEP_DELAY - STEP_STEP * index) * 3.2))
-        )
+        appear = _step_appear(t, index)
         color = STEP_COLORS[index % len(STEP_COLORS)]
         rounded_rect(ctx, cx, box_y, box_w, box_h, 14, "#F2F5F9", alpha=appear)
         # 顶部一条色带
@@ -76,13 +92,20 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         text(ctx, desc, cx + box_w / 2, box_y + h * 0.205, 26,
              COLORS["secondary"], anchor="center", alpha=appear)
 
-        # 步骤之间的箭头
+        # 步骤之间的箭头：**跟着下一步一起亮**。
+        #
+        # 箭头指着下一步，用下一步的透明度才是实话——原来用的是**这一步**
+        # 的透明度，于是第 4 步淡入的时候，它右边那条指向第 5 步的箭头
+        # 已经画出来了，而第 5 步还没出现：箭头悬空指着空气。
         if index < count - 1:
             arrow(ctx, cx + box_w + w * 0.006, box_y + box_h * 0.5,
                   cx + box_w + gap - w * 0.006, box_y + box_h * 0.5,
-                  COLORS["accent"], 5, 16, alpha=appear)
+                  COLORS["accent"], 5, 16, alpha=_step_appear(t, index + 1))
 
-    text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
+    # 收束句等五步亮齐再落下来
+    closing = layout.closing_alpha(t, closing_ready(count))
+    text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"],
+         alpha=closing)
 
 
 def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
@@ -114,9 +137,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     badge_x = left + w * 0.035
     for index, (name, desc) in enumerate(steps):
         card_y = y0 + index * (card_h + gap)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - STEP_DELAY - STEP_STEP * index) * 3.2))
-        )
+        appear = _step_appear(t, index)
         color = STEP_COLORS[index % len(STEP_COLORS)]
         # 卡片本体
         rounded_rect(ctx, left, card_y, width, card_h, 14, "#F2F5F9", alpha=appear)
@@ -139,10 +160,11 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                           width * V_DESC_RATIO, 30, COLORS["secondary"],
                           alpha=appear, anchor="right")
 
-        # 步骤之间的箭头：接在编号那一列上，串起五步
+        # 步骤之间的箭头：接在编号那一列上，串起五步。
+        # 跟横版一样：**跟着下一步一起亮**，不指着还没出现的那一步。
         if index < count - 1:
             axis_x = badge_x + badge / 2
             arrow(ctx, axis_x, card_y + card_h + h * 0.004,
                   axis_x, card_y + card_h + gap - h * 0.004,
-                  COLORS["accent"], 4, 12, alpha=appear)
+                  COLORS["accent"], 4, 12, alpha=_step_appear(t, index + 1))
 

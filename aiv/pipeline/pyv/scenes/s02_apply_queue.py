@@ -24,6 +24,18 @@ REQUIRED = ("title", "publisher_label", "publisher_sub", "apply_label", "apply_s
 # 队列里每条事务一个颜色
 MARKER_COLORS = ("#F6AD55", "#4FD1C5", "#8FAADC", "#E9A0DC")
 
+# 队列里芯片逐个淡入的时序（场景进度）
+CHIP_DELAY = 0.12
+CHIP_STAGGER = 0.10
+CHIP_SPEED = 3.2
+
+
+def _chip_appear(t: float, index: int) -> float:
+    """队列里第 index 条事务的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0,
+                     (t - CHIP_DELAY - CHIP_STAGGER * index) * CHIP_SPEED)))
+
 
 def render(ctx, t: float, w: int, h: int, params=None) -> None:
     p = Params(params, "s02")
@@ -69,9 +81,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     for index, txn_id in enumerate(txn_ids):
         chip_h = h * 0.058
         chip_y = queue_y + index * (chip_h + h * 0.022)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - 0.12 - index * 0.10) * 3.2))
-        )
+        appear = _chip_appear(t, index)
         color = MARKER_COLORS[index % len(MARKER_COLORS)]
         is_active = txn_id == active
         rounded_rect(ctx, queue_x, chip_y, queue_w, chip_h, 10,
@@ -80,9 +90,11 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
              "#FFFFFF" if is_active else COLORS["primary"],
              anchor="center", bold=True, alpha=appear)
 
-    # 执行线程与队列之间
+    # 执行线程与队列之间。**箭头跟着队列一起亮**——它指着队列，
+    # 队列 t=0.12 才出现，而箭头原来从 t=0 就是满的。
     arrow(ctx, app_x + app_w + w * 0.012, app_y + app_h * 0.5,
-          queue_x - w * 0.012, queue_y + h * 0.145, COLORS["accent"], 6, 20)
+          queue_x - w * 0.012, queue_y + h * 0.145, COLORS["accent"], 6, 20,
+          alpha=_chip_appear(t, 0))
 
     # 队列底下的框线
     stroke_rect(ctx, queue_x - w * 0.012, queue_y - h * 0.012,
@@ -140,9 +152,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                       COLORS["primary"], bold=True)
     for index, txn_id in enumerate(txn_ids):
         chip_y = queue_y + index * (chip_h + gap)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - 0.12 - index * 0.10) * 3.2))
-        )
+        appear = _chip_appear(t, index)
         color = MARKER_COLORS[index % len(MARKER_COLORS)]
         is_active = txn_id == active
         rounded_rect(ctx, chip_x, chip_y, chip_w, chip_h, 10,
@@ -152,9 +162,10 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
                           "#FFFFFF" if is_active else COLORS["primary"],
                           anchor="center", bold=True, alpha=appear)
 
-    # 执行线程与队列之间
+    # 执行线程与队列之间。**箭头跟着队列一起亮**（与横版同一规矩）
     arrow(ctx, left + content_w / 2, app_y + app_h,
-          left + content_w / 2, 752, COLORS["accent"], 6, 20)
+          left + content_w / 2, 752, COLORS["accent"], 6, 20,
+          alpha=_chip_appear(t, 0))
 
     # 队列底下的框线。**框线不许越出内容区**——右侧是抖音的按钮栏，
     # 探出去 8px 就会撞上。

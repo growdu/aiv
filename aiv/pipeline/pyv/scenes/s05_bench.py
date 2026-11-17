@@ -20,8 +20,9 @@ REQUIRED = ("title", "serial_label", "parallel_label", "callout",
             "callout_sub", "caption")
 
 # 刻度：单位是「相对串行解码的倍数」。1 倍对应 UNIT_W 宽的画布比例。
-UNIT_W = 0.09
-TRACK_X = 0.07
+UNIT_W = 0.10
+# 刻度轨道的左端：**画幅比例**，与标题、说明行同一条左边距（都是 w*0.06）。
+TRACK_X = 0.06
 SERIAL_LABEL_Y = 0.30
 SERIAL_Y = 0.33
 PARALLEL_LABEL_Y = 0.50
@@ -35,9 +36,14 @@ RANGE_HIGH = 5
 CALL_OUT_X = 0.80
 
 
-def scale(unit: float) -> dict:
-    """刻度上的关键位置。"""
-    x0 = unit * TRACK_X
+def scale(unit: float, x0: float) -> dict:
+    """刻度上的关键位置。
+
+    `x0` 是轨道左端（像素），由调用方按**画幅比例**算出来传进来。
+    这里不再自己乘比例：之前写的是 `unit * TRACK_X`，而 `unit`
+    已经是像素量纲（w*UNIT_W），乘出来是 12 px——标签与条贴死画幅左边，
+    与标题行（w*0.06）不在同一条左边距上，整张图重心偏左。
+    """
     return {
         "x0": x0,
         "unit": unit,
@@ -55,7 +61,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     text(ctx, p["title"], w * 0.06, h * 0.14, 56, COLORS["primary"], bold=True)
 
     unit = w * UNIT_W
-    s = scale(unit)
+    s = scale(unit, w * TRACK_X)
 
     # 串行：一条整条，1 倍
     text(ctx, p["serial_label"], s["x0"], h * SERIAL_LABEL_Y, 34, COLORS["primary"])

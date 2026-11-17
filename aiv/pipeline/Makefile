@@ -86,7 +86,7 @@ VERTICAL_STORYBOARD := $(ROOT)/storyboard_$(EP)__vertical.json
 VERTICAL_BUILD := $(ROOT)/build/$(EP)__vertical
 VERTICAL_OUT := $(ROOT)/out/$(EP)__vertical.mp4
 
-.PHONY: all test doctor validate align brand render compose nobrand vertical probe persona bgm mix-verify topics pronunciation clean
+.PHONY: all test doctor validate align brand render compose nobrand vertical probe persona bgm mix-verify topics pronunciation review review-text review-video review-frames clean
 
 all: validate brand render compose
 
@@ -163,6 +163,22 @@ probe:
 	ffprobe -v error -show_entries format=duration \
 		-show_entries stream=width,height,codec_type,codec_name,pix_fmt \
 		-of default=noprint_wrappers=1 $(OUT)
+
+# ---- 视频审核（见 aiv/review/README.md）------------------------------------
+#
+# 两层分开：文本层审「要讲什么」，成片层审「做出来是什么样」。
+# **信号不是门禁**：命中信号不会让命令失败——一期历史问题不该
+# 永久卡住流水线。记录与状态在 aiv/review/episodes/<EP>.md。
+review-text:
+	$(PY) -m pyv.cli review text --episode $(EP)
+
+review-video:
+	$(PY) -m pyv.cli review video --episode $(EP)
+
+# 抽帧 + 清单：给人和 Agent 看画面用。帧不入库（aiv/.gitignore 拦 frames/），
+# 入库的是清单与结论。
+review-frames:
+	$(PY) -m pyv.cli review frames --episode $(EP)
 
 clean:
 	rm -rf $(BUILD) $(ROOT)/out/$(EP).mp4
