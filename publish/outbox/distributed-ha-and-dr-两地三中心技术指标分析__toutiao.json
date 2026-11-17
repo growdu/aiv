@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "distributed/ha-and-dr/两地三中心技术指标分析",
+  "draft_id": "7708376401791009334",
+  "package_dir": "toutiao/out/distributed-ha-and-dr-两地三中心技术指标分析",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "两地三中心技术指标分析（距离、延迟、丢包率）",
+  "updated_at": "2026-11-15T20:43:39+08:00"
+}
