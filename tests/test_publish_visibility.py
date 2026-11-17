@@ -162,7 +162,7 @@ def test_the_video_pages_tool_does_not_write_the_series_page(tmp_path, monkeypat
     assert not (tmp_path / "source" / "videos" / "index.md").exists()
 
 
-def test_read_outbox_finds_the_real_snapshots():
+def test_the_video_pages_tool_reads_the_real_snapshots():
     """真的仓库里的 567 条快照，一条都不能漏。
 
     别的用例把快照目录指到临时目录——**路径写错时它们照样绿**。
@@ -301,7 +301,7 @@ def test_the_index_is_written_as_json(tmp_path, monkeypatch):
     assert "articles" in payload and "videos" in payload
 
 
-def test_read_outbox_finds_the_real_snapshots():
+def test_the_publish_index_reads_the_real_snapshots():
     """真的仓库里的 567 条快照，一条都不能漏。
 
     别的用例把快照目录指到临时目录——**路径写错时它们照样绿**。

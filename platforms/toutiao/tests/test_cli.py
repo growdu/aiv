@@ -423,7 +423,7 @@ def test_no_temporary_file_is_left_behind(tmp_path):
 
 def test_the_cli_writes_nothing_into_the_repository(tmp_path, repo_root):
     """命令不得碰仓库：所有落盘都在临时目录里。"""
-    outbox = repo_root / "publish" / "outbox"
+    outbox = repo_root / "platforms" / "toutiao" / "outbox"
     before = sorted(p.name for p in outbox.iterdir()) if outbox.is_dir() else []
     _site(tmp_path)
 
