@@ -10,8 +10,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-for extra in (REPO_ROOT / "channels", REPO_ROOT / "bilibili",
-              REPO_ROOT / "douyin",
+for extra in (REPO_ROOT / "platforms",
               REPO_ROOT / "video" / "pipeline"):
     if str(extra) not in sys.path:
         sys.path.insert(0, str(extra))
@@ -49,7 +48,7 @@ def test_the_bilibili_subtitle_events_match_the_timeline_owner():
 
     adapter 只能 import `epmeta` 与 `preflight`（规格 §3.3），
     所以「字幕从哪来」这条规则写了两遍：一份在 `pyv.timeline`（storyboard
-    格式的主人），一份在 `bilibili/subtitle.py`。这条测试拿真实 storyboard
+    格式的主人），一份在 `platforms/bilibili/subtitle.py`。这条测试拿真实 storyboard
     对照两边，规则一改就会红。
     """
     from bilibili import subtitle

@@ -53,7 +53,7 @@ jobs:
       - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements/publish.txt -r requirements/toutiao.txt -r requirements/weixin.txt
+          pip install -r requirements/publish.txt -r requirements/toutiao.txt -r requirements/wechat.txt
 
       - name: Build content units
         # 内容单元是 sync 的产物，也是契约层与 adapter 真正读的东西。
@@ -69,7 +69,7 @@ jobs:
         run: python3 -m pytest publish/tests -q
 
       - name: Toutiao adapter tests
-        run: python3 -m pytest toutiao/tests -q
+        run: python3 -m pytest platforms/toutiao/tests -q
 
       - name: Weixin adapter tests
-        run: python3 -m pytest weixin/tests -q
+        run: python3 -m pytest platforms/wechat/tests -q

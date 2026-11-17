@@ -4,7 +4,7 @@
 # 平台规则变了改这里，不改 Python。
 #
 # 数值来源：公众号官方接口文档 + 本号实测（2026-11-11，见
-# weixin/docs/03-试点记录.md）。这三个数字与 weixin/wechat/posts.py、
+# platforms/wechat/docs/03-试点记录.md）。这三个数字与 platforms/wechat/posts.py、
 # titles.py、digest.py 里的常量是同一批——
 # publish/tests/test_capability_compat.py 盯着两边不漂。
 #
@@ -14,8 +14,8 @@
 # ⚠️ body_chars = 60000：**不是平台的硬限制**，是工具选的一档。
 # 官方字段表写「少于 2 万字符」，2026-11-14 实测推翻了这个说法——
 # draft/add 收下 20001 / 25000 / 40000 / 65535 / 100000 字符全部成功，
-# draft/get 读回来长度与提交一致，一字未少（见 weixin/README.md 与
-# weixin/docs/06-超长文章拆分.md）。工具默认取 60000：渲染后的 HTML
+# draft/get 读回来长度与提交一致，一字未少（见 platforms/wechat/README.md 与
+# platforms/wechat/docs/06-超长文章拆分.md）。工具默认取 60000：渲染后的 HTML
 # 里只有约四分之一是读者看得见的字，60000 字符约合读者那儿的 1.5 万字。
 # 想换档用 --max-length / WX_MAX_LENGTH（实测天花板 100000）。
 
@@ -53,7 +53,7 @@ body_chars = 60000
 digest_chars = 120
 
 [adapter]
-# 包目录是 <仓库>/weixin/，命令在那个目录下跑：
+# 包目录是 <仓库>/platforms/wechat/，命令在 <仓库>/platforms/ 下跑：
 # `python3 -m wechat.cli publish <content_id>`。
-package = "weixin"
+package = "wechat"
 command = ["python3", "-m", "wechat.cli"]

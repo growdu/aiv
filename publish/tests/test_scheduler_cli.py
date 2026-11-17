@@ -29,9 +29,9 @@ from publishkit.schedule import resolve_config, snapshot_name
 
 #: 假的 adapter：按 PLAN 里写的模式决定退出码与要不要写快照。
 #:
-#: 它住在 ``<仓库>/fakeadapter/fakeadapter/``，跟真的 adapter 一样是
-#: 「顶层目录不是包、同名子目录才是包」——调度器把 cwd 设成
-#: ``<仓库>/fakeadapter``，靠它让 ``python3 -m fakeadapter.cli`` 找得到。
+#: 它住在 ``<仓库>/platforms/fakeadapter/``，跟真的 adapter 一样是
+#: 「压平之后目录名就是包名」——调度器把 cwd 设成 ``<仓库>/platforms``，
+#: 靠它让 ``python3 -m fakeadapter.cli`` 找得到。
 FAKE_ADAPTER = '''\
 """假的 adapter：按 PLAN 里的模式退出。"""
 import json
@@ -157,7 +157,7 @@ def workspace(tmp_path):
     (caps / "fake.toml").write_text(CAPABILITY_TOML, encoding="utf-8")
     (caps / "fakevideo.toml").write_text(VIDEO_CAPABILITY_TOML, encoding="utf-8")
 
-    package = root / "fakeadapter" / "fakeadapter"
+    package = root / "platforms" / "fakeadapter"
     package.mkdir(parents=True)
     (package / "__init__.py").write_text("", encoding="utf-8")
     (package / "cli.py").write_text(FAKE_ADAPTER, encoding="utf-8")
@@ -252,13 +252,13 @@ def test_the_weekly_run_publishes_and_writes_the_week_key(workspace):
 
 
 def test_the_adapter_is_called_with_the_documented_contract(workspace):
-    """命令是 ``<command> publish <content_id>``，cwd 是 adapter 的包目录。"""
+    """命令是 ``<command> publish <content_id>``，cwd 是 ``platforms/``。"""
     main(workspace.argv("schedule", "weekly"))
 
     call = workspace.calls()[0]
     assert call["argv"][0] == "publish"
     assert call["argv"][1] == call["content_id"]
-    assert call["cwd"] == str(workspace.root / "fakeadapter")
+    assert call["cwd"] == str(workspace.root / "platforms")
 
 
 def test_a_success_without_a_snapshot_is_not_reported_as_a_success(workspace, capsys):

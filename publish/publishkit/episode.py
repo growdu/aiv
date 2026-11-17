@@ -71,7 +71,7 @@ front matter 的格式规则（契约一 §4.2）只允许扁平的 ``key: value
 与 ``tools/site_root.py`` 的等价性由 ``publish/tests/test_episode.py`` 的一条
 兼容性测试钉住——**靠测试锁住，不靠 import**。
 
-这与契约一为什么不 import ``weixin/wechat/posts.py`` 的理由完全一样：
+这与契约一为什么不 import ``platforms/wechat/posts.py`` 的理由完全一样：
 两边各自演进，靠一条测试断言它们不漂移。
 """
 

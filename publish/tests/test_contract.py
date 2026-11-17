@@ -1,7 +1,7 @@
 """内容契约：front matter 解析、字段校验、候选集判定。
 
 这一层的测试盯三件事：
-1. 解析语义在 **LF 输入下**与 ``weixin/wechat/posts.py`` 的
+1. 解析语义在 **LF 输入下**与 ``platforms/wechat/posts.py`` 的
    ``parse_front_matter()`` 逐条一致（规格 §4.2 明文要求）；两处例外
    ——CRLF（weixin 那份不认）与缩进标量（weixin 那份读成空列表）——
    都是钉死的有意为之，各由下面一条用例显式断言；
@@ -565,21 +565,21 @@ def test_contract_reads_a_real_calendar_date():
 # --- 与 weixin 解析器的对齐 ---------------------------------------------
 #
 # 规格 §4.2：「这套格式不是新发明……契约与它逐条对齐，不是各写各的。」
-# 这里的对照表是 weixin/wechat/posts.py 的 parse_front_matter()——两份实现
+# 这里的对照表是 platforms/wechat/posts.py 的 parse_front_matter()——两份实现
 # 在 **LF 输入下**必须对同一段 front matter 给出同一个答案。这条测试**只读**
-# weixin/，不改它一个字节；weixin 那边挪了目录或改了导入路径时，本条自动 skip。
+# platforms/wechat/，不改它一个字节；weixin 那边挪了目录或改了导入路径时，本条自动 skip。
 #
 # **两处被允许的分歧**（契约层更宽容/更响亮），各由下面一条用例显式钉住：
 # CRLF 与缩进标量。
 
-WEIXIN_DIR = Path(__file__).resolve().parents[2] / "weixin"
+WEIXIN_DIR = Path(__file__).resolve().parents[2] / "platforms" / "wechat"
 
 
 def _weixin_parser():
     if not WEIXIN_DIR.is_dir():
         return None
-    if str(WEIXIN_DIR) not in sys.path:
-        sys.path.insert(0, str(WEIXIN_DIR))
+    if str(WEIXIN_DIR.parent) not in sys.path:
+        sys.path.insert(0, str(WEIXIN_DIR.parent))
     try:
         from wechat.posts import parse_front_matter as weixin_parser
     except Exception:  # pragma: no cover - weixin 那边在并行开发
@@ -590,7 +590,7 @@ def _weixin_parser():
 def test_parser_matches_the_weixin_parser_on_the_real_corpus():
     weixin_parser = _weixin_parser()
     if weixin_parser is None:
-        pytest.skip("weixin/ 不可用，跳过与 wechat.posts 的对照")
+        pytest.skip("platforms/wechat/ 不可用，跳过与 wechat.posts 的对照")
 
     docs = Path(__file__).resolve().parents[2] / "docs"
     drafts = [
@@ -625,7 +625,7 @@ def test_crlf_is_the_one_deliberate_divergence_from_the_weixin_parser():
     """
     weixin_parser = _weixin_parser()
     if weixin_parser is None:
-        pytest.skip("weixin/ 不可用，跳过与 wechat.posts 的对照")
+        pytest.skip("platforms/wechat/ 不可用，跳过与 wechat.posts 的对照")
 
     text = "---\r\ntitle: x\r\nplatforms:\r\n  - wechat\r\n---\r\n\r\n正文\r\n"
 
@@ -651,7 +651,7 @@ def test_the_indented_scalar_form_is_the_second_deliberate_divergence():
     """
     weixin_parser = _weixin_parser()
     if weixin_parser is None:
-        pytest.skip("weixin/ 不可用，跳过与 wechat.posts 的对照")
+        pytest.skip("platforms/wechat/ 不可用，跳过与 wechat.posts 的对照")
 
     text = "---\ntitle: x\nplatforms:\n  wechat\n---\n\n正文\n"
 

@@ -49,9 +49,9 @@
                                     │                        │
                      ┌──────────────┼────────────────────────┘
                      ▼              ▼            ▼            ▼
-                  weixin/        toutiao/    channels/    bilibili/
+                  wechat/        toutiao/    channels/    bilibili/
                   （公众号）      （头条号）   （视频号）     （B 站）
-                  各自一套 adapter：切片 → 清单 → 出包/API → 人工/自动发布
+                  四个都在 platforms/ 下（目录名即包名），各自一套 adapter：切片 → 清单 → 出包/API → 人工/自动发布
 ```
 
 ### 三条产线的分工
@@ -76,7 +76,7 @@
 | **视频生产层** | `video/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
 | **审核层** | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | 只读 `docs/`、`video/` 的契约与产物 |
 | **发布契约层** | `publish/publishkit/` | 内容契约 / 能力模型 / manifest / 调度 | **不认识任何平台** |
-| **平台适配层** | `weixin/` `toutiao/` `channels/` `bilibili/` | 平台切片、渲染、出包、发布、状态 | 只认 TOML 与 manifest JSON |
+| **平台适配层** | `platforms/wechat/` `platforms/toutiao/` `platforms/channels/` `platforms/bilibili/` | 平台切片、渲染、出包、发布、状态 | 只认 TOML 与 manifest JSON |
 
 **依赖方向是单向的**：平台层不 import 契约层，契约层不 import 平台层。
 两边唯一的接缝是**同一份 `capabilities/*.toml`** 与**同一份 manifest JSON**。
@@ -165,16 +165,16 @@
 
 | 平台 | 目录 | 形态 | 自动化档位 |
 | --- | --- | --- | --- |
-| 微信公众号 | `weixin/wechat/` | 图文 → 草稿箱（`draft/add`） | 自动生成 + 自动进草稿箱，**发表由人点**（账号无发表接口权限） |
-| 今日头条 | `toutiao/toutiao/` | 图文 → 头条版排版包 / 半自动出包 | `manual`（能力声明）：出包 + 人工发（账号未认证，API 权限开不了） |
-| 微信视频号 | `channels/channels/` | 视频 → 切片 + 人工发布清单 | `manual`：视频号无普通创作者发布接口 |
-| 哔哩哔哩 | `bilibili/bilibili/` | 视频 → 投稿包 + 字幕 | `manual`（`ARC_BASE` 权限开通后可转 `api_publish`） |
+| 微信公众号 | `platforms/wechat/` | 图文 → 草稿箱（`draft/add`） | 自动生成 + 自动进草稿箱，**发表由人点**（账号无发表接口权限） |
+| 今日头条 | `platforms/toutiao/` | 图文 → 头条版排版包 / 半自动出包 | `manual`（能力声明）：出包 + 人工发（账号未认证，API 权限开不了） |
+| 微信视频号 | `platforms/channels/` | 视频 → 切片 + 人工发布清单 | `manual`：视频号无普通创作者发布接口 |
+| 哔哩哔哩 | `platforms/bilibili/` | 视频 → 投稿包 + 字幕 | `manual`（`ARC_BASE` 权限开通后可转 `api_publish`） |
 
 每个 adapter 的典型模块：`assets.py`（素材）、`contract.py`（平台契约）、
 `render.py`/`package.py`（渲染/打包）、`state.py`（状态）、`snapshot.py`（快照）、
 `notify.py`（通知）、`cli.py`（命令行），外加 `docs/`（设计与实施计划）与 `tests/`。
 
-公众号线最成熟：`weixin/wechat/` 20 个模块，覆盖 Markdown 解析、封面、标题裁剪、
+公众号线最成熟：`platforms/wechat/` 20 个模块，覆盖 Markdown 解析、封面、标题裁剪、
 超长文章拆分、SVG/代码高亮、mermaid、合集与分类、品牌图文，已跑到草稿箱。
 
 ---
@@ -220,7 +220,7 @@
 | `video/build/`、`video/out/` | 片段与成片 | ❌ |
 | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | ✅ 帧除外 |
 | `publish/` | 契约层、调度、能力声明、outbox | ✅ |
-| `weixin/` `toutiao/` `channels/` `bilibili/` | 平台 adapter | ✅ |
+| `platforms/wechat/` `platforms/toutiao/` `platforms/channels/` `platforms/bilibili/` | 平台 adapter | ✅ |
 | `requirements/` | 依赖清单（按模块分文件） | ✅ |
 | `.github/workflows/` | `hexo.yml`（构建部署）、`contracts.yml`（契约闸门） | ✅ |
 
@@ -263,7 +263,7 @@ python3 tools/check-content-contract.py   # 校验 568 个内容单元，违规�
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements/publish.txt        # 契约层与调度层（零运行时依赖）
-pip install -r requirements/weixin.txt         # 公众号 adapter
+pip install -r requirements/wechat.txt         # 公众号 adapter
 pip install -r requirements/video-pipeline.txt # AIV 视频生产线
 ```
 
@@ -357,4 +357,4 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | [`video/review/README.md`](video/review/README.md) | 视频审校：文本层 `VT-*` 与成片层 `VV-*`、抽帧方法、一期一条记录 |
 | [`review/README.md`](review/README.md) | 博客内容审校：文档侧的同构机制（`tools/review-check.py`） |
 | [`video/人格规范.md`](video/%E4%BA%BA%E6%A0%BC%E8%A7%84%E8%8C%83.md) | 小象是谁、怎么想、怎么讲（9 条可机检规则） |
-| `weixin/docs/`、`toutiao/docs/`、`channels/docs/`、`bilibili/docs/` | 各平台 adapter 的设计与实施计划 |
+| `platforms/wechat/docs/`、`platforms/toutiao/docs/`、`platforms/channels/docs/`、`platforms/bilibili/docs/` | 各平台 adapter 的设计与实施计划 |

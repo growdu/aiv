@@ -9,7 +9,7 @@
 * 契约层这一份读**任意**平台（wechat / youtube / bilibili / toutiao /
   channels），所以顶层是「核心必填 + 平台扩展可选」，``[limits]`` 里
   平台自有的键原样保留、不做类型判断。
-* adapter 那一份只读**自己**平台（``toutiao/toutiao/capability.py``），
+* adapter 那一份只读**自己**平台（``platforms/toutiao/capability.py``），
   所以它那份的限额字段全是必填——缺一个就报错。
 * 两边**互不 import**：契约层不 import 平台内部模块，平台也不 import
   契约层。它们认的是**同一份 TOML 文件**，不是同一份代码。
@@ -24,7 +24,7 @@
 
 **两边的解读严格度不一样，逐条列在这里**（同一份 TOML 喂两边的结论；adapter
 那一列依据的是 ``feat/toutiao-adapter`` 分支上的
-``toutiao/toutiao/capability.py``，截至 ``bee4dfc``）：
+``platforms/toutiao/capability.py``，截至 ``bee4dfc``）：
 
 =====================================  ==========  =====================
 TOML 写法                                 契约层      toutiao adapter

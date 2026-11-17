@@ -22,6 +22,7 @@ def test_video_sits_next_to_platforms_at_repo_root():
     """
     repo_root = character.REPO_ROOT
     assert (repo_root / "video").is_dir()
+    assert (repo_root / "platforms").is_dir()
     assert character.AIV_ROOT == repo_root / "video"
     # 旧位置只剩发布用的文档副本，工程内容（pipeline/ 等）必须已经搬走
     legacy = repo_root / "docs" / "life" / "aiv"

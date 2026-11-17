@@ -16,11 +16,14 @@ from datetime import date
 import json
 import os
 from pathlib import Path
+import subprocess
 
 import pytest
 
 from publishkit import (
     PublishKitError,
+    cli,
+    load_capability,
 )
 from publishkit.schedule import (
     PUBLISHED_STATUSES,
@@ -163,7 +166,7 @@ def test_config_defaults_to_the_repository_layout(tmp_path):
     assert config.outbox_dir == root / "publish" / "outbox"
     assert config.posts_dir == root / "source" / "_posts"
     assert config.capabilities_dir == root / "publish" / "capabilities"
-    assert config.secrets_file == root / "weixin" / "secrets.json"
+    assert config.secrets_file == root / "platforms" / "wechat" / "secrets.json"
 
 
 def test_config_reads_the_environment_variables(tmp_path):
@@ -643,3 +646,22 @@ def test_a_corpus_where_everything_is_published_says_so(tmp_path):
 
     assert chosen is None
     assert "本周没有可发的" in reason
+
+
+def test_the_adapter_runs_inside_the_platforms_directory(monkeypatch):
+    """压平后包在 platforms/<plat>/ 下，子进程的 cwd 必须是 platforms/。"""
+    captured = {}
+
+    def fake_run(argv, cwd=None, env=None, **kwargs):
+        captured["argv"] = argv
+        captured["cwd"] = cwd
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    # 用仓库里真实的 toutiao 能力声明与真实的 resolve_config()，只换掉 subprocess.run
+    config = resolve_config(repo_root=REPO_ROOT)
+    capability = load_capability("toutiao",
+                                  capabilities_dir=REPO_ROOT / "publish" / "capabilities")
+    cli.invoke_adapter(config, capability, "some-content-id", 300)
+    assert captured["cwd"] == str(REPO_ROOT / "platforms")
+    assert captured["argv"][:3] == ["python3", "-m", "toutiao.cli"]

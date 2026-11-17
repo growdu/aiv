@@ -25,9 +25,9 @@ pip install -r requirements/<你需要的那个>.txt
 | --- | --- |
 | `dev.txt` | 所有测试用的公共依赖（pytest） |
 | `publish.txt` | 发布契约层与调度层（`publish/publishkit`） |
-| `toutiao.txt` | 头条号 adapter（`toutiao/toutiao`） |
-| `weixin.txt` | 公众号 adapter（`weixin/wechat`） |
-| `video-platforms.txt` | 视频号 / B 站 adapter（`channels`、`bilibili`） |
+| `toutiao.txt` | 头条号 adapter（`platforms/toutiao`） |
+| `wechat.txt` | 公众号 adapter（`platforms/wechat`） |
+| `video-platforms.txt` | 视频号 / B 站 adapter（`platforms/channels`、`platforms/bilibili`） |
 | `video-pipeline.txt` | AIV 视频生产线（出片引擎、形象、音色） |
 
 依赖是「下限」而不是「锁死」：上游发大版本通常不破坏这里的用法，真出事了再在这里钉死具体版本。

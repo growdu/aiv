@@ -17,7 +17,7 @@
     cd publish && python3 -m publishkit.cli schedule weekly
     PYTHONPATH=publish python3 -m publishkit.cli schedule weekly
 
-**退出码沿用 adapter 的约定**（``toutiao/toutiao/cli.py`` 那一套）：
+**退出码沿用 adapter 的约定**（``platforms/toutiao/cli.py`` 那一套）：
 
 ===  ==========================================
 0    成功
@@ -72,7 +72,7 @@ __all__ = [
     "main",
 ]
 
-#: 退出码是与调用方的约定（与 ``toutiao/toutiao/cli.py`` 同一套）。
+#: 退出码是与调用方的约定（与 ``platforms/toutiao/cli.py`` 同一套）。
 EXIT_OK = 0
 EXIT_USAGE = 1
 EXIT_INELIGIBLE = 2
@@ -174,7 +174,7 @@ def _common_options() -> _Parser:
         "--secrets",
         metavar="路径",
         default=argparse.SUPPRESS,
-        help="凭据文件（默认：环境变量 PUBLISH_SECRETS，或 <仓库>/weixin/secrets.json）",
+        help="凭据文件（默认：环境变量 PUBLISH_SECRETS，或 <仓库>/platforms/wechat/secrets.json）",
     )
     parser.add_argument(
         "--adapter-timeout",
@@ -302,8 +302,8 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
     """调平台 adapter 的 CLI。
 
     命令是 ``<adapter_command...> publish <content_id>``，**cwd 必须是
-    ``<仓库>/<adapter 包名>``**：adapter 的包目录是 ``repo/toutiao/toutiao/``，
-    ``python3 -m toutiao.cli`` 要靠 cwd 在 ``sys.path`` 里找到它。
+    ``<仓库>/platforms``——``python3 -m <包名>.cli`` 靠 cwd 在 ``sys.path``
+    里找到它**（adapter 的包目录是 ``repo/platforms/toutiao/``）。
 
     adapter 自己按它自己的 ``automation`` 分支，调度器不替它分支。
     """
@@ -319,11 +319,11 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
             "能力声明 {} 没有 [adapter].package，不知道它住在哪".format(capability.id)
         )
 
-    working_dir = config.repo_root / package
-    if not working_dir.is_dir():
+    working_dir = config.repo_root / "platforms"
+    if not (working_dir / package).is_dir():
         raise ScheduleConfigError(
             "adapter 的包目录不存在：{}（能力声明 {} 写的 package 是 {!r}）".format(
-                working_dir, capability.id, package
+                working_dir / package, capability.id, package
             )
         )
 

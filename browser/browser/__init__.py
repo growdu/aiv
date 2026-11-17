@@ -4,7 +4,7 @@
 
     video/publish/<EP>.json ──┐
                              ├─→ browser/ ─→ 真实浏览器 ─→ 平台页面
-    channels/out/<EP>/    ──┘
+    platforms/channels/out/<EP>/    ──┘
 
 为什么单独一层。adapter 负责「这个平台的限额怎么裁、包怎么出」，
 是平台知识；视频号与 B站各不相同，所以两个 adapter 互不引用
@@ -14,7 +14,7 @@
 
 所以这里的分工是：
 
-    adapter（channels/、bilibili/）  产出发布包，校验限额
+    adapter（platforms/channels/、platforms/bilibili/）  产出发布包，校验限额
     browser/                         打开真实浏览器，把包里的东西填进去
     状态快照（publish/outbox/）        两边共用的对外事实
 

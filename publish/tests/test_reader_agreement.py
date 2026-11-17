@@ -1,15 +1,15 @@
 """两个读者读同一份能力声明，结论必须一致。
 
 契约层（``publish/publishkit/capability.py``）与头条号 adapter
-（``toutiao/toutiao/capability.py``）是**两份独立实现**——接缝原则（规格
+（``platforms/toutiao/capability.py``）是**两份独立实现**——接缝原则（规格
 §11.1）不许它们互相 import。它们认的是**同一份 TOML 文件**。
 
 两份实现各自演化，最容易出的偏差是「同一份 TOML，一个说行、另一个说不行」。
 那种分歧不咬人（发布流水线走的是契约层，它是唯一闸门），但它让「双读者
 单真相」变成空话：真相只有一份的时候，两个读者得先同意那一份是什么。
 
-这条测试只**读** ``toutiao/``，不改它一个字节（与 ``test_capability_compat.py``
-对 ``weixin/`` 的做法一样）。头条号那边挪了目录或改了导入路径时，本条自动 skip。
+这条测试只**读** ``platforms/toutiao/``，不改它一个字节（与 ``test_capability_compat.py``
+对 ``platforms/wechat/`` 的做法一样）。头条号那边挪了目录或改了导入路径时，本条自动 skip。
 
 **那三处已知的分歧也钉在这里**——更严的那一边必须拒。「有意为之」不能只靠
 文档说，得有人盯着：哪一边变松了，本条立刻红。
@@ -23,7 +23,7 @@ import pytest
 from publishkit.capability import load_capability_file
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TOUTIAO_DIR = REPO_ROOT / "toutiao"
+TOUTIAO_DIR = REPO_ROOT / "platforms" / "toutiao"
 REAL_DECLARATION = REPO_ROOT / "publish" / "capabilities" / "toutiao.toml"
 
 BASE_TOML = """\
@@ -56,8 +56,8 @@ def _adapter_loader():
     """The Toutiao adapter's loader, or ``None`` when it is not importable."""
     if not TOUTIAO_DIR.is_dir():
         return None
-    if str(TOUTIAO_DIR) not in sys.path:
-        sys.path.insert(0, str(TOUTIAO_DIR))
+    if str(TOUTIAO_DIR.parent) not in sys.path:
+        sys.path.insert(0, str(TOUTIAO_DIR.parent))
     try:
         from toutiao.capability import load_capability
     except Exception:  # pragma: no cover - 头条号那边在并行开发
@@ -76,7 +76,7 @@ def _read_by_both(tmp_path, text, filename="toutiao.toml"):
 
     loader = _adapter_loader()
     if loader is None:
-        pytest.skip("toutiao/ 不可用，跳过跨读者对照")
+        pytest.skip("platforms/toutiao/ 不可用，跳过跨读者对照")
 
     results = []
     for load in (load_capability_file, loader):
@@ -91,7 +91,7 @@ def test_both_readers_read_the_real_declaration_the_same_way():
     """仓库里那一份真实声明：两个读者都要接受，而且读出的值要一样。"""
     loader = _adapter_loader()
     if loader is None:
-        pytest.skip("toutiao/ 不可用，跳过跨读者对照")
+        pytest.skip("platforms/toutiao/ 不可用，跳过跨读者对照")
 
     contract_cap = load_capability_file(REAL_DECLARATION)
     adapter_cap = loader(REAL_DECLARATION)

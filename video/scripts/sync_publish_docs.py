@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """把要发到博客的文档同步一份到 docs/life/aiv/。
 
-`video/` 是仓库根级模块（与 `weixin/` 同级），整个目录不在 `docs/` 下面，
+`video/` 是仓库根级模块（与 `platforms/` 同级），整个目录不在 `docs/` 下面，
 而 `sync-hexo.py` 只扫 `docs/`——所以要发布的文档必须在 `docs/life/aiv/`
 留一份，否则那些规范页面会从 growdu.cn 上消失。
 

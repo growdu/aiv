@@ -89,7 +89,7 @@ def bili_selectors(tmp_path, bili_server):
 
 @pytest.fixture
 def bili_package(tmp_path):
-    """一个假的 B站 发布包目录，结构照 bilibili/out/<EP>/ 来。"""
+    """一个假的 B站 发布包目录，结构照 platforms/bilibili/out/<EP>/ 来。"""
     root = tmp_path / "ep01"
     root.mkdir()
     (root / "title.txt").write_text("一个 64 位计数器，决定所有事务的提交顺序", encoding="utf-8")

@@ -49,7 +49,7 @@ def fixture_selectors(tmp_path):
 
 @pytest.fixture
 def package_dir(tmp_path):
-    """一个假的发布包目录，结构照 channels/out/<EP>/ 来。"""
+    """一个假的发布包目录，结构照 platforms/channels/out/<EP>/ 来。"""
     root = tmp_path / "ep01"
     root.mkdir()
     (root / "title.txt").write_text("两个事务改同一行，谁先谁后", encoding="utf-8")

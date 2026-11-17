@@ -89,7 +89,7 @@ flowchart TD
 | 展示层 | `themes/matery/` | 模板、样式、静态资源 | Hexo 运行时 |
 | 视频生产层 | `video/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
 | 发布契约层 | `publish/publishkit/` | 内容契约、能力模型、清单、调度 | **不认识任何平台** |
-| 平台适配层 | `weixin/`、`toutiao/`、`douyin/`、`channels/`、`bilibili/` | 切片、渲染、出包、发布 | 只认能力声明与发布清单 |
+| 平台适配层 | `platforms/wechat/`、`platforms/toutiao/`、`platforms/douyin/`、`platforms/channels/`、`platforms/bilibili/` | 切片、渲染、出包、发布 | 只认能力声明与发布清单 |
 
 规矩只有一条：**依赖是单向的**。平台层不引用契约层，契约层不引用平台层。
 

@@ -38,9 +38,9 @@ ToutiaoUploader = toutiao_flow.ToutiaoUploader
 ToutiaoError = toutiao_flow.ToutiaoError
 BROWSER_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BROWSER_ROOT.parent
-DEFAULT_PACKAGES = REPO_ROOT / "channels" / "out"
-DEFAULT_BILIBILI_PACKAGES = REPO_ROOT / "bilibili" / "out"
-DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "toutiao" / "out"
+DEFAULT_PACKAGES = REPO_ROOT / "platforms" / "channels" / "out"
+DEFAULT_BILIBILI_PACKAGES = REPO_ROOT / "platforms" / "bilibili" / "out"
+DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "platforms" / "toutiao" / "out"
 DEFAULT_OUTBOX = REPO_ROOT / "publish" / "outbox"
 DEFAULT_OUT = BROWSER_ROOT / "out"
 DEFAULT_SELECTORS = BROWSER_ROOT / "selectors" / "channels.json"
@@ -283,7 +283,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
     if not url:
         print("WARN 没能自动取到发布链接。")
         print(f"     请手动复制链接，然后跑：")
-        print(f"     cd channels && {sys.executable} -m channels.cli mark published "
+        print(f"     cd platforms && {sys.executable} -m channels.cli mark published "
               f"{episode} --url \"<链接>\"")
         return 2
 
@@ -299,7 +299,7 @@ def _mark_published(episode: str, url: str, args: argparse.Namespace) -> None:
     """
     template = args.mark_cmd or DEFAULT_MARK_TEMPLATE
     command = template.format(python=sys.executable, episode=episode, url=url)
-    cwd = Path(args.mark_cwd).resolve() if args.mark_cwd else REPO_ROOT / "channels"
+    cwd = Path(args.mark_cwd).resolve() if args.mark_cwd else REPO_ROOT / "platforms"
     print(f"回填状态：{command}（cwd={cwd}）")
     result = subprocess.run(shlex.split(command), cwd=str(cwd))
     if result.returncode != 0:
@@ -558,7 +558,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p_bili)
     p_bili.add_argument("episode")
     p_bili.add_argument("--package", default=None,
-                        help="B站 发布包目录，默认 bilibili/out/<期号>")
+                        help="B站 发布包目录，默认 platforms/bilibili/out/<期号>")
     p_bili.add_argument("--out", default=None, help="产物目录")
     p_bili.add_argument("--cdp", default=None,
                         help="挂到已经在跑的浏览器上，"
@@ -573,7 +573,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_tt.add_argument("--all", dest="all_posts", action="store_true",
                        help="把账本里所有 drafted 的文章都过一遍")
     p_tt.add_argument("--packages-dir", default=None,
-                       help="头条号发布包目录，默认 toutiao/out")
+                       help="头条号发布包目录，默认 platforms/toutiao/out")
     p_tt.add_argument("--outbox-dir", default=None,
                        help="状态快照目录，默认 publish/outbox")
     p_tt.add_argument("--out", default=None, help="产物目录，默认 browser/out/toutiao")

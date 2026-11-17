@@ -1,4 +1,4 @@
-# 视频号 / B 站 adapter（channels/channels、bilibili/bilibili）。
+# 视频号 / B 站 adapter（platforms/channels、platforms/bilibili）。
 #
 # pillow   封面缩略图处理
 #

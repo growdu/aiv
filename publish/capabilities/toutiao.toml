@@ -4,8 +4,8 @@
 # 限额是数据不是代码 —— 平台规则变了改这里，不改 Python。
 #
 # 数值来源：**2026-11-13 在头条号后台实测**（Phase 0，浏览器驱动真实编辑器，
-# 用 `toutiao/out/db-logical_decode-postgresql逻辑复制-DML/` 真包走完整流程）。
-# 逐项记录见 `toutiao/docs/02-试点记录.md` §R2。
+# 用 `platforms/toutiao/out/db-logical_decode-postgresql逻辑复制-DML/` 真包走完整流程）。
+# 逐项记录见 `platforms/toutiao/docs/02-试点记录.md` §R2。
 #
 # 每条限额后面的注释写的是「实测到什么」和「还没测到什么」——后者不能省，
 # 「实测了 A」不等于「B 也实测了」。
@@ -47,7 +47,7 @@ body_chars = 3000
 # 单段上限（**平台字数**，不是字符数）。实测：单段 200 平台字不告警，
 # 201 平台字开始报「1 处段落字数过多」。
 # 「平台字数」是编辑器那套口径：非 ASCII 字符逐字 + ASCII 字符每两个折一个
-# （详见 toutiao/toutiao/wordcount.py）。一段 216 个原始字符的中英混排段落
+# （详见 platforms/toutiao/wordcount.py）。一段 216 个原始字符的中英混排段落
 # 平台计 178 字，不告警——按字符数判就会误报。
 paragraph_words = 200
 

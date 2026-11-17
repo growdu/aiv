@@ -130,7 +130,7 @@ def resolve_config(
     环境变量               含义                        默认
     ==================== ========================== ==========================
     ``PUBLISH_REPO``      仓库根路径                  从当前目录往上找
-    ``PUBLISH_SECRETS``   凭据文件                    ``$REPO/weixin/secrets.json``
+    ``PUBLISH_SECRETS``   凭据文件                    ``$REPO/platforms/wechat/secrets.json``
     ``PUBLISH_STATE_DIR`` 状态目录                    ``$REPO/publish``
     ==================== ========================== ==========================
 
@@ -158,7 +158,7 @@ def resolve_config(
     elif env.get("PUBLISH_SECRETS"):
         secret_path = Path(env["PUBLISH_SECRETS"])
     else:
-        secret_path = root / "weixin" / "secrets.json"
+        secret_path = root / "platforms" / "wechat" / "secrets.json"
 
     return ScheduleConfig(
         repo_root=root,
@@ -411,7 +411,7 @@ def flatten_content_id(content_id: str) -> str:
     ``db/postgresql/demo`` → ``db-postgresql-demo``。
 
     **顺带校验**：``.`` / ``..`` 这类路径段一律拒绝——写错地方只是不整洁，
-    删错地方是破坏（与 ``toutiao/toutiao/publish.py`` 的 ``flatten_id()``
+    删错地方是破坏（与 ``platforms/toutiao/publish.py`` 的 ``flatten_id()``
     同一套理由；这里独立实现，契约层不 import adapter 的模块）。
     """
     if not isinstance(content_id, str) or not content_id.strip():
