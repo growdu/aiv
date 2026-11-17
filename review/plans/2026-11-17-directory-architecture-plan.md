@@ -447,9 +447,9 @@ if str(REPO_ROOT / "platforms") not in sys.path:      # 原来 REPO_ROOT / "<pla
 **同时把 Task 1 Step 6 留的半条断言补上**：`video/pipeline/tests/test_character.py` 里
 `assert (repo_root / "platforms").is_dir()` 现在可以加回去了。
 
-- [ ] **Step 3b: 改那条钉死了路径字符串的断言**
+- [ ] **Step 3b: 改那些钉死了路径的断言**
 
-`platforms/channels/tests/test_package.py` 里有一条断言写死了仓库相对路径：
+**① `platforms/channels/tests/test_package.py` 里写死了仓库相对路径的那条：**
 
 ```python
     target = package.REPO_ROOT / "channels" / "out" / "ep01"
@@ -466,6 +466,40 @@ if str(REPO_ROOT / "platforms") not in sys.path:      # 原来 REPO_ROOT / "<pla
 同文件里 `package_dir="channels/out/ep01"` 那个入参（写进快照的测试数据）也一并改成
 `"platforms/channels/out/ep01"`——它是**测试数据**不是历史快照，改了才对。
 `platforms/bilibili/tests/test_package.py` 里 `package_dir="bilibili/out/ep02"` 同理。
+
+**② `publish/tests/test_real_declarations.py` 里那两条找 adapter 目录的：**
+
+压平前 adapter 的包目录是 `REPO_ROOT / <plat>`（`weixin/wechat/`、`toutiao/toutiao/`…），
+压平后是 `REPO_ROOT / "platforms" / <plat>`。所以：
+
+```python
+def test_every_declaration_points_at_an_adapter_that_exists():
+    for capability in CAPABILITIES:
+        package = capability.adapter_package
+        assert package, f"{capability.id} 的能力声明没有 [adapter].package"
+
+        directory = REPO_ROOT / "platforms" / package
+        assert directory.is_dir(), (
+            f"{capability.id} 指向的 adapter 目录不存在：{directory}"
+        )
+
+
+def test_every_adapter_command_names_a_module_that_exists():
+    """命令是 ``python3 -m <模块>``，模块要真的在那个目录里。"""
+    for capability in CAPABILITIES:
+        command = capability.adapter_command
+        assert command, f"{capability.id} 的能力声明没有 [adapter].command"
+
+        module = command[-1].split(".")[0]
+        directory = REPO_ROOT / "platforms" / capability.adapter_package
+        candidates = [
+            directory / "__init__.py",        # 压平后包目录就是 platforms/<plat>/
+            directory / (module + ".py"),
+        ]
+        assert any(path.is_file() for path in candidates), (
+            f"{capability.id} 的命令 {' '.join(command)} 指向的模块不在 {directory} 里"
+        )
+```
 
 > **注意区别**：测试里的**期望值**要跟着改（它算的是真路径），
 > 而 `publish/outbox/` 里 567 个快照的 `package_dir` 是**历史记录，一个字都不改**
