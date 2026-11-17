@@ -20,7 +20,8 @@
    探针**跑在子进程里**：进程内的 `sys.path` 上已经有 `platforms/`
    （conftest 插的），在进程内探针就永远绿，压根抓不住这条 bug。
    子进程的 `sys.path` 只有脚本自己的那一行说了算——那才是真话。
-2. **`tools/` 下没有任何脚本还提到 `weixin` 这个目录名**（静态扫，命中就是漏）。
+2. **`tools/` 下没有任何脚本还引用着已删除的 `weixin/` 目录**（静态扫，
+   只认**路径形状**——见 `_path_shaped_weixin`）。
 3. **`prune-empty-drafts.py` 的两个默认值**指向
    `platforms/wechat/out` 与 `platforms/wechat/secrets.json`
    （用 AST 读，不用正则猜）。
@@ -28,9 +29,12 @@
 
 import ast
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOLS_DIR = REPO_ROOT / "platforms" / "wechat" / "tools"
@@ -78,20 +82,96 @@ def test_every_tool_can_be_loaded_without_blowing_up():
         )
 
 
-def test_no_tool_still_mentions_the_old_directory_name():
-    """`tools/` 下不许再出现 `weixin` 这个目录名。
+def _path_shaped_weixin(text: str) -> list:
+    """找出「`weixin` 出现在**路径形状**里」的出现处。
+
+    判定规则（控制器裁定）：一个 `weixin` 出现处，**当且仅当**它
+    **被引号包住**（`"…"` 或 `'…'`）**或**它**紧邻着 `/`**（前或后）
+    ——才算命中。其余一律不算。
+
+    这么判是因为下面这些**合法的**内容里也有 `weixin`：
+
+    ==============================  ==============================
+    命中                             不命中
+    ==============================  ==============================
+    ``"weixin"`` / ``'weixin'``      ``api.weixin.qq.com``
+    ``.../weixin/...``               ``com.growdu.weixin.auto-draft``
+    ``weixin/``                      ``weixin_39033058``
+                                     ``weixin.jpg``
+                                     散文里出现的「weixin」两个字
+    ==============================  ==============================
+
+    裸子串匹配会把后一类误报成「还在引用已删除的目录」——
+    指控式的文案一旦误报，人就开始怀疑守卫本身。
+    """
+    hits = []
+    for match in re.finditer("weixin", text):
+        before = text[match.start() - 1] if match.start() else ""
+        after = text[match.end()] if match.end() < len(text) else ""
+        quoted = before in ('"', "'") and after == before
+        adjacent = before == "/" or after == "/"
+        if not (quoted or adjacent):
+            continue
+        line = text.count("\n", 0, match.start()) + 1
+        hits.append((line, "被引号包住" if quoted else "紧邻着 /"))
+    return hits
+
+
+#: 判定规则的对照表：左边该命中，右边不该命中。
+SCAN_TABLE = (
+    ("ROOT / \"weixin\"", True),
+    ("ROOT / 'weixin'", True),
+    ("\"weixin/out\"", True),
+    ("\"platforms/weixin/x.py\"", True),
+    ("weixin/out", True),
+    ("\"weixin\"", True),
+    ("\"api.weixin.qq.com\"", False),
+    ("\"com.growdu.weixin.auto-draft\"", False),
+    ("\"weixin_39033058\"", False),
+    ("\"weixin.jpg\"", False),
+    ("散文里的 weixin 两个字", False),
+)
+
+SCAN_TABLE_IDS = (
+    "quoted-double", "quoted-single", "quoted-with-suffix",
+    "path-segment", "bare-slash", "quoted-exact",
+    "domain", "launchd-label", "app-id", "image-file", "prose",
+)
+
+
+@pytest.mark.parametrize(
+    "text, expected", SCAN_TABLE, ids=SCAN_TABLE_IDS)
+def test_the_old_directory_scan_only_fires_on_path_shapes(text, expected):
+    """静态扫的判定规则：只认路径形状。
+
+    这条用例把判定规则本身钉住——将来有人把规则改宽（退回裸子串），
+    这里会红。
+    """
+    hits = _path_shaped_weixin(text)
+    assert bool(hits) is expected, (
+        "{} 这段文字{}该命中（判为 {}）".format(
+            text, "应该" if expected else "不应该", hits)
+    )
+
+
+def test_no_tool_still_references_the_deleted_directory():
+    """`tools/` 下不许再引用已删除的 `weixin/` 目录。
 
     静态扫：这一条不依赖子进程，任何漏改都逃不掉。
     """
     offenders = []
     for path in sorted(TOOLS_DIR.glob("*.py")):
-        text = path.read_text(encoding="utf-8")
-        if "weixin" in text:
-            offenders.append(path.name)
+        hits = _path_shaped_weixin(path.read_text(encoding="utf-8"))
+        if hits:
+            offenders.append("{}（第 {} 行，{}）".format(
+                path.name,
+                "、".join(str(line) for line, _ in hits),
+                "、".join(reason for _, reason in hits),
+            ))
 
     assert not offenders, (
         "tools/ 下这些脚本还在引用已删除的 weixin/ 目录：{}"
-        .format("、".join(offenders))
+        .format("；".join(offenders))
     )
 
 

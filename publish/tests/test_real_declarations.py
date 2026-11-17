@@ -21,6 +21,37 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CAPABILITIES = list_capabilities()
 
 
+def _git(*args: str) -> subprocess.CompletedProcess:
+    """跑一条 git 命令（同 `video/pipeline/tests/test_assets_are_tracked.py` 的写法）。"""
+    return subprocess.run(
+        ["git", *args], cwd=REPO_ROOT, capture_output=True, text=True
+    )
+
+
+def _ignored_directories():
+    """`platforms/` 下被 git 忽略的目录（发布包等产物、`__pycache__` 之类）。
+
+    **git 只用来排除产物目录——枚举包仍然走磁盘上的 `rglob`。**
+    要是改用 `git ls-files` 去枚举包，守卫在「还没提交的挪动」面前就变瞎了：
+    目录挪深了还没 `git add`，守卫照样绿。**磁盘是真相，git 只用来排除产物。**
+
+    git 不可用时返回 ``None`` = **不过滤**，不是跳过——跳过等于把这条守卫
+    整个关掉，比误报一次更糟。
+    """
+    result = _git("ls-files", "--others", "--ignored", "--exclude-standard",
+                  "--directory", "--", "platforms")
+    if result.returncode != 0:
+        return None
+
+    directories = []
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        directories.append((REPO_ROOT / line.rstrip("/")).resolve())
+    return directories
+
+
 def test_the_repository_declares_at_least_the_four_known_platforms():
     ids = {cap.id for cap in CAPABILITIES}
     assert {"wechat", "toutiao", "channels", "bilibili"} <= ids
@@ -94,13 +125,30 @@ def test_the_platform_dirs_keep_the_repo_root_at_the_right_depth():
     反推出来的断言恒真：目录真被挪走一层，守卫照样 PASS。
     所以下面扫的是 `platforms/` 下真实存在的「带 `__init__.py` 的目录」——
     挪深一层（`platforms/xx/toutiao`）它就会露出来。
+
+    **产物目录不算。** `platforms/<plat>/out/` 里是发布包等本地产物，
+    它们被 git 忽略，里面要是出现 `__init__.py`（比如某个产物是个包），
+    那不是「平台被挪深了一层」——把它算进来就是**误报**，而下一个人会去查
+    搬迁，没人查产物目录。
     """
     repo_root = REPO_ROOT.resolve()
     platforms_dir = repo_root / "platforms"
     assert platforms_dir.is_dir(), "platforms/ 不存在"
 
     # ① 每个平台包都必须待在 platforms/ 这一层。
-    packages = sorted(marker.parent for marker in platforms_dir.rglob("__init__.py"))
+    #    枚举走磁盘（rglob）；git 只用来把「被忽略的产物目录」排除掉。
+    ignored = _ignored_directories()
+    packages = []
+    for marker in platforms_dir.rglob("__init__.py"):
+        package = marker.parent
+        if ignored is not None and any(
+            package.resolve().is_relative_to(directory)
+            for directory in ignored
+        ):
+            continue
+        packages.append(package)
+    packages.sort()
+
     assert packages, "platforms/ 下一个 Python 包都没有——目录结构不对"
     for package in packages:
         assert package.resolve().parents[1] == repo_root, (
