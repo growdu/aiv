@@ -387,7 +387,7 @@ def main():
         'distributed/distributed-storage/haproxy使用extern-check支持伪双写配置验证.md': ['HAProxy', '伪双写'],
         'distributed/distributed-storage/事务管理.md': ['事务管理', '并发控制', '锁'],
         'distributed/field-notes/多地多中心方案调研.md': ['多中心'],
-        'cluster/repmgr网络割裂问题.md': ['repmgr'],
+        'distributed/field-notes/repmgr网络割裂问题.md': ['repmgr'],
     }
 
     # --- database/ (1 file) ---

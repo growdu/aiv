@@ -44,6 +44,7 @@
   "cluster/raft/raft协议动态调整quorum": "distributed/consensus/raft协议动态调整quorum",
   "cluster/raft/raft重要概念": "distributed/consensus/raft重要概念",
   "cluster/raft协议动态调整quorum": "distributed/consensus/raft协议动态调整quorum",
+  "cluster/repmgr网络割裂问题": "distributed/field-notes/repmgr网络割裂问题",
   "cluster/zookeeper/zookeeperC语言API编程指南": "distributed/consensus/zookeeperC语言API编程指南",
   "cluster/zookeeper/zookeeper主备集群demo": "distributed/consensus/zookeeper主备集群demo",
   "cluster/zookeeper/zookeeper使用说明文档": "distributed/consensus/zookeeper使用说明文档",

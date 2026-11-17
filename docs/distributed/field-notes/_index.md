@@ -24,3 +24,4 @@ tags:
 - [sanlock实现共享corosync共享存储仲裁](./sanlock实现共享corosync共享存储仲裁.md)
 - [一台主机运行多个corosync代码分析](./一台主机运行多个corosync代码分析.md)
 - [多地多中心方案调研](./多地多中心方案调研/index.md)
+- [repmgr网络割裂问题](./repmgr网络割裂问题.md)
