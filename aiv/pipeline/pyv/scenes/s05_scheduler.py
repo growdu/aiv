@@ -28,6 +28,15 @@ DISPATCH_STEP = 0.11
 DISPATCH_DELAY = 0.10
 COMMIT_STEP = 0.08
 COMMIT_DELAY = 0.42
+# 一块芯片亮起来有多快（斜率的倒数）
+COMMIT_SPEED = 3.5
+
+
+def _commit_appear(t: float, order: int) -> float:
+    """提交通道里第 order 块芯片的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0,
+                     (t - COMMIT_DELAY - COMMIT_STEP * order) * COMMIT_SPEED)))
 
 
 def worker_of(dispatch: list[list], txn_id: str) -> int:
@@ -90,9 +99,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
 
     step = (lane_x1 - lane_x0) / len(commit_order)
     for order, txn_id in enumerate(commit_order):
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - COMMIT_DELAY - COMMIT_STEP * order) * 3.5))
-        )
+        appear = _commit_appear(t, order)
         cx = lane_x0 + (order + 0.5) * step
         color = MARKER_COLORS[dispatch.index(
             next(row for row in dispatch if row[0] == txn_id))
@@ -101,9 +108,11 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
                      color, alpha=appear)
         text(ctx, txn_id, cx, lane_y + chip_h * 0.22, 32, "#FFFFFF",
              anchor="center", bold=True, alpha=appear)
+        # 箭头**跟着下一块芯片一起亮**：它指着下一块芯片，
+        # 下一块还没出现时，箭头指着的就是空气。
         if order < len(commit_order) - 1:
             arrow(ctx, cx + chip_w / 2, lane_y, cx + step - chip_w / 2, lane_y,
-                  COLORS["accent"], 5, 18, alpha=appear)
+                  COLORS["accent"], 5, 18, alpha=_commit_appear(t, order + 1))
 
     text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
 
@@ -173,9 +182,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     lane_x1 = left + (len(commit_order) - 0.5) * step + lane_chip_w / 2
     rounded_rect(ctx, lane_x0, lane_y, lane_x1 - lane_x0, 6, 3, "#DCE1E8")
     for order, txn_id in enumerate(commit_order):
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - COMMIT_DELAY - COMMIT_STEP * order) * 3.5))
-        )
+        appear = _commit_appear(t, order)
         cx = left + (order + 0.5) * step
         color = MARKER_COLORS[dispatch.index(
             next(row for row in dispatch if row[0] == txn_id))
@@ -185,8 +192,9 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
         scene_layout.line(ctx, txn_id, cx, lane_y + chip_h * 0.22,
                           lane_chip_w - 16, 34, "#FFFFFF", anchor="center",
                           bold=True, alpha=appear)
+        # 箭头**跟着下一块芯片一起亮**（与横版同一规矩）
         if order < len(commit_order) - 1:
             arrow(ctx, cx + lane_chip_w / 2, lane_y,
                   cx + step - lane_chip_w / 2, lane_y, COLORS["accent"], 5, 18,
-                  alpha=appear)
+                  alpha=_commit_appear(t, order + 1))
 

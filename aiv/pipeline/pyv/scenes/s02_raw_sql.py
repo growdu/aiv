@@ -32,6 +32,17 @@ CHIP_PADDING = 12.0
 #: 芯片里的字有多大（装不下就往下收）。
 CHIP_TEXT_SIZE = 28
 
+#: 两端盒子的点亮时序（场景进度）
+BOX_DELAY = 0.08
+BOX_STAGGER = 0.18
+BOX_SPEED = 3.0
+
+
+def _box_appear(t: float, index: int) -> float:
+    """第 index 端盒子的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0, (t - BOX_DELAY - BOX_STAGGER * index) * BOX_SPEED)))
+
 
 def render(ctx, t: float, w: int, h: int, params=None) -> None:
     p = Params(params, "s02")
@@ -53,9 +64,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     for index, (label, x) in enumerate((
             (str(p["source_label"]), w * 0.06),
             (str(p["target_label"]), w * 0.62))):
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - 0.08 - index * 0.18) * 3.0))
-        )
+        appear = _box_appear(t, index)
         rounded_rect(ctx, x, box_y, box_w, box_h, 16, COLORS["primary"],
                      alpha=appear)
         text(ctx, label, x + box_w / 2, box_y + h * 0.075, 38, "#FFFFFF",
@@ -71,10 +80,16 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
                           COLORS["primary"], anchor="center", alpha=appear)
 
     # ---- 中间：写进日志，原样发过去 ----
+    #
+    # **箭头跟着两端一起亮**：这条箭头指向订阅端，订阅端 t=0.26 才出现，
+    # 而箭头原来从 t=0 就是满的——段第一帧是「箭头悬空、指向不存在的
+    # 两端」，约半秒钟。
     lane_y = box_y + box_h * 0.5
-    arrow(ctx, w * 0.40, lane_y, w * 0.60, lane_y, COLORS["accent"], 7, 24)
+    lane_appear = _box_appear(t, 1)
+    arrow(ctx, w * 0.40, lane_y, w * 0.60, lane_y, COLORS["accent"], 7, 24,
+          alpha=lane_appear)
     text(ctx, p["wal_label"], w * 0.50, lane_y - h * 0.045, 38, COLORS["accent"],
-         anchor="center", bold=True)
+         anchor="center", bold=True, alpha=lane_appear)
 
     text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
 
@@ -99,9 +114,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     for index, (label, y) in enumerate((
             (str(p["source_label"]), 250.0),
             (str(p["target_label"]), 790.0))):
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - 0.08 - index * 0.18) * 3.0))
-        )
+        appear = _box_appear(t, index)
         rounded_rect(ctx, left, y, content_w, box_h, 16, COLORS["primary"],
                      alpha=appear)
         scene_layout.line(ctx, label, left + content_w / 2, y + 70,
@@ -120,7 +133,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     # 橙色留给箭头。
     scene_layout.line(ctx, p["wal_label"], left + content_w / 2, 660,
                       content_w - 80, 38, COLORS["primary"], anchor="center",
-                      bold=True)
+                      bold=True, alpha=_box_appear(t, 1))
     arrow(ctx, left + content_w / 2, 690, left + content_w / 2, 780,
-          COLORS["accent"], 7, 24)
+          COLORS["accent"], 7, 24, alpha=_box_appear(t, 1))
 

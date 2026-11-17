@@ -21,177 +21,22 @@
 
 **覆盖。** 六期契约里的全部场景段，横竖两个画幅，跟
 `test_scene_overlap.py` 一样扫 21 个时刻。
+
+插桩本身在 `tests/scene_probe.py`——那里还有做时序检查要用的不透明度。
 """
 from __future__ import annotations
 
 import importlib
 from pathlib import Path
 
-import cairo
 import pytest
 
 from pyv import contract as contract_mod
-from pyv import draw, episodes as episodes_mod, fonts, scene_layout
+from pyv import episodes as episodes_mod
+
+from scene_probe import LANDSCAPE, PORTRAIT, TIMES, Session
 
 ROOT = Path(__file__).resolve().parents[2]
-
-LANDSCAPE = (1920, 1080)
-PORTRAIT = (1080, 1920)
-
-#: 扫的时刻：0.00 到 1.00，步长 0.05。
-TIMES = tuple(round(i * 0.05, 2) for i in range(21))
-
-#: 淡到多少以下就不算「看得见的东西」。
-VISIBLE_ALPHA = 0.6
-
-#: 墨迹允许比底色多出几像素（浮点与描边的余量）。
-TOLERANCE = 0.5
-
-
-class Text:
-    """一处字：墨迹包围盒 + 它自己的颜色 + 画它时的字号。"""
-
-    def __init__(self, s: str, x0: float, y0: float, x1: float, y1: float,
-                 color: str, size: float = 0.0):
-        self.label = s
-        self.x0, self.y0, self.x1, self.y1 = x0, y0, x1, y1
-        self.color = color
-        self.size = size
-
-    @property
-    def cx(self) -> float:
-        return (self.x0 + self.x1) / 2
-
-    @property
-    def cy(self) -> float:
-        return (self.y0 + self.y1) / 2
-
-    def __repr__(self) -> str:
-        return (f"<字「{self.label}」 {self.x0:.0f}→{self.x1:.0f} "
-                f"@{self.y0:.0f}..{self.y1:.0f}>")
-
-
-class Rect:
-    """一块实心底色。"""
-
-    def __init__(self, x: float, y: float, w: float, h: float, color: str):
-        self.x0, self.y0 = x, y
-        self.x1, self.y1 = x + w, y + h
-        self.color = color
-
-    @property
-    def area(self) -> float:
-        return max(0.0, self.x1 - self.x0) * max(0.0, self.y1 - self.y0)
-
-    def holds(self, text: Text) -> bool:
-        """这块底色是不是托着这处字（按中心点判）。"""
-        return (self.x0 <= text.cx <= self.x1
-                and self.y0 <= text.cy <= self.y1)
-
-    def __repr__(self) -> str:
-        return f"<底色 {self.x0:.0f},{self.y0:.0f}→{self.x1:.0f},{self.y1:.0f}>"
-
-
-def _ink_box(ctx, s: str, x: float, y: float, size: float,
-             anchor: str, bold: bool) -> tuple[float, float, float, float]:
-    """量出这行字的**墨迹**包围盒。
-
-    跟 `draw.text` 用同一套度量（`fonts.select_font` 关 hinting、
-    `.width` 居中），不然量出来的位置跟画出来的位置对不上。
-    """
-    fonts.select_font(ctx, bold=bold)
-    ctx.set_font_size(size)
-    width = ctx.text_extents(s).width
-    if anchor == "center":
-        origin = x - width / 2
-    elif anchor == "right":
-        origin = x - width
-    else:
-        origin = x
-    ctx.new_path()
-    ctx.move_to(origin, y)
-    ctx.text_path(s)
-    x0, y0, x1, y1 = ctx.path_extents()
-    ctx.new_path()
-    return x0, y0, x1, y1
-
-
-class Probe:
-    """插桩：把这一帧画过的字与实心底色都记下来。"""
-
-    def __init__(self):
-        self.texts: list[Text] = []
-        self.rects: list[Rect] = []
-
-    def text(self, ctx, s, x, y, size, color, anchor="left", bold=False,
-             alpha=1.0):
-        if alpha >= VISIBLE_ALPHA and s.strip():
-            x0, y0, x1, y1 = _ink_box(ctx, s, x, y, size, anchor, bold)
-            self.texts.append(Text(s, x0, y0, x1, y1, color, size))
-        return None
-
-    def rounded_rect(self, ctx, x, y, w, h, r, color, alpha=1.0):
-        if alpha >= VISIBLE_ALPHA:
-            self.rects.append(Rect(x, y, w, h, color))
-        return None
-
-    # -- 判据 ----------------------------------------------------------
-    def overflows(self) -> list[tuple[Text, Rect, float]]:
-        """字从自己那块底色上溢出去的地方。
-
-        判据：字落在**托着它的最紧那块底色**里（按中心点找，候选里
-        面积最小的那个），但墨迹的左右两边超出了它。
-        """
-        hits = []
-        for text in self.texts:
-            candidates = [r for r in self.rects if r.holds(text)]
-            if not candidates:
-                continue
-            tightest = min(candidates, key=lambda r: r.area)
-            over = max(tightest.x0 - text.x0, text.x1 - tightest.x1)
-            if over > TOLERANCE:
-                hits.append((text, tightest, over))
-        return hits
-
-
-def _probe_frame(renderer, params, t, w, h, monkeypatch, modules=()) -> Probe:
-    """画一帧，把这一帧的字与实心底色都记下来。
-
-    **场景模块各自绑着 `draw.text` / `draw.rounded_rect`**
-    （`from pyv.draw import …` 是在导入时绑定的），所以只补 `pyv.draw`
-    是不够的——每个用到的模块都要单独补一遍。
-    """
-    probe = Probe()
-    original_text = draw.text
-    original_rect = draw.rounded_rect
-
-    def recording_text(ctx, s, x, y, size, color, anchor="left", bold=False,
-                       alpha=1.0):
-        probe.text(ctx, s, x, y, size, color, anchor=anchor, bold=bold,
-                   alpha=alpha)
-        return original_text(ctx, s, x, y, size, color, anchor=anchor,
-                             bold=bold, alpha=alpha)
-
-    def recording_rect(ctx, x, y, w, h, r, color, alpha=1.0):
-        probe.rounded_rect(ctx, x, y, w, h, r, color, alpha=alpha)
-        return original_rect(ctx, x, y, w, h, r, color, alpha=alpha)
-
-    monkeypatch.setattr(draw, "text", recording_text)
-    monkeypatch.setattr(draw, "rounded_rect", recording_rect)
-    # `scene_layout.text` 是 `draw.text` 的别名，`scene_layout.line`
-    # 走的就是它——不补这一处，走 `scene_layout.line` 画出来的字就
-    # 一处都记不上。
-    monkeypatch.setattr(scene_layout, "text", recording_text)
-    for module in modules:
-        if hasattr(module, "text"):
-            monkeypatch.setattr(module, "text", recording_text)
-        if hasattr(module, "rounded_rect"):
-            monkeypatch.setattr(module, "rounded_rect", recording_rect)
-
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
-    ctx = cairo.Context(surface)
-    renderer(ctx, t, w, h, params)
-    return probe
 
 
 def _segments():
@@ -228,9 +73,9 @@ def test_text_stays_inside_its_own_background(episode, segment, orientation,
     w, h = canvas
     renderer, modules = _render_segment(segment)
     params = segment.params
+    session = Session(monkeypatch, modules=modules)
     for t in TIMES:
-        probe = _probe_frame(renderer, params, t, w, h, monkeypatch,
-                             modules=modules)
+        probe = session.frame(renderer, params, t, w, h)
         hits = probe.overflows()
         assert not hits, (
             f"{episode} {segment.id} {orientation} t={t}："
@@ -266,8 +111,8 @@ def test_sql_chip_keeps_its_declared_font_size(monkeypatch):
     ddl = str(segment.params["ddl_text"])
     renderer, modules = _render_segment(segment)
     w, h = LANDSCAPE
-    probe = _probe_frame(renderer, segment.params, 1.0, w, h, monkeypatch,
-                         modules=modules)
+    session = Session(monkeypatch, modules=modules)
+    probe = session.frame(renderer, segment.params, 1.0, w, h)
     drawn = [t for t in probe.texts if t.label == ddl]
     assert drawn, f"画面上没画那段 SQL：{ddl}"
     for text in drawn:
