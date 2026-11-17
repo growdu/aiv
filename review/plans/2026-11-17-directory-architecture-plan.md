@@ -1268,6 +1268,27 @@ def load_outbox_index(outbox_root) -> OutboxIndex:
 `root / "platforms" / "wechat" / "secrets.json"`；
 那张环境变量表的 `secrets_file` 一行同步改。
 
+**还有一句 docstring 会因为本任务变成假话——必须在这里改，不许留给 Task 6。**
+`schedule.py:137-138` 现在写的是：
+
+```
+    状态目录一改，``schedule.json`` 与 ``outbox/`` **都跟着走**——
+    outbox 不是钉死在 ``$PUBLISH_REPO/publish/outbox`` 的。
+```
+
+本任务之后 outbox **不再跟状态目录走**，这句话就是**假话**。
+Task 6 的兜底 grep 只认 `publish/outbox` 这个**字面量**——
+它能把路径改掉，**改不掉这句行为描述**。所以：
+
+```python
+    状态目录一改，``schedule.json`` **跟着走**，``outbox/`` 不跟——
+    outbox 住在平台目录里（``<仓库>/platforms/<平台>/outbox/``），是入库的发布记录。
+```
+
+**顺带确认一下**：那张环境变量表里**没有** outbox 那一行
+（`resolve_config` 只读 `PUBLISH_REPO` / `PUBLISH_SECRETS` / `PUBLISH_STATE_DIR`）——
+**不要给表加行**。
+
 - [ ] **Step 4: 改契约层的命令与写盘**
 
 `publish/publishkit/cli.py`：
@@ -1356,6 +1377,31 @@ def test_read_outbox_finds_the_real_snapshots():
 > 「入库目录里只允许有 git 跟踪的文件」这条判据**永远通过**——
 > 守卫自己瞎了。
 
+> **`platforms/toutiao/tests/conftest.py` 的 pathspec 是「自动推」的——不要手改。**
+> 它的 `_tracked_files()` 用 `str(directory.relative_to(REPO_ROOT))` 推出 pathspec，
+> 所以**改 `OUTBOX_DIR` 常量就够了**。
+> 同一个概念在两个文件里是**两种写法**——别把 douyin 的做法套到 toutiao 上。
+>
+> **但 `platforms/toutiao/tests/conftest.py` 还有一个 `PACKAGES_DIR` 要确认**：
+> ```python
+> PACKAGES_DIR = REPO_ROOT / "toutiao" / "out"
+> WRITABLE_IN_THE_REPOSITORY = (OUTBOX_DIR, PACKAGES_DIR)
+> ```
+> Task 2 应该已经把它改成 `REPO_ROOT / "platforms" / "toutiao" / "out"`。
+> **Task 4 要确认**——`WRITABLE_IN_THE_REPOSITORY` 里的目录如果指空，
+> `the_repository_is_never_written_to` 这个 session 级 fixture 的
+> `snapshot()` 会走 `else: seen[directory] = set()` 分支——
+> **它盯的那个目录等于没盯**。
+
+> **记一笔：douyin 的守卫覆盖范围会变窄。**
+> 迁移前 douyin 的守卫盯的是**整个共享的** `publish/outbox/`——
+> douyin 的测试往 `publish/outbox/xxx__toutiao.json` 写东西**会被它抓到**。
+> 迁移后它只盯 `platforms/douyin/outbox/`，
+> douyin 的测试若往 `platforms/toutiao/outbox/` 写，**douyin 的守卫抓不到**
+> （toutiao 自己的 conftest 抓得到，但那是另一个测试进程）。
+> 这是**有意不修**——共享 outbox 本来就不是好设计——
+> 但**要在 Task 4 的报告里写一句**，让后来的人知道这是有意为之。
+
 > **browser 的 `DEFAULT_OUTBOX` 不是「平台根」——它是头条号那一个目录。**
 > `browser/browser/cli.py:435` 把它传给 `cmd_toutiao_images`，
 > 那条命令做的是 `outbox_dir.glob("*__toutiao.json")`——**单目录 glob**。
@@ -1382,8 +1428,30 @@ def test_read_outbox_finds_the_real_snapshots():
 REPO_OUTBOX = REPO_ROOT / "platforms"
 ```
 
-并把该文件里断言 `config.outbox_dir == root / "publish" / "outbox"` 的两处改成
-`config.outbox_root == root / "platforms"`。
+**但这个文件里 `REPO_OUTBOX` 和 `config.outbox_dir` 一共出现了七处**——
+一句话的指令覆盖不了一个文件里的七处用法。逐处过：
+
+| 位置 | 现状 | 改成 |
+| --- | --- | --- |
+| `:43` `REPO_OUTBOX` | `REPO_ROOT / "publish" / "outbox"` | `REPO_ROOT / "platforms"` |
+| `:163` | `assert config.outbox_dir == root / "publish" / "outbox"` | `assert config.outbox_root == root / "platforms"` |
+| `:184` | `assert config.outbox_dir == tmp_path / "state" / "outbox"`（**语义变了**：outbox 不再跟状态目录走） | `assert config.outbox_root == tmp_path / "platforms"`，上面那句注释也要改 |
+| `:197` | `outbox_dir=tmp_path / "other-outbox"`（`resolve_config` 的关键字） | `outbox_root=` |
+| `:207` | `assert config.outbox_dir == tmp_path / "other-outbox"` | `assert config.outbox_root == ...` |
+| `:478` | `pytest.skip("仓库里没有 publish/outbox/")` | `pytest.skip("仓库里没有 platforms/")` |
+| `:481` | `for path in sorted(REPO_OUTBOX.glob("*.json")):` | `for path in sorted(REPO_OUTBOX.glob("*/outbox/*.json")):` |
+| `:617-618` | `outbox = root / "publish" / "outbox"` + `write_snapshot(outbox, ...)` | `outbox = root / "platforms" / "toutiao" / "outbox"` |
+| `:622` | `load_outbox_index(config.outbox_dir)` | `load_outbox_index(config.outbox_root)` |
+
+> **`:481` 那一处不改，测试会红**：快照搬进 `platforms/<plat>/outbox/` 之后，
+> 在 `platforms/` 顶层 glob `"*.json"` 一个都找不到 → `assert checked > 0` 失败。
+>
+> **`:617` 那一处不改，测试也会红，但症状更误导**：新扫描器扫的是
+> `root/platforms/*/outbox/*.json`，而快照被写在了 `root/publish/outbox/` →
+> 索引是空的 → 调度器认为这篇**没发过** → 选了错的平台。
+>
+> **`assert checked > 0` 不要改成 `assert checked == 567`**——这条用例的 docstring 明说
+> 「master 上多出快照时它自动多验几条，不用改测试」。数量由 Step 1 的新守卫钉住。
 
 - [ ] **Step 8: 跑测试**
 
