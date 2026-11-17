@@ -81,6 +81,7 @@
     "cluster/corosync/totem协议详解.md": "distributed/consensus/totem协议详解.md",
     "cluster/ha/业界高可用解决方案.md": "distributed/selection/业界高可用解决方案.md",
     "cluster/raft协议动态调整quorum.md": "distributed/consensus/raft协议动态调整quorum.md",
+    "cluster/repmgr网络割裂问题.md": "distributed/field-notes/repmgr网络割裂问题.md",
     "cluster/两地三中心技术指标分析.md": "distributed/ha-and-dr/两地三中心技术指标分析.md",
     "cluster/主流分布式高可用方案.md": "distributed/selection/主流分布式高可用方案.md",
     "cluster/从两地三中心到OceanBase的多地多中心 - 墨天轮.md": "distributed/distributed-storage/从两地三中心到OceanBase的多地多中心 - 墨天轮.md",
