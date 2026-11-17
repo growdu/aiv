@@ -310,7 +310,7 @@ mindmap
 | PostgreSQL(旧) | [docs/pgsql/(/categories/%E6%BA%90%E7%A0%81%E4%B8%BB%E7%BA%BF/PostgreSQL/) |
 | openGauss(旧) | [docs/openguass/(../openguass/index.html) |
 | 集群 / HA | [docs/cluster/(../cluster/index.html) |
-| Linux 内核 | [docs/linux/(../linux/index.html) |
+| Linux 内核 | [docs/source-tracks/linux/](/categories/%E6%BA%90%E7%A0%81%E4%B8%BB%E7%BA%BF/Linux/) |
 
 ## 参考
 - PostgreSQL 官方文档 [postgresql.org/docs/18](https://www.postgresql.org/docs/18/)

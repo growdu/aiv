@@ -224,10 +224,7 @@
       "goal": "走完这条线，你能用 GDB 和 perf 把一个「系统卡了」的问题定位到具体的内核路径。",
       "track_match": [
         {
-          "path_prefix": "linux/"
-        },
-        {
-          "path_prefix": "network/"
+          "path_prefix": "source-tracks/linux/"
         },
         {
           "path_prefix": "storage/"
@@ -250,10 +247,7 @@
           "goal": "命令、目录、脚本、SSH —— 每天都要用的那部分先扎实。",
           "match": [
             {
-              "path_regex": "^linux/(linux目录介绍|linux常用高级命令|shell使用|解决SSH连接Linux超时自动断开|linux下svn吐血指北|本地git仓库|centos搭建离线仓库|银河麒麟V10 远程桌面_银河麒麟v10远程桌面-CSDN博客)$"
-            },
-            {
-              "path_regex": "^linux/(logrotate机制详解|git指北|git高级指北|linux下RANDOM和uuid的区别)$"
+              "path_prefix": "source-tracks/linux/daily-ops/"
             },
             {
               "path_prefix": "computer_communication/"
@@ -266,10 +260,7 @@
           "goal": "进程地址空间、分配器、库的装载与链接 —— 程序为什么会 OOM。",
           "match": [
             {
-              "path_prefix": "linux/ebpf/"
-            },
-            {
-              "path_regex": "^linux/(linux内存管理指北|内存管理之dlmalloc|linux cache指北|linux巨页内存指北|不得不知道的linux库的装载、链接)$"
+              "path_prefix": "source-tracks/linux/memory-and-linking/"
             },
             {
               "path_regex": "^base/(design-pattern|sql)$"
@@ -285,13 +276,7 @@
           "goal": "内核怎么调度、字符设备怎么写、模块怎么加载。",
           "match": [
             {
-              "path_regex": "^linux/(linux内核指北|linux内核模块指北|linux字符设备指北|linux锁指北|linux系统接口|kconfig和kbuild指北|gcc attribute指北|uboot指北|linux数据预取|linuxUIO指北|linux ptp指北|linux socket编程指北)$"
-            },
-            {
-              "path_regex": "^linux/(kernel)$"
-            },
-            {
-              "path_regex": "^linux/(kernel/qemu-busybox调试linux|cpu-affinity-top-guide)$"
+              "path_prefix": "source-tracks/linux/kernel-internals/"
             }
           ]
         },
@@ -301,13 +286,10 @@
           "goal": "TCP/IP 到底怎么跑，MTU 为什么会把人坑到外网不通。",
           "match": [
             {
-              "path_prefix": "network/"
+              "path_prefix": "source-tracks/linux/networking/"
             },
             {
               "path_prefix": "protocol/"
-            },
-            {
-              "path_regex": "^linux/(vlan使用指北|抓包指北)$"
             }
           ]
         },
@@ -317,10 +299,10 @@
           "goal": "本地文件怎么组织，NFS/Samba 怎么配。",
           "match": [
             {
-              "path_prefix": "storage/"
+              "path_prefix": "source-tracks/linux/filesystem/"
             },
             {
-              "path_regex": "^linux/lvm详解$"
+              "path_prefix": "storage/"
             }
           ]
         }

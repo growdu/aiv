@@ -1,6 +1,7 @@
 {
   "category_redirects": {
     "BenchmarkSQL 基准测试": "源码主线/PostgreSQL/扩展、性能与生态",
+    "Linux": "源码主线/Linux",
     "PostgreSQL": "源码主线/PostgreSQL",
     "PostgreSQL 共享内存机制(深入版)": "源码主线/PostgreSQL/存储引擎",
     "PostgreSQL 源码修炼之路": "源码主线/PostgreSQL",
@@ -8,7 +9,8 @@
     "PostgreSQL 逻辑解码完整目录": "源码主线/PostgreSQL/逻辑复制与流式",
     "数据库": "源码主线/PostgreSQL",
     "数据库深入": "源码主线/PostgreSQL",
-    "数据库深入/数据库": "源码主线/PostgreSQL"
+    "数据库深入/数据库": "源码主线/PostgreSQL",
+    "网络": "源码主线/Linux/网络协议与抓包"
   },
   "dir_map": {
     "db/benchmarksql/": "source-tracks/postgresql/extensions-perf/",
@@ -20,6 +22,9 @@
     "db/performance/": "source-tracks/postgresql/extensions-perf/",
     "db/sqlserver/": "source-tracks/postgresql/logical-replication/sqlserver/",
     "db/taos/": "source-tracks/postgresql/extensions-perf/",
+    "linux/ebpf/": "source-tracks/linux/memory-and-linking/ebpf/",
+    "linux/kernel/": "source-tracks/linux/kernel-internals/kernel/",
+    "network/": "source-tracks/linux/networking/",
     "pgsql/debug/": "source-tracks/postgresql/getting-started/",
     "pgsql/executor/": "source-tracks/postgresql/index-and-query/",
     "pgsql/extension/": "source-tracks/postgresql/extensions-perf/",
@@ -35,15 +40,17 @@
     "pgsql/storage/full_page_writes/": "source-tracks/postgresql/wal-and-recovery/full_page_writes/"
   },
   "drop_index": [
+    "db/_index.md",
     "db/benchmarksql/_index.md",
     "db/linux-shared-memory/_index.md",
     "db/logical_decode/_index.md",
+    "db/opengauss-csn-total-ordering/_index.md",
+    "db/opengauss-parallel-decoding-design/_index.md",
     "db/postgresql/_index.md",
     "db/postgresql/learning-path/_index.md",
-    "pgsql/_index.md",
-    "db/_index.md",
-    "db/opengauss-csn-total-ordering/_index.md",
-    "db/opengauss-parallel-decoding-design/_index.md"
+    "linux/_index.md",
+    "network/_index.md",
+    "pgsql/_index.md"
   ],
   "file_map": {
     "database/citus-columnar-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/citus-columnar-deep-dive/index.md",
@@ -153,6 +160,39 @@
     "db/postgresql/逻辑复制性能测试.md": "source-tracks/postgresql/logical-replication/逻辑复制性能测试.md",
     "db/命名空间.md": "source-tracks/postgresql/getting-started/命名空间.md",
     "db/多数据库模式命名空间问题.md": "source-tracks/postgresql/getting-started/多数据库模式命名空间问题.md",
+    "linux/centos搭建离线仓库.md": "source-tracks/linux/daily-ops/centos搭建离线仓库.md",
+    "linux/cpu-affinity-top-guide/index.md": "source-tracks/linux/kernel-internals/cpu-affinity-top-guide/index.md",
+    "linux/gcc attribute指北.md": "source-tracks/linux/kernel-internals/gcc attribute指北.md",
+    "linux/git指北.md": "source-tracks/linux/daily-ops/git指北.md",
+    "linux/git高级指北.md": "source-tracks/linux/daily-ops/git高级指北.md",
+    "linux/kconfig和kbuild指北.md": "source-tracks/linux/kernel-internals/kconfig和kbuild指北.md",
+    "linux/linux cache指北.md": "source-tracks/linux/memory-and-linking/linux cache指北.md",
+    "linux/linux ptp指北.md": "source-tracks/linux/kernel-internals/linux ptp指北.md",
+    "linux/linux socket编程指北.md": "source-tracks/linux/kernel-internals/linux socket编程指北.md",
+    "linux/linuxUIO指北.md": "source-tracks/linux/kernel-internals/linuxUIO指北.md",
+    "linux/linux下RANDOM和uuid的区别.md": "source-tracks/linux/daily-ops/linux下RANDOM和uuid的区别.md",
+    "linux/linux下svn吐血指北.md": "source-tracks/linux/daily-ops/linux下svn吐血指北.md",
+    "linux/linux内存管理指北.md": "source-tracks/linux/memory-and-linking/linux内存管理指北.md",
+    "linux/linux内核指北.md": "source-tracks/linux/kernel-internals/linux内核指北.md",
+    "linux/linux内核模块指北.md": "source-tracks/linux/kernel-internals/linux内核模块指北.md",
+    "linux/linux字符设备指北.md": "source-tracks/linux/kernel-internals/linux字符设备指北.md",
+    "linux/linux巨页内存指北.md": "source-tracks/linux/memory-and-linking/linux巨页内存指北.md",
+    "linux/linux常用高级命令.md": "source-tracks/linux/daily-ops/linux常用高级命令.md",
+    "linux/linux数据预取.md": "source-tracks/linux/kernel-internals/linux数据预取.md",
+    "linux/linux目录介绍.md": "source-tracks/linux/daily-ops/linux目录介绍.md",
+    "linux/linux系统接口.md": "source-tracks/linux/kernel-internals/linux系统接口.md",
+    "linux/linux锁指北.md": "source-tracks/linux/kernel-internals/linux锁指北.md",
+    "linux/logrotate机制详解.md": "source-tracks/linux/daily-ops/logrotate机制详解.md",
+    "linux/lvm详解.md": "source-tracks/linux/filesystem/lvm详解.md",
+    "linux/shell使用.md": "source-tracks/linux/daily-ops/shell使用.md",
+    "linux/uboot指北.md": "source-tracks/linux/kernel-internals/uboot指北.md",
+    "linux/vlan使用指北.md": "source-tracks/linux/networking/vlan使用指北.md",
+    "linux/不得不知道的linux库的装载、链接.md": "source-tracks/linux/memory-and-linking/不得不知道的linux库的装载、链接.md",
+    "linux/内存管理之dlmalloc.md": "source-tracks/linux/memory-and-linking/内存管理之dlmalloc.md",
+    "linux/抓包指北.md": "source-tracks/linux/networking/抓包指北.md",
+    "linux/本地git仓库.md": "source-tracks/linux/daily-ops/本地git仓库.md",
+    "linux/解决SSH连接Linux超时自动断开.md": "source-tracks/linux/daily-ops/解决SSH连接Linux超时自动断开.md",
+    "linux/银河麒麟V10 远程桌面_银河麒麟v10远程桌面-CSDN博客.md": "source-tracks/linux/daily-ops/银河麒麟V10 远程桌面_银河麒麟v10远程桌面-CSDN博客.md",
     "pgsql/PostgreSQL 时间线解析.md": "source-tracks/postgresql/wal-and-recovery/PostgreSQL 时间线解析.md",
     "pgsql/Postgres中postmaster代码解析(--boot和--single).md": "source-tracks/postgresql/getting-started/Postgres中postmaster代码解析(--boot和--single).md",
     "pgsql/checkpoint机制浅析.md": "source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
@@ -174,11 +214,55 @@
     "pgsql/wal机制浅析.md": "source-tracks/postgresql/wal-and-recovery/wal机制浅析.md",
     "pgsql/数据库崩溃恢复.md": "source-tracks/postgresql/wal-and-recovery/数据库崩溃恢复.md"
   },
-  "note": "PostgreSQL 试点迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。",
+  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。",
   "out_map": {
     "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
     "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md"
   },
+  "projects": [
+    {
+      "display_name": "PostgreSQL",
+      "series": {
+        "extensions-perf": "扩展、性能与生态",
+        "getting-started": "起步与全景",
+        "index-and-query": "索引与查询",
+        "logical-replication": "逻辑复制与流式",
+        "replication-ha": "复制与高可用",
+        "storage-engine": "存储引擎",
+        "transaction-mvcc": "事务与并发",
+        "wal-and-recovery": "WAL 与恢复"
+      },
+      "series_meta": {
+        "extensions-perf": "扩展、性能与生态：pgvector、pgbench、火焰图与周边工具链。",
+        "getting-started": "先知道它是什么、怎么跑起来、整体长什么样 —— 这一站不碰源码细节。",
+        "index-and-query": "一条 SQL 从解析到拿到结果，中间经过哪些索引与执行器结构。",
+        "logical-replication": "逻辑复制与流式：解码、apply、并行 apply 与 DDL 同步。",
+        "replication-ha": "复制与高可用：流复制、复制槽、主备切换与 repmgr。",
+        "storage-engine": "页、文件与内存：数据在磁盘上长什么样，缓冲区与共享内存怎么管。",
+        "transaction-mvcc": "事务、MVCC 与并发：可见性判断、行锁、闩锁与快照。",
+        "wal-and-recovery": "WAL、checkpoint 与恢复：写前日志怎么保证崩溃后能redo出来。"
+      },
+      "target_root": "source-tracks/postgresql"
+    },
+    {
+      "display_name": "Linux",
+      "series": {
+        "daily-ops": "日常操作与工具",
+        "filesystem": "存储与文件系统",
+        "kernel-internals": "内核机制与驱动",
+        "memory-and-linking": "内存与动态链接",
+        "networking": "网络协议与抓包"
+      },
+      "series_meta": {
+        "daily-ops": "日常操作与工具：命令、目录、脚本、SSH —— 每天都要用的那部分先扎实。",
+        "filesystem": "存储与文件系统：本地文件怎么组织，NFS/Samba 怎么配。",
+        "kernel-internals": "内核机制与驱动：内核怎么调度、字符设备怎么写、模块怎么加载。",
+        "memory-and-linking": "内存与动态链接：进程地址空间、分配器、库的装载与链接 —— 程序为什么会 OOM。",
+        "networking": "网络协议与抓包：TCP/IP 到底怎么跑，MTU 为什么会把人坑到外网不通。"
+      },
+      "target_root": "source-tracks/linux"
+    }
+  ],
   "ref_rewrites": [
     {
       "file": "tools/sync-hexo.py",
@@ -239,29 +323,12 @@
     {
       "file": "publish/tests/test_manifest.py",
       "form": "cid"
+    },
+    {
+      "file": "tests/test_review_check.py",
+      "form": "docs"
     }
   ],
-  "series": {
-    "extensions-perf": "扩展、性能与生态",
-    "getting-started": "起步与全景",
-    "index-and-query": "索引与查询",
-    "logical-replication": "逻辑复制与流式",
-    "replication-ha": "复制与高可用",
-    "storage-engine": "存储引擎",
-    "transaction-mvcc": "事务与并发",
-    "wal-and-recovery": "WAL 与恢复"
-  },
-  "series_meta": {
-    "extensions-perf": "扩展、性能与生态：pgvector、pgbench、火焰图与周边工具链。",
-    "getting-started": "先知道它是什么、怎么跑起来、整体长什么样 —— 这一站不碰源码细节。",
-    "index-and-query": "一条 SQL 从解析到拿到结果，中间经过哪些索引与执行器结构。",
-    "logical-replication": "逻辑复制与流式：解码、apply、并行 apply 与 DDL 同步。",
-    "replication-ha": "复制与高可用：流复制、复制槽、主备切换与 repmgr。",
-    "storage-engine": "页、文件与内存：数据在磁盘上长什么样，缓冲区与共享内存怎么管。",
-    "transaction-mvcc": "事务、MVCC 与并发：可见性判断、行锁、闩锁与快照。",
-    "wal-and-recovery": "WAL、checkpoint 与恢复：写前日志怎么保证崩溃后能redo出来。"
-  },
-  "target_root": "source-tracks/postgresql",
   "updated": "2026-11-17",
   "version": 1
 }

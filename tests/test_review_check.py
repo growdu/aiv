@@ -172,7 +172,7 @@ REVIEWED_ARTICLES = (
     "docs/base/file.md",
     "docs/cluster/corosync/corosync-down网卡仍处于多数派/index.md",
     "docs/cluster/kingbase/tptc.md",
-    "docs/network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
+    "docs/source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
     "docs/source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
 )
 
@@ -599,6 +599,39 @@ def test_fig_01_counts_a_node_whose_name_starts_with_end(tmp_path):
     """回归：``end`` 是收尾一个 subgraph 的关键字，不能把 ``endpoint`` 也吞掉。"""
     module = load_tool()
     assert module._mermaid_size("graph TB\n    endpoint --> server\n") == (2, 2, 1)
+
+
+def test_fig_01_longest_path_is_stable_on_a_graph_with_a_cycle():
+    """回归：图里有环时，最长路径必须每次算出同一个数。
+
+    早先的实现用「在途标记」在 DFS 里当场截断环，而 DFS 从哪个框出发
+    取决于 ``set`` 的迭代顺序 —— 字符串的哈希每进程随机，于是同一张图
+    在不同进程里算出不同的路径长度（实测 3 / 4 / 5 都出现过）。
+    FIG-01 命中与否跟着抖，审校台账上的 warn 数也跟着抖：
+    同一棵树连跑四次，warn 在 509 与 510 之间来回跳。
+
+    这张图的最长简单路径是 4 个框：A→B→D→E（环 A→B→C→A 只能算一次）。
+    """
+    snippet = (
+        "import importlib.util, sys\n"
+        f"spec = importlib.util.spec_from_file_location('review_check', {str(TOOL)!r})\n"
+        "m = importlib.util.module_from_spec(spec)\n"
+        "sys.modules['review_check'] = m\n"
+        "spec.loader.exec_module(m)\n"
+        "print(m._longest_path({'A','B','C','D','E'},"
+        " [('A','B'),('B','C'),('C','A'),('B','D'),('D','E')]))\n"
+    )
+    values = set()
+    for seed in ("1", "2", "3", "4", "5", "6"):
+        env = dict(os.environ, PYTHONHASHSEED=seed)
+        proc = subprocess.run(
+            [sys.executable, "-c", snippet],
+            capture_output=True, encoding="utf-8", errors="replace",
+            cwd=REPO_ROOT, env=env,
+        )
+        values.add(proc.stdout.strip())
+    assert len(values) == 1, f"同一张图在不同哈希种子下算出不同的结果：{values}"
+    assert values == {"4"}
 
 
 def test_fig_01_flags_an_over_long_mindmap(tmp_path):
