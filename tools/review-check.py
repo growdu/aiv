@@ -577,35 +577,63 @@ def _mermaid_graph(body: str) -> tuple[set[str], list[tuple[str, str]]]:
 def _longest_path(nodes: set[str], edges: list[tuple[str, str]]) -> int:
     """顺着一路走最多能经过几个框。
 
-    图里可能有环（重试、回滚），所以用 DFS 记忆化 + 在途标记把环截断。
-    截断后算出来的是「不重复经过同一个框」的最长路径——环上转一圈
+    图里可能有环（重试、回滚），所以先把环切掉再算路径：环上转一圈
     不算变长，这正是「这条路有多长」该有的意思。
+
+    **切环必须确定性**：早先的实现用「在途标记」在 DFS 里遇到环就当场截断，
+    而 DFS 从哪个框出发取决于 ``set`` 的迭代顺序 —— 字符串的哈希每进程随机，
+    于是同一张图每次跑出来的路径长度可能差 1，FIG-01 命中与否也跟着抖。
+    （实测：同一棵树上连跑四次，warn 信号 509 与 510 之间来回跳。）
+
+    现在改成标准做法：先做一次确定性 DFS，把「指向在途节点的边」（回边）
+    标出来删掉，剩下的图一定是 DAG，再在 DAG 上算最长路径。
+    起点与后继都按 id 排序，于是同一张图永远得到同一个数。
     """
     adjacency: dict[str, list[str]] = {}
     for src, dst in edges:
-        adjacency.setdefault(src, []).append(dst)
+        adjacency.setdefault(src, set()).add(dst)
+    adjacency = {src: sorted(dsts) for src, dsts in adjacency.items()}
+
+    # 1) 确定性 DFS：找出回边（指向在途节点的边）
+    color: dict[str, int] = {}          # 0 未访问 / 1 在途 / 2 已完成
+    back_edges: set[tuple[str, str]] = set()
+
+    def classify(start: str) -> None:
+        stack = [(start, iter(adjacency.get(start, ())))]
+        color[start] = 1
+        while stack:
+            node, it = stack[-1]
+            nxt = next(it, None)
+            if nxt is None:
+                color[node] = 2
+                stack.pop()
+                continue
+            state = color.get(nxt, 0)
+            if state == 0:
+                color[nxt] = 1
+                stack.append((nxt, iter(adjacency.get(nxt, ()))))
+            elif state == 1:
+                back_edges.add((node, nxt))
+
+    for node in sorted(nodes):
+        if color.get(node, 0) == 0:
+            classify(node)
+
+    # 2) DAG 上的最长路径（记忆化）
     memo: dict[str, int] = {}
-    on_stack: set[str] = set()
 
     def walk(node: str) -> int:
         if node in memo:
             return memo[node]
-        if node in on_stack:
-            # 回到在途的框：这里有环。贡献 0 个新框——那个框已经被算过了，
-            # 环上转一圈不会让路径变得更长。
-            return 0
-        on_stack.add(node)
         best = 1
         for nxt in adjacency.get(node, ()):
+            if (node, nxt) in back_edges:
+                continue
             best = max(best, 1 + walk(nxt))
-        on_stack.discard(node)
         memo[node] = best
         return best
 
-    longest = 1
-    for node in nodes:
-        longest = max(longest, walk(node))
-    return longest
+    return max((walk(node) for node in sorted(nodes)), default=1)
 
 
 def _max_fanout(edges: list[tuple[str, str]]) -> int:
