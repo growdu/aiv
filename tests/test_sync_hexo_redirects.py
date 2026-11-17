@@ -1,9 +1,13 @@
-"""重定向页生成器的两条硬规矩（tools/sync-hexo.py）。
+"""重定向页生成器的三条硬规矩（tools/sync-hexo.py）。
 
 一是**旧 URL 必须还在**：文章换了目录、分类改了名，旧链接要能跳到新地方，
 所以生成器在旧路径上放一个 meta refresh 的静态页。
 
-二是**产物必须传得上去**：GitHub 的 upload-artifact / upload-pages-artifact
+二是**日期段要对得上**：重定向页默认落在新文件的日期段上（文章搬家时
+日期不变）；旧 URL 的日期跟新文件对不上时（合并两篇逐字节相同的重复
+文章就会碰上），键里可以带一段日期，照它写。
+
+三是**产物必须传得上去**：GitHub 的 upload-artifact / upload-pages-artifact
 拒绝含文件名非法字符（``: * ? " < > |``）的路径 —— 一个带冒号的目录就能让
 整个部署断在那里。2026-11-17 的 Deploy Hexo 就是这么断的：旧分类
 「PostgreSQL 源码修炼之路:内核深度拆解专题」生成出来的目录带了冒号，
@@ -80,3 +84,30 @@ def test_article_redirect_with_an_illegal_filename_char_is_skipped(sync, out_dir
     sync.REDIRECTS["旧路径:带冒号"] = "新路径"
     assert sync.write_redirects() == 0
     assert not (out_dir / "2026").exists()
+
+
+def test_redirect_with_a_dated_key_lands_on_the_old_date(sync, out_dir, monkeypatch):
+    """键里带日期的重定向：页面落在**旧 URL 当初的日期段**上。
+
+    合并两篇逐字节相同的重复文章时，合并后的那篇只有一个日期 ——
+    另一个旧 URL 的日期段跟它对不上。不带日期的键会落在错的地址上，
+    真正的旧地址就 404 了；键里带上日期才落得准。
+    """
+    monkeypatch.setattr(sync, "_redirect_target_file", lambda p: "docs/merged/index.md")
+    monkeypatch.setattr(sync, "git_date", lambda p: "2022-06-13 16:14:13")
+    sync.REDIRECTS["2022/10/25/cluster/raft/旧文章"] = "merged/新文章"
+    assert sync.write_redirects() == 1
+    page = out_dir / "2022" / "10" / "25" / "cluster" / "raft" / "旧文章" / "index.md"
+    assert page.is_file()
+    # 指向的是新文章自己的地址
+    assert "/2022/06/13/merged/" in page.read_text(encoding="utf-8")
+
+
+def test_redirect_without_a_date_still_uses_the_new_files_date(sync, out_dir, monkeypatch):
+    """普通键不受影响 —— 页面照旧落在新文件的日期段上。"""
+    monkeypatch.setattr(sync, "_redirect_target_file", lambda p: "docs/merged/index.md")
+    monkeypatch.setattr(sync, "git_date", lambda p: "2022-06-13 16:14:13")
+    sync.REDIRECTS["cluster/raft/旧文章"] = "merged/新文章"
+    assert sync.write_redirects() == 1
+    assert (out_dir / "2022" / "06" / "13" / "cluster" / "raft" / "旧文章"
+            / "index.md").is_file()

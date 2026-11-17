@@ -259,7 +259,7 @@ def test_image_size_is_sniffed_from_the_content_not_the_extension():
     if node is None:
         pytest.skip("没有 node，跳过 JS 侧校验")
 
-    sample = REPO / "docs" / "cluster" / "ha" / "ha元信息常见存储方式" / "img" / "oceanbase_arch.png"
+    sample = REPO / "docs" / "distributed" / "ha-and-dr" / "ha元信息常见存储方式" / "img" / "oceanbase_arch.png"
     assert sample.is_file(), f"样本图片不见了：{sample}"
     assert sample.read_bytes()[:3] == b"\xff\xd8\xff", "样本不再是 JPEG 内容的 .png"
 

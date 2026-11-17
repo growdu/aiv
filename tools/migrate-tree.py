@@ -67,6 +67,12 @@ DATE_FILE = "data/date-overrides.json"
 LINK_RE = re.compile(r"(?<!!)\[([^\]]*)\]\(([^)]+)\)")
 IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 
+#: 重定向表里**带日期的键**（``2022/10/25/cluster/raft/…``）—— 旧 URL
+#: 当初发布时的日期段。跟 ``tools/sync-hexo.py`` 的 ``DATED_REDIRECT_RE``
+#: 是同一套写法（两处各写一份，是有意付的重复：迁移脚本不 import 站点
+#: 脚本，站点脚本也不 import 迁移脚本）。
+DATED_REDIRECT_RE = re.compile(r"^(?P<stamp>\d{4}/\d{2}/\d{2})/(?P<path>.+)$")
+
 EXTERNAL_PREFIXES = (
     "http://", "https://", "data:", "mailto:", "tel:", "ftp://",
     "javascript:", "about:", "//", "#",
@@ -80,6 +86,19 @@ EXTERNAL_PREFIXES = (
 
 def load_migration(path=None):
     with open(os.path.join(REPO, path or MIGRATION_FILE), encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def load_redirects(path="data/redirects.json"):
+    """现存的 ``data/redirects.json``（重写之前的那一份）。
+
+    带日期的键是手工补的，重写时得留着 —— ``build_redirects`` 只从
+    ``moves`` 推得出普通的键。
+    """
+    full = os.path.join(REPO, path)
+    if not os.path.exists(full):
+        return {}
+    with open(full, encoding="utf-8") as fh:
         return json.load(fh)
 
 
@@ -774,11 +793,26 @@ def permalink_path(rel):
     return stem
 
 
-def build_redirects(moves):
-    """旧 permalink 路径 → 新 permalink 路径。"""
+def build_redirects(moves, existing=None):
+    """旧 permalink 路径 → 新 permalink 路径。
+
+    ``existing`` 是上一轮的 ``data/redirects.json``：**带日期的键**
+    （``2022/10/25/cluster/raft/…``）是手工补的 —— 合并两篇逐字节相同的
+    重复文章时，旧 URL 的日期段跟新文件对不上，键里带上日期才落得准。
+    ``moves`` 推不出这种条目，所以从旧表里留着；同一条路径的普通键
+    （日期由新文件决定，落错地方的那个）去掉，免得白生成一个多余的页面。
+    """
     out = {}
     for old_rel, new_rel in sorted(moves.items()):
         out[permalink_path(old_rel)] = permalink_path(new_rel)
+    dated = {}
+    for key, value in (existing or {}).items():
+        m = DATED_REDIRECT_RE.match(key)
+        if not m:
+            continue
+        dated[key] = value
+        out.pop(m.group("path"), None)
+    out.update(dated)
     return out
 
 
@@ -990,7 +1024,7 @@ def main():
     write_index_files(table, moves, report)
 
     # 5. 常量补丁
-    redirects = build_redirects(moves)
+    redirects = build_redirects(moves, load_redirects())
     date_overrides = build_date_overrides(moves, dates_before,
                                           table.get("out_map", {}))
     cat_redirects = build_category_redirects(table)

@@ -1997,6 +1997,16 @@ def _site_encode_url(path):
 #: 连着两个 push 没上成线）。
 INVALID_PATH_CHARS = ':*?"<>|'
 
+#: 重定向表的键可以带一段日期（``2022/10/25/cluster/raft/…``）。
+#:
+#: 重定向页的日期段历来取自**新文件**的日期（``git_date()``）——文章搬家时
+#: 日期不变，这正是 ``data/date-overrides.json`` 存在的意义。但合并两篇
+#: **逐字节相同**的重复文章时情况不一样：合并后的那篇只有一个日期，
+#: 另一个旧 URL 的日期段就对不上了（键里不带日期就落在错的地址上，
+#: 真正的旧地址 404）。键里带上日期即可 —— 那是这条旧 URL 当初发布时的
+#: 日期段，一字不差。
+DATED_REDIRECT_RE = re.compile(r"^(?P<stamp>\d{4}/\d{2}/\d{2})/(?P<path>.+)$")
+
 
 def write_redirects():
     """Generate redirect pages for permalinks that changed.
@@ -2007,6 +2017,12 @@ def write_redirects():
     at the OLD path that forwards to the new one.  The pages live in
     source/ (not source/_posts/), so Hexo copies them verbatim into
     public/ and they survive as plain files.
+
+    **键里可以带一段日期**（``2022/10/25/cluster/raft/…``）：重定向页落在
+    旧 URL 当初发布时的日期段上。默认取新文件的日期 —— 文章搬家时日期不变；
+    合并两篇逐字节相同的重复文章时，合并后的那篇只有一个日期，另一个旧
+    URL 的日期段就对不上了，这时键里带上日期才落得准（见
+    :data:`DATED_REDIRECT_RE`）。
 
     **目录名用原始路径，不做百分号编码。** nginx 拿到的 `$uri` 是
     解码过的：浏览器请求 `/2023/05/17/pgsql/replication/PostgreSQL%E6%95%B0.../`，
@@ -2034,15 +2050,23 @@ def write_redirects():
             print(f"WARNING redirect target missing: {new_path}", file=sys.stderr)
             continue
         date = git_date(new_file)
-        stamp = f"{date[:4]}/{date[5:7]}/{date[8:10]}"
+        target_stamp = f"{date[:4]}/{date[5:7]}/{date[8:10]}"
         # The permalink slug drops the source extension (.md / .html).
         new_slug = new_path
         for ext in (".md", ".html", ".htm"):
             if new_slug.endswith(ext):
                 new_slug = new_slug[: -len(ext)]
                 break
-        new_url = f"{SITE_ROOT}/{stamp}/{_site_encode_url(new_slug)}/"
-        out_dir = os.path.join(SRC, stamp, old_path)
+        new_url = f"{SITE_ROOT}/{target_stamp}/{_site_encode_url(new_slug)}/"
+        # 重定向页落在**旧 URL** 的日期段上。默认取新文件的日期（文章搬家时
+        # 日期不变）；键里带了日期就照它写 —— 合并重复文章时旧 URL 的日期
+        # 跟新文件对不上，只有照旧写才落得在真正的旧地址上。
+        page_stamp = target_stamp
+        dated = DATED_REDIRECT_RE.match(old_path)
+        if dated:
+            page_stamp = dated.group("stamp")
+            old_path = dated.group("path")
+        out_dir = os.path.join(SRC, page_stamp, old_path)
         os.makedirs(out_dir, exist_ok=True)
         with open(os.path.join(out_dir, "index.md"), "w", encoding="utf-8") as f:
             f.write(
