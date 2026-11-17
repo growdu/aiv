@@ -39,7 +39,7 @@ PATCH_THEME = REPO / "tools" / "patch-theme.py"
 IMG_FILTER = REPO / "scripts" / "img-dimensions.js"
 
 SAMPLE_PNG = REPO / "docs" / "source-tracks" / "postgresql" / "logical-replication" / "pa_decode" / "image.png"
-SAMPLE_JPG = REPO / "docs" / "network" / "ipv6_img" / "07-55785c722b16.jpg"
+SAMPLE_JPG = REPO / "docs" / "source-tracks" / "linux" / "networking" / "ipv6_img" / "07-55785c722b16.jpg"
 
 
 def _read(path: Path) -> str:
