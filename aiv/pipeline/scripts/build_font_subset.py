@@ -125,14 +125,21 @@ FACES = (
 #: - `tests/test_bgm.py` 的替换符 `U+FFFD`（断言「文档里不该有它」）
 #: - `scripts/redgreen_check.py` 的读音样本 `ŋ`（TTS 载荷，不是画面）
 #:
-#: 素材脚本（`brand/`、`character/`）也不在内：它们往素材上写的是
-#: ASCII 品牌词「growdu」，已被 ASCII 段覆盖；散文 docstring 不进字体。
+#: 素材脚本（`character/`）不在内：它们往素材上写的是 ASCII 品牌词
+#: 「growdu」，已被 ASCII 段覆盖；散文 docstring 不进字体。
+#:
+#: 但 **`brand/scripts/render_brand.py` 在内**：它把品牌片的中文文案
+#: （「深入数据库 · 分享技术之美」「感谢观看」「把踩过的坑写成方法」……）
+#: 直接画到画面上。它不在列表里的实测后果就是品牌片出现豆腐块
+#: （「⊠入数据库 · 分享技术之⊠」——「深」「美」两个字不在子集里）。
+#: **素材脚本要分两类看**：只写 ASCII 的不进，写中文上画面的必须进。
 DRAWING_MODULES = (
     "pipeline/pyv/scenes/*.py",
     "pipeline/pyv/subtitle.py",
     "pipeline/pyv/layout.py",
     "pipeline/pyv/components.py",
     "pipeline/pyv/scene_layout.py",
+    "brand/scripts/render_brand.py",
 )
 
 

@@ -1,5 +1,5 @@
 /* tech.css -----------------------------------------------------------------
-   首页首屏（.home-hero）的样式。
+   本站自己的样式：首页首屏（.home-hero）和学习路径页（.learning-page）。
 
    为什么单独开一个文件：
    docs/blog/重构方案.md §5.4 规定新样式只放这里，不再往 tools/patch-theme.py
@@ -41,24 +41,6 @@
   max-width: 1080px;
 }
 
-.home-hero__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 18px;
-  font-family: var(--tech-mono);
-  font-size: 13px;
-  letter-spacing: .12em;
-  color: var(--tech-accent);
-}
-
-.home-hero__eyebrow::before {
-  content: "";
-  width: 22px;
-  height: 2px;
-  background: var(--tech-accent);
-}
-
 .home-hero__lead {
   max-width: 780px;
   margin: 0;
@@ -92,6 +74,48 @@
 
 .home-hero__badges {
   margin: 22px 0 0;
+}
+
+/* --- 从这里开始（学习路径入口）-------------------------------------------- */
+
+.home-hero__start {
+  margin: 24px 0 0;
+}
+
+.home-hero__start-link {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 18px;
+  color: var(--tech-ink);
+  background: var(--tech-card);
+  border: 1px solid var(--tech-rule);
+  border-left: 3px solid var(--tech-accent);
+  border-radius: 3px;
+  text-decoration: none;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.home-hero__start-link:hover,
+.home-hero__start-link:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--tech-accent);
+  box-shadow: 0 6px 18px rgba(31, 41, 51, .08);
+}
+
+.home-hero__start-link i {
+  color: var(--tech-accent);
+}
+
+.home-hero__start-label {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.home-hero__start-hint {
+  font-size: 13px;
+  color: var(--tech-muted);
 }
 
 /* --- 首屏搜索 ------------------------------------------------------------ */
@@ -301,4 +325,236 @@ body.DarkMode .home-hero__search-results {
 body.DarkMode .home-hero__card:hover,
 body.DarkMode .home-hero__card:focus-visible {
   box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+
+/* learning-page ------------------------------------------------------------
+   学习路径页（/learning/ 和每条赛道一页）的排版。
+
+   页面骨架在 themes/matery/layout/learning.ejs，正文是
+   tools/build-learning-path.py 生成的 Markdown。这里只管**索引页特有**的
+   那几件事：面包屑、阶段标题、以及「一篇文章一行」的长清单分两栏排。
+
+   为什么清单要分两栏：db-internals 的 L7（逻辑复制与流式）有 85 篇，
+   一栏排下来是一屏接一屏 —— 读者根本看不到这条赛道到底有多厚，
+   更看不到「我读到第几篇了」。
+   ------------------------------------------------------------------------- */
+
+.learning-page {
+  --lp-accent: #0b7285;
+  --lp-rule: rgba(31, 41, 51, .12);
+}
+
+.learning-page__container {
+  max-width: 1080px;
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+.learning-page__crumb {
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: #5b6670;
+}
+
+.learning-page__crumb a {
+  color: #5b6670;
+  text-decoration: none;
+}
+
+.learning-page__crumb a:hover,
+.learning-page__crumb a:focus-visible {
+  color: var(--lp-accent);
+  text-decoration: underline;
+}
+
+.learning-page__crumb-sep {
+  margin: 0 8px;
+  color: #9aa5ad;
+}
+
+.learning-page__body {
+  padding: 8px 4px 16px;
+}
+
+/* 阶段标题：L1 / L2 …… */
+.learning-page__body h2 {
+  margin-top: 2.2rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid var(--lp-rule);
+}
+
+.learning-page__body h3 {
+  margin-top: 1.6rem;
+}
+
+/* 阶段里的文章清单：两栏，别让 85 篇文章堆成一堵墙 */
+.learning-page__body ul {
+  columns: 2;
+  column-gap: 2.5rem;
+}
+
+.learning-page__body ul li {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  margin-bottom: .35rem;
+}
+
+.learning-page__body table {
+  display: table;
+  width: 100%;
+}
+
+.learning-page__body table td,
+.learning-page__body table th {
+  vertical-align: top;
+}
+
+@media (max-width: 992px) {
+  .learning-page__body ul {
+    columns: 1;
+  }
+}
+
+body.DarkMode .learning-page {
+  --lp-accent: #66c2d0;
+  --lp-rule: rgba(223, 230, 234, .16);
+}
+
+body.DarkMode .learning-page__crumb,
+body.DarkMode .learning-page__crumb a {
+  color: #9fb0b8;
+}
+
+body.DarkMode .learning-page__crumb a:hover,
+body.DarkMode .learning-page__crumb a:focus-visible {
+  color: var(--lp-accent);
+}
+
+/* 首页学习路径面板（8 条赛道）------------------------------------------------
+   赛道卡片复用了 patch-theme.py 注入的 .lane-grid / .lane-card 类名，
+   颜色改用 CSS 变量 --lane-color / --lane-tint：加一条赛道只需要在下面
+   加两行变量，不用再写一遍图标、边框、链接三处颜色。 */
+
+.lane-grid--tracks {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.lane-grid--tracks .lane-card {
+  border-top-color: var(--lane-color, #009688);
+}
+
+.lane-grid--tracks .lane-card__icon {
+  color: var(--lane-color, #009688);
+  background: var(--lane-tint, rgba(0, 150, 136, .12));
+}
+
+.lane-grid--tracks .lane-card__more {
+  color: var(--lane-color, #009688);
+}
+
+.lane-card__count {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: var(--lane-color, #009688);
+  background: var(--lane-tint, rgba(0, 150, 136, .12));
+}
+
+.lane-card__stages {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lane-card__stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #546e7a;
+  background: rgba(0, 0, 0, .04);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.lane-card__stage-id {
+  font-weight: 700;
+  color: var(--lane-color, #009688);
+}
+
+.learning-path__all {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.learning-path__all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #00796b;
+  text-decoration: none;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(0, 150, 136, .10);
+  transition: background .2s ease, transform .2s ease;
+}
+
+.learning-path__all-link:hover,
+.learning-path__all-link:focus-visible {
+  background: rgba(0, 150, 136, .18);
+  transform: translateY(-2px);
+}
+
+.learning-path__all-link i {
+  transition: transform .2s ease;
+}
+
+.learning-path__all-link:hover i {
+  transform: translateX(3px);
+}
+
+/* 赛道配色：每条赛道一个色（--lane-color 描边/图标/链接，--lane-tint 淡底） */
+.lane-card--db-internals   { --lane-color: #00796b; --lane-tint: rgba(0, 121, 107, .12); }
+.lane-card--distributed    { --lane-color: #6a1b9a; --lane-tint: rgba(106, 27, 154, .12); }
+.lane-card--linux-network  { --lane-color: #1565c0; --lane-tint: rgba(21, 101, 192, .12); }
+.lane-card--dataplane      { --lane-color: #ef6c00; --lane-tint: rgba(239, 108, 0, .12); }
+.lane-card--ai-tools       { --lane-color: #c2185b; --lane-tint: rgba(194, 24, 91, .12); }
+.lane-card--engineering    { --lane-color: #2e7d32; --lane-tint: rgba(46, 125, 50, .12); }
+.lane-card--life           { --lane-color: #6d4c41; --lane-tint: rgba(109, 76, 65, .12); }
+.lane-card--blogging       { --lane-color: #3949ab; --lane-tint: rgba(57, 73, 171, .12); }
+
+@media (max-width: 992px) {
+  .lane-grid--tracks {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .lane-grid--tracks {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.DarkMode .lane-card__stage {
+  color: #b0bec5;
+  background: rgba(255, 255, 255, .06);
+}
+
+body.DarkMode .learning-path__all-link {
+  color: #4db6ac;
+  background: rgba(77, 182, 172, .12);
+}
+
+body.DarkMode .learning-path__all-link:hover,
+body.DarkMode .learning-path__all-link:focus-visible {
+  background: rgba(77, 182, 172, .20);
 }

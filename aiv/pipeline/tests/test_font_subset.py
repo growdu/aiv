@@ -21,7 +21,12 @@
 路径可能绕开它——某个场景从别的模块引了一个画字助手，那个助手里的
 文案就既不在列表里、也没被静态提取扫到。第 4 条不看源码，**看画面**：
 它把 36 个视觉段在两个画幅、若干时刻都真画一遍、把真实字幕稿逐条
-烧一遍，把画出去的字收齐。源码怎么改都逃不过它。
+烧一遍、把品牌片的片头片尾真渲一遍，把画出去的字收齐。源码怎么改
+都逃不过它。
+
+品牌片这一条是**补上来的**：它是独立于流水线的一条出字路
+（`pyv/brand.py` 只把成片拼进契约，自己不画字）。漏了它的实测后果
+就是品牌片上出豆腐块——画面照常生成、时长照常对，没有任何报错。
 
 **两条都验过会红**：把「关」（只在字幕里出现）与「缓」（场景与字幕
 都有）从子集里挖掉，两条缺字守卫都报红。
@@ -67,12 +72,18 @@ EXTRA_PUNCTUATION = "　·—…、。《》「」『』（）：；？！，－
 #: persona、timeline……）——它们的中文不上画面，收进来还得为
 #: `pyv/fonts.py` 的探针字符 `U+E000` 这类字形预留位置，而上游
 #: 字体里根本没有那些字。
+#:
+#: **品牌片算不算？算。** `brand/scripts/render_brand.py` 把中文文案
+#: 直接画到画面上（「深入数据库 · 分享技术之美」「感谢观看」……）。
+#: 它不在列表里的实测后果就是品牌片出现豆腐块——画面照常生成、
+#: 时长照常对，没有任何报错，只有盯着字才看得见。
 DRAWING_MODULES = (
     "pipeline/pyv/scenes/*.py",
     "pipeline/pyv/subtitle.py",
     "pipeline/pyv/layout.py",
     "pipeline/pyv/components.py",
     "pipeline/pyv/scene_layout.py",
+    "brand/scripts/render_brand.py",
 )
 
 #: 运行时探针采样几个时刻。
@@ -169,15 +180,38 @@ def _repo_chars() -> set[str]:
     return chars
 
 
+def _load_brand_render():
+    """载入 `brand/scripts/render_brand.py`（品牌片的渲染入口）。
+
+    它不在 pipeline 包里，按路径载入——跟 `tests/test_glasses.py`
+    载入素材脚本一个路子。
+    """
+    import importlib.util
+    import sys
+
+    path = AIV_ROOT / "brand" / "scripts" / "render_brand.py"
+    spec = importlib.util.spec_from_file_location("render_brand", path)
+    module = importlib.util.module_from_spec(spec)
+    # 必须先注册进 sys.modules：模块里的 dataclass 机制要回查
+    # sys.modules[cls.__module__]
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _drawn_chars() -> set[str]:
     """把**真正画出去**的字收齐。
 
-    **不看源码，看画面**：两条出字的路都走一遍。
+    **不看源码，看画面**：所有出字的路都走一遍。
 
     1. **场景**：36 个视觉段 × 两个画幅 × 五个时刻，拦下每一次画字。
     2. **字幕**：真实字幕稿 → 真实 `SubtitleBurner` → 真实 `wrap_line`
        → 拦在 `_outlined_text`——那是**切好行之后**真正落到画面上的
        那一行。
+    3. **品牌片**：真实 `render_brand.py` 的片头 / 片尾各渲五个时刻，
+       拦在它自己的 `text()` 上。品牌片是**独立于流水线的一条出字路**
+       （`pyv/brand.py` 只是把成片拼进契约，不画字），不单独扫它，
+       它的中文文案就没人管——实测漏过一次，品牌片上出了豆腐块。
 
     **为什么字幕要单独拦**：字幕不经过 `draw.text`，它自己走
     `ctx.text_path`。只拦 `draw.text` 的话，字幕上的字一个都收不到
@@ -188,6 +222,8 @@ def _drawn_chars() -> set[str]:
     （`from pyv.draw import text`），所以只补 `pyv.draw` 不够，
     每个用到的模块都要单独补一遍。
     """
+    from PIL import Image
+
     from pyv import align
     from pyv import contract as contract_mod
     from pyv import draw, episodes as episodes_mod
@@ -249,6 +285,20 @@ def _drawn_chars() -> set[str]:
                 for event in events:
                     burner.draw(ctx, event.start + 0.5, width, height)
                 del surface, ctx
+
+        # 3. 品牌片：真实渲染入口，拦它自己的 text()
+        brand = _load_brand_render()
+        original_brand_text = brand.text
+        brand.text = recorder
+        try:
+            background = Image.new("RGBA", (1920, 1080), (0, 0, 0, 255))
+            character = cairo.ImageSurface(cairo.FORMAT_ARGB32, 64, 64)
+            for renderer in (brand.render_intro_frame, brand.render_outro_frame):
+                for t in PROBE_TIMES:
+                    renderer(t, background, character, 0.9)
+            del character
+        finally:
+            brand.text = original_brand_text
     finally:
         draw.text = original_draw_text
         subtitle_mod._outlined_text = original_outlined

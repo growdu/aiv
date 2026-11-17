@@ -6,8 +6,14 @@
   （tests/test_home_first_screen.py 守着这一条）
 
   三块内容：
-    1. 定位句 —— 读 `config.description`（站点配置里那一句具体的说明），
-       不在模板里硬编码，改配置时不会两处对不上。
+    1. 一句定位 —— 读 `config.home_hero_lead`（站点配置里那句给人看的短话），
+       没配就退回 `config.description`。两处都不在模板里硬编码，改配置时
+       不会两处对不上。
+       注意跟 `config.description` 分工：description 是给搜索引擎看的那句
+       长描述（meta、分享卡片），当大标题读着像关键词堆砌，占四行。
+       原来这上面还有一行 13px 的小标签（`config.subtitle`
+       「技术·学习·实践·人生·哲学」），已经去掉：它列的就是下面那 9 个
+       徽章里的同一批东西。
     2. 分类徽章 + 打字机 —— 由 tools/patch-theme.py 注入到下面的徽章占位处，
        徽章的链接要从 `site.categories` 反查真实分类路径，不能手写。
     3. 三篇代表作 —— 清单在仓库根的 `data/featured.json`（作者可维护），
@@ -35,15 +41,38 @@
 %>
 <section class="home-hero" data-aos="fade-up">
   <div class="container">
-    <p class="home-hero__eyebrow"><%= config.subtitle %></p>
-    <h1 class="home-hero__lead"><%= config.description %></h1>
+    <h1 class="home-hero__lead"><%= config.home_hero_lead || config.description %></h1>
 
     <div class="home-hero__search">
       <label class="home-hero__search-label" for="homeSearch">站内搜索</label>
       <input type="search" id="homeSearch" class="home-hero__search-input"
+             data-index-url="<%- url_for('/search-lite.json') %>"
              placeholder="按标题或分类搜索…" autocomplete="off" spellcheck="false" />
       <ul class="home-hero__search-results" id="homeSearchResults" hidden></ul>
       <p class="home-hero__search-hint">按标题搜索 · 全文搜索用顶部导航</p>
+    </div>
+
+    <%# 「从这里开始」——全站文章的学习路径总览。
+        徽章只盖到 9 个分类，读者从一篇文章落地之后没有「下一篇读什么」的
+        可靠去处；这一条就是那个去处。用 <div> 而不是 <nav>：Materialize
+        按元素名给 nav 上样式，会把它压成一条红条。
+
+        数字取自 tools/build-learning-path.py 生成的 source/_data/learning.json，
+        不在模板里写死——文章总数会变，写死的话哪天对不上也没人知道。 %>
+    <%
+      var _lp = (site.data && site.data.learning) || null;
+      var _lpTracks = _lp && _lp.tracks ? _lp.tracks.length : 0;
+      var _lpTotal = _lp && _lp.total ? _lp.total : 0;
+      var _lpHint = _lpTracks
+        ? (_lpTracks + ' 条赛道 · ' + _lpTotal + ' 篇文章 · 每条都排好了顺序')
+        : '按赛道和阶段排好顺序，从这里挑一条走';
+    %>
+    <div class="home-hero__start">
+      <a class="home-hero__start-link" href="<%- url_for('/learning/') %>">
+        <i class="fas fa-map-signs"></i>
+        <span class="home-hero__start-label">从这里开始</span>
+        <span class="home-hero__start-hint"><%= _lpHint %></span>
+      </a>
     </div>
 
     <div class="home-hero__badges"><%
@@ -95,7 +124,12 @@
 </div>
 
     <% if (_heroPosts.length) { %>
-    <nav class="home-hero__featured" aria-label="代表作">
+    <%# 用 <section> 而不是 <nav>：Materialize 按**元素名**给 nav 上样式
+        （nav{height:64px;line-height:64px;background-color:#ee6e73}），
+        那一块会被压成 64px 高、行高 64px，卡片溢出首屏盒子，
+        底下的统计条正好盖在代表作卡片上。参见
+        tests/test_content_nav_not_materialize_navbar.py。 %>
+    <section class="home-hero__featured" aria-label="代表作">
       <% _heroPosts.forEach(function (post) {
            var _cats = (post.categories && post.categories.data) || [];
            var _cat = _cats.length ? _cats[0].name : '';
@@ -106,7 +140,7 @@
         <span class="home-hero__card-date"><%= post.date ? post.date.format('YYYY-MM-DD') : '' %></span>
       </a>
       <% }); %>
-    </nav>
+    </section>
     <% } %>
   </div>
 </section>
@@ -133,9 +167,16 @@
     });
   };
 
+  // 索引的地址由**模板**给出（带挂载点前缀）。
+  //
+  // 写死 '/search-lite.json' 的话，镜像站（挂在 /blog/ 下）会 404——
+  // 而下面那个 .catch() 会把 404 吞成一个空索引，用户看到的是
+  // 「没有匹配的文章」：一个坏掉的控件，看起来像「搜不到」。
+  var INDEX_URL = input.getAttribute('data-index-url') || '/search-lite.json';
+
   var loadIndex = function () {
     if (index) return Promise.resolve(index);
-    return fetch('/search-lite.json')
+    return fetch(INDEX_URL)
       .then(function (r) { return r.json(); })
       .then(function (d) { index = Array.isArray(d) ? d : []; return index; })
       .catch(function () { index = []; return index; });

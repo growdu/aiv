@@ -400,6 +400,26 @@ window.initMermaidDiagrams = function () {
 <% } %>"""
 )
 
+def is_standalone_page(content):
+    """这个页面是**独立页**吗？（front matter 里 layout: false）
+
+    独立页自带 <html>/<head>/<body>，主题的 layout.ejs **不会**套它们——
+    往里注入主题的 CSS/JS 只会多出一份拷贝。
+
+    /all/ 那个重定向页就是这么中招的：注入之后它多了一个
+    <link rel="canonical" href="https://growdu.cn/all/index.html">，
+    跟它自己的跳转目标 /archives/ 打架；而因为注入过的文件会被跳过，
+    那份 CSS 从此冻结在那里，patcher 再也不刷新它。
+
+    判据就是 front matter 里的 ``layout: false``——那是页面自己声明的
+    「别套 layout」。
+    """
+    m = re.match(r"\A---\s*\n(.*?)\n---", content, re.S)
+    if not m:
+        return False
+    return re.search(r"^layout:\s*false\s*$", m.group(1), re.M) is not None
+
+
 for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
     for fname in files:
         if not fname.endswith(".ejs"):
@@ -407,6 +427,10 @@ for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
         fpath = os.path.join(root, fname)
         with open(fpath, encoding="utf-8") as f:
             c = f.read()
+        # 独立页（layout: false）自带 html/head/body，
+        # 主题资源不该往里塞。
+        if is_standalone_page(c):
+            continue
         changed = False
         if "</head>" in c and '<meta property="og:title"' not in c:
             c = c.replace("</head>", inject_css + "\n</head>", 1)
@@ -475,6 +499,10 @@ for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
         fpath = os.path.join(root, fname)
         with open(fpath, encoding="utf-8") as f:
             c = f.read()
+        # 独立页（layout: false）自带 html/head/body，
+        # 主题资源不该往里塞。
+        if is_standalone_page(c):
+            continue
         changed = False
 
         stripped = THEME_MERMAID_BLOCK.sub("", c)
@@ -1986,6 +2014,10 @@ for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
         fpath = os.path.join(root, fname)
         with open(fpath, encoding="utf-8") as f:
             c = f.read()
+        # 独立页（layout: false）自带 html/head/body，
+        # 主题资源不该往里塞。
+        if is_standalone_page(c):
+            continue
         changed = False
         if "</head>" in c and "custom-blog-style" not in c:
             c = c.replace("</head>", custom_css + "\n</head>", 1)
@@ -2032,145 +2064,15 @@ if os.path.isfile(_bg_content):
     else:
         print("No dead home-only hero block in bg-cover-content.ejs")
 
-# Fixed sidebars: categories (left) + hot posts ranking (right)
-sidebar_ejs = """<% if (site.categories && site.categories.length) { %>
-<div class="cat-sidebar">
-  <div class="cat-title"><i class="fas fa-folder-tree"></i> 分类导航</div>
-  <div class="cat-list">
-    <% var _ci={'数据库':'fa-database','数据库深入':'fa-database','PostgreSQL':'fa-database','openGauss':'fa-database','存储':'fa-hard-drive','分布式':'fa-sitemap','算法':'fa-calculator','集群':'fa-server','网络':'fa-network-wired','AI':'fa-robot','ChatGPT':'fa-comments','DPDK':'fa-bolt','VPP':'fa-bolt','编程基础':'fa-code','Linux':'fa-terminal','Docker':'fab fa-docker','工具':'fa-toolbox','协议':'fa-handshake','C语言':'fa-code','Python':'fa-code','Go':'fa-code','前端':'fa-laptop-code','汇编':'fa-microchip','GUI':'fa-window-restore','视频':'fa-video','邮件':'fa-envelope','环境':'fa-cog','FAQ':'fa-question-circle','路径':'fa-road','wiki':'fa-book','股票':'fa-chart-line','OPC':'fa-microchip','page':'fa-file','pcap':'fa-wireshark','web':'fa-globe'}; %>
-    <% site.categories.each(function(category) { %>
-    <a href="<%- url_for(category.path) %>"><i class="fas <%- _ci[category.name] || 'fa-folder' %>"></i><span><%- category.name %></span><span class="cat-count"><%= category.posts.length %></span></a>
-    <% }); %>
-  </div>
-</div>
-<% } %>
-<%
-  var hashCode = function(s) {
-    var h = 0;
-    for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
-    return 'p' + Math.abs(h);
-  };
-  var getDate = function(p) { return p.date ? new Date(p.date).getTime() : 0; };
-  // 阅读量快照 —— GoatCounter 的**真实** PV。
-  //
-  // 真相在仓库根的 data/view-counts.json：tools/fetch-view-counts.py 抓来的，
-  // sync-hexo.py 复制到 source/_data/，hexo 挂到 site.data 上。
-  //
-  // 这里曾经是**假的**：旧代码写的是 Math.max(5, Math.floor(字数 / 50))，
-  // 于是十万字的文章显示「🔥 2000」——读者以为有两千人读过它。
-  // 拿不到真实值时**宁可这一格不显示**，也不显示一个假的🔥。
-  var _vc = (site.data && site.data['view-counts']) || null;
-  var _counts = (_vc && _vc.counts) || {};
-  var _norm = function(p) {
-    // hexo 的 post.path 是 '2026/08/18/db/aaa/index.html'，
-    // GoatCounter 记的是 '/2026/08/18/db/aaa/'——两边归一到同一个键。
-    var s = String(p || '');
-    if (s.charAt(0) === '/') { s = s.slice(1); }
-    if (s.slice(-11) === '/index.html') { s = s.slice(0, -11); }
-    else if (s === 'index.html') { s = ''; }
-    while (s.length > 0 && s.charAt(s.length - 1) === '/') { s = s.slice(0, -1); }
-    return s;
-  };
-  var pvOf = function(p) {
-    var n = _counts[_norm(p && p.path)];
-    return typeof n === 'number' ? n : 0;
-  };
-  var hasPV = Object.keys(_counts).length > 0;
-  var wcOf = function(p) { return p.content ? String(p.content).replace(/<[^>]+>/g, '').length : 0; };
-  var allPosts = site.posts.data.slice();
-  var hotPosts;
-  if (hasPV) {
-    // 有真实阅读量：按它排。
-    hotPosts = allPosts.slice().sort(function(a, b) { return pvOf(b) - pvOf(a); }).slice(0, 50);
-  } else {
-    // 没有真实阅读量：按字数排（老样子），但**一个数字都不显示**。
-    allPosts.sort(function(a, b) { return wcOf(b) - wcOf(a); });
-    hotPosts = allPosts.slice(0, 50);
-  }
-  var hotData = hotPosts.map(function(p) {
-    var cats = (p.categories && p.categories.data) || [];
-    var cat = cats.length > 0 ? cats[0].name : '';
-    return {h: hashCode(p.path), t: p.title, u: p.path.replace('index.html', ''), c: pvOf(p), cat: cat};
-  });
-%>
-<div class="hot-sidebar">
-  <div class="hot-title"><i class="fas fa-fire"></i> <%= hasPV ? '最多阅读' : '长文排行' %></div>
-  <div class="hot-list" id="hot-posts-list">
-    <% hotPosts.slice(0, 20).forEach(function(post, i) { %>
-    <a href="<%- url_for(post.path) %>"><span class="hot-rank rank-<%= i+1 %>"><%= i+1 %></span><div class="hot-content"><span class="hot-name"><%= post.title %></span><div class="hot-meta"><% var _cats = (post.categories && post.categories.data) || []; if (_cats.length > 0) { %><span class="hot-cat"><%= _cats[0].name %></span><% } %><% var _pv = pvOf(post); if (_pv > 0) { %><span class="hot-views">🔥 <%= _pv %></span><% } %></div></div></a>
-    <% }); %>
-  </div>
-</div>
-<% if (is_home()) { %>
-<script id="hot-posts-json" type="application/json"><%- JSON.stringify(hotData) %></script>
-<script>
-(function(){
-  var data=JSON.parse(document.getElementById('hot-posts-json').textContent);
-  if(!data||!data.length)return;
-  var ROOT='<%- config.root %>';
-  // Sort by the real view count from the GoatCounter snapshot.
-  // 没有快照时 c 全是 0 —— 排序不动，页面保持服务端按字数的顺序。
-  data.sort(function(a,b){return b.c-a.c;});
-  Promise.resolve(data).then(function(results){
-    var list=document.getElementById('hot-posts-list');
-    if(!list)return;
-    list.innerHTML='';
-    results.slice(0,20).forEach(function(p,i){
-      var a=document.createElement('a');
-      a.href=ROOT+p.u;
-      var r=document.createElement('span');
-      r.className='hot-rank rank-'+(i+1);
-      r.textContent=i+1;
-      a.appendChild(r);
-      var content=document.createElement('div');
-      content.className='hot-content';
-      var n=document.createElement('span');
-      n.className='hot-name';
-      n.textContent=p.t;
-      content.appendChild(n);
-      var meta=document.createElement('div');
-      meta.className='hot-meta';
-      if(p.cat){
-        var c=document.createElement('span');
-        c.className='hot-cat';
-        c.textContent=p.cat;
-        meta.appendChild(c);
-      }
-      if(p.c>0){
-        var v=document.createElement('span');
-        v.className='hot-views';
-        v.textContent='🔥 '+p.c;
-        meta.appendChild(v);
-      }
-      content.appendChild(meta);
-      a.appendChild(content);
-      list.appendChild(a);
-    });
-  }).catch(function(){});
-})();
-</script>
-<% } %>
-<%# Per-page view counter is handled by Vercount embed below. %>
-"""
-sidebar_done = False
-for root, dirs, files in os.walk(os.path.join(theme_dir, "layout")):
-    if sidebar_done:
-        break
-    for fname in files:
-        if not fname.endswith(".ejs"):
-            continue
-        fpath = os.path.join(root, fname)
-        with open(fpath, encoding="utf-8") as f:
-            c = f.read()
-        if "</body>" in c and "cat-sidebar" not in c:
-            c = c.replace("</body>", sidebar_ejs + "\n</body>", 1)
-            with open(fpath, "w", encoding="utf-8") as f:
-                f.write(c)
-            print(f"Injected sidebars into {os.path.relpath(fpath, theme_dir)}")
-            sidebar_done = True
-            break
-if not sidebar_done:
-    print("WARNING: could not inject sidebars")
+# 侧栏（分类导航 + 最多阅读）**不再**由这个脚本注入。
+#
+# 它原来往主题文件里塞一份侧栏模板的抄本。可那份抄本跟主题里真正生效的
+# 那段（themes/matery/layout/layout.ejs）早就对不上了——抄本少了折叠开关
+# （onclick="toggleSidebar('cat')"）和定义 window.toggleSidebar 的那段脚本。
+# 哪天它真的注入进去，侧栏就再也折叠不了，而构建不会报错、测试也不会红。
+#
+# 一份抄本 = 两处真相 = 迟早漂。主题是**签进仓库**的（不再从上游 clone），
+# 侧栏就在 layout.ejs 里，带着折叠开关那一份。抄本删掉，只留一份。
 
 
 # --- 6. Footer scripts: busuanzi.pure.mini.js + GoatCounter embed ---

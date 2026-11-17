@@ -8,7 +8,7 @@ fetch ``search.json``——实测 13,490,267 字节，线上 gzip 后 4,202,343 
 顶部导航里（那才是需要全文索引的地方）。阶段 0 已经造好了精简索引
 ``search-lite.json``（约 80KB，每条只有 title / url / cat），404 页在用。
 
-**这里断言的是行为**：真的把首屏那段 JS 拿�� node 里跑一遍——输入一个词，
+**这里断言的是行为**：真的把首屏那段 JS 拿到 node 里跑一遍——输入一个词，
 结果列表里要出现那篇文章；超过 8 条要截断；回车要跳第一条。
 只检查模板里有没有 ``id``、有没有 ``search-lite.json`` 字样，挡不住
 「fetch 的是对的、但渲染是空的」这种坏法。
@@ -153,9 +153,11 @@ const DATA = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const QUERY = process.argv[3];
 
 const handlers = {};
+const INDEX_URL = process.argv[4] || '/search-lite.json';
 const input = {
     value: '',
-    addEventListener: function (t, f) { handlers[t] = f; }
+    addEventListener: function (t, f) { handlers[t] = f; },
+    getAttribute: function (n) { return n === 'data-index-url' ? INDEX_URL : null; }
 };
 const list = {
     innerHTML: '',
@@ -202,7 +204,7 @@ global.window = { location: { href: '' } };
 """
 
 
-def _run_search(tmp_path: Path, data, query: str):
+def _run_search(tmp_path: Path, data, query: str, index_url: str = "/search-lite.json"):
     """把首屏那段 JS 放进 node 跑一遍，返回它渲染出来的结果。"""
     if NODE is None:
         import pytest
@@ -216,7 +218,7 @@ def _run_search(tmp_path: Path, data, query: str):
     data_path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
     result = subprocess.run(
-        [NODE, "-e", HARNESS, str(script_path), str(data_path), query],
+        [NODE, "-e", HARNESS, str(script_path), str(data_path), query, index_url],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -290,3 +292,25 @@ def test_a_query_that_matches_nothing_says_so(tmp_path):
     payload = _run_search(tmp_path, INDEX, "这个词谁也搜不到")
 
     assert payload["html"].strip(), "搜不到时结果列表是空的"
+
+
+def test_the_hero_search_fetches_the_index_from_a_root_prefixed_url(tmp_path):
+    """镜像站把站点挂在 ``/blog/`` 下——索引的地址必须带前缀。
+
+    写死 ``/search-lite.json`` 的话，镜像上会 404，而那个 ``.catch()``
+    会把 404 吞成���个空索引：读者看到「没有匹配的文章」，看起来像
+    「搜不到」，其实是个坏掉的控件。
+    """
+    got = _run_search(tmp_path, INDEX, "PostgreSQL", index_url="/blog/search-lite.json")
+
+    assert got["fetched"] == "/blog/search-lite.json", got["fetched"]
+
+
+def test_the_index_url_comes_from_the_template_not_from_a_literal():
+    """地址得由模板算（``url_for`` 才知道挂载点），不能写死。"""
+    text = _read(HOME_HERO)
+
+    assert "data-index-url=\"<%- url_for('/search-lite.json') %>\"" in text, (
+        "索引地址没有走 url_for——镜像站上会 404"
+    )
+    assert "fetch('/search-lite.json')" not in text, "还在 fetch 写死的根绝对路径"

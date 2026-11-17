@@ -102,7 +102,7 @@ flowchart LR
     RB -->|"SnapBuild 解码"| OUT["pgoutput 编码"]
     OUT -->|"CopyData 协议"| NET["TCP"]
     NET -->|"subscriber 接收"| A["apply worker"]
-    A -->|"落盘到 subscriber 的 pg_wal/0000..."]
+    A -->|"落盘到 subscriber 的 pg_wal/0000..."| SUBWAL["subscriber 的 pg_wal"]
     A -->|"feedback 消息"| P
     P -->|"更新 restart_lsn"| SLOT["slot 状态"]
     style U fill:#dbeafe,stroke:#1d4ed8

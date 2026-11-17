@@ -29,13 +29,19 @@ from browser import doctor, probe
 from browser.driver import ActionError, PageDriver
 from browser.flows import bilibili as bilibili_flow
 from browser.flows import channels as channels_flow
+from browser.flows import toutiao as toutiao_flow
 from browser.plan import PlanError, load_bilibili_plan, load_plan
+from browser.plan import find_toutiao_plan
 from browser.session import BrowserSession, SessionConfig, default_profile_dir
 
+ToutiaoUploader = toutiao_flow.ToutiaoUploader
+ToutiaoError = toutiao_flow.ToutiaoError
 BROWSER_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BROWSER_ROOT.parent
 DEFAULT_PACKAGES = REPO_ROOT / "channels" / "out"
 DEFAULT_BILIBILI_PACKAGES = REPO_ROOT / "bilibili" / "out"
+DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "toutiao" / "out"
+DEFAULT_OUTBOX = REPO_ROOT / "publish" / "outbox"
 DEFAULT_OUT = BROWSER_ROOT / "out"
 DEFAULT_SELECTORS = BROWSER_ROOT / "selectors" / "channels.json"
 DEFAULT_BILIBILI_SELECTORS = BROWSER_ROOT / "selectors" / "bilibili.json"
@@ -304,13 +310,13 @@ def _mark_published(episode: str, url: str, args: argparse.Namespace) -> None:
 
 # -- B站（存草稿） ----------------------------------------------------------
 
-def _open_bilibili_session(args: argparse.Namespace) -> BrowserSession:
-    """B站 的会话：默认**挂到已经在跑的浏览器**上。
+def _open_cdp_session(args: argparse.Namespace) -> BrowserSession:
+    """挂到已经在跑的浏览器上；没给 ``--cdp`` 就自己起一个。
 
-    **为什么不自己起一个。** B站 的登录态是扫码来的，脆；
+    **为什么优先挂上去。** 这些平台的登录态是扫码来的，很脆：
     每跑一条命令就重启一次浏览器，登录态可能当场作废。
-    所以浏览器用 `--remote-debugging-port` 起一次，
-    这条命令用 `--cdp` 挂上去（挂上去的会话 `close()` 不会关浏览器）。
+    所以浏览器用 ``--remote-debugging-port`` 起一次，
+    命令用 ``--cdp`` 挂上去（挂上去的会话 ``close()`` 不会关浏览器）。
     """
     cdp = getattr(args, "cdp", None)
     if cdp:
@@ -319,6 +325,17 @@ def _open_bilibili_session(args: argparse.Namespace) -> BrowserSession:
     config = SessionConfig.build(profile_dir=profile, headless=args.headless,
                                  slow_mo=args.slow_mo)
     return BrowserSession(config)
+
+
+def _open_bilibili_session(args: argparse.Namespace) -> BrowserSession:
+    """B站 的会话。默认**挂到已经在跑的浏览器**上。
+
+    **为什么不自己起一个。** B站 的登录态是扫码来的，脆；
+    每跑一条命令就重启一次浏览器，登录态可能当场作废。
+    所以浏览器用 `--remote-debugging-port` 起一次，
+    这条命令用 `--cdp` 挂上去（挂上去的会话 `close()` 不会关浏览器）。
+    """
+    return _open_cdp_session(args)
 
 
 def cmd_bilibili_draft(args: argparse.Namespace) -> int:
@@ -375,6 +392,107 @@ def cmd_bilibili_draft(args: argparse.Namespace) -> int:
     print(f"清单：{out_dir / 'draft.json'}")
     print("**已存草稿，没有投稿。** 要公开就在创作中心里点「立即投稿」。")
     return 0
+
+
+# -- 头条号（给草稿补图） ----------------------------------------------------
+
+def _toutiao_draft_id(outbox_dir: Path, content_id: str) -> str:
+    """从状态快照里读出平台侧的草稿 id。
+
+    快照（``publish/outbox/<slug>__toutiao.json``）是**公开的契约文件**：
+    里面记着这篇在平台上是什么状态、平台侧 id 是多少。执行器读它就行，
+    不 import 那个 adapter（adapter 也不该知道执行器的事）。
+    """
+    root = Path(outbox_dir)
+    if not root.is_dir():
+        raise PlanError(f"状态快照目录不存在：{root}")
+    for path in sorted(root.glob("*__toutiao.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if payload.get("content_id") != content_id:
+            continue
+        draft_id = payload.get("draft_id")
+        if not draft_id:
+            raise PlanError(
+                f"{content_id} 的快照里没有 draft_id——它可能还没在平台上建过草稿。"
+                "**没有草稿 id 就不能补图**：存草稿的请求里带上 pgc_id 才是更新那一条，"
+                "不带就是新建一条新的。"
+            )
+        return str(draft_id)
+    raise PlanError(f"状态快照里没有 {content_id}：{root}")
+
+
+def cmd_toutiao_images(args: argparse.Namespace) -> int:
+    """给**已经在平台上的草稿**补图。
+
+    只更新，不新建：请求里带平台侧的草稿 id。没有 id 就不做。
+    """
+    packages_dir = (Path(args.packages_dir).expanduser().resolve()
+                    if args.packages_dir else DEFAULT_TOUTIAO_PACKAGES)
+    outbox_dir = (Path(args.outbox_dir).expanduser().resolve()
+                  if args.outbox_dir else DEFAULT_OUTBOX)
+
+    content_ids = list(args.content_ids or [])
+    if args.all_posts:
+        content_ids = []
+        for path in sorted(outbox_dir.glob("*__toutiao.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if payload.get("status") == "drafted" and payload.get("content_id"):
+                content_ids.append(payload["content_id"])
+        content_ids.sort()
+
+    if not content_ids:
+        print("没有要处理的文章。", file=sys.stderr)
+        return 1
+
+    out_dir = Path(args.out).expanduser().resolve() if args.out else DEFAULT_OUT / "toutiao"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    done: list[dict] = []
+    failed: list[dict] = []
+    skipped: list[dict] = []
+
+    with _open_cdp_session(args) as session:
+        uploader = ToutiaoUploader(session.page)
+        for content_id in content_ids:
+            try:
+                plan = find_toutiao_plan(packages_dir, content_id)
+            except PlanError as error:
+                failed.append({"content_id": content_id, "error": str(error)})
+                continue
+            paths = plan.image_paths()
+            if not paths and plan.cover is None and not args.force:
+                skipped.append({"content_id": content_id, "reason": "这篇没有图，也裁不出封面"})
+                continue
+            try:
+                draft_id = _toutiao_draft_id(outbox_dir, content_id)
+                result = uploader.fill_draft(plan, draft_id, images=paths,
+                                            cover=not args.no_cover)
+            except (ToutiaoError, PlanError) as error:
+                failed.append({"content_id": content_id, "error": str(error)})
+                continue
+            done.append({"content_id": content_id, "draft_id": draft_id, **result})
+
+    summary = {"done": done, "failed": failed, "skipped": skipped}
+    (out_dir / "toutiao-images.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    for item in done:
+        print(f"✓ {item['content_id']}：图 {item['uploaded']} 张"
+              + (f"，缺图 {item['missing']}" if item["missing"] else "")
+              + ("，封面已设" if item.get("cover") else ""))
+    for item in skipped:
+        print(f"· {item['content_id']}：{item['reason']}")
+    for item in failed:
+        print(f"✗ {item['content_id']}：{item['error']}", file=sys.stderr)
+    print(f"\n补图 {len(done)} 篇；跳过 {len(skipped)}；失败 {len(failed)}")
+    print(f"清单：{out_dir / 'toutiao-images.json'}")
+    return 1 if failed else 0
 
 
 # -- 入口 -------------------------------------------------------------------
@@ -447,6 +565,26 @@ def build_parser() -> argparse.ArgumentParser:
                              "例如 http://127.0.0.1:9335（不给就自己起一个）")
     p_bili.set_defaults(func=cmd_bilibili_draft)
 
+    p_tt = sub.add_parser("toutiao-images",
+                           help="给**已经在平台上的草稿**补图（头条号，只更新不新建）")
+    add_common(p_tt)
+    p_tt.add_argument("content_ids", nargs="*",
+                       help="文章在站点里的 id（就是 source/_posts 下的相对路径，去掉 .md）")
+    p_tt.add_argument("--all", dest="all_posts", action="store_true",
+                       help="把账本里所有 drafted 的文章都过一遍")
+    p_tt.add_argument("--packages-dir", default=None,
+                       help="头条号发布包目录，默认 toutiao/out")
+    p_tt.add_argument("--outbox-dir", default=None,
+                       help="状态快照目录，默认 publish/outbox")
+    p_tt.add_argument("--out", default=None, help="产物目录，默认 browser/out/toutiao")
+    p_tt.add_argument("--cdp", default=None,
+                       help="挂到已经在跑的浏览器上，"
+                            "例如 http://127.0.0.1:9333（不给就自己起一个）")
+    p_tt.add_argument("--no-cover", action="store_true", help="不传封面")
+    p_tt.add_argument("--force", action="store_true",
+                       help="连没有图的也重存一遍（默认跳过：没有图就没有要补的东西）")
+    p_tt.set_defaults(func=cmd_toutiao_images)
+
     return parser
 
 
@@ -455,7 +593,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (PlanError, channels_flow.FlowError, bilibili_flow.FlowError) as error:
+    except (PlanError, channels_flow.FlowError, bilibili_flow.FlowError,
+            ToutiaoError) as error:
         print(f"ERROR {error}", file=sys.stderr)
         return 1
     except ActionError as error:

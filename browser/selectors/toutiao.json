@@ -1,0 +1,24 @@
+{
+  "_note": "头条号后台的接口与页面位置。**这些是实测出来的，不是猜的**——2026-11-17 用真实账号（growdu）在 mp.toutiao.com 上抓的：上传图片看编辑器自己的请求，存草稿看编辑器自动保存的请求。平台改版或改接口时改这张表，不用改 Python。",
+
+  "_origin_note": "所有接口都在 mp.toutiao.com 这个源上。请求从页面上下文里发（fetch），cookie 由浏览器带——**不要试图用 requests 直连**：要的是页面上的登录态。",
+  "origin": "https://mp.toutiao.com",
+
+  "_entry_note": "草稿箱页面。它是发请求的落脚点：页面上下文里 fetch 同一个源的接口，cookie 自动带上。**实测不必打开编辑器**——从草稿箱页面发存草稿请求同样成功（2026-11-17）。",
+  "entry_url": "https://mp.toutiao.com/profile_v4/manage/draft",
+
+  "_api_note": "upload：上传图片。upload_source=20020002 是正文图，20020003 是封面（封面要带 need_cover_url=1）。实测路径是 /spice/image，**不是** /mp/agw/spice/image（试点记录 §R4.C 里写的那个路径少了前缀，真发会 404）。publish：存草稿（save=0）或发表（save=1），**带 pgc_id 就是更新那一条草稿，不带就是新建一条**。",
+  "api": {
+    "upload": "/spice/image",
+    "upload_source_body": "20020002",
+    "upload_source_cover": "20020003",
+    "publish": "/mp/agw/article/publish",
+    "publish_query": "source=mp&type=article&aid=1231&mp_publish_ab_val=0"
+  },
+
+  "_selectors_note": "目前只用得上一个：草稿箱里每条草稿的 id 在列表接口里（draft_list），账本 publish/outbox/<slug>__toutiao.json 的 draft_id 就是它。留这一节是为了以后要读草稿箱页面时不用改代码结构。",
+  "selectors": {
+    "draft_row": [".article-draft-item"],
+    "draft_title": [".article-draft-item .title"]
+  }
+}

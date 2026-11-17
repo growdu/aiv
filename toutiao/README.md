@@ -26,6 +26,14 @@
   （草稿箱从 0 条变成 3 条，逐条对得上）。两天前的 7050 已经不复存在 ——
   平台侧那个故障好了，所以现在多了一档 `drafted`（草稿已在平台上，等人点发表）。
   详见 [docs/02-试点记录.md](docs/02-试点记录.md) §R4
+- **草稿补图也做成了（2026-11-17 实测）**：59 篇有图的草稿，
+  图与封面都灌进去了（平台草稿箱 547 条不变，只更新不新建）。
+  做法与平台接口的实测形状见 [docs/02-试点记录.md](docs/02-试点记录.md) §R5，
+  工具在 [../browser/browser/flows/toutiao.py](../browser/browser/flows/toutiao.py)：
+  ```bash
+  cd "$(git rev-parse --show-toplevel)"/browser && \
+    python3 -m browser.cli toutiao-images "<content id>" --cdp http://127.0.0.1:9333
+  ```
 - **⚠️ 编辑器里没有「保存草稿」按钮**：草稿只有「草稿将自动保存」这一条自动路径。
   另外**同一轮编辑器会话里连写两篇会覆盖上一条**（两篇共用同一个草稿 id），
   所以每篇都要开一个全新会话——批量灌草稿时就是「刷新 → 填 → 存 → 再刷新」
@@ -34,12 +42,15 @@
 - **⚠️ 别拿「拦请求」当干跑手段**：排查时试着拦下发布请求再点按钮，
   其中一次**照样把文章发出去了**——平台还有别的通道能把 `save=1` 送出去
   （详见 [docs/02-试点记录.md](docs/02-试点记录.md) §R2.F）
-- **自动化能到的最远一步（当前）**：产出发布包 + 通知，等人工上传
+- **自动化能到的最远一步（当前）**：产出发布包 + **把图与封面灌进平台草稿箱**，
+  等人工点「确认发布」。
+  （灌草稿走的是浏览器里的后台接口，**不是开放平台的 API** ——
+  账号仍未认证，`automation` 那一栏维持 `manual`）
 - **实现状态**：切片、渲染、出包、幂等状态、通知、批量出包、命令行**都已实现**
-  （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**391 条用例**。
+  （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**396 条用例**。
   其中 2 条是**语料级回归**——母稿 `source/_posts` 不入库，
-  干净检出里它们是 `skipped`（389 passed / 2 skipped），
-  本地有母稿时才会真跑（391 passed）。
+  干净检出里它们是 `skipped`（394 passed / 2 skipped），
+  本地有母稿时才会真跑（396 passed）。
   逐条任务见 [docs/00-设计.md](docs/00-设计.md)
 
 ## 为什么是「裁」而不是「搬」
@@ -110,6 +121,18 @@ cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli convert 
 
 # 整个语料一次性出包（五百多篇就是靠这一条跑的）
 cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli convert --all
+
+# 只出包，不动账本：给**已经在平台上的草稿**补东西时用这一档。
+# 发布包是本地产物（toutiao/out/ 在 .gitignore 里），清一次就没了；
+# 而账本里那篇仍然是 drafted，convert 会认定「内容没变、跳过」，
+# 于是包再也回不来。--packages-only 把包重新生出来，
+# 但**不写快照、不碰状态文件**——「草稿已在平台上」这件事不会被抹掉。
+cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli convert --all --packages-only
+
+# 顺带把正文里的外链图下载下来打进包里（默认**不**下载）。
+# 头条不能用外链图片（每张图都得重新上传），这一步是把外链图变成
+# 可上传的本地文件。下不到的（死链、防盗链）仍然列在清单里等人工处理。
+cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli convert --all --packages-only --fetch-remote
 
 # 出包 + 通知（API 权限开通后才是真正的「发布」）
 cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli publish <slug>
