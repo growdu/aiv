@@ -404,8 +404,12 @@ def _same_place(post_dir, new_post_dir, hit, new_hit):
 
     没挪窝 = 目标文件没换名字，且它相对于作者的位置没变 ——
     典型情形是「文章和它的目标一起搬到了同一个新目录」。
+
+    **「目标没动」不等于「相对位置没变」** —— 作者自己搬了家、
+    目标留在原地时，两者的相对距离变了（多了一层 `../`），
+    链接必须跟着重算。所以这条捷径只在**作者也没动**时成立。
     """
-    if hit == new_hit:
+    if post_dir == new_post_dir and hit == new_hit:
         return True
     if os.path.basename(hit) != os.path.basename(new_hit):
         return False
