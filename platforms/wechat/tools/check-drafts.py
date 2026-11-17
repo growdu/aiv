@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 WECHAT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(WECHAT_ROOT))
+sys.path.insert(0, str(WECHAT_ROOT.parent))
 
 from wechat.audit import check_html
 from wechat.posts import resolve_content_limit

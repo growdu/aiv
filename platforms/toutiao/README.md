@@ -93,16 +93,15 @@
 ## 目录结构
 
 ```
-platforms/toutiao/
-├── platforms/toutiao/               # Python 包（顶层目录不是包，同名子目录才是）
-│   ├── __init__.py
-│   ├── cli.py             # 命令行入口
-│   ├── contract.py        # 头条版切片规则
-│   ├── render.py          # Markdown → 头条 HTML
-│   ├── assets.py          # 图片转 webp、封面 3:4 裁切
-│   ├── publish.py         # 调 API 或产出发布包
-│   ├── state.py           # 幂等状态
-│   └── notify.py          # 通知
+platforms/toutiao/                   # Python 包（目录名即包名）
+├── __init__.py
+├── cli.py             # 命令行入口
+├── contract.py        # 头条版切片规则
+├── render.py          # Markdown → 头条 HTML
+├── assets.py          # 图片转 webp、封面 3:4 裁切
+├── publish.py         # 调 API 或产出发布包
+├── state.py           # 幂等状态
+├── notify.py          # 通知
 ├── docs/                  # 设计与实测记录
 ├── tests/                 # 单元 + 集成测试
 ├── out/                   # 发布包等本地产物（gitignore）

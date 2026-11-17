@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "weixin"))
+sys.path.insert(0, str(ROOT / "platforms"))
 
 from wechat.audit import _measure  # noqa: E402
 from wechat.collection import render_category_tag  # noqa: E402

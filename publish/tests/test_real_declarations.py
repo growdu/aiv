@@ -89,13 +89,42 @@ def test_the_platform_dirs_keep_the_repo_root_at_the_right_depth():
 
     「仓库根在哪一层」是这些目录里所有相对路径的地基——钉住它，
     免得以后再被悄悄挪走一层，而症状要等到出包时才炸。
+
+    **这里必须从磁盘上找包，不能照着名单反推路径。**
+    反推出来的断言恒真：目录真被挪走一层，守卫照样 PASS。
+    所以下面扫的是 `platforms/` 下真实存在的「带 `__init__.py` 的目录」——
+    挪深一层（`platforms/xx/toutiao`）它就会露出来。
     """
     repo_root = REPO_ROOT.resolve()
+    platforms_dir = repo_root / "platforms"
+    assert platforms_dir.is_dir(), "platforms/ 不存在"
+
+    # ① 每个平台包都必须待在 platforms/ 这一层。
+    packages = sorted(marker.parent for marker in platforms_dir.rglob("__init__.py"))
+    assert packages, "platforms/ 下一个 Python 包都没有——目录结构不对"
+    for package in packages:
+        assert package.resolve().parents[1] == repo_root, (
+            f"{package.relative_to(repo_root)}/ 的仓库根深度变了"
+            "（它被挪深了一层？）"
+        )
+
+    # ② 五个平台包各自只能有一份，而且就在 platforms/ 下。
     for plat in ("wechat", "toutiao", "douyin", "bilibili", "channels"):
-        package = (REPO_ROOT / "platforms" / plat).resolve()
-        assert package.parents[1] == repo_root, f"platforms/{plat}/ 的仓库根深度变了"
+        found = sorted(
+            path for path in platforms_dir.rglob(plat)
+            if path.is_dir() and (path / "__init__.py").is_file()
+        )
+        assert len(found) == 1, (
+            f"platforms/ 下 {plat} 这个包应该只有一个，现在找到 {len(found)} 个："
+            f"{[str(p.relative_to(repo_root)) for p in found]}"
+        )
+        assert found[0].resolve().parents[1] == repo_root, (
+            f"platforms/{plat}/ 的仓库根深度变了")
+
+    # ③ tests/ 与 tools/ 下沉一层，仓库根对它们来说是 parents[2]。
+    for package in sorted(p for p in platforms_dir.iterdir() if p.is_dir()):
         for sub in ("tests", "tools"):
             directory = package / sub
             if directory.is_dir():
-                assert directory.parents[2] == repo_root, (
-                    f"platforms/{plat}/{sub}/ 的仓库根深度变了")
+                assert directory.resolve().parents[2] == repo_root, (
+                    f"{package.name}/{sub}/ 的仓库根深度变了")

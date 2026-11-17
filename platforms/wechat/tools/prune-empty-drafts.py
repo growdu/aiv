@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "weixin"))
+sys.path.insert(0, str(ROOT / "platforms"))
 
 from wechat.posts import discover, is_empty, is_empty_shell  # noqa: E402
 from wechat.publish import WeChatClient  # noqa: E402
@@ -39,10 +39,10 @@ def main(argv=None) -> int:
     parser.add_argument("--posts-dir", type=Path,
                         default=ROOT / "source" / "_posts",
                         help="文章目录，默认 source/_posts")
-    parser.add_argument("--out-dir", type=Path, default=ROOT / "weixin" / "out",
+    parser.add_argument("--out-dir", type=Path, default=ROOT / "platforms" / "wechat" / "out",
                         help="产物目录，默认 platforms/wechat/out")
     parser.add_argument("--secrets-file", type=Path,
-                        default=ROOT / "weixin" / "secrets.json",
+                        default=ROOT / "platforms" / "wechat" / "secrets.json",
                         help="本地凭据 JSON，默认 platforms/wechat/secrets.json")
     args = parser.parse_args(argv)
 

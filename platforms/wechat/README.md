@@ -1,4 +1,4 @@
-# weixin — 博客到公众号的转换与自动发布
+# wechat — 博客到公众号的转换与自动发布
 
 把 `source/_posts/` 下的博客文章转换成公众号可直接发布的 HTML，并推送到公众号草稿箱。
 
@@ -197,7 +197,7 @@ export WX_NOTIFY_KEY=SCTxxxxxxxx     # https://sct.ftqq.com 扫码登录即可�
 ## 测试
 
 ```bash
-cd weixin && python3 -m pytest tests -q
+cd platforms/wechat && python3 -m pytest tests -q
 ```
 
 测试不依赖网络：微信接口用本地假 HTTP server 模拟（绑定 `127.0.0.1`）。

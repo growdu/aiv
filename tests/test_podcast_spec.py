@@ -126,7 +126,7 @@ PLANNED_PATHS = {
 # `:year/:month/:day/:title/`（permalink 模板）都会被误判。
 REPO_TOP_DIRS = {
     "bilibili", "browser", "channels", "docs", "douyin",
-    "public", "publish", "review", "scripts", "source", "tests",
+    "platforms", "public", "publish", "review", "scripts", "source", "tests",
     "themes", "tools", "toutiao", "video", "weixin",
 }
 

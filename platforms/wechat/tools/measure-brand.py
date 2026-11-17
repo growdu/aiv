@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "weixin"))
+sys.path.insert(0, str(ROOT / "platforms"))
 
 from wechat.brand import (byline_html, series_note_of, strip_title_page,  # noqa: E402
                           title_page_of)
