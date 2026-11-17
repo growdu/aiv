@@ -84,7 +84,7 @@ FEATURED_POSTS = {
     "distributed/foundations/分布式系统设计必知必会.md": 60,
     "source-tracks/postgresql/getting-started/postgresql基操.md": 55,
     "source-tracks/linux/kernel-internals/linux内核指北.md": 50,
-    "dpdk/dpdk常用接口指北.md": 45,
+    "source-tracks/dpdk/getting-started/dpdk常用接口指北.md": 45,
     "engineering/containers/docker基础指北.md": 40,
     "ai/07_ChatGPT为什么能对话一篇引用17万次的论文.md": 35,
     "source-tracks/postgresql/logical-replication/逻辑解码/index.md": 30,

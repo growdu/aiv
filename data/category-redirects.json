@@ -1,5 +1,6 @@
 {
   "BenchmarkSQL 基准测试": "源码主线/PostgreSQL/扩展、性能与生态",
+  "DPDK": "源码主线/DPDK与VPP",
   "Docker": "工程与语言/容器与环境",
   "Elasticsearch": "工程与语言/Web、前端与搜索",
   "FAQ": "工程与语言/速查与清单",
@@ -11,6 +12,7 @@
   "PostgreSQL 源码修炼之路": "源码主线/PostgreSQL",
   "PostgreSQL 源码修炼之路:内核深度拆解专题": "源码主线/PostgreSQL",
   "PostgreSQL 逻辑解码完整目录": "源码主线/PostgreSQL/逻辑复制与流式",
+  "VPP": "源码主线/DPDK与VPP",
   "Vue": "工程与语言/Web、前端与搜索",
   "Web": "工程与语言/Web、前端与搜索",
   "openGauss": "分布式与架构/一致性协议",

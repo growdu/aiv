@@ -148,7 +148,7 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/distributed/foundations/分布式存储需要解决的问题.md`
 - `docs/distributed/foundations/分布式系统设计必知必会.md`
 - `docs/source-tracks/postgresql/logical-replication/ai_coding/逻辑复制支持ddl ai配置流程.md`
-- `docs/dpdk/vpp插件开发.md`
+- `docs/source-tracks/dpdk/plugins-and-apps/vpp插件开发.md`
 - `docs/engineering/foundations/python/pytest/pytest进阶.md`
 - `docs/engineering/foundations/rust/rust设计原则.md`
 - `docs/source-tracks/linux/kernel-internals/linux数据预取.md`
@@ -205,12 +205,12 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/engineering/containers/docker compose管理容器.md`
 - `docs/engineering/containers/docker搭建个人镜像仓库.md`
 - `docs/dpdk/fastup模拟UE测试.md`
-- `docs/dpdk/pktgen.md`
-- `docs/dpdk/pktgen编译使用.md`
-- `docs/dpdk/ptpclient.md`
-- `docs/dpdk/vpp使用.md`
-- `docs/dpdk/交叉编译.md`
-- `docs/dpdk/抓包.md`
+- `docs/source-tracks/dpdk/getting-started/pktgen.md`
+- `docs/source-tracks/dpdk/getting-started/pktgen编译使用.md`
+- `docs/source-tracks/dpdk/getting-started/ptpclient.md`
+- `docs/source-tracks/dpdk/plugins-and-apps/vpp使用.md`
+- `docs/source-tracks/dpdk/getting-started/交叉编译.md`
+- `docs/source-tracks/dpdk/getting-started/抓包.md`
 - `docs/engineering/engineering-practice/texlive安装.md`
 - `docs/engineering/cheatsheets/faq汇总.md`
 - `docs/engineering/web-and-frontend/go_web.md`
@@ -239,8 +239,8 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/engineering/engineering-practice/doxygen使用指南.md`
 - `docs/engineering/engineering-practice/shell常用脚本.md`
 - `docs/engineering/engineering-practice/你一定要知道的黑客小技巧.md`
-- `docs/vpp/fastgtpu配置及cli说明文档.md`
-- `docs/vpp/vpp调试指北.md`
+- `docs/source-tracks/dpdk/plugins-and-apps/fastgtpu配置及cli说明文档.md`
+- `docs/source-tracks/dpdk/getting-started/vpp调试指北.md`
 - `docs/engineering/web-and-frontend/cargo构建.md`
 - `docs/engineering/web-and-frontend/python环境搭建.md`
 - `docs/engineering/web-and-frontend/react app教程.md`

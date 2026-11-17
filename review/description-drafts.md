@@ -347,26 +347,26 @@
 | `engineering/containers/kali搭建docker.md` | 在 Kali Linux 上搭建 Docker 的过程记录：更新软件源、安装 Docker 并验证是否成功。 | 查看一下是否安装成功 | ☐ |
 | `engineering/containers/使用github作为docker镜像存储仓库.md` | docker因为其便利性和隔离性已经成为日常开发中非常常见的技术，使用docker可以把我们的编译开发环境打包，在任何机器上只要把docker镜像来取下来运行，不需要重复搭建编译开发环境。 | docker因为其便利性和隔离性已经成为日常开发中非常常见的技术，使用docker可以把我们的编译开发环境打包，在任何机器上只要把docker镜像来取下来运行，不需要重复搭建编译开发环境。 | ☐ |
 | `docker/docker与宿主机共享内存通信/index.md` | docker中的进程要与宿主机使用共享内存通信，需要在启动容器的时候指定<font color=\"red\">“--ipc=host”</font>选项。然后再编写相应的共享内存的程序，一个跑在宿主机上，另一个跑在docker上面。 | docker中的进程要与宿主机使用共享内存通信，需要在启动容器的时候指定<font color="red">“--ipc=host”</font>选项。然后再编写相应的共享内存的程序，一个跑在宿主机上，另一个跑在docker上面。 | ☐ |
-| `dpdk/day1.md` | VFIO是一个可以安全的把设备I/O、中断、DMA等暴露到用户空间（userspace），从而可以在用户空间完成设备驱动的框架。用户空间直接设备访问，虚拟机设备分配可以获得更高的IO性能。 | VFIO是一个可以安全的把设备I/O、中断、DMA等暴露到用户空间（userspace），从而可以在用户空间完成设备驱动的框架。用户空间直接设备访问，虚拟机设备分配可以获得更高的IO性能。 | ☐ |
-| `dpdk/dpdk之kni使用.md` | 和igb uio模块一样，kni模块分成内核以及用户态代码，内核模块在编译出来之后为rte_kni.ko，首先插入内核，dpdk提供了一个用户态的例子。首先看下kni内核模块代码,在kni_misc.c中，ko代码入口为 | 和igb uio模块一样，kni模块分成内核以及用户态代码，内核模块在编译出来之后为rte_kni.ko，首先插入内核，dpdk提供了一个用户态的例子。首先看下kni内核模块代码,在kni_misc.c中，ko代码入口为 | ☐ |
-| `dpdk/dpdk常用接口指北.md` | 基于dpdk18.11版本，其他版本注意区别。 | 基于dpdk18.11版本，其他版本注意区别。 | ☐ |
-| `dpdk/dpdk无锁队列实现.md` | rte_ring是dpdk内部提供的一种无锁队列实现。 | rte_ring是dpdk内部提供的一种无锁队列实现。 | ☐ |
+| `source-tracks/dpdk/getting-started/day1.md` | VFIO是一个可以安全的把设备I/O、中断、DMA等暴露到用户空间（userspace），从而可以在用户空间完成设备驱动的框架。用户空间直接设备访问，虚拟机设备分配可以获得更高的IO性能。 | VFIO是一个可以安全的把设备I/O、中断、DMA等暴露到用户空间（userspace），从而可以在用户空间完成设备驱动的框架。用户空间直接设备访问，虚拟机设备分配可以获得更高的IO性能。 | ☐ |
+| `source-tracks/dpdk/getting-started/dpdk之kni使用.md` | 和igb uio模块一样，kni模块分成内核以及用户态代码，内核模块在编译出来之后为rte_kni.ko，首先插入内核，dpdk提供了一个用户态的例子。首先看下kni内核模块代码,在kni_misc.c中，ko代码入口为 | 和igb uio模块一样，kni模块分成内核以及用户态代码，内核模块在编译出来之后为rte_kni.ko，首先插入内核，dpdk提供了一个用户态的例子。首先看下kni内核模块代码,在kni_misc.c中，ko代码入口为 | ☐ |
+| `source-tracks/dpdk/getting-started/dpdk常用接口指北.md` | 基于dpdk18.11版本，其他版本注意区别。 | 基于dpdk18.11版本，其他版本注意区别。 | ☐ |
+| `source-tracks/dpdk/architecture/dpdk无锁队列实现.md` | rte_ring是dpdk内部提供的一种无锁队列实现。 | rte_ring是dpdk内部提供的一种无锁队列实现。 | ☐ |
 | `dpdk/fastupkni功能测试.md` | scl保持多版本gcc兼容，并支持切换gcc版本进行编译。 | scl保持多版本gcc兼容，并支持切换gcc版本进行编译。 | ☐ |
 | `dpdk/fastup时间规划.md` | fastup测试优化具体划分为如下步骤： | fastup测试优化具体划分为如下步骤： | ☐ |
 | `dpdk/fastup模拟UE测试.md` | 先在同一个docker上启动模拟phy和模拟UE，同时抓下一个全流程的包，后续用于pktgen打流回放。 | 先在同一个docker上启动模拟phy和模拟UE，同时抓下一个全流程的包，后续用于pktgen打流回放。 | ☐ |
 | `dpdk/fastup测试优化完成情况.md` | fastup 性能测试与优化的进度表：每项任务的计划用时、实际完成时间与完成情况。 | （没抽出来） | ☐ |
-| `dpdk/linux大页内存.md` | HugePages是通过使用大页内存来取代传统的4kb内存页面，使得管理虚拟地址数变少，加快了从虚拟地址到物理地址的映射以及通过摒弃内存页面的换入换出以提高内存的整体性能。 | HugePages是通过使用大页内存来取代传统的4kb内存页面，使得管理虚拟地址数变少，加快了从虚拟地址到物理地址的映射以及通过摒弃内存页面的换入换出以提高内存的整体性能。 | ☐ |
-| `dpdk/nxp运行vpp.md` | 运行成功，但存在如下报错： | 运行成功，但存在如下报错： | ☐ |
-| `dpdk/pktgen.md` | DPDK 的 pktgen 怎么用：拉源码、按 x86 与 arm64-dpaa2 两套环境编译，以及把脚本和二进制部署到目标板子。 | （没抽出来） | ☐ |
-| `dpdk/pktgen编译使用.md` | pktgen 的编译步骤：x86 与 arm 两条交叉编译链路的环境变量与 make config 用法。 | （没抽出来） | ☐ |
-| `dpdk/ptpclient.md` | ptpclient 的功能边界：目前实现了哪些 PTP 能力，以及基站设备侧和完整功能各自要求什么。 | （没抽出来） | ☐ |
-| `dpdk/vpp.md` | VPP(Vector Packet Processing )(向量包处理)库。 | VPP(Vector Packet Processing )(向量包处理)库。 | ☐ |
-| `dpdk/vpp与dpdk的关系.md` | dpdk作为vpp的一个插件，主要用来从网卡收发包。 | dpdk作为vpp的一个插件，主要用来从网卡收发包。 | ☐ |
-| `dpdk/vpp使用.md` | vpp通过文件读取配置，通过-c指定文件名称读取。 | vpp通过文件读取配置，通过-c指定文件名称读取。 | ☐ |
-| `dpdk/vpp使用kni.md` | 在dpdk插件的main.c通过判断/dev/kni是否存在来确定rte_kni模块是否加载。 | 在dpdk插件的main.c通过判断/dev/kni是否存在来确定rte_kni模块是否加载。 | ☐ |
-| `dpdk/vpp插件开发.md` | vpp 插件开发笔记（内容还在整理）。 | （没抽出来） | ☐ |
-| `dpdk/交叉编译.md` | 交叉编译实践：以 gdb 为例，从 x86 编到 arm32/arm64 的 configure 参数怎么写。 | （没抽出来） | ☐ |
-| `dpdk/抓包.md` | 编译完成后在arm64-dpaa-linuxapp-gcc目录下生成库和二进制。 | 编译完成后在arm64-dpaa-linuxapp-gcc目录下生成库和二进制。 | ☐ |
+| `source-tracks/dpdk/getting-started/linux大页内存.md` | HugePages是通过使用大页内存来取代传统的4kb内存页面，使得管理虚拟地址数变少，加快了从虚拟地址到物理地址的映射以及通过摒弃内存页面的换入换出以提高内存的整体性能。 | HugePages是通过使用大页内存来取代传统的4kb内存页面，使得管理虚拟地址数变少，加快了从虚拟地址到物理地址的映射以及通过摒弃内存页面的换入换出以提高内存的整体性能。 | ☐ |
+| `source-tracks/dpdk/getting-started/nxp运行vpp.md` | 运行成功，但存在如下报错： | 运行成功，但存在如下报错： | ☐ |
+| `source-tracks/dpdk/getting-started/pktgen.md` | DPDK 的 pktgen 怎么用：拉源码、按 x86 与 arm64-dpaa2 两套环境编译，以及把脚本和二进制部署到目标板子。 | （没抽出来） | ☐ |
+| `source-tracks/dpdk/getting-started/pktgen编译使用.md` | pktgen 的编译步骤：x86 与 arm 两条交叉编译链路的环境变量与 make config 用法。 | （没抽出来） | ☐ |
+| `source-tracks/dpdk/getting-started/ptpclient.md` | ptpclient 的功能边界：目前实现了哪些 PTP 能力，以及基站设备侧和完整功能各自要求什么。 | （没抽出来） | ☐ |
+| `source-tracks/dpdk/plugins-and-apps/vpp.md` | VPP(Vector Packet Processing )(向量包处理)库。 | VPP(Vector Packet Processing )(向量包处理)库。 | ☐ |
+| `source-tracks/dpdk/architecture/vpp与dpdk的关系.md` | dpdk作为vpp的一个插件，主要用来从网卡收发包。 | dpdk作为vpp的一个插件，主要用来从网卡收发包。 | ☐ |
+| `source-tracks/dpdk/plugins-and-apps/vpp使用.md` | vpp通过文件读取配置，通过-c指定文件名称读取。 | vpp通过文件读取配置，通过-c指定文件名称读取。 | ☐ |
+| `source-tracks/dpdk/plugins-and-apps/vpp使用kni.md` | 在dpdk插件的main.c通过判断/dev/kni是否存在来确定rte_kni模块是否加载。 | 在dpdk插件的main.c通过判断/dev/kni是否存在来确定rte_kni模块是否加载。 | ☐ |
+| `source-tracks/dpdk/plugins-and-apps/vpp插件开发.md` | vpp 插件开发笔记（内容还在整理）。 | （没抽出来） | ☐ |
+| `source-tracks/dpdk/getting-started/交叉编译.md` | 交叉编译实践：以 gdb 为例，从 x86 编到 arm32/arm64 的 configure 参数怎么写。 | （没抽出来） | ☐ |
+| `source-tracks/dpdk/getting-started/抓包.md` | 编译完成后在arm64-dpaa-linuxapp-gcc目录下生成库和二进制。 | 编译完成后在arm64-dpaa-linuxapp-gcc目录下生成库和二进制。 | ☐ |
 | `dpdk/dpdk相关/index.md` | DPDK全称为Date planedevelopment kit，是一个用来进行包数据处理加速的软件库 | DPDK全称为Date planedevelopment kit，是一个用来进行包数据处理加速的软件库 | ☐ |
 | `dpdk/fastup测试报告/index.md` | 需要使用专门的交叉工具编译，交叉编译工具文件为fsl-qoriq-glibc-x86_64-fsl-toolchain-aarch64-toolchain-2.5.sh，使用如下命令安装： | 需要使用专门的交叉工具编译，交叉编译工具文件为fsl-qoriq-glibc-x86_64-fsl-toolchain-aarch64-toolchain-2.5.sh，使用如下命令安装： | ☐ |
 | `dpdk/l3fwd/index.md` | 核心网（x86机器）使用pktgen发包到nxpls2160（arm机器），nxp通过dpdk l3fwd进行转发。 | 核心网（x86机器）使用pktgen发包到nxpls2160（arm机器），nxp通过dpdk l3fwd进行转发。 | ☐ |
@@ -553,21 +553,21 @@
 | `engineering/engineering-practice/如何调试bash脚本.md` | 你可以让bash打印出你脚本执行的过程中的所有语句。这很简单，只需要使用bash的-x选项就可以做到，下面让我们来看一下。 | 你可以让bash打印出你脚本执行的过程中的所有语句。这很简单，只需要使用bash的-x选项就可以做到，下面让我们来看一下。 | ☐ |
 | `engineering/containers/那些你不得不会的提高工作效率的软件神器.md` | vscode服务器版本，可以在浏览器中开发调试代码，尤其适用于windows端开发linux服务器程序。 | vscode服务器版本，可以在浏览器中开发调试代码，尤其适用于windows端开发linux服务器程序。 | ☐ |
 | `video_work/video.md` | 程序员，码农，数据库内核开发，分布式存储开发，用户态协议栈开发。 | 程序员，码农，数据库内核开发，分布式存储开发，用户态协议栈开发。 | ☐ |
-| `vpp/cdu_nxp2160_ptp1588v2实现方案.md` | ptp1588v2是一套软件协议标准，借助于软硬件时间戳来进行时间同步。因而其需要两方面的支持： | ptp1588v2是一套软件协议标准，借助于软硬件时间戳来进行时间同步。因而其需要两方面的支持： | ☐ |
-| `vpp/fastgtpu配置及cli说明文档.md` | vpp加载时会读取startup.conf的配置，fastgtpu的配置如下： | vpp加载时会读取startup.conf的配置，fastgtpu的配置如下： | ☐ |
-| `vpp/fastup发包测试说明文档.md` | fastgtpu作为vpp的一个插件，只能被动收包，无法主动发包，需对其进行发包适配。 | fastgtpu作为vpp的一个插件，只能被动收包，无法主动发包，需对其进行发包适配。 | ☐ |
-| `vpp/fastup插件加载.md` | fastgtpu 插件的加载与初始化：VLIB 初始化函数、线程创建、udp 端口注册、发包队列与收包回调的调用链。 | （没抽出来） | ☐ |
+| `source-tracks/dpdk/plugins-and-apps/cdu_nxp2160_ptp1588v2实现方案.md` | ptp1588v2是一套软件协议标准，借助于软硬件时间戳来进行时间同步。因而其需要两方面的支持： | ptp1588v2是一套软件协议标准，借助于软硬件时间戳来进行时间同步。因而其需要两方面的支持： | ☐ |
+| `source-tracks/dpdk/plugins-and-apps/fastgtpu配置及cli说明文档.md` | vpp加载时会读取startup.conf的配置，fastgtpu的配置如下： | vpp加载时会读取startup.conf的配置，fastgtpu的配置如下： | ☐ |
+| `source-tracks/dpdk/testing-and-perf/fastup发包测试说明文档.md` | fastgtpu作为vpp的一个插件，只能被动收包，无法主动发包，需对其进行发包适配。 | fastgtpu作为vpp的一个插件，只能被动收包，无法主动发包，需对其进行发包适配。 | ☐ |
+| `source-tracks/dpdk/plugins-and-apps/fastup插件加载.md` | fastgtpu 插件的加载与初始化：VLIB 初始化函数、线程创建、udp 端口注册、发包队列与收包回调的调用链。 | （没抽出来） | ☐ |
 | `vpp/fastup适配ptp方案.md` | vpp主要在5G小基站侧基于dpdk用于收发包处理。而中国移动对基站侧的ptp协议实现要求如下： | vpp主要在5G小基站侧基于dpdk用于收发包处理。而中国移动对基站侧的ptp协议实现要求如下： | ☐ |
-| `vpp/vpp buffer接口.md` | VPP 的 buffer 接口：vlib_buffer_t 的结构，为什么用 union 以及 cacheline 对齐是怎么回事。 | （没抽出来） | ☐ |
-| `vpp/vpp vector指北.md` | VPP 的 vector 是什么：本质上是动态可变大小的数组，以及它在数据面编程里怎么用。 | 版权声明：本文为CSDN博主「成王君」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。 原文链接：https://blog.csdn.net/weixin_45429253/article/details/97020110 | ☐ |
-| `vpp/vpp主要数据结构.md` | vpp最顶层结构，其中包含了vpp执行的绝大部分信息，后续注册加载都是填充该数据结构。执行都需要从该数据结构中获取相关信息。 | vpp最顶层结构，其中包含了vpp执行的绝大部分信息，后续注册加载都是填充该数据结构。执行都需要从该数据结构中获取相关信息。 | ☐ |
-| `vpp/vpp代码流程图.md` | 常规程序都是从main函数开始执行，main函数执行完后程序退出。但vpp利用gcc的 \\__attribute__((constructor))特性，使很多函数都在main函数之前执行。主要是插件的配置、注册等操作。当然这些配置和注册操作只是告诉vpp有哪些插件和配置，具体的注册加载执行还需要… | 常规程序都是从main函数开始执行，main函数执行完后程序退出。但vpp利用gcc的 \__attribute__((constructor))特性，使很多函数都在main函数之前执行。主要是插件的配置、注册等操作。当然这些配置和注册操作只是告诉vpp有哪些插件和配置，具体的注册加载执行还需要… | ☐ |
-| `vpp/vpp使用说明文档.md` | 先将vpp_arm64.tar.gz复制到目标机器上进行解压，解压后的目录结构如下： | 先将vpp_arm64.tar.gz复制到目标机器上进行解压，解压后的目录结构如下： | ☐ |
-| `vpp/vpp多网口转发.md` | vpp接管两个网口，当前需实现功能从网口1进来的流量由网口2发送出去。 | vpp接管两个网口，当前需实现功能从网口1进来的流量由网口2发送出去。 | ☐ |
-| `vpp/vpp开发指南.md` | vpp二次开发一般都是基于vpp框架进行插件开发。具体友包含以下几个方面： | vpp二次开发一般都是基于vpp框架进行插件开发。具体友包含以下几个方面： | ☐ |
-| `vpp/vpp抓包.md` | vpp支持抓包，对报文抓取后保存到文件中，并通过wireshark分析报文。 | vpp支持抓包，对报文抓取后保存到文件中，并通过wireshark分析报文。 | ☐ |
-| `vpp/vpp日志系统.md` | 在dpdk插件中可以使用vpp封装的dpdk日志打印接口： | 在dpdk插件中可以使用vpp封装的dpdk日志打印接口： | ☐ |
-| `vpp/vpp调试指北.md` | 常用程序调试有如下几种方式： | 常用程序调试有如下几种方式： | ☐ |
+| `source-tracks/dpdk/architecture/vpp buffer接口.md` | VPP 的 buffer 接口：vlib_buffer_t 的结构，为什么用 union 以及 cacheline 对齐是怎么回事。 | （没抽出来） | ☐ |
+| `source-tracks/dpdk/architecture/vpp vector指北.md` | VPP 的 vector 是什么：本质上是动态可变大小的数组，以及它在数据面编程里怎么用。 | 版权声明：本文为CSDN博主「成王君」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。 原文链接：https://blog.csdn.net/weixin_45429253/article/details/97020110 | ☐ |
+| `source-tracks/dpdk/architecture/vpp主要数据结构.md` | vpp最顶层结构，其中包含了vpp执行的绝大部分信息，后续注册加载都是填充该数据结构。执行都需要从该数据结构中获取相关信息。 | vpp最顶层结构，其中包含了vpp执行的绝大部分信息，后续注册加载都是填充该数据结构。执行都需要从该数据结构中获取相关信息。 | ☐ |
+| `source-tracks/dpdk/architecture/vpp代码流程图.md` | 常规程序都是从main函数开始执行，main函数执行完后程序退出。但vpp利用gcc的 \\__attribute__((constructor))特性，使很多函数都在main函数之前执行。主要是插件的配置、注册等操作。当然这些配置和注册操作只是告诉vpp有哪些插件和配置，具体的注册加载执行还需要… | 常规程序都是从main函数开始执行，main函数执行完后程序退出。但vpp利用gcc的 \__attribute__((constructor))特性，使很多函数都在main函数之前执行。主要是插件的配置、注册等操作。当然这些配置和注册操作只是告诉vpp有哪些插件和配置，具体的注册加载执行还需要… | ☐ |
+| `source-tracks/dpdk/getting-started/vpp使用说明文档.md` | 先将vpp_arm64.tar.gz复制到目标机器上进行解压，解压后的目录结构如下： | 先将vpp_arm64.tar.gz复制到目标机器上进行解压，解压后的目录结构如下： | ☐ |
+| `source-tracks/dpdk/testing-and-perf/vpp多网口转发.md` | vpp接管两个网口，当前需实现功能从网口1进来的流量由网口2发送出去。 | vpp接管两个网口，当前需实现功能从网口1进来的流量由网口2发送出去。 | ☐ |
+| `source-tracks/dpdk/getting-started/vpp开发指南.md` | vpp二次开发一般都是基于vpp框架进行插件开发。具体友包含以下几个方面： | vpp二次开发一般都是基于vpp框架进行插件开发。具体友包含以下几个方面： | ☐ |
+| `source-tracks/dpdk/architecture/vpp抓包.md` | vpp支持抓包，对报文抓取后保存到文件中，并通过wireshark分析报文。 | vpp支持抓包，对报文抓取后保存到文件中，并通过wireshark分析报文。 | ☐ |
+| `source-tracks/dpdk/getting-started/vpp日志系统.md` | 在dpdk插件中可以使用vpp封装的dpdk日志打印接口： | 在dpdk插件中可以使用vpp封装的dpdk日志打印接口： | ☐ |
+| `source-tracks/dpdk/getting-started/vpp调试指北.md` | 常用程序调试有如下几种方式： | 常用程序调试有如下几种方式： | ☐ |
 | `vpp/fastup-kni设计实现说明文档/index.md` | 当前5G小基站CDU控制面和数据面需要使用两个网口与核心网进行通信。但对于CDU而言，控制面数据量较小，且属于突发性流量；而数据面数据量较大，为持续性流量。相对于数据面来说，控制面流量几乎可以忽略不计。在当前设计中，控制面却需要占用一张网卡，这带来了巨大的资源消耗和维护成本。 | 当前5G小基站CDU控制面和数据面需要使用两个网口与核心网进行通信。但对于CDU而言，控制面数据量较小，且属于突发性流量；而数据面数据量较大，为持续性流量。相对于数据面来说，控制面流量几乎可以忽略不计。在当前设计中，控制面却需要占用一张网卡，这带来了巨大的资源消耗和维护成本。 | ☐ |
 | `vpp/fatsup-cpu间转发测试报告/index.md` | cpub对外网口1接入数据包，经mac层转发到cpub对内网口2，经mac层转发到cpua对内网口1进行业务逻辑处理。在cpub上未进行业务处理，在cpub上报文仅到达mac层。 | cpub对外网口1接入数据包，经mac层转发到cpub对内网口2，经mac层转发到cpua对内网口1进行业务逻辑处理。在cpub上未进行业务处理，在cpub上报文仅到达mac层。 | ☐ |
 | `vpp/vpp-ip分片测试验证/index.md` | fastup后续需考虑大包，会涉及到ip分片，需要分析验证fastup是否支持分片报文重组，以及大包分片发送。 | fastup后续需考虑大包，会涉及到ip分片，需要分析验证fastup是否支持分片报文重组，以及大包分片发送。 | ☐ |
