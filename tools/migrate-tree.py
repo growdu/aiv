@@ -125,12 +125,13 @@ def expand_out_map(table):
     return out
 
 
-def effective_map(table):
+def effective_map(table, out_paths=None):
     """把 `dir_map` + `file_map` 摊平成一张「旧路径 → 新路径」的表。
 
     `file_map` 优先于 `dir_map` —— 目录级规则是「整目录搬」，
     文件级规则是「这一篇例外」。`out_map` 里的文件不进新树。
     """
+    out_paths = expand_out_map(table) if out_paths is None else out_paths
     out = {}
     for old_dir, new_dir in table.get("dir_map", {}).items():
         prefix = old_dir.rstrip("/") + "/"
@@ -138,7 +139,7 @@ def effective_map(table):
             if rel.startswith(prefix) and _is_article(rel):
                 out[rel] = new_dir.rstrip("/") + "/" + rel[len(prefix):]
     out.update(table.get("file_map", {}))
-    for rel in expand_out_map(table):
+    for rel in out_paths:
         out.pop(rel, None)
     return out
 
@@ -521,20 +522,21 @@ def save_resolved(articles, assets):
                   ensure_ascii=False, indent=2, sort_keys=True)
 
 
-def plan_moves(table):
+def plan_moves(table, out_paths=None):
     """把迁移表摊平成一份「要执行的动作清单」。"""
-    moves = effective_map(table)
+    out_paths = expand_out_map(table) if out_paths is None else out_paths
+    moves = effective_map(table, out_paths)
     actions = []
     for old_rel in sorted(moves):
         actions.append(("in", old_rel, moves[old_rel]))
-    for old_rel, new_rel in sorted(expand_out_map(table).items()):
+    for old_rel, new_rel in sorted(out_paths.items()):
         actions.append(("out", old_rel, new_rel))
     for old_rel in sorted(table.get("drop_index", [])):
         actions.append(("drop", old_rel, None))
     return actions, moves
 
 
-def asset_moves(table, moves):
+def asset_moves(table, moves, out_paths=None):
     """随文章一起搬的资源文件（图片等）。
 
     规则：凡是落在 `dir_map` 目录下的非文章文件，跟着目录一起搬 ——
@@ -546,7 +548,7 @@ def asset_moves(table, moves):
     移出 `docs/` 的文件（`out_map`）不搬进新树 —— 它们由「移出」这条
     动作自己带走（连图片一起，见 `expand_out_map`）。
     """
-    out_paths = expand_out_map(table)
+    out_paths = expand_out_map(table) if out_paths is None else out_paths
     out = {}
     for old_dir, new_dir in table.get("dir_map", {}).items():
         prefix = old_dir.rstrip("/") + "/"
@@ -1043,8 +1045,13 @@ def main():
     args = ap.parse_args()
 
     table = load_migration(args.map)
-    actions, moves = plan_moves(table)
-    assets = asset_moves(table, moves)
+    # **`out_map` 的整目录展开必须在搬之前算**：搬完旧目录就没了，
+    # 再展开就展开不出任何文件 —— 日期表会以为那些文章还留在 `docs/` 里，
+    # 给已经不存在的路径留一条日期记录（`capture-dates.py --check` 会报
+    # 「缺文件」）。
+    out_paths = expand_out_map(table)
+    actions, moves = plan_moves(table, out_paths)
+    assets = asset_moves(table, moves, out_paths)
     # 跟上次跑解析出来的清单合起来 —— 目录搬空之后，`dir_map` 推不出
     # 「本来在哪」了，只有落盘的清单知道。
     prior_articles, prior_assets = load_resolved()
@@ -1120,8 +1127,7 @@ def main():
 
     # 5. 常量补丁
     redirects = build_redirects(moves, load_redirects())
-    date_overrides = build_date_overrides(moves, dates_before,
-                                          expand_out_map(table))
+    date_overrides = build_date_overrides(moves, dates_before, out_paths)
     cat_redirects = build_category_redirects(table)
     for name, payload in (
         (DATE_FILE, date_overrides),
