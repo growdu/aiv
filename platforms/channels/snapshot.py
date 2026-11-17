@@ -24,7 +24,7 @@ SNAPSHOT_KEYS = (
     "reason",
 )
 
-OUTBOX_DIR = Path(__file__).resolve().parents[2] / "publish" / "outbox"
+OUTBOX_DIR = Path(__file__).resolve().parents[2] / "platforms" / "channels" / "outbox"
 
 
 def _now() -> datetime:

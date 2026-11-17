@@ -3,7 +3,7 @@
 
 **母稿是 ``video/字幕-<主题>.md``**——那一行一句的口播稿与字幕表，是这条线
 入库的唯一真相；画面契约在 ``video/contracts/<期号>.json``，发布状态在
-``publish/outbox/*.json``。
+``platforms/<平台>/outbox/*.json``。
 
 生成的是**内容单元**（``source/_posts/video/<期号>.md``），不是页面：
 视频和文章走同一套渲染、同一个 permalink、同一条「已发布到」通道。
@@ -41,7 +41,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 AIV_ROOT = REPO_ROOT / "video"
 MAKEFILE = AIV_ROOT / "pipeline" / "Makefile"
 CONTRACTS_DIR = AIV_ROOT / "contracts"
-OUTBOX_DIR = REPO_ROOT / "publish" / "outbox"
+PLATFORMS_DIR = REPO_ROOT / "platforms"
 POSTS_DIR = REPO_ROOT / "source" / "_posts"
 
 CATEGORY = "视频"
@@ -87,19 +87,27 @@ def parse_front_matter(text):
 
 
 def read_outbox():
-    """Every publish snapshot, keyed by (content_id, platform)."""
+    """Every publish snapshot, keyed by (content_id, platform).
+
+    The snapshots live in each platform's own directory
+    (``platforms/<platform>/outbox/``), so every one of those directories
+    is read -- **missing one hides an episode that was already sent**.
+    """
     records = {}
-    if not OUTBOX_DIR.is_dir():
+    if not PLATFORMS_DIR.is_dir():
         return records
-    for path in sorted(OUTBOX_DIR.glob("*.json")):
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+    for directory in sorted(PLATFORMS_DIR.glob("*/outbox")):
+        if not directory.is_dir():
             continue
-        content_id = data.get("content_id")
-        platform = data.get("platform")
-        if isinstance(content_id, str) and isinstance(platform, str):
-            records[(content_id, platform)] = data
+        for path in sorted(directory.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            content_id = data.get("content_id")
+            platform = data.get("platform")
+            if isinstance(content_id, str) and isinstance(platform, str):
+                records[(content_id, platform)] = data
     return records
 
 

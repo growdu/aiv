@@ -53,7 +53,7 @@ EXIT_ERROR = 3
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_POSTS_DIR = _REPO_ROOT / "source" / "_posts"
 DEFAULT_OUT_DIR = _REPO_ROOT / "platforms" / "toutiao" / "out"
-DEFAULT_OUTBOX_DIR = _REPO_ROOT / "publish" / "outbox"
+DEFAULT_OUTBOX_DIR = _REPO_ROOT / "platforms" / "toutiao" / "outbox"
 DEFAULT_CAPABILITY = default_capability_path()
 DEFAULT_STATE_FILE = _REPO_ROOT / "platforms" / "toutiao" / "out" / "state.json"
 
@@ -547,7 +547,7 @@ def _add_common_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--out-dir", type=Path, default=argparse.SUPPRESS,
                         help="发布包目录（默认：platforms/toutiao/out）")
     parser.add_argument("--outbox-dir", type=Path, default=argparse.SUPPRESS,
-                        help="状态快照目录（默认：publish/outbox）")
+                        help="状态快照目录（默认：platforms/toutiao/outbox）")
     parser.add_argument("--capability", type=Path, default=argparse.SUPPRESS,
                         help="平台能力声明（默认：platforms/toutiao/capability.toml）")
     parser.add_argument("--state-file", type=Path, default=argparse.SUPPRESS,

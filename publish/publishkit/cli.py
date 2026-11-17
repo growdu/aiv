@@ -154,10 +154,10 @@ def _common_options() -> _Parser:
         help="内容单元目录（默认：<仓库>/source/_posts）",
     )
     parser.add_argument(
-        "--outbox-dir",
+        "--outbox-root",
         metavar="路径",
         default=argparse.SUPPRESS,
-        help="outbox 目录（默认：<状态目录>/outbox）",
+        help="平台根目录（默认：<仓库>/platforms）",
     )
     parser.add_argument(
         "--schedule-file",
@@ -284,7 +284,7 @@ def _config_from_args(args) -> ScheduleConfig:
         repo_root=getattr(args, "repo_root", None),
         state_dir=getattr(args, "state_dir", None),
         posts_dir=getattr(args, "posts_dir", None),
-        outbox_dir=getattr(args, "outbox_dir", None),
+        outbox_root=getattr(args, "outbox_root", None),
         platforms_dir=getattr(args, "platforms_dir", None),
         schedule_file=getattr(args, "schedule_file", None),
         secrets=getattr(args, "secrets", None),
@@ -333,7 +333,7 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
     environment["PUBLISH_REPO"] = str(config.repo_root)
     # 状态目录可以被指到别处，adapter 写快照时得知道写到哪去。
     # CLI 契约是固定的 ``publish <content_id>``，位置只能从 argv 之外传。
-    environment["PUBLISH_OUTBOX_DIR"] = str(config.outbox_dir)
+    environment["PUBLISH_OUTBOX_DIR"] = str(config.outbox_dir_for(capability.id))
 
     try:
         completed = subprocess.run(
@@ -373,7 +373,7 @@ def write_snapshot(
     快照是**公开信息**：没有 token、没有 secret、没有本机的绝对路径。
     文件名按约定：``<压平后的 content_id>__<platform>.json``。
     """
-    outbox = config.outbox_dir
+    outbox = config.outbox_dir_for(platform)
     outbox.mkdir(parents=True, exist_ok=True)
     path = outbox / snapshot_name(content_id, platform)
 
@@ -436,7 +436,7 @@ def publish_one(
     失败要**记进 outbox**（§7.1），不吞异常；某个平台失败不阻塞其他平台
     （§3.4）——所以这里返回退出码，由调用方决定要不要继续。
     """
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
     if index.is_published(content_id, platform):
         return EXIT_OK, ["{} 已经发到过 {}，跳过。".format(content_id, platform)]
 
@@ -468,7 +468,7 @@ def publish_one(
         # 「成功」必须**确认过**，不能假设。快照是发布层的幂等键：
         # 它没落到调度器看的那份 outbox 里，这一篇下周会被再发一遍，
         # 而调度器刚才还报「成功」——发重了比发慢了糟糕得多。
-        landed = load_outbox_index(config.outbox_dir).get(content_id, platform)
+        landed = load_outbox_index(config.outbox_root).get(content_id, platform)
         wrote = landed is not None and (
             before is None or landed.mtime_ns != before.mtime_ns
         )
@@ -483,7 +483,9 @@ def publish_one(
                 status="unknown",
                 reason=(
                     "adapter 报成功，但快照没落到 {}：幂等键没落盘，"
-                    "结果未知，不自动重发，待人工核对".format(config.outbox_dir)
+                    "结果未知，不自动重发，待人工核对".format(
+                        config.outbox_dir_for(platform)
+                    )
                 ),
                 title=title,
                 automation=capability.automation,
@@ -492,14 +494,17 @@ def publish_one(
             return EXIT_ERROR, [
                 "{} → {}：adapter 报成功但快照没落到 {} —— 幂等键没落盘，"
                 "结果未知（已记进 {}），待人工核对。".format(
-                    content_id, platform, config.outbox_dir, path.name
+                    content_id,
+                    platform,
+                    config.outbox_dir_for(platform),
+                    path.name,
                 )
             ]
         return EXIT_OK, ["{} → {}：成功。".format(content_id, platform)]
 
     # adapter 自己写没写快照：它写了就以它的为准（它是平台那一侧的事实），
     # 调度器不覆盖别人的记录。
-    after = load_outbox_index(config.outbox_dir).get(content_id, platform)
+    after = load_outbox_index(config.outbox_root).get(content_id, platform)
     adapter_wrote = after is not None and (
         before is None or after.mtime_ns != before.mtime_ns
     )
@@ -691,7 +696,7 @@ def cmd_schedule_status(args) -> int:
             )
         )
 
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
     for error in index.errors:
         print("  outbox 有读不动的快照：{}".format(error))
 
@@ -748,7 +753,7 @@ def cmd_schedule_candidates(args) -> int:
     capabilities = target_platforms(config, platform_filter)
 
     units, errors = discover_units(config.posts_dir)
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
 
     for error in errors:
         print("语料有问题：{}".format(error))

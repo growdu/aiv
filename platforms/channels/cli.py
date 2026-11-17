@@ -153,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     p_package.add_argument("--video", default=None, help="成片路径，默认 video/out/<期号>.mp4")
     p_package.add_argument("--out", default=str(DEFAULT_OUT))
     p_package.add_argument("--outbox", default=None,
-                           help="状态快照目录，默认 publish/outbox")
+                           help="状态快照目录，默认 platforms/channels/outbox")
     p_package.set_defaults(func=cmd_package)
 
     p_status = sub.add_parser("status")
@@ -168,7 +168,7 @@ def main(argv: list[str] | None = None) -> int:
     p_mark.add_argument("--url", default=None, help="公开链接，published 档必填")
     p_mark.add_argument("--out", default=str(DEFAULT_OUT))
     p_mark.add_argument("--outbox", default=None,
-                        help="状态快照目录，默认 publish/outbox")
+                        help="状态快照目录，默认 platforms/channels/outbox")
     p_mark.set_defaults(func=cmd_mark)
 
     args = parser.parse_args(argv)

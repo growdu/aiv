@@ -1,12 +1,12 @@
 """outbox 状态快照：公众号这一侧的公开状态。
 
-**为什么要它**：发布层的幂等键是 ``publish/outbox/`` 里那份快照
+**为什么要它**：发布层的幂等键是 ``platforms/wechat/outbox/`` 里那份快照
 （规格 §7.1）。微信 adapter 原来把发布状态写在自己机器上的
 ``platforms/wechat/out/state.json``，那份文件**不入库**——换台机器、或者清一次
 工作目录，「这篇发过没有」就没人知道了。
 
 所以公众号也把状态写进 outbox：契约层、站点发布索引、以及别的平台
-都看同一个地方。
+都看同一批快照。
 
 **只含公开信息**：access_token、AppSecret 永不入库。
 
@@ -22,8 +22,8 @@ from pathlib import Path
 
 __all__ = ["OUTBOX_DIR", "snapshot_name", "write_snapshot", "outbox_dir_from_env"]
 
-#: 仓库里那份 outbox 目录（与 platforms/、publish/outbox 同级）。
-OUTBOX_DIR = Path(__file__).resolve().parents[2] / "publish" / "outbox"
+#: 仓库里那份 outbox 目录（``platforms/wechat/outbox/``）。
+OUTBOX_DIR = Path(__file__).resolve().parents[2] / "platforms" / "wechat" / "outbox"
 
 #: 快照的字段就是这些，多一个少一个都会被契约测试抓住。
 SNAPSHOT_KEYS = (

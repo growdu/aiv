@@ -128,7 +128,7 @@ REPRINT_POLICIES = (
 #:
 #: 这 7 个字段只回答「**这一期是什么**」——身份、内容事实。
 #: 「**在哪看**」（平台链接）是发布动作的产物，记在
-#: ``publish/outbox/<EP>__<平台>.json`` 的 ``published_url`` 里，
+#: ``platforms/<平台>/outbox/<EP>__<平台>.json`` 的 ``published_url`` 里，
 #: **不进 front matter**：发布产物抄进母稿就是新造一类手写常量，
 #: 而手写常量正是 §5.1 刚消灭掉的东西。
 EPISODE_SCALAR_FIELDS = (

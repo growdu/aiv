@@ -41,7 +41,7 @@ def test_the_outbox_directory_can_be_pointed_elsewhere(monkeypatch, tmp_path):
 def test_without_the_environment_variable_it_is_the_repository_one(monkeypatch):
     monkeypatch.delenv("PUBLISH_OUTBOX_DIR", raising=False)
     assert outbox_dir_from_env().name == "outbox"
-    assert outbox_dir_from_env().parent.name == "publish"
+    assert outbox_dir_from_env().parent.name == "wechat"
 
 
 # --- payload ---------------------------------------------------------------

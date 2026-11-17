@@ -71,7 +71,7 @@ def test_the_missing_video_hint_reaches_the_terminal(tmp_path, monkeypatch, caps
 
     **也不能顺手往仓库的 outbox 写快照**：命令在**另一个进程**里跑，
     conftest 那个 monkeypatch 拦不住。上一版这个测试就把
-    `publish/outbox/structured-ddl__douyin.json` 写成了指向
+    `platforms/douyin/outbox/structured-ddl__douyin.json` 写成了指向
     pytest 临时目录的垃圾。
     """
     from douyin import cli

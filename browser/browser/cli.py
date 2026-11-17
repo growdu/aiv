@@ -41,7 +41,7 @@ REPO_ROOT = BROWSER_ROOT.parent
 DEFAULT_PACKAGES = REPO_ROOT / "platforms" / "channels" / "out"
 DEFAULT_BILIBILI_PACKAGES = REPO_ROOT / "platforms" / "bilibili" / "out"
 DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "platforms" / "toutiao" / "out"
-DEFAULT_OUTBOX = REPO_ROOT / "publish" / "outbox"
+DEFAULT_OUTBOX = REPO_ROOT / "platforms" / "toutiao" / "outbox"
 DEFAULT_OUT = BROWSER_ROOT / "out"
 DEFAULT_SELECTORS = BROWSER_ROOT / "selectors" / "channels.json"
 DEFAULT_BILIBILI_SELECTORS = BROWSER_ROOT / "selectors" / "bilibili.json"
@@ -399,7 +399,7 @@ def cmd_bilibili_draft(args: argparse.Namespace) -> int:
 def _toutiao_draft_id(outbox_dir: Path, content_id: str) -> str:
     """从状态快照里读出平台侧的草稿 id。
 
-    快照（``publish/outbox/<slug>__toutiao.json``）是**公开的契约文件**：
+    快照（``platforms/toutiao/outbox/<slug>__toutiao.json``）是**公开的契约文件**：
     里面记着这篇在平台上是什么状态、平台侧 id 是多少。执行器读它就行，
     不 import 那个 adapter（adapter 也不该知道执行器的事）。
     """
@@ -575,7 +575,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_tt.add_argument("--packages-dir", default=None,
                        help="头条号发布包目录，默认 platforms/toutiao/out")
     p_tt.add_argument("--outbox-dir", default=None,
-                       help="状态快照目录，默认 publish/outbox")
+                       help="状态快照目录，默认 platforms/toutiao/outbox")
     p_tt.add_argument("--out", default=None, help="产物目录，默认 browser/out/toutiao")
     p_tt.add_argument("--cdp", default=None,
                        help="挂到已经在跑的浏览器上，"

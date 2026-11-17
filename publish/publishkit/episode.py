@@ -52,7 +52,7 @@ front matter 的格式规则（契约一 §4.2）只允许扁平的 ``key: value
 （钩子 / 字幕 / 时长 / 许可证）、可追溯性（源码路径 / 复现命令）。
 
 「**在哪看**」（平台链接）是**发布动作的产物**：发布流程把链接写进
-``publish/outbox/<EP>__<平台>.json`` 的 ``published_url``。
+``platforms/<平台>/outbox/<EP>__<平台>.json`` 的 ``published_url``。
 
 它不进 front matter，理由与 §五.2「落地 URL 必须派生」同源：
 

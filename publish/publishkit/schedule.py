@@ -104,11 +104,15 @@ class ScheduleConfig:
 
     repo_root: Path
     posts_dir: Path
-    outbox_dir: Path
+    outbox_root: Path
     state_dir: Path
     schedule_file: Path
     platforms_dir: Path
     secrets_file: Path
+
+    def outbox_dir_for(self, platform: str) -> Path:
+        """某个平台的快照目录：``<outbox_root>/<platform>/outbox``。"""
+        return self.outbox_root / platform / "outbox"
 
 
 def resolve_config(
@@ -116,7 +120,7 @@ def resolve_config(
     repo_root=None,
     state_dir=None,
     posts_dir=None,
-    outbox_dir=None,
+    outbox_root=None,
     platforms_dir=None,
     schedule_file=None,
     secrets=None,
@@ -134,8 +138,8 @@ def resolve_config(
     ``PUBLISH_STATE_DIR`` 状态目录                    ``$REPO/publish``
     ==================== ========================== ==========================
 
-    状态目录一改，``schedule.json`` 与 ``outbox/`` **都跟着走**——
-    outbox 不是钉死在 ``$PUBLISH_REPO/publish/outbox`` 的。
+    状态目录一改，``schedule.json`` **跟着走**，``outbox/`` 不跟——
+    outbox 住在平台目录里（``<仓库>/platforms/<平台>/outbox/``），是入库的发布记录。
     """
     env = os.environ if environ is None else environ
 
@@ -165,7 +169,9 @@ def resolve_config(
         posts_dir=Path(posts_dir)
         if posts_dir is not None
         else root / "source" / "_posts",
-        outbox_dir=Path(outbox_dir) if outbox_dir is not None else state / "outbox",
+        outbox_root=(
+            Path(outbox_root) if outbox_root is not None else root / "platforms"
+        ),
         state_dir=state,
         schedule_file=(
             Path(schedule_file)
@@ -317,7 +323,7 @@ class OutboxRecord:
 
 @dataclass(frozen=True)
 class OutboxIndex:
-    """``publish/outbox/*.json`` 的索引。
+    """``<平台根>/*/outbox/*.json`` 的索引。
 
     **靠扫目录建索引，不靠算文件名去找**：快照是自描述的（文件里写着
     ``content_id`` 与 ``platform``），文件名只是约定。
@@ -365,44 +371,50 @@ class OutboxIndex:
         )
 
 
-def load_outbox_index(outbox_dir) -> OutboxIndex:
-    """扫描 outbox 目录建索引。
+def load_outbox_index(outbox_root) -> OutboxIndex:
+    """扫描平台目录下的 outbox 建索引。
+
+    每个平台的快照住在 ``<root>/<platform>/outbox/``；这里把五个目录
+    一起扫了——**读侧漏一个目录，就等于把已发过的内容当成没发过**。
 
     坏 JSON 不静默忽略：记进 ``errors``，让调用方报出来——一个读不动的
     快照文件，意味着一篇可能已经发过了却查不到。
     """
-    root = Path(outbox_dir)
+    root = Path(outbox_root)
     records = {}
     errors = []
     if not root.is_dir():
         return OutboxIndex(records={}, errors=())
 
-    for path in sorted(root.glob("*.json")):
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            errors.append("{}：读不出来（{}）".format(path.name, exc))
+    for directory in sorted(root.glob("*/outbox")):
+        if not directory.is_dir():
             continue
-        if not isinstance(data, dict):
-            errors.append("{}：不是一份映射".format(path.name))
-            continue
-        content_id = data.get("content_id")
-        platform = data.get("platform")
-        if not isinstance(content_id, str) or not isinstance(platform, str):
-            errors.append("{}：缺 content_id 或 platform".format(path.name))
-            continue
-        try:
-            mtime_ns = path.stat().st_mtime_ns
-        except OSError:
-            mtime_ns = 0
-        records[(content_id, platform)] = OutboxRecord(
-            content_id=content_id,
-            platform=platform,
-            status=str(data.get("status") or ""),
-            path=path,
-            data=data,
-            mtime_ns=mtime_ns,
-        )
+        for path in sorted(directory.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                errors.append("{}：读不出来（{}）".format(path.name, exc))
+                continue
+            if not isinstance(data, dict):
+                errors.append("{}：不是一份映射".format(path.name))
+                continue
+            content_id = data.get("content_id")
+            platform = data.get("platform")
+            if not isinstance(content_id, str) or not isinstance(platform, str):
+                errors.append("{}：缺 content_id 或 platform".format(path.name))
+                continue
+            try:
+                mtime_ns = path.stat().st_mtime_ns
+            except OSError:
+                mtime_ns = 0
+            records[(content_id, platform)] = OutboxRecord(
+                content_id=content_id,
+                platform=platform,
+                status=str(data.get("status") or ""),
+                path=path,
+                data=data,
+                mtime_ns=mtime_ns,
+            )
     return OutboxIndex(records=records, errors=tuple(errors))
 
 
@@ -741,7 +753,7 @@ def retry_failed(
 
     返回 ``(消息列表, 本次处理过的 (content_id, platform))``。
     """
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
     messages = []
     handled = set()
     for record in sorted(
@@ -861,7 +873,7 @@ def run_weekly(
     for error in errors:
         messages.append("语料有问题，这一篇没进候选集：" + error)
 
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
     for error in index.errors:
         messages.append("outbox 有读不动的快照：" + error)
 
@@ -948,7 +960,7 @@ def _publish_to_platforms(config, content_id, platforms, publisher, dry_run, ski
                 "{} → {}：本次已经处理过，跳过。".format(content_id, platform)
             )
             continue
-        index = load_outbox_index(config.outbox_dir)
+        index = load_outbox_index(config.outbox_root)
         record = index.get(content_id, platform)
         if record is not None and record.status == "unknown":
             # 结果未知（超时）：不能自动重发——可能已经发出去了（§7.1 第三条）。

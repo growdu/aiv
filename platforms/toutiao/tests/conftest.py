@@ -12,10 +12,10 @@ SOURCE_POSTS = REPO_ROOT / "source" / "_posts"
 CAPABILITIES = REPO_ROOT / "platforms" / "toutiao"
 
 #: The directories inside the repository that the commands write into when
-#: they are not told otherwise.  ``publish/outbox/`` holds tracked
+#: they are not told otherwise.  ``platforms/toutiao/outbox/`` holds tracked
 #: snapshots; ``platforms/toutiao/out/`` holds the Phase 0 packages the pilot work
 #: depends on.  A test that forgets one of the options writes here.
-OUTBOX_DIR = REPO_ROOT / "publish" / "outbox"
+OUTBOX_DIR = REPO_ROOT / "platforms" / "toutiao" / "outbox"
 PACKAGES_DIR = REPO_ROOT / "platforms" / "toutiao" / "out"
 WRITABLE_IN_THE_REPOSITORY = (OUTBOX_DIR, PACKAGES_DIR)
 
@@ -28,7 +28,7 @@ def _tracked_files(directory: Path):
 
     ``-z`` is not optional here.  Without it git quotes every path that
     holds a non-ASCII character and writes the bytes as octal escapes
-    (``"publish/outbox/db-logical_decode-postgresql\\351\\207\\217..."``),
+    (``"platforms/toutiao/outbox/db-logical_decode-postgresql\\351\\207\\217..."``),
     so a file whose name contains Chinese never matches the real name on
     disk -- and a **tracked** file gets reported as untracked.  The
     snapshot names are derived from the article titles, and those are
@@ -71,7 +71,7 @@ def the_repository_is_never_written_to():
     - the **packages directory** is compared against the snapshot taken at
       the **start of the session**, not "before and after this test": the
       second kind cannot see what the previous test left behind.  That is
-      how a test wrote a package into ``publish/outbox/`` and the old
+      how a test wrote a package into ``platforms/toutiao/outbox/`` and the old
       per-test comparison still reported everything was fine.
     """
     def snapshot():
@@ -99,7 +99,7 @@ def the_repository_is_never_written_to():
     if tracked is not None:
         untracked = sorted(after[OUTBOX_DIR] - tracked)
         assert not untracked, (
-            "publish/outbox/ 里有没被 git 跟踪的文件：{} —— "
+            "platforms/toutiao/outbox/ 里有没被 git 跟踪的文件：{} —— "
             "它们是某次测试留下的，删掉它们".format("、".join(untracked))
         )
 

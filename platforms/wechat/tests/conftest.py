@@ -29,7 +29,7 @@ def isolated_credentials(monkeypatch):
 def isolated_outbox(monkeypatch, tmp_path_factory):
     """Point the outbox snapshot at a temporary directory.
 
-    发布状态快照的默认位置是仓库里的 ``publish/outbox/``——那是要入库的
+    发布状态快照的默认位置是仓库里的 ``platforms/wechat/outbox/``——那是要入库的
     幂等键，不是测试的沙箱。测试写进去会污染工作树（头条号那边有一条
     守卫测试专门抓这个），所以这里把它挪到临时目录。
     """

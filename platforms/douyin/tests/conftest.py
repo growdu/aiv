@@ -46,7 +46,7 @@ def make_video():
 def outbox(tmp_path, monkeypatch):
     """测试期间状态快照写进临时目录。
 
-    默认位置是 `publish/outbox/`（规格 §7.5），那是仓库里的一个目录——
+    默认位置是 `platforms/douyin/outbox/`（规格 §7.5），那是仓库里的一个目录——
     测试不该往仓库里写东西，出了包也说不清是哪次跑的。
     """
     from douyin import snapshot
@@ -58,7 +58,7 @@ def outbox(tmp_path, monkeypatch):
 
 @pytest.fixture(autouse=True, scope="session")
 def _the_repo_outbox_stays_untouched():
-    """测试不许往仓库里的 `publish/outbox` 写东西。
+    """测试不许往仓库里的 `platforms/douyin/outbox` 写东西。
 
     **基准是会话起点，不是每个测试的前后。** 前后比对看不见**上一个
     测试**留下的东西——那个文件在本次起点就已经存在了，于是「前后一样」，
@@ -69,11 +69,11 @@ def _the_repo_outbox_stays_untouched():
     遗留」的办法。
 
     踩过的坑：命令行测试是**另一个进程**，conftest 里把快照目录改到
-    临时区拦不住它——它把 `publish/outbox/structured-ddl__douyin.json`
+    临时区拦不住它——它把 `platforms/douyin/outbox/structured-ddl__douyin.json`
     写成了指向 pytest 临时目录的垃圾：文件在、JSON 合法、看着像真的
     状态，下一个人读到的是假的。
     """
-    repo_outbox = REPO_ROOT / "publish" / "outbox"
+    repo_outbox = REPO_ROOT / "platforms" / "douyin" / "outbox"
 
     def _on_disk():
         if not repo_outbox.is_dir():
@@ -92,7 +92,7 @@ def _the_repo_outbox_stays_untouched():
         # 写成八进制转义并加引号（"a\346\227\245.json"），拿那个字符串去跟
         # 文件系统上的真实中文名比对，永远比不上——守卫就成了永远误报的摆设。
         # `-z` 输出的是 NUL 分隔的原始路径，不转义、不加引号。
-        result = subprocess.run(["git", "ls-files", "-z", "publish/outbox"],
+        result = subprocess.run(["git", "ls-files", "-z", "platforms/douyin/outbox"],
                                 cwd=REPO_ROOT, capture_output=True)
         raw = result.stdout.decode("utf-8", errors="replace")
         return {line for line in raw.split("\0") if line.strip()}
@@ -105,16 +105,16 @@ def _the_repo_outbox_stays_untouched():
         name for name in set(before) | set(after)
         if before.get(name) != after.get(name)
     )
-    assert not changed, f"测试往仓库的 publish/outbox 写了东西：{changed}"
+    assert not changed, f"测试往仓库的 platforms/douyin/outbox 写了东西：{changed}"
 
     tracked = _tracked()
     if tracked is not None:
         untracked = sorted(
             name for name in after
-            if f"publish/outbox/{name}" not in tracked
+            if f"platforms/douyin/outbox/{name}" not in tracked
         )
         assert not untracked, (
-            f"publish/outbox 里有没被 git 跟踪的文件：{untracked}"
+            f"platforms/douyin/outbox 里有没被 git 跟踪的文件：{untracked}"
             f"（上个 session 留下的脏文件，或本次测试写的）"
         )
 

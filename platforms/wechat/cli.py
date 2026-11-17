@@ -1026,7 +1026,7 @@ def _drop_extra_parts(client, store, post, count: int) -> None:
 def _write_outbox_snapshot(args, *, status: str, title: str, reason: str,
                            retryable: bool = False,
                            published_url: str | None = None) -> bool:
-    """把这一篇的发布状态写进 ``publish/outbox/``。
+    """把这一篇的发布状态写进 ``platforms/wechat/outbox/``。
 
     **为什么写**：发布层的幂等键是 outbox 里那份快照（规格 §7.1）。
     微信 adapter 原来把状态写在自己机器上的 ``platforms/wechat/out/state.json``，

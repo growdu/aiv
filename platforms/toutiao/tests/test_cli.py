@@ -180,7 +180,7 @@ def test_an_empty_environment_variable_falls_back_to_the_default(tmp_path, monke
     """空字符串不是「指到空目录」，是「没指」。
 
     这里直接测解析函数，不跑命令：命令的默认 outbox 是仓库里的
-    ``publish/outbox/``，跑一次就会把测试产物写进仓库。
+    ``platforms/toutiao/outbox/``，跑一次就会把测试产物写进仓库。
     """
     monkeypatch.setenv("PUBLISH_OUTBOX_DIR", "   ")
     assert cli._default_outbox_dir() == cli.DEFAULT_OUTBOX_DIR

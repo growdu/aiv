@@ -205,7 +205,8 @@ def workspace(tmp_path):
             ]
 
         def outbox(self):
-            return self.root / "publish" / "outbox"
+            # 快照按平台住：``<平台根>/<平台>/outbox/``。
+            return self.root / "platforms" / "fake" / "outbox"
 
         def schedule_file(self):
             return self.root / "publish" / "schedule.json"
@@ -534,7 +535,12 @@ def test_the_command_line_overrides_the_environment(workspace, monkeypatch):
     assert not (workspace.root / "elsewhere").exists()
 
 
-def test_the_outbox_directory_follows_the_state_directory(workspace, monkeypatch):
+def test_the_outbox_directory_does_not_follow_the_state_directory(workspace, monkeypatch):
+    """状态目录改了，outbox **不跟着走**——它住在平台目录里。
+
+    outbox 是入库的发布记录（幂等键），它跟平台待在一起；
+    状态目录只是调度层自己的那层幂等键，两者分开。
+    """
     state_dir = workspace.root / "elsewhere"
     monkeypatch.setenv("PUBLISH_REPO", str(workspace.root))
     monkeypatch.setenv("PUBLISH_STATE_DIR", str(state_dir))
@@ -542,7 +548,8 @@ def test_the_outbox_directory_follows_the_state_directory(workspace, monkeypatch
     main(["schedule", "weekly"])
 
     assert (state_dir / "schedule.json").is_file()
-    assert (state_dir / "outbox").is_dir()
+    assert not (state_dir / "outbox").exists()
+    assert (workspace.root / "platforms" / "fake" / "outbox").is_dir()
 
 
 def test_the_module_entry_point_works(workspace):

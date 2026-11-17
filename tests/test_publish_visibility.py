@@ -6,7 +6,7 @@ see on the site:
 - ``tools/build-video-pages.py`` turns each AIV episode's narration script
   into a content unit (``source/_posts/video/<episode>.md``) plus a
   collection page.
-- ``tools/build-publish-index.py`` summarises ``publish/outbox/*.json``
+- ``tools/build-publish-index.py`` summarises ``platforms/<platform>/outbox/*.json``
   into ``source/_data/publish_index.json``, which the theme renders as the
   "where else did this go" block.
 
@@ -102,9 +102,10 @@ def test_a_video_page_carries_its_kind_and_its_platforms(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    outbox = tmp_path / "outbox"
-    outbox.mkdir()
+    platforms = tmp_path / "platforms"
     for platform in ("bilibili", "channels"):
+        outbox = platforms / platform / "outbox"
+        outbox.mkdir(parents=True)
         (outbox / f"row-lock__{platform}.json").write_text(
             json.dumps(
                 {"content_id": "row-lock", "platform": platform, "status": "packaged"}
@@ -115,7 +116,7 @@ def test_a_video_page_carries_its_kind_and_its_platforms(tmp_path, monkeypatch):
     monkeypatch.setattr(video_pages, "AIV_ROOT", aiv)
     monkeypatch.setattr(video_pages, "MAKEFILE", aiv / "pipeline" / "Makefile")
     monkeypatch.setattr(video_pages, "CONTRACTS_DIR", aiv / "contracts")
-    monkeypatch.setattr(video_pages, "OUTBOX_DIR", outbox)
+    monkeypatch.setattr(video_pages, "PLATFORMS_DIR", platforms)
     monkeypatch.setattr(video_pages, "POSTS_DIR", tmp_path / "posts")
 
     assert video_pages.main([]) == 0
@@ -148,17 +149,28 @@ def test_the_video_pages_tool_does_not_write_the_series_page(tmp_path, monkeypat
         "ifeq ($(EP),row-lock)\nSCRIPT := $(ROOT)/字幕-行锁.md\nendif\n",
         encoding="utf-8",
     )
-    outbox = tmp_path / "outbox"
-    outbox.mkdir()
+    platforms = tmp_path / "platforms"
+    (platforms / "toutiao" / "outbox").mkdir(parents=True)
 
     monkeypatch.setattr(video_pages, "AIV_ROOT", aiv)
     monkeypatch.setattr(video_pages, "MAKEFILE", aiv / "pipeline" / "Makefile")
     monkeypatch.setattr(video_pages, "CONTRACTS_DIR", aiv / "contracts")
-    monkeypatch.setattr(video_pages, "OUTBOX_DIR", outbox)
+    monkeypatch.setattr(video_pages, "PLATFORMS_DIR", platforms)
     monkeypatch.setattr(video_pages, "POSTS_DIR", tmp_path / "posts")
 
     assert video_pages.main([]) == 0
     assert not (tmp_path / "source" / "videos" / "index.md").exists()
+
+
+def test_read_outbox_finds_the_real_snapshots():
+    """真的仓库里的 567 条快照，一条都不能漏。
+
+    别的用例把快照目录指到临时目录——**路径写错时它们照样绿**。
+    这一条对着真仓库：漏掉任何一个平台的目录，站点就会把
+    「已经发过的」当成「没发过」。
+    """
+    records = video_pages.read_outbox()
+    assert len(records) == 567, f"读到 {len(records)} 条快照，应为 567"
 
 
 # --- 发布索引 -------------------------------------------------------------
@@ -209,9 +221,12 @@ def test_the_index_splits_articles_from_videos(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    outbox = tmp_path / "outbox"
-    outbox.mkdir()
-    (outbox / "database-demo__toutiao.json").write_text(
+    platforms = tmp_path / "platforms"
+    toutiao = platforms / "toutiao" / "outbox"
+    toutiao.mkdir(parents=True)
+    bilibili = platforms / "bilibili" / "outbox"
+    bilibili.mkdir(parents=True)
+    (toutiao / "database-demo__toutiao.json").write_text(
         json.dumps(
             {
                 "content_id": "database/demo",
@@ -222,7 +237,7 @@ def test_the_index_splits_articles_from_videos(tmp_path, monkeypatch):
         ),
         encoding="utf-8",
     )
-    (outbox / "row-lock__bilibili.json").write_text(
+    (bilibili / "row-lock__bilibili.json").write_text(
         json.dumps(
             {
                 "content_id": "row-lock",
@@ -236,7 +251,7 @@ def test_the_index_splits_articles_from_videos(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr(publish_index, "POSTS_DIR", posts_dir)
-    monkeypatch.setattr(publish_index, "OUTBOX_DIR", outbox)
+    monkeypatch.setattr(publish_index, "PLATFORMS_DIR", platforms)
 
     index = publish_index.build_index()
 
@@ -254,15 +269,16 @@ def test_a_snapshot_without_a_page_is_reported_not_hidden(tmp_path, monkeypatch)
     """找不到内容单元的快照要报出来，不能悄悄丢掉。"""
     posts_dir = tmp_path / "source" / "_posts"
     posts_dir.mkdir(parents=True)
-    outbox = tmp_path / "outbox"
-    outbox.mkdir()
-    (outbox / "gone__wechat.json").write_text(
+    platforms = tmp_path / "platforms"
+    wechat = platforms / "wechat" / "outbox"
+    wechat.mkdir(parents=True)
+    (wechat / "gone__wechat.json").write_text(
         json.dumps({"content_id": "gone", "platform": "wechat", "status": "drafted"}),
         encoding="utf-8",
     )
 
     monkeypatch.setattr(publish_index, "POSTS_DIR", posts_dir)
-    monkeypatch.setattr(publish_index, "OUTBOX_DIR", outbox)
+    monkeypatch.setattr(publish_index, "PLATFORMS_DIR", platforms)
 
     index = publish_index.build_index()
 
@@ -273,13 +289,26 @@ def test_a_snapshot_without_a_page_is_reported_not_hidden(tmp_path, monkeypatch)
 def test_the_index_is_written_as_json(tmp_path, monkeypatch):
     posts_dir = tmp_path / "source" / "_posts"
     posts_dir.mkdir(parents=True)
-    outbox = tmp_path / "outbox"
-    outbox.mkdir()
+    platforms = tmp_path / "platforms"
+    (platforms / "toutiao" / "outbox").mkdir(parents=True)
     monkeypatch.setattr(publish_index, "POSTS_DIR", posts_dir)
-    monkeypatch.setattr(publish_index, "OUTBOX_DIR", outbox)
+    monkeypatch.setattr(publish_index, "PLATFORMS_DIR", platforms)
 
     out = tmp_path / "data" / "publish_index.json"
     assert publish_index.main(["--out", str(out)]) == 0
 
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert "articles" in payload and "videos" in payload
+
+
+def test_read_outbox_finds_the_real_snapshots():
+    """真的仓库里的 567 条快照，一条都不能漏。
+
+    别的用例把快照目录指到临时目录——**路径写错时它们照样绿**。
+    这一条对着真仓库：漏掉任何一个平台的目录，站点就会把
+    「已经发过的」当成「没发过」。
+    """
+    records = publish_index.read_outbox()
+    assert sum(len(v) for v in records.values()) == 567, (
+        f"读到 {sum(len(v) for v in records.values())} 条快照，应为 567"
+    )

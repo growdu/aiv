@@ -10,7 +10,7 @@ pipeline, so the state is kept in three layers:
 **Two state mechanisms live in this project, and they are not the same
 thing.**  Mixing them up is the easy mistake here:
 
-- ``publish/outbox/<content_id>__<platform>.json`` is the *committed*
+- ``platforms/<platform>/outbox/<content_id>__<platform>.json`` is the *committed*
   idempotency key: the snapshot written by ``publish.py``.  It is public,
   it goes into the repository, and it is what the "already published, do
   not publish again" rule reads.

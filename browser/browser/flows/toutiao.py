@@ -17,7 +17,7 @@
 但内容不对」。
 
 **它不动账本。** 草稿 id 没变，账本里那条记录也就没变；
-``publish/outbox/`` 里的快照仍然是「drafted + 同一个 draft_id」。
+``platforms/toutiao/outbox/`` 里的快照仍然是「drafted + 同一个 draft_id」。
 """
 
 from __future__ import annotations

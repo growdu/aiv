@@ -25,7 +25,7 @@ SNAPSHOT_KEYS = (
     "reason",
 )
 
-OUTBOX_DIR = Path(__file__).resolve().parents[2] / "publish" / "outbox"
+OUTBOX_DIR = Path(__file__).resolve().parents[2] / "platforms" / "bilibili" / "outbox"
 # 仓库根：platforms/bilibili/snapshot.py → platforms/bilibili → platforms → 仓库根
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

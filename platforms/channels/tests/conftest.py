@@ -44,7 +44,7 @@ def make_video():
 def outbox(tmp_path, monkeypatch):
     """测试期间状态快照写进临时目录。
 
-    默认位置是 `publish/outbox/`（规格 §7.5），那是仓库里的一个目录——
+    默认位置是 `platforms/channels/outbox/`（规格 §7.5），那是仓库里的一个目录——
     测试不该往仓库里写东西，出了包也说不清是哪次跑的。
     """
     from channels import snapshot

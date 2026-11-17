@@ -2,16 +2,17 @@
 """汇总发布状态，产出站点用的发布索引。
 
 **站点是内容谱系的根**（发布架构 §9.3）：一篇文章页要能回答「这篇还发到了
-哪些平台」，一个视频页要能回答「这期发到哪了」。答案在 ``publish/outbox/``
-里——那是发布层的幂等键，本工具把它汇总成站点能消费的形状。
+哪些平台」，一个视频页要能回答「这期发到哪了」。答案在各平台的
+``platforms/<平台>/outbox/`` 里——那是发布层的幂等键，本工具把它汇总成
+站点能消费的形状。
 
 产物：
 
     source/_data/publish_index.json    主题 partial 消费的数据源
     source/_posts/_published.md        （不生成，见下）
 
-**只读不写发布状态**：本工具不改 ``publish/outbox/``，它只是把那些快照
-读出来拼成一张表。真相永远在快照里。
+**只读不写发布状态**：本工具不改 ``platforms/<平台>/outbox/``，它只是把那些
+快照读出来拼成一张表。真相永远在快照里。
 
 用法：
 
@@ -27,7 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-OUTBOX_DIR = REPO_ROOT / "publish" / "outbox"
+PLATFORMS_DIR = REPO_ROOT / "platforms"
 POSTS_DIR = REPO_ROOT / "source" / "_posts"
 DATA_DIR = REPO_ROOT / "source" / "_data"
 
@@ -113,27 +114,35 @@ def read_posts():
 
 
 def read_outbox():
-    """Every publish snapshot, keyed by content_id."""
+    """Every publish snapshot, keyed by content_id.
+
+    The snapshots live in each platform's own directory
+    (``platforms/<platform>/outbox/``), so every one of those directories
+    is read -- **missing one hides an article that was already sent**.
+    """
     records = {}
-    if not OUTBOX_DIR.is_dir():
+    if not PLATFORMS_DIR.is_dir():
         return records
-    for path in sorted(OUTBOX_DIR.glob("*.json")):
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+    for directory in sorted(PLATFORMS_DIR.glob("*/outbox")):
+        if not directory.is_dir():
             continue
-        content_id = data.get("content_id")
-        platform = data.get("platform")
-        if not isinstance(content_id, str) or not isinstance(platform, str):
-            continue
-        records.setdefault(content_id, []).append({
-            "platform": platform,
-            "platform_name": PLATFORM_NAMES.get(platform, platform),
-            "status": data.get("status", "unknown"),
-            "published_url": data.get("published_url"),
-            "reason": data.get("reason", ""),
-            "updated_at": data.get("updated_at", ""),
-        })
+        for path in sorted(directory.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            content_id = data.get("content_id")
+            platform = data.get("platform")
+            if not isinstance(content_id, str) or not isinstance(platform, str):
+                continue
+            records.setdefault(content_id, []).append({
+                "platform": platform,
+                "platform_name": PLATFORM_NAMES.get(platform, platform),
+                "status": data.get("status", "unknown"),
+                "published_url": data.get("published_url"),
+                "reason": data.get("reason", ""),
+                "updated_at": data.get("updated_at", ""),
+            })
     return records
 
 
@@ -203,7 +212,7 @@ def build_index():
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="build-publish-index",
-        description="汇总 publish/outbox 的发布状态，产出站点用的发布索引。",
+        description="汇总各平台 outbox 的发布状态，产出站点用的发布索引。",
     )
     parser.add_argument(
         "--out",

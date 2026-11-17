@@ -16,7 +16,7 @@
 
     adapter（platforms/channels/、platforms/bilibili/）  产出发布包，校验限额
     browser/                         打开真实浏览器，把包里的东西填进去
-    状态快照（publish/outbox/）        两边共用的对外事实
+    状态快照（platforms/<平台>/outbox/） 两边共用的对外事实
 
 **browser/ 不 import 任何 adapter。** 回填快照靠调用外部命令
 （默认 `python -m channels.cli mark published`），不靠 import，
