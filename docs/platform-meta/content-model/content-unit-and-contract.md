@@ -85,7 +85,9 @@ difficulty: 3
 白名单一共 **19 项**：上面这 10 项是文章用的，另外 9 项
 （`episode`、`episode_no`、`series`、`episode_hook`、`episode_subtitle`、
 `episode_duration_s`、`episode_license`、`episode_sources`、`episode_repro`）
-是视频期号专用的——同一份契约要同时管住文章和视频两类内容单元，
+是视频期号专用的。
+
+同一份契约要同时管住文章和视频两类内容单元，
 所以白名单是「文章字段 + 视频字段」，不是只有文章字段。
 
 透传的意思是：**作者写了什么，编译时原样搬过去，一个字都不改**。
@@ -188,7 +190,7 @@ difficulty: 3
 
 ---
 
-## 七、接着读
+## 七、相关阅读
 
 - [一个仓库，三条产线](../platform-overview/one-repo-three-pipelines.md) —
   这份契约在整体架构里的位置
