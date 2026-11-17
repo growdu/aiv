@@ -483,6 +483,32 @@ def asset_moves(table, moves):
 # --------------------------------------------------------------------------
 
 
+def _projects(table):
+    """迁移表里的「主线项目」列表。
+
+    每条项目有自己的 `target_root`（在 `docs/` 里的落点）、显示名
+    和系列表。**为什么不是一个**：`source-tracks/` 下面会同时住着
+    PostgreSQL、Linux、DPDK 几条主线 —— 每个项目的中文显示名和系列表
+    都不一样，塞进一张扁平的 `series` 里就分不清谁是谁了。
+
+    旧版迁移表只有一个 `target_root` + 一张扁平的 `series` —— 兼容它：
+    合成一个项目出来。
+    """
+    projects = table.get("projects")
+    if projects:
+        return projects
+    return [{
+        "target_root": table.get("target_root", "source-tracks/postgresql"),
+        "series": table.get("series", {}),
+        "series_meta": table.get("series_meta", {}),
+    }]
+
+
+# 目录名 → 中文显示名。分类链与 URL 里的中文都靠它。
+TOP_DISPLAY_NAMES = {"source-tracks": "源码主线"}
+PROJECT_DISPLAY_NAMES = {"postgresql": "PostgreSQL", "linux": "Linux"}
+
+
 def write_index_files(table, moves, report):
     """给新树写 `_index.md`。
 
@@ -490,47 +516,53 @@ def write_index_files(table, moves, report):
     read_cascade_categories()` 靠它把分类链拼出来（源码主线 → PostgreSQL
     → 存储引擎），三级分类页才会真的生成。
     """
-    series_cn = table.get("series", {})
-    target_root = table.get("target_root", "source-tracks/postgresql")
     made = []
+    tops_done = set()
+    for proj in _projects(table):
+        series_cn = proj.get("series", {})
+        series_meta = proj.get("series_meta", {})
+        target_root = proj["target_root"]
+        parts = target_root.split("/")
 
-    # 顶层：docs/<target_root 的第一段>/_index.md
-    top = target_root.split("/")[0]
-    top_cn = {"source-tracks": "源码主线"}.get(top, top)
-    made.append(_write_index(
-        f"{top}/_index.md", top_cn, top_cn,
-        f"{top_cn}：按「一条主线走到底」的顺序组织的内容。",
-        [], table))
+        # 顶层：docs/<target_root 的第一段>/_index.md
+        top = parts[0]
+        top_cn = TOP_DISPLAY_NAMES.get(top, top)
+        if top not in tops_done:
+            tops_done.add(top)
+            made.append(_write_index(
+                f"{top}/_index.md", top_cn, top_cn,
+                f"{top_cn}：按「一条主线走到底」的顺序组织的内容。",
+                [], table))
 
-    # 中间层（target_root 有三段以上时才有；两段时这一层是空的）
-    parts = target_root.split("/")
-    for depth in range(2, len(parts)):
-        rel_dir = "/".join(parts[:depth])
-        name = parts[depth - 1]
-        cn = "PostgreSQL" if name == "postgresql" else name
+        # 中间层（target_root 有三段以上时才有；两段时这一层是空的）
+        for depth in range(2, len(parts)):
+            rel_dir = "/".join(parts[:depth])
+            name = parts[depth - 1]
+            cn = PROJECT_DISPLAY_NAMES.get(name, name)
+            made.append(_write_index(
+                f"{rel_dir}/_index.md", cn, cn, f"{cn} 主线。", [], table))
+
+        # 项目层：项目目录页 + 它下面的系列目录页。
+        #
+        # 项目目录页**不能少** —— 少了它，分类链就少一级：文章的
+        # cascade 只有「源码主线」和系列名，`/categories/源码主线/存储引擎/`
+        # 而不是 `/categories/源码主线/PostgreSQL/存储引擎/`。
+        proj_dir = target_root
+        proj_name = parts[-1]
+        proj_cn = (proj.get("display_name")
+                   or PROJECT_DISPLAY_NAMES.get(proj_name, proj_name))
+        series_lines = []
+        for slug, scn in series_cn.items():
+            desc = series_meta.get(slug, f"{proj_cn} 的{scn}方向。")
+            made.append(_write_index(
+                f"{proj_dir}/{slug}/_index.md", scn, proj_cn,
+                desc, _series_articles(moves, f"{proj_dir}/{slug}/"),
+                table))
+            series_lines.append(f"- [{scn}](./{slug}/_index.md)")
         made.append(_write_index(
-            f"{rel_dir}/_index.md", cn, cn, f"{cn} 主线。", [], table))
-
-    # 项目层：项目目录页 + 它下面的系列目录页。
-    #
-    # 项目目录页**不能少** —— 少了它，分类链就少一级：文章的
-    # cascade 只有「源码主线」和系列名，`/categories/源码主线/存储引擎/`
-    # 而不是 `/categories/源码主线/PostgreSQL/存储引擎/`。
-    proj_dir = target_root
-    proj_name = parts[-1]
-    proj_cn = "PostgreSQL" if proj_name == "postgresql" else proj_name
-    series_lines = []
-    for slug, scn in series_cn.items():
-        desc = table.get("series_meta", {}).get(slug, f"{proj_cn} 的{scn}方向。")
-        made.append(_write_index(
-            f"{proj_dir}/{slug}/_index.md", scn, proj_cn,
-            desc, _series_articles(moves, f"{proj_dir}/{slug}/"),
-            table))
-        series_lines.append(f"- [{scn}](./{slug}/_index.md)")
-    made.append(_write_index(
-        f"{proj_dir}/_index.md", proj_cn, proj_cn,
-        f"{proj_cn} 源码主线：{len(series_cn)} 个系列，由浅入深。",
-        [], table, extra=["## 系列", ""] + series_lines + [""]))
+            f"{proj_dir}/_index.md", proj_cn, proj_cn,
+            f"{proj_cn} 源码主线：{len(series_cn)} 个系列，由浅入深。",
+            [], table, extra=["## 系列", ""] + series_lines + [""]))
     report.append(f"目录页：新建 {len(made)} 个")
     return made
 
@@ -613,9 +645,51 @@ def _write_index(rel, title, parent_cn, description, articles, table, extra=None
             old = fh.read()
         if old == body:
             return rel
+        # 目录页可能被人手写过 —— 项目目录页后来并进了一整张几百行的
+        # 「数据库总览」。整篇覆盖会把那些内容抹掉，所以**只刷新
+        # 「本系列文章」那一节**，其余原样保留。
+        merged = _merge_article_section(old, body)
+        if merged != old:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(merged)
+        return rel
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(body)
     return rel
+
+
+ARTICLE_SECTION = "## 本系列文章"
+
+
+def _section_span(text, heading):
+    """一节（`## 标题`）在文本里的起止位置。
+
+    一节从标题行开始，到下一个 `## ` 之前为止。找不到返回 None。
+    """
+    start = text.find("\n" + heading + "\n")
+    if start < 0:
+        if text.startswith(heading + "\n"):
+            start = 0
+        else:
+            return None
+    else:
+        start += 1
+    nxt = re.search(r"(?m)^## ", text[start + len(heading) + 1:])
+    end = start + len(heading) + 1 + nxt.start() if nxt else len(text)
+    return start, end
+
+
+def _merge_article_section(old, body):
+    """只把「本系列文章」那一节换成新的，其余原样保留。"""
+    new_span = _section_span(body, ARTICLE_SECTION)
+    if not new_span:
+        # 新版没有这一节（项目目录页就是）—— 旧文一个字都不动。
+        return old
+    new_sec = body[new_span[0]:new_span[1]]
+    old_span = _section_span(old, ARTICLE_SECTION)
+    if not old_span:
+        return old.rstrip("\n") + "\n\n" + new_sec.rstrip("\n") + "\n"
+    return old[:old_span[0]] + new_sec + old[old_span[1]:]
 
 
 # --------------------------------------------------------------------------
