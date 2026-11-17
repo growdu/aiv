@@ -41,24 +41,6 @@
   max-width: 1080px;
 }
 
-.home-hero__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 18px;
-  font-family: var(--tech-mono);
-  font-size: 13px;
-  letter-spacing: .12em;
-  color: var(--tech-accent);
-}
-
-.home-hero__eyebrow::before {
-  content: "";
-  width: 22px;
-  height: 2px;
-  background: var(--tech-accent);
-}
-
 .home-hero__lead {
   max-width: 780px;
   margin: 0;

@@ -6,8 +6,14 @@
   （tests/test_home_first_screen.py 守着这一条）
 
   三块内容：
-    1. 定位句 —— 读 `config.description`（站点配置里那一句具体的说明），
-       不在模板里硬编码，改配置时不会两处对不上。
+    1. 一句定位 —— 读 `config.home_hero_lead`（站点配置里那句给人看的短话），
+       没配就退回 `config.description`。两处都不在模板里硬编码，改配置时
+       不会两处对不上。
+       注意跟 `config.description` 分工：description 是给搜索引擎看的那句
+       长描述（meta、分享卡片），当大标题读着像关键词堆砌，占四行。
+       原来这上面还有一行 13px 的小标签（`config.subtitle`
+       「技术·学习·实践·人生·哲学」），已经去掉：它列的就是下面那 9 个
+       徽章里的同一批东西。
     2. 分类徽章 + 打字机 —— 由 tools/patch-theme.py 注入到下面的徽章占位处，
        徽章的链接要从 `site.categories` 反查真实分类路径，不能手写。
     3. 三篇代表作 —— 清单在仓库根的 `data/featured.json`（作者可维护），
@@ -35,8 +41,7 @@
 %>
 <section class="home-hero" data-aos="fade-up">
   <div class="container">
-    <p class="home-hero__eyebrow"><%= config.subtitle %></p>
-    <h1 class="home-hero__lead"><%= config.description %></h1>
+    <h1 class="home-hero__lead"><%= config.home_hero_lead || config.description %></h1>
 
     <div class="home-hero__search">
       <label class="home-hero__search-label" for="homeSearch">站内搜索</label>

@@ -15,8 +15,9 @@ carousel——首张 ``about-cover`` 铺着主题默认的模糊橙树照片，�
 2. 新的 ``home-hero`` 排在统计条**之前**——首屏要真的有内容，
    而不是把内容推到折线以下；
 3. 首屏不是全屏的（全屏 = 还是在卖风景）；
-4. 首屏带的是**站点定位**（读 ``config.description``，那是一句具体的
-   技术描述），不是一句硬编码的口号；
+4. 首屏带的是**站点定位**（读 ``config.home_hero_lead`` 那句短话，没配
+   就退回 ``config.description``），不是一句硬编码的口号；首屏也不再有一行
+   重复分类清单的小标签——那 9 个徽章已经列过一遍了；
 5. 首屏有三篇代表作，而且代表作清单来自 ``data/featured.json``
    （作者可维护的文件），不是硬编码在模板里的标题。
 
@@ -146,6 +147,83 @@ def test_the_hero_carries_the_site_positioning_sentence():
 
     assert "config.description" in hero, (
         "home-hero.ejs 应当读 config.description 当定位句"
+    )
+
+
+def test_the_hero_lead_is_a_short_sentence_and_not_the_seo_description():
+    """首屏那句大标题是**短句**，不是 SEO 用的那句长描述。
+
+    ``config.description`` 是给搜索引擎看的（九十多个字、顿号串），
+    当大标题读着像关键词堆砌，占掉四行。而那行 13px 的小标签
+    （「技术·学习·实践·人生·哲学」）列的又是下面 9 个徽章里的同一批东西。
+
+    所以：短句单独放一个配置项 ``home_hero_lead``，长句留给 meta。
+    """
+    hero = _read(HOME_HERO)
+    config = _read(REPO / "_config.yml")
+
+    assert "config.home_hero_lead" in hero, (
+        "home-hero.ejs 应当读 config.home_hero_lead 当首屏大标题"
+    )
+    assert "home_hero_lead:" in config, "_config.yml 里应当有 home_hero_lead 这一句"
+
+    lead = re.search(r"^home_hero_lead:\s*(.+)$", config, re.M)
+    assert lead, "_config.yml 里读不出 home_hero_lead 的值"
+    value = lead.group(1).strip().strip("'\"")
+    assert value, "home_hero_lead 不能是空的"
+    assert len(value) <= 24, (
+        "首屏大标题要是一句话，不是一段话：{}（{} 个字）".format(value, len(value))
+    )
+
+
+def test_the_hero_lead_falls_back_to_the_description_when_it_is_not_configured():
+    """没配 ``home_hero_lead`` 时退回 ``config.description``，那一格不空着。"""
+    hero = _read(HOME_HERO)
+
+    assert re.search(r"config\.home_hero_lead\s*\|\|\s*config\.description", hero), (
+        "home-hero.ejs 的 h1 应当是 config.home_hero_lead || config.description"
+    )
+
+
+def test_the_hero_does_not_repeat_the_category_list_as_an_eyebrow():
+    """首屏不再有一行「技术·学习·实践·人生·哲学」的小标签。
+
+    它列的就是下面那 9 个徽章里的同一批东西，留着是同一句话出现两遍。
+
+    注释里提到 ``config.subtitle`` 不算——那是解释「为什么删了它」，
+    所以先剥掉 ``<%# ... %>`` 注释块再查。
+    """
+    hero = re.sub(r"<%#.*?%>", "", _read(HOME_HERO), flags=re.S)
+
+    assert "config.subtitle" not in hero, "首屏不该再有一行重复分类清单的小标签"
+
+
+def test_the_built_home_page_shows_the_short_lead():
+    """构建产物里，h1 是那句短句——不是 SEO 的长描述。
+
+    对着 ``public/index.html`` 查，不是对着模板查：模板对了、产物没对，
+    中间隔着的正是 sync-hexo 和 patch-theme 那两步。
+    """
+    built = REPO / "public" / "index.html"
+    if not built.is_file():
+        import pytest
+
+        pytest.skip("还没构建（public/index.html 不存在）")
+
+    html = built.read_text(encoding="utf-8")
+    m = re.search(r'<h1 class="home-hero__lead">(.*?)</h1>', html, re.S)
+    assert m, "首页的 h1 不见了"
+    lead = m.group(1).strip()
+
+    config = _read(REPO / "_config.yml")
+    m2 = re.search(r"^home_hero_lead:\s*(.+)$", config, re.M)
+    assert m2, "_config.yml 里没有 home_hero_lead"
+    expect = m2.group(1).strip().strip("'\"")
+    assert lead == expect, "首页 h1 是「{}」，配置里写的是「{}」".format(lead, expect)
+    assert len(lead) <= 24, "首页 h1 太长了：{}".format(lead)
+    assert "home-hero__eyebrow" not in html, "首页还有那行重复分类清单的小标签"
+    assert "技术·学习·实践·人生·哲学" not in html, (
+        "首页还在显示那行「技术·学习·实践·人生·哲学」"
     )
 
 
