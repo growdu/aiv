@@ -117,6 +117,11 @@ def _is_article(rel):
     return ext in (".md", ".html", ".htm") and not rel.endswith("_index.md")
 
 
+def _is_index_file(rel):
+    """是不是分类目录页（`_index.md` / `_index.html`）。"""
+    return os.path.basename(rel).startswith("_index.")
+
+
 # --------------------------------------------------------------------------
 # 日期
 # --------------------------------------------------------------------------
@@ -440,6 +445,9 @@ def asset_moves(table, moves):
 
     规则：凡是落在 `dir_map` 目录下的非文章文件，跟着目录一起搬 ——
     图片的站内 URL 是 `images/<docs 相对路径>`，不跟着搬就会指向旧路径。
+
+    ``_index.md`` **不算资源**：它是分类链的载体（``cascade.categories``），
+    搬走它等于把一个分类悄悄改名。被搬文章旁边的 ``_index.md`` 留在原地。
     """
     out = {}
     for old_dir, new_dir in table.get("dir_map", {}).items():
@@ -447,7 +455,7 @@ def asset_moves(table, moves):
         for rel in _walk_docs():
             if not rel.startswith(prefix):
                 continue
-            if _is_article(rel):
+            if _is_article(rel) or _is_index_file(rel):
                 continue
             out[rel] = new_dir.rstrip("/") + "/" + rel[len(prefix):]
     # 逐篇搬的文章旁边的资源文件（同一目录下的图片）
@@ -457,7 +465,7 @@ def asset_moves(table, moves):
         for rel in _walk_docs():
             if os.path.dirname(rel) != old_dir:
                 continue
-            if _is_article(rel) or rel in out:
+            if _is_article(rel) or _is_index_file(rel) or rel in out:
                 continue
             out[rel] = new_dir + "/" + os.path.basename(rel)
     return out
