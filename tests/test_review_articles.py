@@ -34,8 +34,8 @@ COROSYNC = DOCS_ROOT / "cluster/corosync/corosync-down网卡仍处于多数派/i
 KNOWN_BARE_URL_ARTICLES = frozenset({
     "docs/chatgpt/chatgpt使用.md",
     "docs/cluster/DCF/一文读懂openguass dcf网络模块.md",
-    "docs/database/database-specialization-taxonomy/index.md",
-    "docs/db/postgresql/postgresql-community-gems/index.md",
+    "docs/source-tracks/postgresql/getting-started/database-specialization-taxonomy/index.md",
+    "docs/source-tracks/postgresql/extensions-perf/postgresql-community-gems/index.md",
     "docs/life/road/左耳朵耗子的话——关于技术的一些思考.md",
     "docs/linux/ebpf/rust-ebpf编程基础.md",
     "docs/linux/linux下RANDOM和uuid的区别.md",
@@ -532,7 +532,7 @@ def test_only_one_ipv6_article_with_this_title():
 
 # --- PostgreSQL 存储、索引及系统优化、主备切换 -----------------------------
 
-PG_SWITCH = DOCS_ROOT / "pgsql/replication/Postgresql存储、索引及系统优化、主备切换/index.md"
+PG_SWITCH = DOCS_ROOT / "source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md"
 
 
 def test_the_pg_article_has_a_clean_title_and_a_visible_version_baseline():
@@ -726,5 +726,5 @@ def test_only_one_pg_article_with_this_title():
         if match and match.group(1).strip() == title:
             same.append(path.relative_to(REPO_ROOT).as_posix())
     assert same == [
-        "docs/pgsql/replication/Postgresql存储、索引及系统优化、主备切换/index.md",
+        "docs/source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
     ], f"全树有多篇同名文章：{same}"

@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-parallel-worker",
+  "draft_id": "7708375110360531492",
+  "package_dir": "toutiao/out/source-tracks-postgresql-logical-replication-postgresql-logical-replication-parallel-worker",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL 18 逻辑复制的并行解码与并行",
+  "updated_at": "2026-11-15T20:43:41+08:00"
+}

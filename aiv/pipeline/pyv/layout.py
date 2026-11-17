@@ -35,8 +35,36 @@ from __future__ import annotations
 import cairo
 
 from pyv import draw
+from pyv import easing
 from pyv import fonts
 from pyv.palette import COLORS
+
+#: 收束句浮出用的斜率：场景进度的 1/CLOSING_SLOPE 走完 0 → 1。
+CLOSING_SLOPE = 8.0
+
+
+def closing_alpha(t: float, ready_at: float,
+                  slope: float = CLOSING_SLOPE) -> float:
+    """收束句（画面底部那行总结）的不透明度。
+
+    **收束句在它指认的东西都出齐之后才浮出，浮出之后一直不透明。**
+
+    两个毛病是同一条毛病的两头：
+
+    - **早浮出**：画面上已经写着「这四条短板」，卡却只摆了三张——
+      观众先读到结论，再等证据。
+    - **晚浮出**：淡入斜率太缓，这句总结到场景结束都没亮透。
+      s05_layers 那一段就是：`(t - 0.80) * 5.0` 走完要 0.2 个场景进度，
+      而场景只剩 0.2——这句总结**一次都没亮全过**。
+
+    所以这里给的是「不透明度」，不是一条淡入曲线：`ready_at` 之前是 0
+    （一个字都不画），之后按 `slope` 走一遍 `ease_out_cubic`，走完就是 1，
+    一直保持到场景结束。
+
+    `ready_at` 由每个场景自己算——它知道自己的东西什么时候出齐
+    （`pyv/scenes/` 里那些 `closing_ready()`）。
+    """
+    return easing.ease_out_cubic(max(0.0, min(1.0, (t - ready_at) * slope)))
 
 
 class CanvasLayout:

@@ -1,6 +1,6 @@
 # 审校：文件基本操作
 
-- 原文：`docs/base/file.md`
+- 原文：docs/base/file.md
 - 范围：全文
 - 目标读者：要用 C / Java / C# / Python / shell / bat 做文件操作的开发者
 - 一句话定位：把四种语言的文件操作 API 并排摆开，当速查手册用
@@ -224,8 +224,8 @@
   `docs/language/` 下只有内存、autoconf、cmake、变长数组、词法分析这些，
   **没有**讲文件/IO 的文章，所以本篇不存在重复。本轮**没有扩语言覆盖范围**
   （扩到更多语言属于扩写，不在本次改动范围里），改为在「延伸阅读」一节
-  链到本仓库确实相关的三篇：`pgsql/pg_io_调优`、
-  `db/postgresql/learning-path/04-storage-abstraction`、
+  链到本仓库确实相关的三篇：`source-tracks/postgresql/extensions-perf/pg_io_调优`、
+  `source-tracks/postgresql/storage-engine/learning-path/04-storage-abstraction`、
   `cluster/分布式存储需要解决的问题`。
 
 ## 可补的技术证据或产物

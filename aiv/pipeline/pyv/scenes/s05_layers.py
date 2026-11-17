@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 from pyv import easing
+from pyv import layout
 from pyv import scene_layout
 from pyv.draw import rounded_rect, text
 from pyv.palette import COLORS
@@ -20,17 +21,39 @@ from pyv.params import Params
 REQUIRED = ("title", "layer_ids", "layer_names", "layer_roles", "caption")
 
 # 版式常量：每层一行，行的起点与步长
-ROW_TOP = 0.225
-ROW_STEP = 0.103
-ROW_H = 0.082
+#
+# **六行整体上收**：原来最后一行（L6）的底在 0.822h = 888 px，而收束句
+# 的基线固定在 0.86h = 929 px——上下只差 5 px，那句总结读起来像 L6 这一行
+# 的说明。上收到 0.19h 起步、步长 0.096、每行 0.078，最后一行落在 0.748h
+# = 808 px，收束句与它隔开 84 px。
+ROW_TOP = 0.19
+ROW_STEP = 0.096
+ROW_H = 0.078
 # 层与层之间的点亮间隔（场景进度）：六层铺满整个场景，读完一层才出下一层
-ROW_STAGGER = 0.12
+#
+# **间隔收窄、点亮变快**：原来间隔 0.12、点亮斜率 3.5，最后一层要到
+# t=0.886 才亮齐——收束句根本没有出场的时间。现在间隔 0.075、斜率 6.0，
+# 最后一层 t=0.542 就亮齐，收束句 t=0.542 之后浮出，亮透之后还剩
+# 1.05 秒（这一段只有 3.24 s）。
+ROW_STAGGER = 0.075
+ROW_SPEED = 6.0
 
 
 def layer_count(params=None) -> int:
     """层数。"""
     p = Params(params, "s05")
     return len(p["layer_ids"])
+
+
+def closing_ready(count: int) -> float:
+    """收束句最早能出场的时刻：最后一层亮齐之后。"""
+    return ROW_STAGGER * max(0, count - 1) + 1.0 / ROW_SPEED
+
+
+def _appear(t: float, index: int) -> float:
+    """第 index 层的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0, (t - ROW_STAGGER * index) * ROW_SPEED)))
 
 
 def render(ctx, t: float, w: int, h: int, params=None) -> None:
@@ -47,8 +70,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     for index in range(layer_count(params)):
         y = h * ROW_TOP + index * h * ROW_STEP
         row_h = h * ROW_H
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - ROW_STAGGER * index) * 3.5)))
+        appear = _appear(t, index)
         badge = COLORS["accent"] if index % 2 == 0 else COLORS["secondary"]
         rounded_rect(ctx, w * 0.07, y, w * 0.066, row_h, 10, badge, alpha=appear)
         text(ctx, ids[index], w * 0.103, y + row_h * 0.66, 34, "#FFFFFF",
@@ -58,8 +80,8 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         text(ctx, roles[index], w * 0.42, y + row_h * 0.64, 33,
              COLORS["secondary"], alpha=appear)
 
-    # 收束句最后才出，六层亮完再落一句
-    closing = easing.ease_out_cubic(max(0.0, min(1.0, (t - 0.80) * 5.0)))
+    # 收束句最后才出，六层亮完再落一句——亮透之后一直亮着（见 layout.closing_alpha）
+    closing = layout.closing_alpha(t, closing_ready(len(ids)))
     text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"],
          alpha=closing)
 
@@ -93,8 +115,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
 
     for index in range(len(ids)):
         y = row_top + index * (row_h + row_gap)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - ROW_STAGGER * index) * 3.5)))
+        appear = _appear(t, index)
         badge = COLORS["accent"] if index % 2 == 0 else COLORS["secondary"]
         rounded_rect(ctx, left, y, max_width, row_h, 12, "#F2F5F9", alpha=appear)
         badge_y = y + (row_h - badge_h) / 2

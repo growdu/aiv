@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/getting-started/meson-pg",
+  "draft_id": "7708375244578685494",
+  "package_dir": "toutiao/out/source-tracks-postgresql-getting-started-meson-pg",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "用 Meson 编译 PostgreSQL",
+  "updated_at": "2026-11-15T20:43:56+08:00"
+}

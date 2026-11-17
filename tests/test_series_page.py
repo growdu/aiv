@@ -54,7 +54,7 @@ def _index(rows=None):
                 "hook": "MVCC 让读不挡写，但两个写会互相覆盖",
                 "duration_s": 35.172,
                 "date": "2026-03-08",
-                "content_id": "database/postgresql-row-lock-deep-dive",
+                "content_id": "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive",
                 "video_date": "2026-05-19",
                 "video_content_id": "video/row-lock",
                 "platforms": [
@@ -105,7 +105,7 @@ def test_the_series_page_links_the_full_article_and_the_script(tmp_path, monkeyp
     series_page.main(["--out", str(out)])
     text = out.read_text(encoding="utf-8")
 
-    assert "/2026/03/08/database/postgresql-row-lock-deep-dive/" in text
+    assert "/2026/03/08/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/" in text
     assert "/2026/05/19/video/row-lock/" in text
 
 

@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 from pyv import easing
+from pyv import layout
 from pyv import scene_layout
 from pyv.draw import rounded_rect, text
 from pyv.palette import COLORS
@@ -21,6 +22,27 @@ REQUIRED = ("title", "question_label", "shortfalls", "caption")
 
 # 四张卡片的配色
 CARD_COLORS = ("#F6AD55", "#4FD1C5", "#8FAADC", "#E9A0DC")
+
+# 四张卡片逐张淡入的时序（场景进度）
+#
+# **收得快一点**：原来第四张卡要淡到 t=0.88 才亮齐，而这一段只有
+# 6.3 s——「这四条短板」这句收束句根本没有出场的时间，只能从 t=0
+# 就写死着（观众先读到结论、再等证据）。现在第四张卡 t=0.572 亮齐，
+# 收束句随后浮出，还剩 1.9 秒亮着。
+CARD_DELAY = 0.14
+CARD_STAGGER = 0.07
+CARD_SPEED = 4.5
+
+
+def closing_ready(count: int) -> float:
+    """收束句最早能出场的时刻：最后一张卡亮齐之后。"""
+    return CARD_DELAY + CARD_STAGGER * max(0, count - 1) + 1.0 / CARD_SPEED
+
+
+def _card_appear(t: float, index: int) -> float:
+    """第 index 张卡的不透明度。"""
+    return easing.ease_out_cubic(
+        max(0.0, min(1.0, (t - CARD_DELAY - CARD_STAGGER * index) * CARD_SPEED)))
 
 
 def render(ctx, t: float, w: int, h: int, params=None) -> None:
@@ -54,9 +76,7 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     card_h = h * 0.17
     for index, (name, desc) in enumerate(shortfalls):
         cx = x0 + index * (card_w + gap)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - 0.22 - index * 0.11) * 3.0))
-        )
+        appear = _card_appear(t, index)
         color = CARD_COLORS[index % len(CARD_COLORS)]
         rounded_rect(ctx, cx, card_y, card_w, card_h, 14, "#F2F5F9",
                      alpha=appear)
@@ -66,7 +86,10 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
         text(ctx, desc, cx + card_w / 2, card_y + h * 0.125, 26,
              COLORS["secondary"], anchor="center", alpha=appear)
 
-    text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"])
+    # 收束句等四张卡亮齐再落下来
+    closing = layout.closing_alpha(t, closing_ready(len(shortfalls)))
+    text(ctx, p["caption"], w * 0.06, h * 0.86, 44, COLORS["primary"],
+         alpha=closing)
 
 
 def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
@@ -100,9 +123,7 @@ def _render_vertical(ctx, t: float, w: int, h: int, p: Params) -> None:
     card_y0 = 450
     for index, (name, desc) in enumerate(shortfalls):
         card_y = card_y0 + index * (card_h + card_gap)
-        appear = easing.ease_out_cubic(
-            max(0.0, min(1.0, (t - 0.22 - index * 0.11) * 3.0))
-        )
+        appear = _card_appear(t, index)
         color = CARD_COLORS[index % len(CARD_COLORS)]
         rounded_rect(ctx, left, card_y, full_w, card_h, 14, "#F2F5F9",
                      alpha=appear)

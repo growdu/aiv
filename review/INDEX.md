@@ -1,8 +1,8 @@
 # 审校进度索引
 
-审校范围：`docs/` 全树（633 篇）里**面向读者的技术文章**（423 篇）。
+审校范围：`docs/` 全树（631 篇）里**面向读者的技术文章**（423 篇）。
 非内容（站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿）、
-速查/清单/操作类、非技术内容与**转载稿**共 210 篇已排除——分类与逐篇清单见
+速查/清单/操作类、非技术内容与**转载稿**共 208 篇已排除——分类与逐篇清单见
 [`scope/2026-11-14-scope-classification.md`](scope/2026-11-14-scope-classification.md)。
 
 > 转载稿（正文顶部有 `> 来源:`，署名他人）不按原创稿审改——改写等于改别人的东西。
@@ -36,23 +36,36 @@
 范围扩到全树后按信号密度排序继续——排序依据见范围分类文档的「逐支柱分布」。
 
 图示可读性规则（`FIG-01` 图太长该拆 / `FIG-02`「下图」离图太远）加入后，
-全树 620 篇里 82 篇命中 `FIG-01`、5 篇命中 `FIG-02`。已审文章中
+全树 628 篇里 82 篇命中 `FIG-01`、5 篇命中 `FIG-02`。已审文章中
 `一文读懂openguass dcf网络模块`（6 张超长链式流程图）与 `06-heap-and-mvcc`
 （HeapTuple 结构图 + UPDATE 流程图）的信号数因此各 +1。
 **已合入的文章不保证信号为 0**——规则是后加的，之前的稿子没按新规则重审。
 
+站内链接另有一把尺子：`tools/check-internal-links.py`（2026-11-17 新增）。
+母稿侧查相对链接能不能解析到目标，产物侧查 `public/` 里的站内 href 有没有落到
+不存在的页面上。首跑抓出 **11 条产物侧死链**（线上的死链，多在
+`db/opengauss-*` 两篇文章里，指向 `db/postgresql/` 下少了一级的路径），
+母稿侧 **62 条**相对链接解析不到（多在 `database/_index.md` —— 分类页本身
+不发，读者看不见，但迁移时会咬人）。这两组数字是**迁移前**的基线，
+搬家后必须回到 0（死链）/ 不增加（母稿侧）。
+
+**PostgreSQL 试点搬完后的实测（2026-11-17）**：产物侧 **11 → 0**
+（132457 条站内 href 全通）；母稿侧 **62 → 5**，剩下的 5 条逐条核对过，
+都是迁移前就在的误报（`{image_url}` 模板占位符、`life/shehui/_index.md` × 2、
+两个代码块里的 `DatumGetPointer(...)` / `order_date`），在 master 上逐字相同。
+
 | 记录 | 支柱 | 状态 | 信号 | 待确认 | 不阻塞 | 批次 |
 | --- | --- | --- | --- | --- | --- | --- |
-| [postgresql-mvcc](database/postgresql-mvcc.md) | database | 已合入 | 0 | 0 | 1 | 试点 |
-| [postgresql-logical-replication-worker-model](database/postgresql-logical-replication-worker-model.md) | database | 已合入 | 0 | 0 | 1 | 试点 |
-| [06-heap-and-mvcc](db/postgresql/learning-path/06-heap-and-mvcc.md) | db | 已合入 | 1 | 0 | 2 | 试点 |
-| [checkpoint机制浅析](pgsql/checkpoint机制浅析.md) | pgsql | 已合入 | 0 | 0 | 0 | 试点 |
+| [postgresql-mvcc](source-tracks/postgresql/transaction-mvcc/postgresql-mvcc.md) | source-tracks | 已合入 | 0 | 0 | 1 | 试点 |
+| [postgresql-logical-replication-worker-model](source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model.md) | source-tracks | 已合入 | 0 | 0 | 1 | 试点 |
+| [06-heap-and-mvcc](source-tracks/postgresql/transaction-mvcc/learning-path/06-heap-and-mvcc.md) | source-tracks | 已合入 | 1 | 0 | 2 | 试点 |
+| [checkpoint机制浅析](source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md) | source-tracks | 已合入 | 0 | 0 | 0 | 试点 |
 | [分布式一致性协议](cluster/分布式一致性协议.md) | cluster | 已合入 | 0 | 0 | 2 | 试点 |
 | [file](base/file.md) | base | 已合入 | 0 | 0 | 3 | 1 |
 | [corosync-down网卡仍处于多数派](cluster/corosync/corosync-down网卡仍处于多数派.md) | cluster | 已合入 | 0 | 0 | 6 | 1 |
 | [tptc](cluster/kingbase/tptc.md) | cluster | 已合入 | 0 | 0 | 8 | 1 |
 | [从原理到实践，彻底告别 IPv6 上网不稳定的问题](network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md) | network | 已合入 | 0 | 0 | 6 | 1 |
-| [Postgresql存储、索引及系统优化、主备切换](pgsql/replication/Postgresql存储、索引及系统优化、主备切换.md) | pgsql | 已合入 | 1 | 0 | 2 | 1 |
+| [Postgresql存储、索引及系统优化、主备切换](source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换.md) | source-tracks | 已合入 | 1 | 0 | 2 | 1 |
 | [raft重要概念](cluster/raft/raft重要概念.md) | cluster | 建议中 | 2 | 4 | 0 | 2 |
 | [sanlock实现共享corosync共享存储仲裁](cluster/corosync/sanlock实现共享corosync共享存储仲裁.md) | cluster | 建议中 | 2 | 6 | 0 | 2 |
 | [中移动数据库停库问题分析](cluster/ha/中移动数据库停库问题分析.md) | cluster | 建议中 | 2 | 8 | 0 | 2 |

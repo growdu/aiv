@@ -14,6 +14,8 @@
 | --- | --- |
 | `pipeline/` | 出片流水线：`pyv/` 渲染引擎 + `tests/` + `Makefile` |
 | `contracts/` | 视觉分镜契约：一期视频的段落划分与画面文案 |
+| `publish/` | 发布元数据：每期各平台的标题、简介、话题与分区（`pyv publish check` 体检） |
+| `review/` | 视频审校：文本层 `VT-*` 与成片层 `VV-*` 的规则、一期一条记录、抽帧清单 |
 | `character/` | 3D 小象形象：生成、加眼镜、铭牌盖章（`scripts/`） |
 | `brand/` | 品牌片头/片尾：渲染与配乐（`scripts/`） |
 | `voice/` | 旁白音色与合成（`scripts/`） |
@@ -26,6 +28,9 @@
 | [人格规范.md](人格规范.md) | 小象是谁、怎么想、怎么讲；9 条可机检规则 |
 | [形象与音色规范.md](形象与音色规范.md) | 角色设定、铭牌文字的确定性、旁白音色定稿 |
 | [背景音乐规范.md](背景音乐规范.md) | 选曲白名单、风格标准、技术规格、混音与 ducking 规则 |
+| [选题库.md](选题库.md) | 每期的题目、口播骨架、画面契约草案与数字出处（选题的唯一事实来源） |
+| [上机指南.md](上机指南.md) | 换机器怎么装依赖、字体差异、常见故障 |
+| [review/README.md](review/README.md) | 视频审校规范：两层规则、抽帧方法、一期一条记录 |
 
 模块自己的说明在 [character/README.md](character/README.md)、
 [brand/README.md](brand/README.md)、[voice/README.md](voice/README.md)、
@@ -35,7 +40,8 @@
 
 [选题库.md](选题库.md) 是**选题这件事的唯一事实来源**：每一期一条，
 含题目、主钩子、关联文档、适配理由、口播骨架、画面契约草案与数字出处。
-第一季的主线是「机制族」——同一个机制往下挖。
+第一季的主线是「机制族」——同一个机制往下挖；EP06 起进入第二季「内核机制」
+（行锁、MVCC 这些内核里的数据结构）。
 
 它同样可机检（`pipeline/pyv/topics.py`，8 条规则）：
 
@@ -51,15 +57,21 @@ make topics       # python -m pyv.cli topics check
 
 选题库里的口播骨架是**草案**，出片前要按实际旁白重新定标语速。
 
-### 第一季进度
+### 进度
 
 | 期 | 主题 | 状态 | 成片规格 |
 | --- | --- | --- | --- |
 | EP01 | openGauss 的并行逻辑解码 | 已出片 | 正文 32.436 秒 |
 | EP02 | 一个 64 位计数器，决定所有事务的提交顺序 | 已出片 | 正文 35.316 秒 |
+| EP03 | WAL 里的顺序，不等于事务的顺序 | 已出片 | 正文 34.596 秒 |
+| EP04 | 并行接收之后，谁先应用 | 已出片 | 正文 35.424 秒 |
+| EP05 | 为什么 DDL 同步不能直接把 SQL 文本发过去 | 已出片 | 正文 34.128 秒 |
+| EP06 | 两个事务改同一行，谁先谁后（第二季入口） | 已出片 | 正文 35.208 秒 |
 
-两期的成片都是 1920×1080 / 24fps / H.264 yuv420p / AAC 48kHz 立体声，
-外加 2.833 秒品牌片头与片尾。
+六期的成片都是 1920×1080 / 24fps / H.264 yuv420p / AAC 48kHz 立体声，
+外加 2.833 秒品牌片头与片尾（EP01 共 38.125 秒，EP02 共 41.000 秒，
+EP03 共 40.262 秒，EP04 共 41.090 秒，EP05 共 39.833 秒，EP06 共 40.875 秒）。
+成片是产物、不入库，上面的时长是实测值，记在 [index.md](index.md) 与本表里。
 
 ## 本期内容进契约，版式常量留代码
 
@@ -92,12 +104,47 @@ make test        # 全量测试
 make persona     # 按《人格规范》检查口播稿
 make topics      # 按《选题库》的规则检查选题
 make bgm         # 按《背景音乐规范》检查曲库台账
+make mix-verify  # 成片级混音验收（规范 §5.7）
+make pronunciation  # 多音字读音验收（要联网合成探针）
+make probe       # ffprobe 看成片的时长、编码与像素格式
 ```
 
 出片链路（`align → validate → brand → render → compose`）需要旁白音频
 （`narration_<期号>.mp3`，**已入库**）与视觉分镜契约（`contracts/<期号>.json`，
 已入库）——契约决定**画面上写什么**，旁白决定**什么时候出现**。
 时间轴 `storyboard_<期号>.json` 由 `align` 从旁白算出来，是产物，不入库。
+
+### 出片之后：验收、体检与审校
+
+出片不是终点。成片要过两道体检，再进审校：
+
+| 环节 | 命令 | 查什么 |
+| --- | --- | --- |
+| 成片验收 | `make EP=<期号> mix-verify` | 稳态 duck 深度、旁白/BGM 电平差、真峰值（规范 §5.7） |
+| 发布体检 | `python3 -m pyv.cli publish check --episode <期号>` | 发布元数据 + 成片技术门槛（每个平台各判一遍） |
+| 文本层审校 | `make review-text EP=<期号>` | `VT-*`：口播腔调、数字出处、口播与字幕是否一致 |
+| 成片层审校 | `make review-video EP=<期号>` | `VV-*`：漏画、字幕没烧上、旁白静音、时长与时间轴对不上 |
+| 抽帧看画面 | `make review-frames EP=<期号>` | 每段两帧 + 关键帧，出一份「这一帧该有什么文案」的对照清单 |
+
+审校的两层、阈值与边界见 [review/README.md](review/README.md)。
+
+### 抖音那一档：无品牌导流版与竖版
+
+抖音禁「过度营销信息」与站外引流，所以另出两档：
+
+```bash
+make EP=<期号> nobrand            # 去品牌片头/片尾
+make EP=<期号> nobrand NOBADGE=1  # 再去掉胸口铭牌（铭牌也是品牌标识）
+make EP=<期号> vertical           # 9:16 竖版
+```
+
+三件事要记住：
+
+- **片段目录与成片都另起一份**（`build/<期号>__nobrand/`、`out/<期号>__nobrand.mp4`），
+  不跟带品牌的版本共用——共用会让增量渲染把带品牌片的片段当成可复用的。
+- **竖版本来就不套品牌片**：品牌片素材是横版的，贴到竖版画布上会被拉变形，
+  `pyv.cli brand` 会直接拒绝。
+- **铭牌默认保留**：铭牌占比极小，先按保留投一条看审核结果再定。
 
 ### 换一台机器
 
@@ -111,6 +158,24 @@ cd aiv/pipeline && make doctor                       # 自检
 唯一的差异是**字体**：macOS 用 `PingFang SC`，Linux 用开源的 `Noto Sans CJK SC`
 （PingFang 是 Apple 授权字体，不能随仓库分发），所以同一段文字的**像素不同**，
 文案与版式规则一致。详见[上机指南.md](上机指南.md)。
+
+### 版式在两台机器上长得一样
+
+「像素不同」这件事后来收窄了。做法是让两台机器用**同一个字体文件**，
+再把字体之外的变量按住：
+
+| 做法 | 在哪 | 为什么 |
+| --- | --- | --- |
+| 内置字体子集入库 | `pipeline/assets/fonts/` | 两台机器装同一份 `AIV Sans CJK SC`（Regular + Bold），不是各装各的系统字体 |
+| 关掉 hinting | `pyv/fingerprint.py` 的前置条件 | Linux 的 FreeType 默认开 autohinter，轮廓点吸附像素网格——实测一行字的步进能差 **68px**，字号跟着差 3.2px |
+| 粗体用真 Bold 字形 | `assets/fonts/AIVSansCJKSC-Bold.otf` | 只装常规字重时 cairo 会**合成**粗体，CoreText 合成一套、FreeType 合成另一套，轮廓包围盒差 3.14px |
+| 布局指纹守卫 | `pyv/fingerprint.py` + `tests/test_layout_fingerprint.py` | 记落笔坐标、字号、步进宽度、轮廓包围盒——这四类是**字体的性质**，跨机可比 |
+| 逐像素基准 | `scripts/capture_scene_baseline.py` + `tests/test_contract.py` | 覆盖全部 36 个视觉段（6 期 × 6 段），守的是「文案搬进契约不该动到画面」 |
+
+**逐像素基准跨机不可比**：cairo 在 macOS 走 CoreText、在 Linux 走 FreeType，
+栅格化不同，像素必然不同。所以跨机靠**指纹**（实测最大差：坐标 0.000、字号 0.027、
+步进 0.812、包围盒 0.711），逐像素基准只在同平台内比；Linux CI 上那条守卫会
+**跳过并说明原因**，不是红，也不是假装绿。
 
 ## 换一期
 
@@ -136,9 +201,48 @@ make EP=csn-total-ordering all         # validate → brand → render → compo
 | `字幕-<主题>.md` 口播稿与字幕表 | `build/<期号>/*.mp4` 片段 |
 | `pipeline/pyv/scenes/*.py` 场景代码 | `out/<期号>.mp4` 成片 |
 | `narration_<期号>.mp3` 旁白（**出片必需**） | 发布包 |
-| `music/tracks/*.wav` 曲库（**出片必需**） | |
+| `music/tracks/*.wav` 曲库（**出片必需**） | `review/frames/<期号>/*.png` 抽出来的帧 |
 | `character/growdu_character_2k_nobg.png` 立绘（**出片必需**） | |
 | `brand/clips/*.mp4`、`brand/audio/*_mix.wav` 品牌片与音轨 | |
+| `pipeline/assets/fonts/*.otf` 内置字体子集（**跨机版式一致要用**） | |
+| `publish/<期号>.json` 发布元数据 | |
+| `review/frames/<期号>/frames.md` 抽帧清单 | |
+
+抽帧的**帧不入库、清单入库**：帧是产物，跟着本机的成片走；清单是
+「这一期抽了哪些帧、每帧该有什么文案」的对照表——审核记录里的判断要能对着它复核。
+（`.gitignore` 里这一条的放行顺序要紧：先放行目录，再拦内容，最后放行清单。）
+
+## 审校（review）
+
+`review/` 存放对这条线的**审校任务与记录**，一期一条，规范在
+[review/README.md](review/README.md)。目标不是把片子做得更华丽，
+而是让它像一位有经验的工程师在清楚地讲一件事：具体、自然、有判断。
+
+两层分开：
+
+| 层 | 编号 | 审什么 |
+| --- | --- | --- |
+| 文本层 | `VT-01`~`VT-07` | 要讲什么：口播腔调、泛化收尾、近似重复句、数字出处、口播与字幕是否一致、字幕表格式 |
+| 成片层 | `VV-01`~`VV-07` | 做出来是什么样：漏画、字幕没烧上、旁白静音、时长对不上、关键帧间隔、混音电平、平台技术门槛 |
+
+```bash
+cd aiv/pipeline
+make review-text   EP=<期号>   # 文本层
+make review-video  EP=<期号>   # 成片层（需要本机有 out/<期号>.mp4）
+make review-frames EP=<期号>   # 抽帧 + 清单（帧不入库，清单入库）
+```
+
+三条规矩：
+
+- **信号不是门禁**：命中信号不会让命令失败——一期历史问题不该永久卡住流水线。
+- **信号为 0 不等于这期没问题**：机械信号干净的一期照样可能需要改；
+  信号是「值得看一眼的地方」，不是「问题清单」。
+- **改稿会改到画面**：口播改了，契约的句子覆盖关系可能变，`align` 要重算时间轴、
+  片段要重渲。只审文本不审成片，等于审了一份没出片的稿子。
+
+一期一条记录在 `review/episodes/<期号>.md`，进度在 `review/INDEX.md`（只维护一份）。
+`review/` 只记录审核过程与结论，**不是对外发布内容**，不进 `docs/`，
+也不进发布白名单（与文档侧的根 `review/` 同一条纪律）。
 
 ## 发布到博客的那一份
 
@@ -190,7 +294,7 @@ python3 aiv/scripts/sync_publish_docs.py
 | `docs/life/_index.md` | 2 |
 | `docs/life/blog-to-wechat/index.md` | 3 |
 | `docs/life/shehui/media-account/index.md` | 2 |
-| `docs/database/_index.md` | 1（路径另错了一层，一并改成 `../life/aiv/index.html`） |
+| `docs/source-tracks/postgresql/_index.md` | 1（路径另错了一层，一并改成 `../../life/aiv/index.html`） |
 
 落地方式：正本 `index.md` + 发布副本 `docs/life/aiv/index.md`，
 并把 `index.md` 加进 `aiv/scripts/sync_publish_docs.py` 的 `PUBLISH_DOCS`，

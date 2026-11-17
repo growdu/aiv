@@ -23,7 +23,7 @@
   var _heroData = (site.data && site.data.featured) || {};
   var _heroSlugs = _heroData.hero || [];
 
-  // 文章的 permalink 形如 2026/08/18/db/postgresql/learning-path/03-query-pipeline/
+  // 文章的 permalink 形如 2026/08/18/source-tracks/postgresql/index-and-query/learning-path/03-query-pipeline/
   // —— **没有前导斜杠**（url_for 之后才有）。清单里写的是 <相对路径>，
   // 所以这里把日期段剥掉再匹配。
   var _slugOf = function (p) {

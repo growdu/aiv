@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/logical-replication/pa_decode/概要设计说明书-v2",
+  "draft_id": "7708374771365200425",
+  "package_dir": "toutiao/out/source-tracks-postgresql-logical-replication-pa_decode-概要设计说明书-v2",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL 18 逻辑复制并行解码概要设计说明书",
+  "updated_at": "2026-11-15T20:43:44+08:00"
+}

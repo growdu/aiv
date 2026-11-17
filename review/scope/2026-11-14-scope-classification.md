@@ -1,7 +1,7 @@
 # 全树范围分类：哪些不是面向读者的技术文章
 
 - 日期：2026-11-14
-- 依据：`tools/review-check.py` 对 `docs/` 全树（633 篇）跑出的信号，加逐篇读原文的判断
+- 依据：`tools/review-check.py` 对 `docs/` 全树（631 篇）跑出的信号，加逐篇读原文的判断
 - 目的：把审校范围从「四支柱 282 篇」扩到全树之前，先把**不面向读者的技术文章**筛掉，
   免得把站点目录页、内部工作文档、命令速查表也按技术深度五要素去审。
 
@@ -9,7 +9,7 @@
 
 | 桶 | 含义 | 篇数 | 技术深度五要素 |
 | --- | --- | --- | --- |
-| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 106 | 不审 |
+| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 104 | 不审 |
 | 2 速查/清单/操作类 | 面向读者，但形态是命令表、步骤、清单，没有成篇解释 | 49 | 不适用 |
 | 3 非技术内容 | 面向读者，但写的是生活、备考、内部规范 | 38 | 不适用 |
 | 4 转载内容 | 标了来源、署名他人的转载稿 | 17 | 不按原创稿审改 |
@@ -46,59 +46,54 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 
 | 支柱 | 总数 | 非内容 | 速查操作 | 非技术 | 转载 | 技术文章 | warn | DEP-00 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-
-`warn` 与 `DEP-00` 两列是分类当时的一次实跑快照，会随规则变更与文章合入而
-变化；`总数` 与 `技术文章` 两列必须与实际文件数对得上，契约测试盯着后者。
-| db | 102 | 11 | 2 | 0 | 0 | 89 | 44 | 11 |
-| database | 61 | 1 | 0 | 0 | 0 | 60 | 28 | 0 |
-| cluster | 62 | 8 | 0 | 0 | 0 | 54 | 55 | 31 |
-| pgsql | 55 | 5 | 6 | 0 | 0 | 44 | 42 | 20 |
+| source-tracks | 216 | 15 | 8 | 0 | 0 | 193 | 179 | 31 |
+| cluster | 62 | 8 | 0 | 0 | 0 | 54 | 54 | 29 |
+| life | 42 | 11 | 0 | 31 | 0 | 0 | 28 | 6 |
 | linux | 39 | 5 | 7 | 0 | 0 | 27 | 21 | 16 |
-| dpdk | 27 | 3 | 7 | 0 | 0 | 17 | 15 | 9 |
-| tools | 21 | 1 | 4 | 0 | 0 | 16 | 17 | 9 |
-| vpp | 19 | 1 | 2 | 0 | 0 | 16 | 13 | 9 |
-| protocol | 12 | 2 | 0 | 0 | 0 | 10 | 9 | 7 |
-| docker | 12 | 1 | 2 | 0 | 0 | 9 | 5 | 2 |
-| language | 17 | 3 | 5 | 0 | 0 | 9 | 11 | 11 |
-| vue | 14 | 1 | 4 | 0 | 0 | 9 | 9 | 4 |
 | ai | 30 | 1 | 0 | 4 | 17 | 8 | 36 | 4 |
-| blog | 11 | 2 | 0 | 0 | 0 | 9 | 3 | 2 |
+| dpdk | 27 | 3 | 7 | 0 | 0 | 17 | 15 | 9 |
+| tools | 21 | 1 | 4 | 0 | 0 | 16 | 18 | 9 |
+| vpp | 19 | 1 | 2 | 0 | 0 | 16 | 15 | 9 |
+| language | 17 | 3 | 5 | 0 | 0 | 9 | 11 | 11 |
+| base | 14 | 3 | 4 | 0 | 0 | 7 | 12 | 9 |
+| vue | 14 | 1 | 4 | 0 | 0 | 9 | 9 | 4 |
 | page | 13 | 3 | 2 | 0 | 0 | 8 | 13 | 11 |
-| base | 14 | 3 | 4 | 0 | 0 | 7 | 16 | 10 |
-| network | 10 | 3 | 0 | 0 | 0 | 7 | 13 | 5 |
-| es | 5 | 1 | 0 | 0 | 0 | 4 | 6 | 1 |
+| code | 12 | 12 | 0 | 0 | 0 | 0 | 12 | 12 |
+| docker | 12 | 1 | 2 | 0 | 0 | 9 | 5 | 2 |
+| protocol | 12 | 2 | 0 | 0 | 0 | 10 | 9 | 7 |
+| blog | 11 | 2 | 0 | 0 | 0 | 9 | 5 | 2 |
+| network | 10 | 3 | 0 | 0 | 0 | 7 | 10 | 5 |
+| platform-meta | 13 | 7 | 0 | 0 | 0 | 6 | 8 | 7 |
 | storage | 6 | 2 | 0 | 0 | 0 | 4 | 4 | 2 |
 | edit | 5 | 1 | 1 | 0 | 0 | 3 | 5 | 4 |
+| es | 5 | 1 | 0 | 0 | 0 | 4 | 6 | 1 |
 | openguass | 5 | 1 | 1 | 0 | 0 | 3 | 3 | 3 |
+| chatgpt | 3 | 1 | 0 | 2 | 0 | 0 | 3 | 3 |
 | alg | 2 | 1 | 0 | 0 | 0 | 1 | 3 | 1 |
 | computer_communication | 2 | 1 | 0 | 0 | 0 | 1 | 2 | 2 |
-| programmer_self_cultivation | 2 | 1 | 0 | 0 | 0 | 1 | 1 | 1 |
-| web | 2 | 1 | 0 | 0 | 0 | 1 | 2 | 2 |
-| chatgpt | 3 | 1 | 0 | 2 | 0 | 0 | 3 | 3 |
-| code | 12 | 12 | 0 | 0 | 0 | 0 | 12 | 12 |
-| environment | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | faq | 2 | 1 | 1 | 0 | 0 | 0 | 2 | 2 |
 | go_web | 2 | 1 | 1 | 0 | 0 | 0 | 2 | 2 |
-| life | 42 | 11 | 0 | 31 | 0 | 0 | 22 | 6 |
-| mail | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | opc | 2 | 2 | 0 | 0 | 0 | 0 | 1 | 1 |
-| pcap | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| src | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| platform-meta | 13 | 7 | 0 | 0 | 0 | 6 | 0 | 0 |
+| programmer_self_cultivation | 2 | 1 | 0 | 0 | 0 | 1 | 1 | 1 |
+| platform-meta | 13 | 7 | 0 | 0 | 0 | 6 | 8 | 7 |
 | stock | 2 | 1 | 0 | 1 | 0 | 0 | 2 | 1 |
 | video_work | 2 | 2 | 0 | 0 | 0 | 0 | 2 | 2 |
+| web | 2 | 1 | 0 | 0 | 0 | 1 | 2 | 2 |
+| mail | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
+| environment | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
+| pcap | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
+| src | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | wiki | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| **合计** | **633** | **106** | **49** | **38** | **17** | **423** | **427** | **211** |
+| **合计** | **631** | **104** | **49** | **38** | **17** | **423** | **503** | **215** |
 
 ## 排除清单
 
 下面三桶逐篇列出。**桶 4 = `docs/` 全集减去这份清单**，不单独列。
 契约测试守着两件事：清单里的路径不许悬空；审校记录的原文不许落在清单里。
 
-### 桶 1 非内容（106 篇）
+### 桶 1 非内容（104 篇）
 
 #### 站点目录页（59 篇）
-
 - `docs/ai/_index.md`
 - `docs/alg/_index.md`
 - `docs/base/_index.md`
@@ -108,15 +103,6 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/cluster/_index.md`
 - `docs/code/_index.md`
 - `docs/computer_communication/_index.md`
-- `docs/database/_index.md`
-- `docs/db/_index.md`
-- `docs/db/benchmarksql/_index.md`
-- `docs/db/linux-shared-memory/_index.md`
-- `docs/db/logical_decode/_index.md`
-- `docs/db/opengauss-csn-total-ordering/_index.md`
-- `docs/db/opengauss-parallel-decoding-design/_index.md`
-- `docs/db/postgresql/_index.md`
-- `docs/db/postgresql/learning-path/_index.md`
 - `docs/docker/_index.md`
 - `docs/dpdk/_index.md`
 - `docs/edit/_index.md`
@@ -146,9 +132,18 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/platform-meta/multiplatform/_index.md`
 - `docs/platform-meta/platform-overview/_index.md`
 - `docs/platform-meta/video-line/_index.md`
-- `docs/pgsql/_index.md`
 - `docs/programmer_self_cultivation/_index.md`
 - `docs/protocol/_index.md`
+- `docs/source-tracks/_index.md`
+- `docs/source-tracks/postgresql/_index.md`
+- `docs/source-tracks/postgresql/extensions-perf/_index.md`
+- `docs/source-tracks/postgresql/getting-started/_index.md`
+- `docs/source-tracks/postgresql/index-and-query/_index.md`
+- `docs/source-tracks/postgresql/logical-replication/_index.md`
+- `docs/source-tracks/postgresql/replication-ha/_index.md`
+- `docs/source-tracks/postgresql/storage-engine/_index.md`
+- `docs/source-tracks/postgresql/transaction-mvcc/_index.md`
+- `docs/source-tracks/postgresql/wal-and-recovery/_index.md`
 - `docs/src/_index.md`
 - `docs/stock/_index.md`
 - `docs/storage/_index.md`
@@ -158,7 +153,6 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/vue/_index.md`
 - `docs/web/_index.md`
 - `docs/wiki/_index.md`
-
 #### 只有标题的未成稿（24 篇）
 
 - `docs/base/use-tools/download.md`
@@ -169,7 +163,7 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/cluster/主流分布式高可用方案.md`
 - `docs/cluster/分布式存储需要解决的问题.md`
 - `docs/cluster/分布式系统设计必知必会.md`
-- `docs/db/logical_decode/ai_coding/逻辑复制支持ddl ai配置流程.md`
+- `docs/source-tracks/postgresql/logical-replication/ai_coding/逻辑复制支持ddl ai配置流程.md`
 - `docs/dpdk/vpp插件开发.md`
 - `docs/language/python/pytest/pytest进阶.md`
 - `docs/language/rust/rust设计原则.md`
@@ -179,10 +173,10 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/network/mtu路径发现pmtu详解.md`
 - `docs/page/gui.md`
 - `docs/page/read-pdfbox-source-code.md`
-- `docs/pgsql/process/Checkpoint.md`
-- `docs/pgsql/replication/pg_logic_decode.md`
-- `docs/pgsql/replication/pg_slot.md`
-- `docs/pgsql/storage/mm/pg_page.md`
+- `docs/source-tracks/postgresql/wal-and-recovery/Checkpoint.md`
+- `docs/source-tracks/postgresql/replication-ha/pg_logic_decode.md`
+- `docs/source-tracks/postgresql/replication-ha/pg_slot.md`
+- `docs/source-tracks/postgresql/storage-engine/mm/pg_page.md`
 - `docs/protocol/tcp/tcp socket必知必会.md`
 - `docs/storage/sshfs-win精讲.md`
 
@@ -200,11 +194,9 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/code/shell-work/readme.md`
 - `docs/code/shell-work/vim/readme.md`
 
-#### 内部工作文档与记录（10 篇）
+#### 内部工作文档与记录（8 篇）
 
 - `docs/base/normal.md`
-- `docs/db/logical_decode/逻辑复制支持DDL开发交付计划.md`
-- `docs/db/logical_decode/逻辑复制验证步骤.md`
 - `docs/dpdk/fastup测试优化完成情况.md`
 - `docs/life/aiv/人格规范.md`
 - `docs/life/aiv/形象与音色规范.md`
@@ -224,8 +216,8 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/base/use-tools/google.md`
 - `docs/base/use-tools/other.md`
 - `docs/base/use-tools/vim.md`
-- `docs/db/mysql/macos安装mysql.md`
-- `docs/db/postgresql/使用meson编译pg.md`
+- `docs/source-tracks/postgresql/extensions-perf/macos安装mysql.md`
+- `docs/source-tracks/postgresql/getting-started/使用meson编译pg.md`
 - `docs/docker/docker compose管理容器.md`
 - `docs/docker/docker搭建个人镜像仓库.md`
 - `docs/dpdk/fastup模拟UE测试.md`
@@ -253,12 +245,12 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/openguass/openguass升级机制.md`
 - `docs/page/python.md`
 - `docs/page/ssh.md`
-- `docs/pgsql/debug/code-server调试postgresql.md`
-- `docs/pgsql/pg_command/initdb.md`
-- `docs/pgsql/pg_command/pg_ctl.md`
-- `docs/pgsql/pg_complie_and_run.md`
-- `docs/pgsql/postgresql源码编译.md`
-- `docs/pgsql/repmgr/repmgr_cluster.md`
+- `docs/source-tracks/postgresql/getting-started/code-server调试postgresql.md`
+- `docs/source-tracks/postgresql/getting-started/initdb.md`
+- `docs/source-tracks/postgresql/getting-started/pg_ctl.md`
+- `docs/source-tracks/postgresql/getting-started/pg_complie_and_run.md`
+- `docs/source-tracks/postgresql/getting-started/postgresql源码编译.md`
+- `docs/source-tracks/postgresql/replication-ha/repmgr_cluster.md`
 - `docs/tools/codeserver_docker.md`
 - `docs/tools/doxygen使用指南.md`
 - `docs/tools/shell常用脚本.md`

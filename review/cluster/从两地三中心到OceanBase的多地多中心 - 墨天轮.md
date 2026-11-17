@@ -1,6 +1,6 @@
 # 审校：从两地三中心到OceanBase的多地多中心 - 墨天轮
 
-- 原文：`docs/cluster/从两地三中心到OceanBase的多地多中心 - 墨天轮.md`
+- 原文：docs/cluster/从两地三中心到OceanBase的多地多中心 - 墨天轮.md
 - 范围：全文
 - 目标读者：金融行业的 DBA / 架构师，想搞清楚「两地三中心」到底是个什么
   口径的架构，以及 OceanBase 怎么落地
@@ -147,8 +147,8 @@
      「 - 墨天轮」这个来源后缀直接顶到标题上。
      这不是单篇笔误：全树 **44 篇**没有 H1，其中 **9 篇**文件名带
      「 - 来源」后缀（本篇、`docs/openguass/opengauss dcf搭建 - 墨天轮.md`、
-     `docs/pgsql/executor/PostgreSQL的insert语句执行过程分析 - 墨天轮.md`、
-     `docs/pgsql/replication/PostgreSQL的后台进程walsender分析 - 关系型数据库 - 亿速云.md` 等）。
+     `docs/source-tracks/postgresql/index-and-query/PostgreSQL的insert语句执行过程分析 - 墨天轮.md`、
+     `docs/source-tracks/postgresql/replication-ha/PostgreSQL的后台进程walsender分析 - 关系型数据库 - 亿速云.md` 等）。
    - 建议：本篇先补 H1；其余 43 篇单独立一条站点级整改（给 sync-hexo 加
      「文件名带来源后缀时从标题剥掉」的规则，或统一补 H1）。
    - 原因：README 的「一句话定位」；检查器 STR-02 命中。

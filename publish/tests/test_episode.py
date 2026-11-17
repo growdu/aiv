@@ -55,28 +55,28 @@ SPEC = REPO_ROOT / "publish" / "spec" / "08-站点IP骨架.md"
 #: 落地 URL 指向另一个页面——而软 404 会让它看起来是好的。
 SIX_EPISODE_DRAFTS = {
     "pg-parallel-decode": (
-        "docs/database/postgresql-logical-replication-end-to-end-flow/index.md",
-        "database/postgresql-logical-replication-end-to-end-flow",
+        "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md",
+        "source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow",
     ),
     "csn-total-ordering": (
-        "docs/db/opengauss-csn-total-ordering/index.md",
-        "db/opengauss-csn-total-ordering",
+        "docs/source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/index.md",
+        "source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering",
     ),
     "wal-interleave": (
-        "docs/database/postgresql-logical-replication-worker-model/index.md",
-        "database/postgresql-logical-replication-worker-model",
+        "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
+        "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model",
     ),
     "parallel-apply": (
-        "docs/database/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
-        "database/postgresql-logical-replication-ddl-trigger-apply-worker",
+        "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
+        "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker",
     ),
     "structured-ddl": (
-        "docs/database/postgresql-logical-replication-ddl-dml-ordering/index.md",
-        "database/postgresql-logical-replication-ddl-dml-ordering",
+        "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering/index.md",
+        "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering",
     ),
     "row-lock": (
-        "docs/database/postgresql-row-lock-deep-dive/index.md",
-        "database/postgresql-row-lock-deep-dive",
+        "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
+        "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive",
     ),
 }
 
@@ -139,8 +139,8 @@ def complete_fields(**overrides) -> dict:
 
 def test_landing_url_derives_the_permalink():
     assert (
-        landing_url("database/postgresql-row-lock-deep-dive", "2026-10-15")
-        == "/2026/10/15/database/postgresql-row-lock-deep-dive/"
+        landing_url("source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive", "2026-10-15")
+        == "/2026/10/15/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/"
     )
 
 
@@ -199,9 +199,9 @@ def test_landing_url_matches_the_site_build_layers_permalink():
         sys.path.pop(0)
 
     cases = [
-        ("2026-10-15 11:30:25", "database/postgresql-row-lock-deep-dive"),
+        ("2026-10-15 11:30:25", "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"),
         ("2026-11-11 12:30:58", "life/aiv/人格规范"),
-        ("2026-08-24 14:22:40", "database/postgresql-logical-replication-worker-model"),
+        ("2026-08-24 14:22:40", "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model"),
     ]
     for date, content_id in cases:
         assert landing_url(content_id, date) == site_root.permalink(
@@ -220,9 +220,9 @@ def test_content_id_for_draft_maps_index_md_to_its_own_directory():
     """
     assert (
         content_id_for_draft(
-            "docs/database/postgresql-row-lock-deep-dive/index.md", "docs"
+            "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md", "docs"
         )
-        == "database/postgresql-row-lock-deep-dive"
+        == "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"
     )
 
 
@@ -441,7 +441,7 @@ def test_reading_a_draft_leaves_the_date_empty():
 
     episode = read_episode(draft, drafts_root=REPO_ROOT / "docs")
 
-    assert episode.content_id == "database/postgresql-row-lock-deep-dive"
+    assert episode.content_id == "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"
     assert episode.date is None
 
 
@@ -507,7 +507,7 @@ episode_subtitle: "aiv/字幕-行锁.md"
 episode_duration_s: "35.172"
 episode_license: "PostgreSQL BSD"
 episode_sources:
-  - "docs/database/postgresql-row-lock-deep-dive/index.md"
+  - "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md"
 episode_repro:
   - "make -C aiv/pipeline out"
 ---
@@ -528,17 +528,21 @@ def test_the_draft_content_id_matches_the_compiled_content_unit(tmp_path):
 
     所以这条测试真的跑一遍 ``tools/sync-hexo.py``，把两边对上。
     """
-    build_corpus(tmp_path, {"database/postgresql-row-lock-deep-dive/index.md": EPISODE_DRAFT})
+    build_corpus(tmp_path, {"source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md": EPISODE_DRAFT})
     run_sync(tmp_path)
 
     from_draft = content_id_for_draft(
-        tmp_path / "docs" / "database" / "postgresql-row-lock-deep-dive" / "index.md",
+        tmp_path / "docs" / "source-tracks" / "postgresql" / "transaction-mvcc"
+        / "postgresql-row-lock-deep-dive" / "index.md",
         tmp_path / "docs",
     )
-    compiled = tmp_path / "source" / "_posts" / "database" / "postgresql-row-lock-deep-dive.md"
+    compiled = (
+        tmp_path / "source" / "_posts" / "source-tracks" / "postgresql"
+        / "transaction-mvcc" / "postgresql-row-lock-deep-dive.md"
+    )
 
     assert compiled.is_file(), "sync-hexo.py 没有按 index.md 的规则编译"
-    assert from_draft == "database/postgresql-row-lock-deep-dive"
+    assert from_draft == "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"
 
 
 def test_the_landing_url_is_derived_from_the_compiled_content_unit(tmp_path):
@@ -547,15 +551,18 @@ def test_the_landing_url_is_derived_from_the_compiled_content_unit(tmp_path):
     日期取**内容单元**的 ``date``（``sync-hexo.py`` 写进去的那个），
     不取母稿的——母稿的会被覆盖掉。
     """
-    build_corpus(tmp_path, {"database/postgresql-row-lock-deep-dive/index.md": EPISODE_DRAFT})
+    build_corpus(tmp_path, {"source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md": EPISODE_DRAFT})
     run_sync(tmp_path)
 
-    post = tmp_path / "source" / "_posts" / "database" / "postgresql-row-lock-deep-dive.md"
+    post = (
+        tmp_path / "source" / "_posts" / "source-tracks" / "postgresql"
+        / "transaction-mvcc" / "postgresql-row-lock-deep-dive.md"
+    )
     episode = read_episode(post, posts_root=tmp_path / "source" / "_posts")
 
-    assert episode.content_id == "database/postgresql-row-lock-deep-dive"
+    assert episode.content_id == "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"
     assert episode.date is not None
-    assert episode.landing_url() == "/{}/{}/{}/database/postgresql-row-lock-deep-dive/".format(
+    assert episode.landing_url() == "/{}/{}/{}/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/".format(
         episode.date[:4], episode.date[5:7], episode.date[8:10]
     )
 
@@ -582,7 +589,7 @@ def test_every_episode_field_reaches_the_compiled_product(tmp_path):
     assert fields["episode_duration_s"] == "35.172"
     assert fields["episode_license"] == "PostgreSQL BSD"
     assert fields["episode_sources"] == [
-        "docs/database/postgresql-row-lock-deep-dive/index.md"
+        "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md"
     ]
     assert fields["episode_repro"] == ["make -C aiv/pipeline out"]
 

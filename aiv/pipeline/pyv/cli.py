@@ -341,6 +341,36 @@ def cmd_publish(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_review(args: argparse.Namespace) -> int:
+    """视频审核：文本层 / 成片层 / 抽帧清单。"""
+    from pyv import review
+
+    if args.review_command == "text":
+        report = review.check_text(args.episode)
+    elif args.review_command == "video":
+        report = review.check_video(args.episode)
+    elif args.review_command == "frames":
+        out_dir = Path(args.out) if args.out else review.FRAMES_DIR / args.episode
+        frames, manifest = review.extract_and_manifest(args.episode, out_dir)
+        if manifest is None:
+            print(f"ERROR 成片不在本机，抽不了帧：{args.episode}", file=sys.stderr)
+            return 1
+        print(f"OK 抽了 {len(frames)} 帧 → {out_dir}")
+        print(f"清单 → {manifest}")
+        return 0
+    else:
+        print(f"ERROR 未知的审核子命令：{args.review_command}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(review.report_json(report))
+    else:
+        print(report.summary())
+    # **信号不是门禁**：命中信号不返回非零退出码。
+    # 一期历史问题不该永久卡住流水线——那是记录与进度表的事。
+    return 0
+
+
 def _cmd_bgm_windows(args: argparse.Namespace) -> int:
     """挑（或重挑）系列片头片尾的配乐窗口。
 
@@ -510,6 +540,28 @@ def main(argv: list[str] | None = None) -> int:
     p_publish_check = publish_sub.add_parser("check")
     p_publish_check.add_argument("--episode", required=True)
     p_publish_check.set_defaults(func=cmd_publish)
+
+    p_review = sub.add_parser(
+        "review", help="视频审核：文本层 / 成片层 / 抽帧清单")
+    review_sub = p_review.add_subparsers(dest="review_command", required=True)
+
+    p_review_text = review_sub.add_parser(
+        "text", help="审成片背后的文本：口播稿、字幕表、画面契约")
+    p_review_text.add_argument("--episode", required=True, help="期号")
+    p_review_text.add_argument("--json", action="store_true", help="输出 JSON")
+    p_review_text.set_defaults(func=cmd_review)
+
+    p_review_video = review_sub.add_parser(
+        "video", help="审成片本身：抽帧、音轨、技术参数")
+    p_review_video.add_argument("--episode", required=True, help="期号")
+    p_review_video.add_argument("--json", action="store_true", help="输出 JSON")
+    p_review_video.set_defaults(func=cmd_review)
+
+    p_review_frames = review_sub.add_parser(
+        "frames", help="抽帧并写清单（给人/Agent 看画面用）")
+    p_review_frames.add_argument("--episode", required=True, help="期号")
+    p_review_frames.add_argument("--out", default=None, help="输出目录")
+    p_review_frames.set_defaults(func=cmd_review)
 
     args = parser.parse_args(argv)
     return args.func(args)

@@ -22,9 +22,9 @@
 
 ## 明细
 
-### docs/ai/19_AI是你的杠杆普通人也能用的AI实战教程.md
+# docs/ai/19_AI是你的杠杆普通人也能用的AI实战教程.md
 
-- **第 459 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
+- **第 460 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
 
   ```
   A[你懂 / 会做]::: root --> B[重复的部分]::: warm --> C[交给 AI]::: hot --> D[10x 效率]::: hot
@@ -42,25 +42,25 @@
   A[你现在的处境]::: root --> B{你的时间紧迫?}
   ```
 
-### docs/database/citus-columnar-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/citus-columnar-deep-dive/index.md
 
-- **第 161 行**（块 #3，类型 `mindmap`，报错在块内第 ? 行）
-
-  ```
-  mindmap
-  ```
-
-### docs/database/citus-deep-dive/index.md
-
-- **第 53 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
+- **第 164 行**（块 #3，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
   ```
 
-### docs/database/cstore-fdw-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/citus-deep-dive/index.md
 
-- **第 39 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
+- **第 56 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
+
+  ```
+  mindmap
+  ```
+
+# docs/source-tracks/postgresql/extensions-perf/cstore-fdw-deep-dive/index.md
+
+- **第 42 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
@@ -72,17 +72,17 @@
   mindmap
   ```
 
-### docs/database/pg-duckdb-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/pg-duckdb-deep-dive/index.md
 
-- **第 44 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
+- **第 47 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
   ```
 
-### docs/database/pg-stat-statements-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/pg-stat-statements-deep-dive/index.md
 
-- **第 26 行**（块 #0，类型 `mindmap`，报错在块内第 ? 行）
+- **第 29 行**（块 #0，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
@@ -100,15 +100,29 @@
   mindmap
   ```
 
-### docs/database/pgaudit-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/pgaudit-deep-dive/index.md
 
-- **第 26 行**（块 #0，类型 `mindmap`，报错在块内第 ? 行）
+- **第 29 行**（块 #0，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
   ```
 
-### docs/database/pgbackrest-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/pgbackrest-deep-dive/index.md
+
+- **第 47 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
+
+  ```
+  mindmap
+  ```
+
+# docs/source-tracks/postgresql/extensions-perf/pgcrypto-deep-dive/index.md
+
+- **第 28 行**（块 #0，类型 `mindmap`，报错在块内第 ? 行）
+
+  ```
+  mindmap
+  ```
 
 - **第 44 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
 
@@ -116,31 +130,17 @@
   mindmap
   ```
 
-### docs/database/pgcrypto-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/pgvector-deep-dive/index.md
 
-- **第 25 行**（块 #0，类型 `mindmap`，报错在块内第 ? 行）
-
-  ```
-  mindmap
-  ```
-
-- **第 44 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
+- **第 53 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
   ```
 
-### docs/database/pgvector-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/postgis-deep-dive/index.md
 
-- **第 50 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
-
-  ```
-  mindmap
-  ```
-
-### docs/database/postgis-deep-dive/index.md
-
-- **第 244 行**（块 #8，类型 `mindmap`，报错在块内第 ? 行）
+- **第 247 行**（块 #8，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
@@ -152,9 +152,9 @@
   mindmap
   ```
 
-### docs/database/postgresql-core-features/index.md
+# docs/source-tracks/postgresql/getting-started/postgresql-core-features/index.md
 
-- **第 131 行**（块 #3，类型 `flowchart`，报错在块内第 7 行）
+- **第 134 行**（块 #3，类型 `flowchart`，报错在块内第 7 行）
 
   ```
   C -.->|"10 逻辑复制 / 12 可插拔 AM 是“跨架构”"]
@@ -172,9 +172,9 @@
   x-axis "接近 SQL" vs "接近业务"
   ```
 
-### docs/database/postgresql-history/index.md
+# docs/source-tracks/postgresql/getting-started/postgresql-history/index.md
 
-- **第 586 行**（块 #14，类型 `mindmap`，报错在块内第 9 行）
+- **第 589 行**（块 #14，类型 `mindmap`，报错在块内第 9 行）
 
   ```
   商业 PG (EDB / RedHat) 同步更新
@@ -186,9 +186,9 @@
   C -.->"提交评审"| G
   ```
 
-### docs/database/postgresql-latch-mechanism/index.md
+# docs/source-tracks/postgresql/transaction-mvcc/postgresql-latch-mechanism/index.md
 
-- **第 1084 行**（块 #3，类型 `sequenceDiagram`，报错在块内第 11 行）
+- **第 1087 行**（块 #3，类型 `sequenceDiagram`，报错在块内第 11 行）
 
   ```
   - 内核把 SIGURG 投到 B 的 signalfd
@@ -200,33 +200,33 @@
   procSendSignal::procSendSignal as 目标进程
   ```
 
-### docs/database/postgresql-logical-replication-ddl-trigger-apply-worker/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md
 
-- **第 646 行**（块 #4，类型 `sequenceDiagram`，报错在块内第 10 行）
+- **第 677 行**（块 #4，类型 `sequenceDiagram`，报错在块内第 10 行）
 
   ```
   Pub->>HookPub: BEGIN; CREATE TABLE orders ...; CREATE TABLE orders_p1 PARTITION OF ...; ALTER PUBLICATION pub_orders ADD TABLE orders; COMMIT;
   ```
 
-### docs/database/postgresql-logical-replication-end-to-end-flow/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md
 
-- **第 56 行**（块 #0，类型 `flowchart`，报错在块内第 8 行）
+- **第 97 行**（块 #0，类型 `flowchart`，报错在块内第 8 行）
 
   ```
   A -->|"落盘到 subscriber 的 pg_wal/0000..."]
   ```
 
-### docs/database/postgresql-logical-replication-monitoring/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-monitoring/index.md
 
-- **第 422 行**（块 #3，类型 `flowchart`，报错在块内第 12 行）
+- **第 425 行**（块 #3，类型 `flowchart`，报错在块内第 12 行）
 
   ```
   F1[pg_wal_lsn_diff(lsn_a, lsn_b)<br/>+ pg_size_pretty<br/>÷ EXTRACT(EPOCH)]:::calc
   ```
 
-### docs/database/postgresql-logical-replication-reorderbuffer-transaction/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-reorderbuffer-transaction/index.md
 
-- **第 381 行**（块 #4，类型 `stateDiagram-v2`，报错在块内第 2 行）
+- **第 384 行**（块 #4，类型 `stateDiagram-v2`，报错在块内第 2 行）
 
   ```
   [*] --> BORN : 第一次见到 xid / ReorderBufferTXNByXid(create=true) / reorderbuffer.c:652
@@ -244,9 +244,9 @@
   D["final_lsn<br/>(commit/abort LSN)"]:::end
   ```
 
-### docs/database/postgresql-logical-replication-streaming-spill/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-streaming-spill/index.md
 
-- **第 823 行**（块 #7，类型 `flowchart`，报错在块内第 3 行）
+- **第 828 行**（块 #7，类型 `flowchart`，报错在块内第 3 行）
 
   ```
   Q1 -- Publisher --> P1[改 ReorderBufferXXX (reorderbuffer.c)]
@@ -258,9 +258,9 @@
   pub1 --> pub2{streaming + |
   ```
 
-### docs/database/postgresql-logical-replication-tables-lifecycle/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-tables-lifecycle/index.md
 
-- **第 599 行**（块 #4，类型 `flowchart`，报错在块内第 6 行）
+- **第 602 行**（块 #4，类型 `flowchart`，报错在块内第 6 行）
 
   ```
   subgraph workers[共享内存 workers[] (max_logical_replication_workers 个槽)]
@@ -278,41 +278,41 @@
   B3 -.FK srsubid-> B4
   ```
 
-### docs/database/postgresql-logical-replication-worker-model/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md
 
-- **第 125 行**（块 #1，类型 `stateDiagram-v2`，报错在块内第 4 行）
+- **第 88 行**（块 #1，类型 `stateDiagram-v2`，报错在块内第 4 行）
 
   ```
   STARTING --> CONNECTING : run_apply_worker(): walrcv_connect
   ```
 
-### docs/database/postgresql-partition-handling/index.md
+# docs/source-tracks/postgresql/index-and-query/postgresql-partition-handling/index.md
 
-- **第 868 行**（块 #5，类型 `sequenceDiagram`，报错在块内第 29 行）
+- **第 871 行**（块 #5，类型 `sequenceDiagram`，报错在块内第 29 行）
 
   ```
   
   ```
 
-### docs/database/postgresql-rangevar-and-data-structures/index.md
+# docs/source-tracks/postgresql/index-and-query/postgresql-rangevar-and-data-structures/index.md
 
-- **第 672 行**（块 #9，类型 `graph`，报错在块内第 17 行）
+- **第 673 行**（块 #9，类型 `graph`，报错在块内第 17 行）
 
   ```
   D1[pgoutput plugin] --> D2[OpenTable<br/>(RangeVar 重新构造)]
   ```
 
-### docs/database/postgresql-row-lock-deep-dive/index.md
+# docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md
 
-- **第 308 行**（块 #4，类型 `graph`，报错在块内第 12 行）
+- **第 338 行**（块 #4，类型 `graph`，报错在块内第 12 行）
 
   ```
   D -.锁住不允许任何写修改。-> UB[修改 key / DELETE]
   ```
 
-### docs/database/postgresql-running-xacts-snapshot/index.md
+# docs/source-tracks/postgresql/transaction-mvcc/postgresql-running-xacts-snapshot/index.md
 
-- **第 233 行**（块 #4，类型 `mindmap`，报错在块内第 ? 行）
+- **第 236 行**（块 #4，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
@@ -324,9 +324,9 @@
   G["7. txn->base_snapshot 是 ReorderBuffer 视角的"事务能否发送"开关<br/>(NULL → 不发;非 NULL → 以 base_snapshot 为模板拼 snapshot_now)"]
   ```
 
-### docs/database/postgresql-senior-kernel-developer/index.md
+# docs/source-tracks/postgresql/getting-started/postgresql-senior-kernel-developer/index.md
 
-- **第 482 行**（块 #7，类型 `graph`，报错在块内第 2 行）
+- **第 483 行**（块 #7，类型 `graph`，报错在块内第 2 行）
 
   ```
   SQL[SQL]:::parser-->[expr tree]:::parser
@@ -344,9 +344,9 @@
   B --> C[PlanState<br/>(递归)]
   ```
 
-### docs/database/postgresql-toast-deep-dive/index.md
+# docs/source-tracks/postgresql/storage-engine/postgresql-toast-deep-dive/index.md
 
-- **第 77 行**（块 #0，类型 `graph`，报错在块内第 5 行）
+- **第 78 行**（块 #0，类型 `graph`，报错在块内第 5 行）
 
   ```
   B3 --> C[Heap page<br/>(8KB 内)]
@@ -358,33 +358,33 @@
   A[SELECT substr(text, 1000, 100)]:::input --> B["detoast_attr_slice<br/>@ detoast.c"]
   ```
 
-### docs/database/timescaledb-deep-dive/index.md
+# docs/source-tracks/postgresql/extensions-perf/timescaledb-deep-dive/index.md
 
-- **第 52 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
+- **第 55 行**（块 #1，类型 `mindmap`，报错在块内第 ? 行）
 
   ```
   mindmap
   ```
 
-### docs/db/benchmarksql/benchmarksql使用教程.md
+# docs/source-tracks/postgresql/extensions-perf/benchmarksql使用教程.md
 
-- **第 602 行**（块 #5，类型 `quadrantChart`，报错在块内第 3 行）
+- **第 605 行**（块 #5，类型 `quadrantChart`，报错在块内第 3 行）
 
   ```
   x-axis 低延迟 --> 高延迟
   ```
 
-### docs/db/logical_decode/logical_parallel_apply/逻辑复制并行apply依赖冲突检测设计文档.md
+# docs/source-tracks/postgresql/logical-replication/logical_parallel_apply/逻辑复制并行apply依赖冲突检测设计文档.md
 
-- **第 346 行**（块 #12，类型 `flowchart`，报错在块内第 2 行）
+- **第 347 行**（块 #12，类型 `flowchart`，报错在块内第 2 行）
 
   ```
   A["T0 outside window<br/>write R.K=5"]::: out
   ```
 
-### docs/db/logical_decode/logical_parallel_apply/逻辑复制并行apply接口文档.md
+# docs/source-tracks/postgresql/logical-replication/logical_parallel_apply/逻辑复制并行apply接口文档.md
 
-- **第 52 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
+- **第 53 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
 
   ```
   A[Logical Replication]::: root --> B["Serial Apply<br/>单事务"]
@@ -402,9 +402,9 @@
   A[已提交事务 1..N]::: in --> B[Transaction Window]
   ```
 
-### docs/db/logical_decode/logical_parallel_apply/逻辑复制并行apply概要设计文档.md
+# docs/source-tracks/postgresql/logical-replication/logical_parallel_apply/逻辑复制并行apply概要设计文档.md
 
-- **第 55 行**（块 #0，类型 `flowchart`，报错在块内第 3 行）
+- **第 56 行**（块 #0，类型 `flowchart`，报错在块内第 3 行）
 
   ```
   WAL[WAL]::: pub --> DEC[Logical Decoding]::: pub
@@ -434,9 +434,9 @@
   A[一条事务]::: root --> B{事务大小}
   ```
 
-### docs/db/logical_decode/逻辑复制源码分析.md
+# docs/source-tracks/postgresql/logical-replication/逻辑复制源码分析.md
 
-- **第 841 行**（块 #1，类型 `graph`，报错在块内第 2 行）
+- **第 844 行**（块 #1，类型 `graph`，报错在块内第 2 行）
 
   ```
   XLogSendLogical-->XLogReadRecord-->LogicalDecodingProcessRecord-->｜非级联｜GetFlushRecPtr
@@ -448,41 +448,41 @@
   grpah TB
   ```
 
-### docs/db/performance/flame-graph-analysis/index.md
+# docs/source-tracks/postgresql/extensions-perf/flame-graph-analysis/index.md
 
-- **第 526 行**（块 #19，类型 `flowchart`，报错在块内第 2 行）
+- **第 527 行**（块 #19，类型 `flowchart`，报错在块内第 2 行）
 
   ```
   A["A 函数 30%"] -->|?"调用"| B["B 函数 25%"]
   ```
 
-### docs/db/postgresql/learning-path/08-locks-and-concurrency.md
+# docs/source-tracks/postgresql/transaction-mvcc/learning-path/08-locks-and-concurrency.md
 
-- **第 964 行**（块 #3，类型 `graph`，报错在块内第 2 行）
+- **第 967 行**（块 #3，类型 `graph`，报错在块内第 2 行）
 
   ```
   T1[事务 A<br/>持: lock(id=1)<br/>等: lock(id=2)]
   ```
 
-### docs/db/postgresql/learning-path/10-advanced-topics.md
+# docs/source-tracks/postgresql/extensions-perf/learning-path/10-advanced-topics.md
 
-- **第 429 行**（块 #1，类型 `graph`，报错在块内第 10 行）
+- **第 432 行**（块 #1，类型 `graph`，报错在块内第 10 行）
 
   ```
   TQ[1["TupleQueue<br/>(tqueue.c)"]
   ```
 
-### docs/db/postgresql/learning-path/12-physical-replication.md
+# docs/source-tracks/postgresql/replication-ha/learning-path/12-physical-replication.md
 
-- **第 461 行**（块 #2，类型 `stateDiagram-v2`，报错在块内第 23 行）
+- **第 464 行**（块 #2，类型 `stateDiagram-v2`，报错在块内第 23 行）
 
   ```
   Reserved --> Dropped: pg_drop_replication_slot
   ```
 
-### docs/db/postgresql/learning-path/13-logical-replication.md
+# docs/source-tracks/postgresql/logical-replication/learning-path/13-logical-replication.md
 
-- **第 2319 行**（块 #22，类型 `graph`，报错在块内第 17 行）
+- **第 2322 行**（块 #22，类型 `graph`，报错在块内第 17 行）
 
   ```
   CAT -.->|按 (xmin, xmax) 过滤| CD
@@ -494,25 +494,25 @@
   P->>WS: BEGIN; long running txn
   ```
 
-### docs/db/postgresql/pgoutput_change到HeapTupleSatisfiesVisibility调用栈分析/index.md
+# docs/source-tracks/postgresql/logical-replication/pgoutput_change到HeapTupleSatisfiesVisibility调用栈分析/index.md
 
-- **第 507 行**（块 #8，类型 `flowchart`，报错在块内第 4 行）
+- **第 508 行**（块 #8，类型 `flowchart`，报错在块内第 4 行）
 
   ```
   C --> D{snapbuild.c}<br/>Commit 到达 xmin/xmax 边界?
   ```
 
-### docs/db/postgresql/postgresql-apply-leader-worker-code-analysis/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-apply-leader-worker-code-analysis/index.md
 
-- **第 58 行**（块 #0，类型 `flowchart`，报错在块内第 12 行）
+- **第 59 行**（块 #0，类型 `flowchart`，报错在块内第 12 行）
 
   ```
   PA -. "设置: shared->xact_state / fileset_state ..." --> LA
   ```
 
-### docs/db/postgresql/postgresql-apply-parallel-lock-stream/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-apply-parallel-lock-stream/index.md
 
-- **第 117 行**（块 #1，类型 `sequenceDiagram`，报错在块内第 15 行）
+- **第 118 行**（块 #1，类型 `sequenceDiagram`，报错在块内第 15 行）
 
   ```
   style LA fill:#fee2e2,stroke:#dc2626,color:#000
@@ -524,17 +524,17 @@
   LA[LA 等 PA-2 完成] -->|LA 拿 AccessShare<br/>(等 PA-2 释放 XACT lock)| P2[PA-2 持 Exclusive]
   ```
 
-### docs/db/postgresql/postgresql-apply-parallel-worker-code-analysis/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-apply-parallel-worker-code-analysis/index.md
 
-- **第 751 行**（块 #9，类型 `sequenceDiagram`，报错在块内第 11 行）
+- **第 752 行**（块 #9，类型 `sequenceDiagram`，报错在块内第 11 行）
 
   ```
   Pub->>RB: BEGIN; INSERT ... x N
   ```
 
-### docs/db/postgresql/postgresql-apply-parallel-worker/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-apply-parallel-worker/index.md
 
-- **第 39 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
+- **第 40 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
 
   ```
   A[publisher 大事务<br/>10 万条 INSERT]::: root --> B[WAL stream]
@@ -552,9 +552,9 @@
   A[ParallelApplyWorkerPool<br/>HTAB]::: root --> B{key = xid}
   ```
 
-### docs/db/postgresql/postgresql-create-replication-slot-deep-dive/index.md
+# docs/source-tracks/postgresql/replication-ha/postgresql-create-replication-slot-deep-dive/index.md
 
-- **第 164 行**（块 #1，类型 `flowchart`，报错在块内第 6 行）
+- **第 165 行**（块 #1，类型 `flowchart`，报错在块内第 6 行）
 
   ```
   E --> F[构造 (slot_name, lsn) 元组]
@@ -566,33 +566,33 @@
   D --> E[LoadOutputPlugin 加载 plugin<br/>(fast_forward 时跳过)]
   ```
 
-### docs/db/postgresql/postgresql-injection-points-test-unreachable/index.md
+# docs/source-tracks/postgresql/extensions-perf/postgresql-injection-points-test-unreachable/index.md
 
-- **第 411 行**（块 #4，类型 `sequenceDiagram`，报错在块内第 6 行）
+- **第 412 行**（块 #4，类型 `sequenceDiagram`，报错在块内第 6 行）
 
   ```
   Test->>GIN: BEGIN; INSERT INTO gin_index ...
   ```
 
-### docs/db/postgresql/postgresql-logical-replication-add-guc/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc/index.md
 
-- **第 124 行**（块 #2，类型 `flowchart`，报错在块内第 9 行）
+- **第 125 行**（块 #2，类型 `flowchart`，报错在块内第 9 行）
 
   ```
   D1 --> E1[需要 pg_reload_conf() 才会生效]:::sighupapply
   ```
 
-### docs/db/postgresql/postgresql-logical-replication-apply-parallel-tuning/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-apply-parallel-tuning/index.md
 
-- **第 370 行**（块 #4，类型 `flowchart`，报错在块内第 13 行）
+- **第 371 行**（块 #4，类型 `flowchart`，报错在块内第 13 行）
 
   ```
   Launch -->|否| Serial[退回 LA 自己 apply<br/>(不并行)]
   ```
 
-### docs/db/postgresql/postgresql-logical-replication-catalog-visibility/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-catalog-visibility/index.md
 
-- **第 407 行**（块 #1，类型 `flowchart`，报错在块内第 6 行）
+- **第 408 行**（块 #1，类型 `flowchart`，报错在块内第 6 行）
 
   ```
   D --是--> D1[needs_snapshot=true<br/>AddCommitted<br/>xmax = max(xmax, subxid)]
@@ -610,25 +610,25 @@
   G --> H{txn.xid == xid(本次提交者)?}
   ```
 
-### docs/db/postgresql/postgresql-logical-replication-end-to-end/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end/index.md
 
-- **第 751 行**（块 #11，类型 `sequenceDiagram`，报错在块内第 25 行）
+- **第 752 行**（块 #11，类型 `sequenceDiagram`，报错在块内第 25 行）
 
   ```
   R->>DB: UPDATE t SET val=100 WHERE id=1<br/>(或:<br/> DELETE WHERE id=1;<br/> INSERT (1, 100);<br/>如果表无主键)
   ```
 
-### docs/db/postgresql/postgresql-logical-replication-lsn-flow/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-lsn-flow/index.md
 
-- **第 628 行**（块 #3，类型 `sequenceDiagram`，报错在块内第 51 行）
+- **第 629 行**（块 #3，类型 `sequenceDiagram`，报错在块内第 51 行）
 
   ```
   WK->>SubDB: BEGIN; UPDATE t SET val=100 WHERE id=1; COMMIT
   ```
 
-### docs/db/postgresql/postgresql-logical-replication-stream-publisher/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-stream-publisher/index.md
 
-- **第 162 行**（块 #1，类型 `sequenceDiagram`，报错在块内第 7 行）
+- **第 163 行**（块 #1，类型 `sequenceDiagram`，报错在块内第 7 行）
 
   ```
   plugin_plugin as logical.proto
@@ -640,9 +640,9 @@
   A[一条 INSERT t(1, 'a')] --> B[约 30-100 字节]
   ```
 
-### docs/db/postgresql/postgresql-reorder-buffer-code-analysis/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-reorder-buffer-code-analysis/index.md
 
-- **第 25 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
+- **第 26 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
 
   ```
   WAL[WAL Record<br>(heap/heap2/xlog)]:::wal
@@ -660,25 +660,25 @@
   Done["退出循环"]:::end
   ```
 
-### docs/db/postgresql/postgresql-reorderbuffer-c-function-reference/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-reorderbuffer-c-function-reference/index.md
 
-- **第 225 行**（块 #1，类型 `flowchart`，报错在块内第 34 行）
+- **第 226 行**（块 #1，类型 `flowchart`，报错在块内第 34 行）
 
   ```
   IN -->|"使用 ReorderBufferChange"|  PY[output plugin]
   ```
 
-### docs/db/postgresql/postgresql-row-lock/index.md
+# docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock/index.md
 
-- **第 108 行**（块 #1，类型 `flowchart`，报错在块内第 10 行）
+- **第 109 行**（块 #1，类型 `flowchart`，报错在块内第 10 行）
 
   ```
   H1 --> C1[""]:::excl
   ```
 
-### docs/db/postgresql/postgresql-snapbuild-deep-dive/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-snapbuild-deep-dive/index.md
 
-- **第 68 行**（块 #0，类型 `flowchart`，报错在块内第 9 行）
+- **第 69 行**（块 #0，类型 `flowchart`，报错在块内第 9 行）
 
   ```
   S1[只跟踪"已提交且改 catalog"的 xid]
@@ -726,25 +726,25 @@
   SB->>SB: state &lt; CONSISTENT
   ```
 
-### docs/db/postgresql/postgresql-snapbuild-find-snapshot-deep-dive/index.md
+# docs/source-tracks/postgresql/logical-replication/postgresql-snapbuild-find-snapshot-deep-dive/index.md
 
-- **第 78 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
+- **第 79 行**（块 #0，类型 `flowchart`，报错在块内第 2 行）
 
   ```
   A[DecodingContextFindStartpoint<br/>(logical.c:635)] --> B[XLogReadRecord]
   ```
 
-### docs/linux/cpu-affinity-top-guide/index.md
+# docs/linux/cpu-affinity-top-guide/index.md
 
-- **第 89 行**（块 #3，类型 `flowchart`，报错在块内第 5 行）
+- **第 90 行**（块 #3，类型 `flowchart`，报错在块内第 5 行）
 
   ```
   C0 --> S0["SMT Thread 0"]
   ```
 
-### docs/pgsql/postgresql启动流程.md
+# docs/source-tracks/postgresql/getting-started/postgresql启动流程.md
 
-- **第 17 行**（块 #0，类型 `graph`，报错在块内第 4 行）
+- **第 20 行**（块 #0，类型 `graph`，报错在块内第 4 行）
 
   ```
   
