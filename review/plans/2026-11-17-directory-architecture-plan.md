@@ -784,10 +784,18 @@ PLATFORMS = (
 )
 
 changed = []
-for path in sorted(ROOT.rglob("*")):
-    if not path.is_file() or "/.git/" in f"/{path}":
+# **只遍历 git 跟踪的文件**——`pathlib.rglob` 会走进 `.gitignore` 忽略掉的目录
+# （`.superpowers/` 里的 brief/ledger/评审包、`.remember/` 的会话笔记、`.pytest_cache/`）。
+# Task 1 实测踩过：脚本把 SDD 工作区里的任务说明书改了，等于评审读到的是被改过的需求。
+# `git ls-files` 只列被跟踪的文件，那几类天然不在列表里。
+import subprocess
+tracked = subprocess.run(
+    ["git", "ls-files", "-z"], capture_output=True, check=True
+).stdout.decode("utf-8").split("\0")
+for rel in sorted(p for p in tracked if p.strip()):
+    path = ROOT / rel
+    if not path.is_file():
         continue
-    rel = path.as_posix()
     if rel.startswith(EXCLUDE):
         continue
     try:
@@ -818,6 +826,15 @@ for path in sorted(ROOT.rglob("*")):
 print(f"改了 {len(changed)} 个文件")
 PY
 ```
+
+> **遍历方式改成 `git ls-files`**（Task 1 实测踩过的坑）：
+> `pathlib.rglob("*")` 会走进 `.gitignore` 忽略掉的目录——
+> `.superpowers/`（**本次执行的 SDD 工作区**：brief、ledger、评审包）、
+> `.remember/`（会话记忆笔记）、`.pytest_cache/`。
+> Task 1 的替换脚本把 SDD 工作区里的**任务说明书**改了，
+> 等于评审读到的需求跟实现者看到的不是一份。
+> `git ls-files` 只列被跟踪的文件，那几类天然不在列表里。
+> `EXCLUDE` 里那两行保留着——重复排除无害，但写在那儿是为了让人一眼看见「这两类不许动」。
 
 > **`publish/outbox/` 被排除**——脚本跑完必须核对：
 > `git diff --stat -- publish/outbox/` 必须是空的，567 个快照一个字节都没动。
