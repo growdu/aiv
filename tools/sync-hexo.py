@@ -1948,6 +1948,14 @@ def _site_encode_url(path):
     return quote(path, safe=";,/?:@&=+$-_.!~*'()#")
 
 
+#: 文件名里不能有的字符。Windows 的 NTFS 不允许，GitHub 的
+#: upload-artifact / upload-pages-artifact 也直接拒绝含这些字符的路径 ——
+#: 整个产物传不上去，部署直接断在那里（2026-11-17 的 Deploy Hexo 就是
+#: 栽在「PostgreSQL 源码修炼之路:内核深度拆解专题」这个带冒号的目录上，
+#: 连着两个 push 没上成线）。
+INVALID_PATH_CHARS = ':*?"<>|'
+
+
 def write_redirects():
     """Generate redirect pages for permalinks that changed.
 
@@ -1973,6 +1981,12 @@ def write_redirects():
     """
     written = 0
     for old_path, new_path in REDIRECTS.items():
+        bad = [c for c in INVALID_PATH_CHARS if c in old_path]
+        if bad:
+            print(f"  ! 跳过文章重定向 {old_path!r}：旧路径含文件名非法字符 {bad}"
+                  f"（写出来的目录过不了 GitHub artifact 上传）",
+                  file=sys.stderr)
+            continue
         new_file = _redirect_target_file(new_path)
         if new_file is None:
             print(f"WARNING redirect target missing: {new_path}", file=sys.stderr)
@@ -2007,10 +2021,20 @@ def write_category_redirects():
     category (its path gains a prefix), the old URL 404s.  We emit a
     static redirect page there so old links keep working.
 
+    旧分类名里带文件名非法字符的**跳过并喊一声**：那个目录在 Linux 上
+    建得出来，可它会让整个产物传不上 GitHub（见 INVALID_PATH_CHARS）。
+    宁可不发这一页（那个 URL 就没有内链指向它），也不能让部署断掉。
+
     Returns the number of redirect pages written.
     """
     written = 0
     for old_path, new_path in CATEGORY_REDIRECTS.items():
+        bad = [c for c in INVALID_PATH_CHARS if c in old_path]
+        if bad:
+            print(f"  ! 跳过分类重定向 {old_path!r}：旧分类名含文件名非法字符 {bad}"
+                  f"（写出来的目录过不了 GitHub artifact 上传）",
+                  file=sys.stderr)
+            continue
         new_url = f"{SITE_ROOT}/categories/{quote(new_path)}/"
         old_url = f"{SITE_ROOT}/categories/{quote(old_path)}/"
         out_dir = os.path.join(SRC, "categories", old_path)
