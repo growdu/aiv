@@ -253,7 +253,7 @@ cd publish && python3 -m publishkit.cli schedule status
 
 # 契约闸门
 python3 tools/sync-hexo.py                 # 先产出内容单元
-python3 tools/check-content-contract.py   # 校验 568 个内容单元，违规退出码 1
+python3 tools/check-content-contract.py   # 校验 578 个内容单元（572 篇文章 + 6 期视频内容单元），违规退出码 1
 ```
 
 ---
@@ -319,7 +319,7 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | 模块 | 状态 |
 | --- | --- |
 | 站点构建 | 成熟，CI 全自动（2~3 分钟） |
-| 内容契约 | 闸门已进 CI（`contracts.yml`）；568 个内容单元 0 违规 |
+| 内容契约 | 闸门已进 CI（`contracts.yml`）；578 个内容单元 0 违规 |
 | 公众号 | 已实现到**草稿箱**；发表接口无权限（`48001`），自动化边界 = 自动进草稿箱；**已进契约层**（能力声明 + outbox 幂等键） |
 | 头条号 | 出包可用；账号未认证，API 权限开不了，走「出包 + 人工发」 |
 | 视频号 / B 站 | 出包 + 人工发布清单；B 站 `ARC_BASE` 未开通 |

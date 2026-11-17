@@ -838,7 +838,26 @@ def test_the_life_aiv_url_namespace_is_untouched():
     namespace = REPO / "docs" / "life" / "aiv"
     assert namespace.is_dir(), "docs/life/aiv/ 不见了——URL 命名空间被搬家弄坏了"
     files = [p for p in namespace.rglob("*") if p.is_file()]
-    assert len(files) == 9, f"docs/life/aiv/ 的文件数变了：{len(files)}（应为 9）"
+    expected = [
+        "背景音乐规范.md",
+        "人格规范.md",
+        "形象与音色规范.md",
+        "brand/README.md",
+        "brand/scripts/README.md",
+        "character/README.md",
+        "index.md",
+        "music/README.md",
+        "voice/README.md",
+    ]
+    actual = sorted(p.relative_to(namespace).as_posix() for p in files)
+    # `expected` 按仓库约定的顺序写着，比较时再排一次——两边的顺序必须一致，
+    # 但顺序本身不是这条守卫要钉的东西，**文件名才是**。
+    assert actual == sorted(expected), (
+        "docs/life/aiv/ 的文件名清单变了：多出 {}".format(
+            sorted(set(actual) - set(expected))
+        )
+        + "，少了 {}".format(sorted(set(expected) - set(actual)))
+    )
 
 
 def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
@@ -860,15 +879,15 @@ def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
     assert count == 8, f"docs/ 里指向 life/aiv 专题页的链接变成 {count} 处（应为 8）"
 
     # README 里讲解相对链接机制的那两处例子也是 URL 命名空间（搬前叫 aiv/README.md）
-    for name in ("video", "aiv"):
-        readme = REPO / name / "README.md"
-        if readme.is_file():
-            text = readme.read_text(encoding="utf-8")
-            assert "../aiv/背景音乐规范.md" in text, f"{name}/README.md 里的链接例子不见了"
-            assert "../aiv/index.html" in text, f"{name}/README.md 里的链接例子不见了"
-            break
-    else:
-        raise AssertionError("既没有 video/README.md 也没有 aiv/README.md")
+    readme = REPO / "video" / "README.md"
+    assert readme.is_file(), "video/README.md 不见了"
+    text = readme.read_text(encoding="utf-8")
+    assert "../aiv/背景音乐规范.md" in text, "video/README.md 里的链接例子不见了"
+    assert "../aiv/index.html" in text, "video/README.md 里的链接例子不见了"
+    # 工程目录改名了（aiv/ → video/），工程目录不许留残留
+    assert not (REPO / "aiv" / "README.md").exists(), (
+        "aiv/README.md 还在——工程目录改名有残留"
+    )
 
 
 # --- 草稿箱守卫 ------------------------------------------------------------

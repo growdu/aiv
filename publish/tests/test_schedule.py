@@ -16,6 +16,7 @@ from datetime import date
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 
 import pytest
@@ -686,4 +687,26 @@ def test_the_adapter_runs_inside_the_platforms_directory(monkeypatch):
                                   platforms_dir=REPO_ROOT / "platforms")
     cli.invoke_adapter(config, capability, "some-content-id", 300)
     assert captured["cwd"] == str(REPO_ROOT / "platforms")
+    assert captured["argv"][:3] == ["python3", "-m", "toutiao.cli"]
+
+
+def test_the_adapter_runs_inside_the_configured_platforms_directory(monkeypatch, tmp_path):
+    """能力声明从哪儿读，子进程的 cwd 就得是哪儿——不能一个走 tmp_path、一个走仓库。"""
+    captured = {}
+
+    def fake_run(argv, cwd=None, env=None, **kwargs):
+        captured["argv"] = argv
+        captured["cwd"] = cwd
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    # 能力声明抄一份真的到 tmp_path，只换掉它的位置，不改内容
+    target = tmp_path / "toutiao"
+    target.mkdir()
+    shutil.copyfile(REPO_ROOT / "platforms" / "toutiao" / "capability.toml",
+                    target / "capability.toml")
+    config = resolve_config(repo_root=REPO_ROOT, platforms_dir=tmp_path)
+    capability = load_capability("toutiao", platforms_dir=tmp_path)
+    cli.invoke_adapter(config, capability, "some-content-id", 300)
+    assert captured["cwd"] == str(tmp_path)
     assert captured["argv"][:3] == ["python3", "-m", "toutiao.cli"]

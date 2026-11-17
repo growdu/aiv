@@ -303,8 +303,9 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
     """调平台 adapter 的 CLI。
 
     命令是 ``<adapter_command...> publish <content_id>``，**cwd 必须是
-    ``<仓库>/platforms``——``python3 -m <包名>.cli`` 靠 cwd 在 ``sys.path``
-    里找到它**（adapter 的包目录是 ``repo/platforms/toutiao/``）。
+    ``config.platforms_dir``（默认就是 ``<仓库>/platforms``）——``python3 -m <包名>.cli``
+    靠 cwd 在 ``sys.path`` 里找到它**（adapter 的包目录是 ``repo/platforms/toutiao/``）。
+    **能力声明从哪儿读，cwd 就得是哪儿**——两处必须是同一个目录。
 
     adapter 自己按它自己的 ``automation`` 分支，调度器不替它分支。
     """
@@ -320,7 +321,7 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
             "能力声明 {} 没有 [adapter].package，不知道它住在哪".format(capability.id)
         )
 
-    working_dir = config.repo_root / "platforms"
+    working_dir = config.platforms_dir
     if not (working_dir / package).is_dir():
         raise ScheduleConfigError(
             "adapter 的包目录不存在：{}（能力声明 {} 写的 package 是 {!r}）".format(
