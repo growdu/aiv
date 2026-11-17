@@ -132,22 +132,23 @@ def test_load_doc_reads_first_h1_as_title(tmp_path):
 
 def test_cli_json_output_has_expected_shape():
     """集成：真跑一次 CLI，检查 JSON 结构。"""
-    target = REPO_ROOT / "docs" / "database" / "postgresql-mvcc" / "index.md"
+    target = (REPO_ROOT / "docs" / "source-tracks" / "postgresql" /
+              "transaction-mvcc" / "postgresql-mvcc" / "index.md")
     assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
     result = run_tool(str(target), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert "docs" in payload
     doc = payload["docs"][0]
-    assert doc["pillar"] == "database"
-    assert doc["slug"] == "postgresql-mvcc"
+    assert doc["pillar"] == "source-tracks"
+    assert doc["slug"] == "postgresql/transaction-mvcc/postgresql-mvcc"
     assert doc["stats"]["paragraphs"] > 0
     assert isinstance(doc["signals"], list)
 
 
 def test_cli_runs_over_a_whole_pillar():
     """集成：整目录跑一遍，不许崩。"""
-    pillar = REPO_ROOT / "docs" / "database"
+    pillar = REPO_ROOT / "docs" / "source-tracks" / "postgresql"
     result = run_tool(str(pillar), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
@@ -163,16 +164,16 @@ def test_cli_reports_missing_path():
 # 审校过的正文合入后，段落不该又长回去——AIF-03 盯的就是「单段 > 200 字」。
 # 改文章时把两段并回一段，这条测试会报出来：审校完的稿子不能带新债。
 REVIEWED_ARTICLES = (
-    "docs/database/postgresql-mvcc/index.md",
-    "docs/database/postgresql-logical-replication-worker-model/index.md",
-    "docs/db/postgresql/learning-path/06-heap-and-mvcc.md",
-    "docs/pgsql/checkpoint机制浅析.md",
+    "docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md",
+    "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
+    "docs/source-tracks/postgresql/transaction-mvcc/learning-path/06-heap-and-mvcc.md",
+    "docs/source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
     "docs/cluster/分布式一致性协议.md",
     "docs/base/file.md",
     "docs/cluster/corosync/corosync-down网卡仍处于多数派/index.md",
     "docs/cluster/kingbase/tptc.md",
     "docs/network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
-    "docs/pgsql/replication/Postgresql存储、索引及系统优化、主备切换/index.md",
+    "docs/source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
 )
 
 

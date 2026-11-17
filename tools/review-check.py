@@ -16,7 +16,7 @@
 
 用法::
 
-    python3 tools/review-check.py docs/database/postgresql-mvcc/index.md
+    python3 tools/review-check.py docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md
     python3 tools/review-check.py docs/database docs/db --json --out /tmp/s.json
 
 只读：不修改任何被检文件，也不往仓库里写文件。
@@ -764,8 +764,8 @@ RULES.extend([rule_str_01, rule_str_02, rule_str_03, rule_str_04,
 def derive_identity(path: Path, docs_root: Path = DOCS_ROOT) -> tuple[str, str]:
     """Derive ``(pillar, slug)`` from a docs/-relative path.
 
-    ``docs/database/postgresql-mvcc/index.md`` -> ``("database", "postgresql-mvcc")``
-    ``docs/database/pg-dont-do-this.md``      -> ``("database", "pg-dont-do-this")``
+    ``docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md`` -> ``("database", "postgresql-mvcc")``
+    ``docs/source-tracks/postgresql/extensions-perf/pg-dont-do-this.md``      -> ``("database", "pg-dont-do-this")``
     ``docs/db/postgresql/xxx.md``             -> ``("db", "postgresql/xxx")``
 
     ``docs_root`` exists so the rule can be exercised on a temporary tree
@@ -885,8 +885,13 @@ def collect_files(paths: list[str]) -> list[Path]:
         if candidate.is_file():
             found.append(candidate.resolve())
         elif candidate.is_dir():
+            root = candidate.resolve()
             for child in sorted(candidate.rglob("*.md")):
-                if any(part.startswith(".") for part in child.parts):
+                # 隐藏目录只看**候选根之下**的那几段：仓库自己就住在
+                # ``.worktrees/`` 这类隐藏路径下时，按绝对路径的每一段
+                # 去判会把整棵树都当成隐藏目录——目录参数于是检出 0 篇。
+                rel = child.resolve().relative_to(root)
+                if any(part.startswith(".") for part in rel.parts):
                     continue
                 found.append(child.resolve())
         else:

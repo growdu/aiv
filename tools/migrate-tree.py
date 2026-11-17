@@ -357,6 +357,13 @@ def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir, categories=None):
     rel = rel.replace(os.sep, "/")
     if rel == ".":
         rel = "./"
+    elif raw_path.startswith("./") and not rel.startswith("."):
+        # 链接的**形状**原样保留：原来带 `./` 的，重算完还得带。
+        # `os.path.relpath` 吐出来的是 `politics-methods/` 而不是
+        # `./politics-methods/` —— 两种写法在 Markdown 里等价，但
+        # 有测试是按字面量找链接的（`tests/test_gaokao_docs.py`），
+        # 悄悄改形状就会把那些守卫弄红。
+        rel = "./" + rel
     if not rel.endswith("/"):
         rel += "/"
     return rel + tail + suffix
@@ -495,25 +502,35 @@ def write_index_files(table, moves, report):
         f"{top_cn}：按「一条主线走到底」的顺序组织的内容。",
         [], table))
 
-    # 项目层
+    # 中间层（target_root 有三段以上时才有；两段时这一层是空的）
     parts = target_root.split("/")
-    for depth in range(1, len(parts) + 1):
+    for depth in range(2, len(parts)):
         rel_dir = "/".join(parts[:depth])
-        if depth == 1:
-            continue
         name = parts[depth - 1]
         cn = "PostgreSQL" if name == "postgresql" else name
-        if depth == len(parts):
-            for slug, scn in series_cn.items():
-                desc = table.get("series_meta", {}).get(slug, f"{cn} 的{scn}方向。")
-                made.append(_write_index(
-                    f"{rel_dir}/{slug}/_index.md", scn, cn,
-                    desc, _series_articles(moves, f"{rel_dir}/{slug}/"),
-                    table))
-        else:
-            made.append(_write_index(
-                f"{rel_dir}/_index.md", cn, cn,
-                f"{cn} 主线。", [], table))
+        made.append(_write_index(
+            f"{rel_dir}/_index.md", cn, cn, f"{cn} 主线。", [], table))
+
+    # 项目层：项目目录页 + 它下面的系列目录页。
+    #
+    # 项目目录页**不能少** —— 少了它，分类链就少一级：文章的
+    # cascade 只有「源码主线」和系列名，`/categories/源码主线/存储引擎/`
+    # 而不是 `/categories/源码主线/PostgreSQL/存储引擎/`。
+    proj_dir = target_root
+    proj_name = parts[-1]
+    proj_cn = "PostgreSQL" if proj_name == "postgresql" else proj_name
+    series_lines = []
+    for slug, scn in series_cn.items():
+        desc = table.get("series_meta", {}).get(slug, f"{proj_cn} 的{scn}方向。")
+        made.append(_write_index(
+            f"{proj_dir}/{slug}/_index.md", scn, proj_cn,
+            desc, _series_articles(moves, f"{proj_dir}/{slug}/"),
+            table))
+        series_lines.append(f"- [{scn}](./{slug}/_index.md)")
+    made.append(_write_index(
+        f"{proj_dir}/_index.md", proj_cn, proj_cn,
+        f"{proj_cn} 源码主线：{len(series_cn)} 个系列，由浅入深。",
+        [], table, extra=["## 系列", ""] + series_lines + [""]))
     report.append(f"目录页：新建 {len(made)} 个")
     return made
 
@@ -549,7 +566,7 @@ def _md_link_target(path):
     return path.replace("(", "%28").replace(")", "%29").replace(" ", "%20")
 
 
-def _write_index(rel, title, parent_cn, description, articles, table):
+def _write_index(rel, title, parent_cn, description, articles, table, extra=None):
     """写一个 `_index.md`。已存在就只更新文章清单那一段。"""
     path = os.path.join(DOCS, rel)
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -588,6 +605,8 @@ def _write_index(rel, title, parent_cn, description, articles, table):
             title = title.replace("[", "\\[").replace("]", "\\]")
             lines.append(f"- [{title}]({link})")
         lines.append("")
+    if extra:
+        lines.extend(extra)
     body = "\n".join(lines)
     if os.path.exists(path):
         with open(path, encoding="utf-8") as fh:
@@ -608,10 +627,21 @@ def permalink_path(rel):
     """一篇文章的 permalink 路径（不含日期段、不含扩展名）。
 
     bundle（`.../index.md`）的 permalink 是它所在的目录。
+
+    **HTML 文章带 `-html` 后缀**：编译时 HTML 文章的文件名会被改成
+    `<basename>-html.html`（见 `sync-hexo.py` 的 `process_html_post` ——
+    hexo 用文件名推 slug，不加后缀就跟同名 .md 抢 permalink），
+    所以它的 permalink 里也有这个后缀。实测站点上的地址是
+    `/2026/07/03/source-tracks/postgresql/logical-replication/sqlserver/sqlserver逻辑复制ddl-html/`，
+    少了后缀的重定向页会指到一个从来不存在的地址。
     """
-    if os.path.basename(rel) in ("index.md", "index.html", "index.htm"):
+    base = os.path.basename(rel)
+    if base in ("index.md", "index.html", "index.htm"):
         return os.path.dirname(rel)
-    return os.path.splitext(rel)[0]
+    stem, ext = os.path.splitext(rel)
+    if ext.lower() in (".html", ".htm") and not os.path.basename(stem).endswith("-html"):
+        stem += "-html"
+    return stem
 
 
 def build_redirects(moves):
@@ -679,7 +709,7 @@ def rewrite_refs(targets, moves, report):
     `targets` 是 `(文件, 路径形态)` 的清单；形态决定拿哪种写法去替换。
 
     `permalink` 形态特殊一些：站内绝对地址带一段日期
-    （`/2023/09/14/pgsql/postgresql源码编译/`）。日期在迁移前后不变
+    （`/2023/09/14/source-tracks/postgresql/getting-started/postgresql源码编译/`）。日期在迁移前后不变
     （这正是 `DATE_OVERRIDES` 存在的意义），所以只换路径那一段。
     站上有两种写法 —— 中文未编码的、百分号编码的 —— 两种都要替。
     """

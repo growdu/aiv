@@ -12,13 +12,7 @@
       "goal": "走完这条线，你能独立读懂一条 SQL 在 PostgreSQL 里的完整轨迹，能定位一次 WAL 落盘的完整链路，能说清楚 MVCC 与锁的每一个落点。",
       "track_match": [
         {
-          "path_prefix": "database/"
-        },
-        {
-          "path_prefix": "db/"
-        },
-        {
-          "path_prefix": "pgsql/"
+          "path_prefix": "source-tracks/postgresql/"
         },
         {
           "path_prefix": "video/"
@@ -32,34 +26,7 @@
           "goal": "先知道它是什么、怎么跑起来、整体长什么样 —— 这一阶段不碰源码细节。",
           "match": [
             {
-              "path_regex": "^db/postgresql/learning-path/0[123]-"
-            },
-            {
-              "path_prefix": "pgsql/pg_command/"
-            },
-            {
-              "path_prefix": "pgsql/extension/"
-            },
-            {
-              "path_regex": "^pgsql/(pg_complie_and_run|postgresql源码编译|postgresql基操|postgresql启动流程|Postgres中postmaster代码解析|pgsql_main_structure|pg源码对象管理|meson-pg|sql_test|insert_data|kernel)$"
-            },
-            {
-              "path_regex": "^database/postgresql-(history|core-features|for-everything|user-capabilities|module-architecture)$"
-            },
-            {
-              "path_regex": "^database/(database-selection-dimensions|database-specialization-taxonomy|postgresql-senior-kernel-developer)$"
-            },
-            {
-              "path_regex": "^db/postgresql/(part1|pg常用函数|使用meson编译pg)$"
-            },
-            {
-              "path_regex": "^pgsql/Postgres中postmaster代码解析"
-            },
-            {
-              "path_prefix": "pgsql/debug/"
-            },
-            {
-              "path_regex": "^db/(命名空间|多数据库模式命名空间问题)$"
+              "path_prefix": "source-tracks/postgresql/getting-started/"
             }
           ]
         },
@@ -69,22 +36,7 @@
           "goal": "数据落在哪、怎么读进来、内存怎么分 —— 存储这一层的地基。",
           "match": [
             {
-              "path_regex": "^db/postgresql/learning-path/0[45]-"
-            },
-            {
-              "path_prefix": "pgsql/storage/"
-            },
-            {
-              "path_regex": "^db/(linux-shared-memory)$"
-            },
-            {
-              "path_regex": "^db/postgresql/postgresql-shared-memory$"
-            },
-            {
-              "path_regex": "^database/postgresql-(memory-management|toast-deep-dive|catalog-storage|libpq-mechanism)$"
-            },
-            {
-              "path_regex": "^db/postgresql/postgresql-syscache-deep-dive$"
+              "path_prefix": "source-tracks/postgresql/storage-engine/"
             }
           ]
         },
@@ -94,19 +46,7 @@
           "goal": "一条 SQL 从解析到执行，中间经过哪些层；索引为什么快。",
           "match": [
             {
-              "path_regex": "^db/postgresql/learning-path/07-"
-            },
-            {
-              "path_prefix": "pgsql/executor/"
-            },
-            {
-              "path_prefix": "pgsql/stats/"
-            },
-            {
-              "path_regex": "^database/postgresql-(rangevar-and-data-structures|read-catalog-table|schema-search-path|partition-handling|vs-sqlserver-partitioning|parallel-worker)$"
-            },
-            {
-              "path_regex": "^pgsql/kernel/Postgresql触发器详解$"
+              "path_prefix": "source-tracks/postgresql/index-and-query/"
             }
           ]
         },
@@ -116,19 +56,13 @@
           "goal": "隔离级别到底靠什么实现，行锁在哪一层加上去的。",
           "match": [
             {
-              "path_regex": "^db/postgresql/learning-path/0[68]-"
+              "path_prefix": "source-tracks/postgresql/transaction-mvcc/"
             },
             {
-              "path_regex": "^database/postgresql-(mvcc|transaction-lifecycle|row-lock-deep-dive|latch-mechanism|running-xacts-snapshot|catalog-snapshot-deep-dive)$"
+              "path_exact": "video/row-lock"
             },
             {
-              "path_regex": "^db/postgresql/postgresql-row-lock$"
-            },
-            {
-              "path_regex": "^database/postgresql-read-a-row-deep-dive$"
-            },
-            {
-              "path_regex": "^video/(row-lock|csn-total-ordering)$"
+              "path_exact": "video/csn-total-ordering"
             }
           ]
         },
@@ -138,22 +72,10 @@
           "goal": "一次提交落盘了什么，崩了以后怎么爬起来。",
           "match": [
             {
-              "path_regex": "^db/postgresql/learning-path/(09|11)-"
+              "path_prefix": "source-tracks/postgresql/wal-and-recovery/"
             },
             {
-              "path_prefix": "pgsql/process/"
-            },
-            {
-              "path_regex": "^pgsql/(checkpoint机制浅析|wal机制浅析|数据库崩溃恢复)$"
-            },
-            {
-              "path_regex": "^pgsql/storage/(xlog|full_page_writes|pg_checksum)$"
-            },
-            {
-              "path_regex": "^database/postgresql-wal-record-types$"
-            },
-            {
-              "path_regex": "^video/wal-interleave$"
+              "path_exact": "video/wal-interleave"
             }
           ]
         },
@@ -163,25 +85,7 @@
           "goal": "备库怎么追主库、怎么切、复制槽是干什么的。",
           "match": [
             {
-              "path_regex": "^db/postgresql/learning-path/12-"
-            },
-            {
-              "path_prefix": "pgsql/replication/"
-            },
-            {
-              "path_prefix": "pgsql/repmgr/"
-            },
-            {
-              "path_prefix": "pgsql/ha/"
-            },
-            {
-              "path_regex": "^pgsql/(pg_replication|postgresql——流复制和wal日志（八）)$"
-            },
-            {
-              "path_regex": "^db/postgresql/postgresql-create-replication-slot-deep-dive$"
-            },
-            {
-              "path_regex": "^pgsql/PostgreSQL 时间线解析$"
+              "path_prefix": "source-tracks/postgresql/replication-ha/"
             }
           ]
         },
@@ -191,31 +95,16 @@
           "goal": "把 WAL 变成一条可订阅的变更流：解码、重组、Apply、并行。",
           "match": [
             {
-              "path_regex": "^db/postgresql/learning-path/13-"
+              "path_prefix": "source-tracks/postgresql/logical-replication/"
             },
             {
-              "path_prefix": "db/logical_decode/"
+              "path_exact": "video/pg-parallel-decode"
             },
             {
-              "path_prefix": "db/sqlserver/"
+              "path_exact": "video/parallel-apply"
             },
             {
-              "path_prefix": "database/postgresql-logical-replication-"
-            },
-            {
-              "path_regex": "^database/(postgresql-stream-execution-logic|postgresql-background-worker)$"
-            },
-            {
-              "path_regex": "^db/postgresql/(postgresql-apply-|postgresql-logical-replication-|postgresql-reorder|postgresql-snapbuild|postgresql-create-replication-slot|pgoutput_)"
-            },
-            {
-              "path_regex": "^db/(opengauss-csn-total-ordering|opengauss-parallel-decoding-design|ddl同步架构(-html)?)$"
-            },
-            {
-              "path_regex": "^db/postgresql/(postgresql-flame-graph|逻辑复制性能测试)$"
-            },
-            {
-              "path_regex": "^video/(pg-parallel-decode|parallel-apply|structured-ddl)$"
+              "path_exact": "video/structured-ddl"
             }
           ]
         },
@@ -225,31 +114,7 @@
           "goal": "把内核之外的东西补齐：扩展怎么写、扩展生态里有哪些能打的、性能怎么观测和调，以及别的数据库长什么样。",
           "match": [
             {
-              "path_regex": "^db/postgresql/learning-path/(10|14)-"
-            },
-            {
-              "path_regex": "^database/(pgcrypto|pgvector|postgis|timescaledb|timescaledb-columnstore|citus|citus-columnar|cstore-fdw|pg-duckdb)-deep-dive$"
-            },
-            {
-              "path_regex": "^(database/(polardb竞争力分析|postgresql-community-gems)|db/postgresql/postgresql-community-gems)$"
-            },
-            {
-              "path_regex": "^database/(pg-stat-statements|pgaudit|pgbench-internals|pgbackrest)(-deep-dive)?$"
-            },
-            {
-              "path_regex": "^db/(performance/|benchmarksql/)"
-            },
-            {
-              "path_regex": "^pgsql/pg_io_调优$"
-            },
-            {
-              "path_regex": "^database/(pg-challahscript-tips|pg-dont-do-this)$"
-            },
-            {
-              "path_regex": "^db/postgresql/postgresql-injection-points"
-            },
-            {
-              "path_regex": "^db/(mysql/|taos/)"
+              "path_prefix": "source-tracks/postgresql/extensions-perf/"
             }
           ]
         }

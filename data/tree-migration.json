@@ -1,42 +1,50 @@
 {
-  "version": 1,
-  "updated": "2026-11-17",
-  "note": "PostgreSQL 试点迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。",
-  "target_root": "source-tracks/postgresql",
-  "series": {
-    "getting-started": "起步与全景",
-    "storage-engine": "存储引擎",
-    "index-and-query": "索引与查询",
-    "transaction-mvcc": "事务与并发",
-    "wal-and-recovery": "WAL 与恢复",
-    "replication-ha": "复制与高可用",
-    "logical-replication": "逻辑复制与流式",
-    "extensions-perf": "扩展、性能与生态"
+  "category_redirects": {
+    "BenchmarkSQL 基准测试": "源码主线/PostgreSQL/扩展、性能与生态",
+    "PostgreSQL": "源码主线/PostgreSQL",
+    "PostgreSQL 共享内存机制(深入版)": "源码主线/PostgreSQL/存储引擎",
+    "PostgreSQL 源码修炼之路": "源码主线/PostgreSQL",
+    "PostgreSQL 源码修炼之路:内核深度拆解专题": "源码主线/PostgreSQL",
+    "PostgreSQL 逻辑解码完整目录": "源码主线/PostgreSQL/逻辑复制与流式",
+    "数据库": "源码主线/PostgreSQL",
+    "数据库深入": "源码主线/PostgreSQL",
+    "数据库深入/数据库": "源码主线/PostgreSQL"
   },
   "dir_map": {
-    "pgsql/storage/": "source-tracks/postgresql/storage-engine/",
-    "pgsql/storage/full_page_writes/": "source-tracks/postgresql/wal-and-recovery/full_page_writes/",
+    "db/benchmarksql/": "source-tracks/postgresql/extensions-perf/",
+    "db/linux-shared-memory/": "source-tracks/postgresql/storage-engine/",
+    "db/logical_decode/": "source-tracks/postgresql/logical-replication/",
+    "db/mysql/": "source-tracks/postgresql/extensions-perf/",
+    "db/opengauss-csn-total-ordering/": "source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/",
+    "db/opengauss-parallel-decoding-design/": "source-tracks/postgresql/logical-replication/opengauss-parallel-decoding-design/",
+    "db/performance/": "source-tracks/postgresql/extensions-perf/",
+    "db/sqlserver/": "source-tracks/postgresql/logical-replication/sqlserver/",
+    "db/taos/": "source-tracks/postgresql/extensions-perf/",
+    "pgsql/debug/": "source-tracks/postgresql/getting-started/",
+    "pgsql/executor/": "source-tracks/postgresql/index-and-query/",
+    "pgsql/extension/": "source-tracks/postgresql/extensions-perf/",
+    "pgsql/ha/": "source-tracks/postgresql/replication-ha/",
+    "pgsql/kernel/": "source-tracks/postgresql/index-and-query/",
+    "pgsql/meson-pg/": "source-tracks/postgresql/getting-started/",
+    "pgsql/pg_command/": "source-tracks/postgresql/getting-started/",
     "pgsql/process/": "source-tracks/postgresql/wal-and-recovery/",
     "pgsql/replication/": "source-tracks/postgresql/replication-ha/",
     "pgsql/repmgr/": "source-tracks/postgresql/replication-ha/",
-    "pgsql/ha/": "source-tracks/postgresql/replication-ha/",
-    "pgsql/meson-pg/": "source-tracks/postgresql/getting-started/",
-    "pgsql/pg_command/": "source-tracks/postgresql/getting-started/",
-    "pgsql/debug/": "source-tracks/postgresql/getting-started/",
-    "pgsql/executor/": "source-tracks/postgresql/index-and-query/",
-    "pgsql/kernel/": "source-tracks/postgresql/index-and-query/",
     "pgsql/stats/": "source-tracks/postgresql/index-and-query/",
-    "pgsql/extension/": "source-tracks/postgresql/extensions-perf/",
-    "db/logical_decode/": "source-tracks/postgresql/logical-replication/",
-    "db/linux-shared-memory/": "source-tracks/postgresql/storage-engine/",
-    "db/performance/": "source-tracks/postgresql/extensions-perf/",
-    "db/benchmarksql/": "source-tracks/postgresql/extensions-perf/",
-    "db/mysql/": "source-tracks/postgresql/extensions-perf/",
-    "db/taos/": "source-tracks/postgresql/extensions-perf/",
-    "db/sqlserver/": "source-tracks/postgresql/logical-replication/sqlserver/",
-    "db/opengauss-csn-total-ordering/": "source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/",
-    "db/opengauss-parallel-decoding-design/": "source-tracks/postgresql/logical-replication/opengauss-parallel-decoding-design/"
+    "pgsql/storage/": "source-tracks/postgresql/storage-engine/",
+    "pgsql/storage/full_page_writes/": "source-tracks/postgresql/wal-and-recovery/full_page_writes/"
   },
+  "drop_index": [
+    "db/benchmarksql/_index.md",
+    "db/linux-shared-memory/_index.md",
+    "db/logical_decode/_index.md",
+    "db/postgresql/_index.md",
+    "db/postgresql/learning-path/_index.md",
+    "pgsql/_index.md",
+    "db/_index.md",
+    "db/opengauss-csn-total-ordering/_index.md",
+    "db/opengauss-parallel-decoding-design/_index.md"
+  ],
   "file_map": {
     "database/citus-columnar-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/citus-columnar-deep-dive/index.md",
     "database/citus-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/citus-deep-dive/index.md",
@@ -100,6 +108,7 @@
     "database/timescaledb-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/timescaledb-deep-dive/index.md",
     "db/ddl同步架构-html.html": "source-tracks/postgresql/logical-replication/ddl同步架构-html.html",
     "db/ddl同步架构.md": "source-tracks/postgresql/logical-replication/ddl同步架构.md",
+    "db/linux-shared-memory/index.md": "source-tracks/postgresql/storage-engine/linux-shared-memory/index.md",
     "db/postgresql/learning-path/01-build-and-codebase.md": "source-tracks/postgresql/getting-started/learning-path/01-build-and-codebase.md",
     "db/postgresql/learning-path/02-process-architecture.md": "source-tracks/postgresql/getting-started/learning-path/02-process-architecture.md",
     "db/postgresql/learning-path/03-query-pipeline.md": "source-tracks/postgresql/index-and-query/learning-path/03-query-pipeline.md",
@@ -148,6 +157,7 @@
     "pgsql/Postgres中postmaster代码解析(--boot和--single).md": "source-tracks/postgresql/getting-started/Postgres中postmaster代码解析(--boot和--single).md",
     "pgsql/checkpoint机制浅析.md": "source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
     "pgsql/insert_data.md": "source-tracks/postgresql/index-and-query/insert_data.md",
+    "pgsql/meson-pg/index.md": "source-tracks/postgresql/getting-started/meson-pg/index.md",
     "pgsql/pg_complie_and_run.md": "source-tracks/postgresql/getting-started/pg_complie_and_run.md",
     "pgsql/pg_io_调优.md": "source-tracks/postgresql/extensions-perf/pg_io_调优.md",
     "pgsql/pg_replication.md": "source-tracks/postgresql/replication-ha/pg_replication.md",
@@ -164,31 +174,10 @@
     "pgsql/wal机制浅析.md": "source-tracks/postgresql/wal-and-recovery/wal机制浅析.md",
     "pgsql/数据库崩溃恢复.md": "source-tracks/postgresql/wal-and-recovery/数据库崩溃恢复.md"
   },
+  "note": "PostgreSQL 试点迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。",
   "out_map": {
     "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
     "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md"
-  },
-  "drop_index": [
-    "db/benchmarksql/_index.md",
-    "db/linux-shared-memory/_index.md",
-    "db/logical_decode/_index.md",
-    "db/postgresql/_index.md",
-    "db/postgresql/learning-path/_index.md",
-    "pgsql/_index.md",
-    "db/_index.md",
-    "db/opengauss-csn-total-ordering/_index.md",
-    "db/opengauss-parallel-decoding-design/_index.md"
-  ],
-  "category_redirects": {
-    "BenchmarkSQL 基准测试": "源码主线/PostgreSQL/扩展、性能与生态",
-    "PostgreSQL": "源码主线/PostgreSQL",
-    "PostgreSQL 共享内存机制(深入版)": "源码主线/PostgreSQL/存储引擎",
-    "PostgreSQL 源码修炼之路": "源码主线/PostgreSQL",
-    "PostgreSQL 源码修炼之路:内核深度拆解专题": "源码主线/PostgreSQL",
-    "PostgreSQL 逻辑解码完整目录": "源码主线/PostgreSQL/逻辑复制与流式",
-    "数据库": "源码主线/PostgreSQL",
-    "数据库深入": "源码主线/PostgreSQL",
-    "数据库深入/数据库": "源码主线/PostgreSQL"
   },
   "ref_rewrites": [
     {
@@ -252,14 +241,27 @@
       "form": "cid"
     }
   ],
+  "series": {
+    "extensions-perf": "扩展、性能与生态",
+    "getting-started": "起步与全景",
+    "index-and-query": "索引与查询",
+    "logical-replication": "逻辑复制与流式",
+    "replication-ha": "复制与高可用",
+    "storage-engine": "存储引擎",
+    "transaction-mvcc": "事务与并发",
+    "wal-and-recovery": "WAL 与恢复"
+  },
   "series_meta": {
+    "extensions-perf": "扩展、性能与生态：pgvector、pgbench、火焰图与周边工具链。",
     "getting-started": "先知道它是什么、怎么跑起来、整体长什么样 —— 这一站不碰源码细节。",
-    "storage-engine": "页、文件与内存：数据在磁盘上长什么样，缓冲区与共享内存怎么管。",
     "index-and-query": "一条 SQL 从解析到拿到结果，中间经过哪些索引与执行器结构。",
-    "transaction-mvcc": "事务、MVCC 与并发：可见性判断、行锁、闩锁与快照。",
-    "wal-and-recovery": "WAL、checkpoint 与恢复：写前日志怎么保证崩溃后能redo出来。",
-    "replication-ha": "复制与高可用：流复制、复制槽、主备切换与 repmgr。",
     "logical-replication": "逻辑复制与流式：解码、apply、并行 apply 与 DDL 同步。",
-    "extensions-perf": "扩展、性能与生态：pgvector、pgbench、火焰图与周边工具链。"
-  }
+    "replication-ha": "复制与高可用：流复制、复制槽、主备切换与 repmgr。",
+    "storage-engine": "页、文件与内存：数据在磁盘上长什么样，缓冲区与共享内存怎么管。",
+    "transaction-mvcc": "事务、MVCC 与并发：可见性判断、行锁、闩锁与快照。",
+    "wal-and-recovery": "WAL、checkpoint 与恢复：写前日志怎么保证崩溃后能redo出来。"
+  },
+  "target_root": "source-tracks/postgresql",
+  "updated": "2026-11-17",
+  "version": 1
 }

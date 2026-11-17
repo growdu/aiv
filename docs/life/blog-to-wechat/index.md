@@ -877,4 +877,4 @@ WX_DRY_RUN=1       只产出 HTML 不调接口
 
 - [数据库技术自媒体运营手册](../shehui/media-account/index.html) —— 内容侧的母版/切片原则、平台分工、选题方法
 - [AIV 视频生产线：九个环节、唯一契约与入库边界](../aiv/index.html) —— 出片流水线的九个环节与边界
-- [PostgreSQL 逻辑复制 Stream 执行逻辑源码级拆解](../../db/postgresql/postgresql-logical-replication-stream-publisher/index.html) —— 拿来做端到端试跑的那一篇
+- [PostgreSQL 逻辑复制 Stream 执行逻辑源码级拆解](../../source-tracks/postgresql/logical-replication/postgresql-logical-replication-stream-publisher/index.html) —— 拿来做端到端试跑的那一篇

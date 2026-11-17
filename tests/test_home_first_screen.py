@@ -267,7 +267,7 @@ def test_the_hero_can_match_the_slugs_against_a_real_permalink():
     # 去掉正则字面量的首尾斜杠，JS 的转义 `\/` 在 Python 里同样成立。
     py_pattern = m.group(1)[1:-1].replace("\\/", "/")
 
-    slug = "db/postgresql/learning-path/03-query-pipeline"
+    slug = "source-tracks/postgresql/index-and-query/learning-path/03-query-pipeline"
     for path in (
         "2026/08/18/{}/".format(slug),
         "/2026/08/18/{}/".format(slug),
