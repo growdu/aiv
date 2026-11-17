@@ -106,12 +106,12 @@ ls source/_posts/ 2>/dev/null | grep -c 'episode\|视频' || true
 
 - [ ] **Step 1: 写下两条守卫（此时应绿）**
 
-在 `tests/test_podcast_spec.py` 末尾加（`REPO_ROOT` 该文件里已有；若没有用 `Path(__file__).resolve().parents[1]`）：
+在 `tests/test_podcast_spec.py` 末尾加（这个文件里的仓库根常量叫 **`REPO`**，不是 `REPO_ROOT`——见 `tests/test_podcast_spec.py:28`；写错会 `NameError`）：
 
 ```python
 def test_the_life_aiv_url_namespace_is_untouched():
     """`docs/life/aiv/` 是 URL 命名空间，搬家不许碰它。"""
-    namespace = REPO_ROOT / "docs" / "life" / "aiv"
+    namespace = REPO / "docs" / "life" / "aiv"
     assert namespace.is_dir(), "docs/life/aiv/ 不见了——URL 命名空间被搬家弄坏了"
     files = [p for p in namespace.rglob("*") if p.is_file()]
     assert len(files) == 9, f"docs/life/aiv/ 的文件数变了：{len(files)}（应为 9）"
@@ -126,18 +126,18 @@ def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
         "docs/database/_index.md": "../life/aiv/index.html",
     }
     for path, link in links.items():
-        text = (REPO_ROOT / path).read_text(encoding="utf-8")
+        text = (REPO / path).read_text(encoding="utf-8")
         assert link in text, f"{path} 里的 {link} 链接不见了"
 
     # 全仓点数：docs/ 里指向 life/aiv 专题页的链接一共 8 处（分处 4 个文件）
     count = 0
-    for path in sorted((REPO_ROOT / "docs").rglob("*.md")):
+    for path in sorted((REPO / "docs").rglob("*.md")):
         count += path.read_text(encoding="utf-8").count("aiv/index.html")
     assert count == 8, f"docs/ 里指向 life/aiv 专题页的链接变成 {count} 处（应为 8）"
 
     # README 里讲解相对链接机制的那两处例子也是 URL 命名空间（搬前叫 aiv/README.md）
     for name in ("video", "aiv"):
-        readme = REPO_ROOT / name / "README.md"
+        readme = REPO / name / "README.md"
         if readme.is_file():
             text = readme.read_text(encoding="utf-8")
             assert "../aiv/背景音乐规范.md" in text, f"{name}/README.md 里的链接例子不见了"
@@ -1439,12 +1439,16 @@ git commit -m "refactor(outbox): 发布快照按平台下沉到 platforms/<plat>
 ```python
 def test_the_draft_box_exists_and_says_how_it_works():
     """草稿箱是两条流水线的共同入口，它的约定必须写在仓库里。"""
-    readme = REPO_ROOT / "drafts" / "README.md"
+    readme = REPO / "drafts" / "README.md"
     assert readme.is_file(), "drafts/README.md 不见了"
     text = readme.read_text(encoding="utf-8")
     for keyword in ("drafts/", "review/", "docs/", "video/", "platforms/"):
         assert keyword in text, f"草稿箱的约定里没提到 {keyword}"
 ```
+
+> **注意常量名**：这个文件里的仓库根常量叫 **`REPO`**（`tests/test_podcast_spec.py:28`），
+> **不是 `REPO_ROOT`**——写成 `REPO_ROOT` 会 `NameError`，
+> 守卫不是「红」而是「炸」，看不出到底是哪一条约定不满足。
 
 Run: `python3 -m pytest tests/test_podcast_spec.py::test_the_draft_box_exists_and_says_how_it_works -v`
 Expected: FAIL（`drafts/` 不存在）。
