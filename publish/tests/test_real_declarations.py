@@ -22,10 +22,23 @@ CAPABILITIES = list_capabilities()
 
 
 def _git(*args: str) -> subprocess.CompletedProcess:
-    """跑一条 git 命令（同 `video/pipeline/tests/test_assets_are_tracked.py` 的写法）。"""
-    return subprocess.run(
-        ["git", *args], cwd=REPO_ROOT, capture_output=True, text=True
-    )
+    """跑一条 git 命令（同 `video/pipeline/tests/test_assets_are_tracked.py` 的写法）。
+
+    **git 二进制不在 PATH 上时，不许把异常冒出去。**
+    `subprocess.run` 在那种情况下抛 `FileNotFoundError`，
+    异常从这儿冒出去 = **整条守卫报错**——守卫不是「查得严」，
+    是「炸了」。所以这里接住它，返回一个「失败」的结果，
+    让调用方据此退回不过滤。
+    """
+    try:
+        return subprocess.run(
+            ["git", *args], cwd=REPO_ROOT, capture_output=True, text=True
+        )
+    except OSError as error:
+        # FileNotFoundError 是 OSError 的子类——git 不在 PATH 上属于这一支。
+        return subprocess.CompletedProcess(
+            args=["git", *args], returncode=127, stdout="", stderr=str(error),
+        )
 
 
 def _ignored_directories():
@@ -35,8 +48,15 @@ def _ignored_directories():
     要是改用 `git ls-files` 去枚举包，守卫在「还没提交的挪动」面前就变瞎了：
     目录挪深了还没 `git add`，守卫照样绿。**磁盘是真相，git 只用来排除产物。**
 
-    git 不可用时返回 ``None`` = **不过滤**，不是跳过——跳过等于把这条守卫
-    整个关掉，比误报一次更糟。
+    **两种「git 用不上」的情形都退回不过滤**（返回 ``None``），**不跳过**——
+    跳过等于把这条守卫整个关掉，比误报一次更糟：
+
+    * **git 二进制不在 PATH 上**：`_git()` 接住 `OSError`
+      （`FileNotFoundError` 是它的子类），返回失败的结果；
+    * **这个目录不是 git 检出**（没有 `.git`）：git 跑起来了，
+      但 returncode 非零。
+
+    这两件事以前被混成一件说，实际行为不同——现在分开了。
     """
     result = _git("ls-files", "--others", "--ignored", "--exclude-standard",
                   "--directory", "--", "platforms")
@@ -50,6 +70,23 @@ def _ignored_directories():
             continue
         directories.append((REPO_ROOT / line.rstrip("/")).resolve())
     return directories
+
+
+def _is_ignored(path: Path, ignored) -> bool:
+    """这个候选目录是不是落在被忽略的产物目录下面。
+
+    **守卫的两段检查（深度断言、重复包检查）共用这一个判定。**
+    上一轮只给深度断言套了排除规则，重复包检查照旧裸扫——
+    同一个守卫的两半，一个修了一个没修，等于没修：误报还在，
+    只是报错文案从「被挪深了一层」换成了「这个包应该只有一个」，
+    下一个人照样被带偏。
+
+    ``ignored`` 是 ``None``（git 用不上）时一律不排除——退回不过滤。
+    """
+    if ignored is None:
+        return False
+    resolved = path.resolve()
+    return any(resolved.is_relative_to(directory) for directory in ignored)
 
 
 def test_the_repository_declares_at_least_the_four_known_platforms():
@@ -130,6 +167,9 @@ def test_the_platform_dirs_keep_the_repo_root_at_the_right_depth():
     它们被 git 忽略，里面要是出现 `__init__.py`（比如某个产物是个包），
     那不是「平台被挪深了一层」——把它算进来就是**误报**，而下一个人会去查
     搬迁，没人查产物目录。
+
+    **两段检查共用同一份排除集**（`_is_ignored`）：产物目录里冒出来的
+    包既不该被判「挪深了一层」，也不该被判「这个平台有两个」。
     """
     repo_root = REPO_ROOT.resolve()
     platforms_dir = repo_root / "platforms"
@@ -141,10 +181,7 @@ def test_the_platform_dirs_keep_the_repo_root_at_the_right_depth():
     packages = []
     for marker in platforms_dir.rglob("__init__.py"):
         package = marker.parent
-        if ignored is not None and any(
-            package.resolve().is_relative_to(directory)
-            for directory in ignored
-        ):
+        if _is_ignored(package, ignored):
             continue
         packages.append(package)
     packages.sort()
@@ -157,10 +194,12 @@ def test_the_platform_dirs_keep_the_repo_root_at_the_right_depth():
         )
 
     # ② 五个平台包各自只能有一份，而且就在 platforms/ 下。
+    #    同一份排除集——产物目录里的同名目录不是「第二份平台」。
     for plat in ("wechat", "toutiao", "douyin", "bilibili", "channels"):
         found = sorted(
             path for path in platforms_dir.rglob(plat)
             if path.is_dir() and (path / "__init__.py").is_file()
+            and not _is_ignored(path, ignored)
         )
         assert len(found) == 1, (
             f"platforms/ 下 {plat} 这个包应该只有一个，现在找到 {len(found)} 个："
