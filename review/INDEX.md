@@ -73,6 +73,13 @@
 mermaid 渲染失败 **109 张，与搬家前持平**（源码侧能说死：master 的树与合并后的树，
 1309 张唯一 mermaid 源码的集合完全相同，0 张新增、0 张消失）。
 
+**部署链路顺带修掉一处断点（2026-11-17）**：连续两个 push 的 Deploy Hexo
+都断在 "Upload build artifact" —— 旧分类「PostgreSQL 源码修炼之路:内核深度拆解专题」
+的跳转页目录名带冒号，GitHub 的 upload-artifact 拒绝 `:*?"<>|`，
+一个带冒号的目录就让整个产物传不上去。那个分类线上从来没出现过，
+所以那一页不再生成（`tools/sync-hexo.py` 对文章重定向和分类重定向都加了这道检查），
+`tests/test_sync_hexo_redirects.py` 守着。
+
 | 记录 | 支柱 | 状态 | 信号 | 待确认 | 不阻塞 | 批次 |
 | --- | --- | --- | --- | --- | --- | --- |
 | [postgresql-mvcc](source-tracks/postgresql/transaction-mvcc/postgresql-mvcc.md) | source-tracks | 已合入 | 0 | 0 | 1 | 试点 |
