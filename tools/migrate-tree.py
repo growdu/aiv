@@ -352,6 +352,31 @@ def do_move_out(old_rel, new_rel):
     return "moved"
 
 
+RESOLVED_FILE = "data/migration-moves.json"
+
+
+def load_resolved():
+    """上次跑解析出来的搬迁清单。
+
+    为什么要有它：`dir_map` 是「整目录搬」，目录搬空之后就没法再从
+    树上推出「这个文件本来在哪」了 —— 重跑时 `effective_map()` 只能
+    看到 `file_map` 里逐篇写死的那部分。清单落盘，重跑才是同一个动作。
+    """
+    path = os.path.join(REPO, RESOLVED_FILE)
+    if not os.path.exists(path):
+        return {}, {}
+    with open(path, encoding="utf-8") as fh:
+        raw = json.load(fh)
+    return raw.get("articles", {}), raw.get("assets", {})
+
+
+def save_resolved(articles, assets):
+    path = os.path.join(REPO, RESOLVED_FILE)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump({"articles": articles, "assets": assets}, fh,
+                  ensure_ascii=False, indent=2, sort_keys=True)
+
+
 def plan_moves(table):
     """把迁移表摊平成一份「要执行的动作清单」。"""
     moves = effective_map(table)
@@ -519,9 +544,11 @@ def build_date_overrides(moves, dates_before):
     """按**新路径**固化的日期表。"""
     out = {}
     for old_rel, new_rel in sorted(moves.items()):
-        out[new_rel] = dates_before.get(old_rel, "2024-01-01 00:00:00")
+        # 重跑时旧路径已经不在树上，日期表里存的是**新路径** —— 两个键都认。
+        date = dates_before.get(old_rel) or dates_before.get(new_rel)
+        out[new_rel] = date or "2024-01-01 00:00:00"
     for rel, date in dates_before.items():
-        if rel not in moves and rel not in out:
+        if rel not in out and not any(rel == v for v in moves.values()):
             out[rel] = date
     return out
 
@@ -635,6 +662,15 @@ def main():
     table = load_migration(args.map)
     actions, moves = plan_moves(table)
     assets = asset_moves(table, moves)
+    # 跟上次跑解析出来的清单合起来 —— 目录搬空之后，`dir_map` 推不出
+    # 「本来在哪」了，只有落盘的清单知道。
+    prior_articles, prior_assets = load_resolved()
+    merged = dict(prior_articles)
+    merged.update(moves)
+    moves = merged
+    merged_assets = dict(prior_assets)
+    merged_assets.update(assets)
+    assets = merged_assets
 
     print(f"迁移表：{args.map}")
     print(f"  文章搬迁 {len(moves)} 篇，资源 {len(assets)} 个，"
@@ -688,6 +724,7 @@ def main():
         r = do_move(old_rel, new_rel)
         stats[r] = stats.get(r, 0) + 1
     report.append("搬运：" + "，".join(f"{k} {v}" for k, v in sorted(stats.items())))
+    save_resolved(moves, assets)
 
     # 3. 改链接（必须在搬完之后 —— 解析要用「新」的目录结构）
     rewrite_relative_links(moves, report)
@@ -719,7 +756,7 @@ def main():
     # 7. 自检：日期逐篇比对
     drift = []
     for old_rel, new_rel in sorted(moves.items()):
-        want = dates_before.get(old_rel)
+        want = dates_before.get(old_rel) or dates_before.get(new_rel)
         got = module.git_date(os.path.join(DOCS, new_rel))
         if got != want:
             drift.append((old_rel, new_rel, want, got))

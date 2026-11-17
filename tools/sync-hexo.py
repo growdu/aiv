@@ -78,16 +78,16 @@ FEATURED_POSTS = {
     "life/road/01-how_to_learn_program.md": 90,
     "cluster/分布式存储需要解决的问题.md": 85,
     "es/oh-my-search.md": 80,
-    "db/logical_decode/逻辑解码DDL-Replay框架设计/index.md": 75,
+    "source-tracks/postgresql/logical-replication/逻辑解码DDL-Replay框架设计/index.md": 75,
     "cluster/DCF/一文读懂openguass dcf网络模块.md": 70,
     "cluster/分布式一致性协议.md": 65,
     "cluster/分布式系统设计必知必会.md": 60,
-    "pgsql/postgresql基操.md": 55,
+    "source-tracks/postgresql/getting-started/postgresql基操.md": 55,
     "linux/linux内核指北.md": 50,
     "dpdk/dpdk常用接口指北.md": 45,
     "docker/docker基础指北.md": 40,
     "ai/07_ChatGPT为什么能对话一篇引用17万次的论文.md": 35,
-    "db/logical_decode/逻辑解码/index.md": 30,
+    "source-tracks/postgresql/logical-replication/逻辑解码/index.md": 30,
     "language/rust/rust设计原则.md": 25,
     "tools/那些你不得不会的提高工作效率的软件神器.md": 20,
     "network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md": 15,
@@ -151,6 +151,7 @@ REDIRECTS = {
     "life/zhuangxiu": "life/shehui/zhuangxiu",
 }
 
+
 # Redirect pages are Hexo *pages* with `layout: false`.  Hexo's page
 # generator (hexo/dist/plugins/generator/page.js) emits such pages
 # verbatim -- no theme layout -- so the page keeps its own <head> with the
@@ -185,6 +186,31 @@ CATEGORY_REDIRECTS = {
     "stock": "股票与金融",
     "hometown": "人生/家乡",
 }
+
+
+# --- `data/` 下的策展表 ---------------------------------------------------
+#
+# 上面三张表的内容是**人工策展的映射**，不是代码逻辑：目录重排一次就是
+# 几百条，写成 Python 字面量会让这个文件长到几千行，而且每次迁移都要
+# 手改一遍 —— 改漏一条，死链就多一条。
+#
+# 放进 `data/` 之后，迁移脚本（`tools/migrate-tree.py`）直接写，
+# 编译时读。表不存在就当没有（首次 clone、或还没跑过迁移）。
+def _load_data_table(name):
+    """读 `data/` 下的一张策展表。"""
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), name)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+# 顺序：后读到的覆盖先读到的。`data/` 里的表是最新的，
+# 上面写死的字面量保留为「这段历史是怎么来的」的记录。
+DATE_OVERRIDES.update(_load_data_table("data/date-overrides.json"))
+REDIRECTS.update(_load_data_table("data/redirects.json"))
+CATEGORY_REDIRECTS.update(_load_data_table("data/category-redirects.json"))
 
 TOPIC_DEFS = [
     # (name, icon, color, blurb)
@@ -425,7 +451,7 @@ def slugize(name, separator="-"):
 def infer_topics(rel, title):
     """Return the list of topic names a post belongs to.
 
-    rel: docs/-relative path, e.g. 'database/postgresql-mvcc/index.md'.
+    rel: docs/-relative path, e.g. 'source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md'.
     title: post title (already extracted).
     """
     matched = []
@@ -1408,7 +1434,7 @@ def rewrite_links(content, rel):
     """Rewrite relative markdown links to absolute Hexo permalinks.
 
     `rel` is the docs/-relative path of the post being processed, e.g.
-    'database/postgresql-mvcc/index.md'.  Relative links of the form
+    'source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md'.  Relative links of the form
     [text](./other/index.html) are resolved against the post's own
     docs/ directory and replaced with the target's full permalink so
     that the browser navigation from the rendered page lands on a real
@@ -2450,7 +2476,7 @@ def create_database_landing_page(database_data):
         path_part = (
             unquote(p["url"].rstrip("/").split("/", 4)[-1]) if "/" in p["url"] else ""
         )
-        # Compare against FEATURED_POSTS keys (e.g. 'db/logical_decode/逻辑解码DDL-Replay框架设计/index.md')
+        # Compare against FEATURED_POSTS keys (e.g. 'source-tracks/postgresql/logical-replication/逻辑解码DDL-Replay框架设计/index.md')
         for fp in featured_paths:
             slug = fp.replace("/", os.sep).replace(".md", "")
             if path_part.endswith(slug) or slug.endswith(path_part):
