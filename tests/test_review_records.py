@@ -90,11 +90,18 @@ def mechanically_non_article(path: Path) -> bool:
 # GitHub runner 的 git 环境：没有开发者的全局 git 配置，core.quotePath
 # 取默认值（true）。开发机常常把它关掉，于是同一个提交在两台机器上
 # 报出来的路径文本不一样——本地绿、CI 红就是这么来的。
+#
+# ⚠️ GIT_CONFIG_COUNT 是 git 2.31 才有的（2021-03）。旧 git **静默忽略**它：
+# 设了等于没设，core.quotePath 仍按机器自己的全局配置走——本机
+# /root/.gitconfig 里它是 false，于是「CI 样的环境」根本没生效，
+# 下面两条守卫变成在测一个不存在的前提（实测：git 2.27 上必红）。
+# GIT_CONFIG_PARAMETERS 从老 git 就有，且现在还认，两个都设最稳。
 CI_LIKE_GIT_ENV = {
     "GIT_CONFIG_GLOBAL": os.devnull,
     "GIT_CONFIG_COUNT": "1",
     "GIT_CONFIG_KEY_0": "core.quotePath",
     "GIT_CONFIG_VALUE_0": "true",
+    "GIT_CONFIG_PARAMETERS": "'core.quotePath=true'",
 }
 
 # 子进程标记：契约检查会在子进程里再跑一遍自己，没有这个标记就会无限递归。
