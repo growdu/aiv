@@ -352,11 +352,21 @@ def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir, categories=None):
     if categories and hit in categories:
         return categories[hit] + suffix
     new_hit = moves.get(hit, hit)
+    if _same_place(post_dir, new_post_dir, hit, new_hit):
+        # 目标相对作者没挪窝 —— 链接**一个字都不改**。
+        #
+        # 为什么要这一条：文章和它的目标一起搬走时，相对链接照旧是对的，
+        # 可工具照样会把它重写成 `./目标.md`（同目录的写法）或者把
+        # `%E5%B8%B8` 这种百分号编码解成中文。改出来的链接照样能跳，
+        # 但那是**一篇没搬过的文章被无端改了一行** —— 迁移的 diff 里
+        # 全是这种噪音，就没人敢看 diff 了。链接的形状（带不带 `./`、
+        # 百分号编码不编码）属于原文，搬家不改。
+        return None
     new_dir = os.path.dirname(new_hit)
     rel = os.path.relpath(new_dir, new_post_dir) if new_post_dir else new_dir
     rel = rel.replace(os.sep, "/")
     if rel == ".":
-        rel = "./"
+        rel = "./" if raw_path.startswith("./") else ""
     elif raw_path.startswith("./") and not rel.startswith("."):
         # 链接的**形状**原样保留：原来带 `./` 的，重算完还得带。
         # `os.path.relpath` 吐出来的是 `politics-methods/` 而不是
@@ -364,9 +374,27 @@ def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir, categories=None):
         # 有测试是按字面量找链接的（`tests/test_gaokao_docs.py`），
         # 悄悄改形状就会把那些守卫弄红。
         rel = "./" + rel
-    if not rel.endswith("/"):
+    if rel and not rel.endswith("/"):
         rel += "/"
     return rel + tail + suffix
+
+
+def _same_place(post_dir, new_post_dir, hit, new_hit):
+    """链接的目标相对作者挪窝了吗？
+
+    没挪窝 = 目标文件没换名字，且它相对于作者的位置没变 ——
+    典型情形是「文章和它的目标一起搬到了同一个新目录」。
+    """
+    if hit == new_hit:
+        return True
+    if os.path.basename(hit) != os.path.basename(new_hit):
+        return False
+    old_dir = os.path.dirname(hit)
+    new_dir = os.path.dirname(new_hit)
+    old_rel = "" if old_dir == post_dir else os.path.relpath(old_dir, post_dir)
+    new_rel = ("" if new_dir == new_post_dir
+               else os.path.relpath(new_dir, new_post_dir))
+    return old_rel.replace(os.sep, "/") == new_rel.replace(os.sep, "/")
 
 
 # --------------------------------------------------------------------------
