@@ -455,9 +455,29 @@ def test_brand_frames_are_not_judged_as_blank():
     brand = review.Frame(index=1, time=0.0, scene_id="brand_intro",
                          path=Path("/tmp/x.png"), kind="keyframe")
     body = review.Frame(index=2, time=5.0, scene_id="s01",
-                        path=Path("/tmp/y.png"), kind="scene")
+                         path=Path("/tmp/y.png"), kind="scene")
     assert review._is_brand_frame(brand)
     assert not review._is_brand_frame(body)
+
+
+def test_the_frame_on_the_brand_boundary_counts_as_brand():
+    """品牌片淡出到白场，最后那一帧落在正文段上——它是品牌片的淡出。
+
+    实测 ep01：品牌片 2.833 s 结束，2.79 s 之后已是纯白；
+    编码器切出来的关键帧落在 2.8333 s（属于 s01），
+    VV-01 报了一条假警。边界要给半帧多的容差。
+    """
+    from pyv.timeline import Scene
+
+    storyboard = _storyboard(duration=10.0)
+    storyboard.scenes.insert(0, Scene(id="brand_intro", start=0.0, end=2.833,
+                                       type="clip", subtitle=""))
+    boundary = review.Frame(index=1, time=2.8333, scene_id="s01",
+                            path=Path("/tmp/x.png"), kind="keyframe")
+    inside = review.Frame(index=2, time=5.0, scene_id="s01",
+                          path=Path("/tmp/y.png"), kind="scene")
+    assert review._is_brand_frame(boundary, storyboard)
+    assert not review._is_brand_frame(inside, storyboard)
 
 
 def test_narration_gaps_stay_below_the_silence_threshold():
@@ -550,13 +570,122 @@ def test_vv_05_accepts_a_short_keyframe_gap(monkeypatch):
     assert review.vv_05_keyframes(media) == []
 
 
-def test_video_layer_says_what_it_skipped_when_artifacts_are_missing():
+def test_video_layer_says_what_it_skipped_when_artifacts_are_missing(monkeypatch):
     """产物不在 → note 说清跳过什么。**不静默跳过，也不假装绿。**"""
+    monkeypatch.setattr(review, "load_media", lambda episode: review.Media(
+        episode=episode, video=None, storyboard=None, narration=None, bgm=None,
+        notes=["成片不在本机"]))
     report = review.check_video("pg-parallel-decode")
-    if report.signals:
-        pytest.skip("本机有成片，验不了「跳过」这条路径")
     assert report.notes
     assert any("跳过" in note or "不在本机" in note for note in report.notes)
+
+
+def test_a_frame_on_a_segment_boundary_belongs_to_the_later_segment():
+    """边界上的那一帧，画面上已经是后一段了。
+
+    相邻两段共用一个端点；编码器切出来的关键帧常正好落在端点上。
+    按「先到先得」找第一个包含 t 的段，会把清单里的「视觉段」列
+    整体错位一格——实测 ep03 有四个关键帧这么错。
+    """
+    from pyv.timeline import Scene
+
+    storyboard = _storyboard(duration=10.0)
+    storyboard.scenes = [
+        Scene(id="s01", start=0.0, end=6.0, type="code", subtitle=""),
+        Scene(id="s02", start=6.0, end=10.0, type="code", subtitle=""),
+    ]
+    assert review._scene_at(storyboard, 6.0) == "s02"
+    assert review._scene_at(storyboard, 5.999) == "s01"
+
+
+def test_a_keyframe_on_the_real_cut_belongs_to_the_later_segment():
+    """关键帧常正好落在**成片里的真实切点**上，而真实切点比名义边界早一帧。
+
+    实测 parallel-apply：名义 s01→s02 在 5.977 s，真实切点在 5.958 s
+    （s01 渲染 round(3.144*24) = 75 帧 = 3.125 s），而关键帧就在 5.958 s。
+    按名义秒归属，画面上已经是 s02、归属却记成 s01，抽帧清单就拿 s01 的
+    文案去核对 s02 的画面——一整片假漏字。
+    """
+    from pyv.timeline import Scene
+
+    storyboard = _storyboard(duration=10.0)
+    storyboard.scenes = [
+        Scene(id="s01", start=0.0, end=3.144, type="code", subtitle=""),
+        Scene(id="s02", start=3.144, end=7.144, type="code", subtitle=""),
+    ]
+    assert review._scene_at(storyboard, 3.125) == "s02"
+    assert review._scene_at(storyboard, 3.1249) == "s01"
+
+
+def test_a_keyframe_one_microsecond_early_still_belongs_to_the_later_segment(monkeypatch, tmp_path):
+    """ffprobe 的关键帧时间差最后一位小数，归属要吸附到帧网格。
+
+    真实切点在 143/24 = 5.9583333…，ffprobe 报的是 5.958333（差 3e-7）。
+    不吸附就判给上一段，而画面上已经是下一段了。
+    """
+    from pyv.timeline import Scene
+
+    storyboard = _storyboard(duration=10.0)
+    storyboard.scenes = [
+        Scene(id="s01", start=0.0, end=5.977, type="code", subtitle=""),
+        Scene(id="s02", start=5.977, end=9.977, type="code", subtitle=""),
+    ]
+    # s01 渲染 round(5.977*24) = 143 帧 = 5.9583333 s。
+    assert review._scene_at(storyboard, 143 / 24) == "s02"
+    assert review._scene_at(storyboard, 5.958333) == "s01"  # 未吸附：差 3e-7
+
+    grabbed: list[tuple[float, str]] = []
+
+    def fake_grab(video, t, out):
+        grabbed.append((t, ""))
+        out.write_bytes(b"png")
+        return True
+
+    monkeypatch.setattr(review, "_grab", fake_grab)
+    monkeypatch.setattr(review, "_keyframe_times", lambda video: [5.958333])
+    video = tmp_path / "x.mp4"
+    video.write_bytes(b"mp4")
+    media = review.Media(episode="test-ep", video=video, storyboard=storyboard,
+                          narration=None, bgm=None)
+    frames = review.extract_frames(media, tmp_path)
+    keyframe = [f for f in frames if f.kind == "keyframe"]
+    assert [f.scene_id for f in keyframe] == ["s02"]
+    assert keyframe[0].time == pytest.approx(143 / 24)
+
+
+def test_the_mid_and_late_frames_are_taken_from_the_real_span(monkeypatch, tmp_path):
+    """抽帧时间按成片里的真实区间算，不按时间轴上的名义秒。
+
+    名义秒与真实切点差最多一帧；按名义秒抽出来的「段中点」可能落在
+    上一段的尾巴上——那一帧画的是上一段，清单却拿这一段的文案去核对。
+    """
+    grabbed: list[float] = []
+
+    def fake_grab(video, t, out):
+        grabbed.append(t)
+        out.write_bytes(b"png")
+        return True
+
+    monkeypatch.setattr(review, "_grab", fake_grab)
+    monkeypatch.setattr(review, "_keyframe_times", lambda video: [])
+    video = tmp_path / "x.mp4"
+    video.write_bytes(b"mp4")
+
+    from pyv.timeline import Scene
+
+    storyboard = _storyboard(duration=10.0)
+    storyboard.scenes = [
+        Scene(id="s01", start=0.0, end=3.144, type="code", subtitle=""),
+        Scene(id="s02", start=3.144, end=7.144, type="code", subtitle=""),
+    ]
+    media = review.Media(episode="test-ep", video=video, storyboard=storyboard,
+                          narration=None, bgm=None)
+    frames = review.extract_frames(media, tmp_path)
+    # s01 真实区间 0~3.125，s02 真实区间 3.125~7.125（名义起点是 3.144）。
+    # 时间码吸附到帧网格上：清单里每个时间码都是成片里的一帧号。
+    assert [round(frame.time, 4) for frame in frames] == [
+        1.5833, 2.6667, 5.1250, 6.5417,
+    ]
 
 
 # ---------------------------------------------------------------- 跨模块一致性

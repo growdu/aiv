@@ -28,7 +28,7 @@ from pyv import contract as contract_mod
 from pyv import episodes
 from pyv import persona
 from pyv import topics
-from pyv.timeline import Storyboard
+from pyv.timeline import Scene, Storyboard
 
 AIV_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = AIV_ROOT.parent
@@ -103,6 +103,8 @@ SCENE_FRAME_POINTS = (("mid", 0.50), ("late", 0.85))
 NARRATION_SILENCE_S = 1.0
 #: 成片时长与时间轴的容差。
 DURATION_TOLERANCE_S = 0.15
+#: 品牌片边界的容差：半帧多一点（24fps 一帧约 0.042 s）。
+BRAND_EDGE_TOLERANCE_S = 0.05
 #: 关键帧最大间隔（B站《文件上传预处理》：至少 10 秒一个）。
 MAX_KEYFRAME_GAP_S = 10.0
 
@@ -626,13 +628,51 @@ def _keyframe_times(video: Path) -> list[float]:
     return times
 
 
+def _scene_spans(storyboard: Storyboard) -> list[tuple[Scene, float, float]]:
+    """每一段在成片里的**真实**区间（秒），按帧算。
+
+    时间轴上的段边界是浮点秒，成片却是按帧拼起来的：`render.py` 每段
+    渲染 `round(duration * fps)` 帧，`compose.py` 按顺序拼片段。所以成片里
+    真实的段边界与名义值差最多一帧（24fps 下 42 ms），且逐段累积。
+
+    **这半帧的偏差会咬人**：编码器切出来的关键帧常常正好落在真实边界上。
+    实测 parallel-apply：名义 s01→s02 在 5.977 s，真实切点在 5.958 s，
+    而关键帧就在 5.958 s。按名义秒归属，这一帧画面上已经是下一段、
+    归属却记成上一段——抽帧清单就会拿「下一段的画面」去核对「上一段的
+    文案」，一整片假漏字。
+
+    品牌片是同一套：素材片本身 68 帧（24fps），名义时长 2.833 s，
+    `round(2.833 * 24)` 正好 68，对得上。
+    """
+    fps = storyboard.video.fps
+    spans: list[tuple[Scene, float, float]] = []
+    frame = 0
+    for scene in storyboard.scenes:
+        count = max(1, int(round(scene.duration * fps)))
+        spans.append((scene, frame / fps, (frame + count) / fps))
+        frame += count
+    return spans
+
+
 def _scene_at(storyboard: Storyboard | None, t: float) -> str:
+    """这个时间码属于哪一段。
+
+    **按成片的真实边界归属，不按时间轴上的名义秒。** 见 `_scene_spans`：
+    名义边界与成片里的切点差最多一帧，关键帧又常常正好落在切点上，
+    按名义值判就会把「下一段的画面」记成上一段。
+
+    **边界归后一段。** 落在端点上的那一帧，画面上已经是后一段了
+    （它就是后一段的第一帧）。所以取**起始时间不大于 t 的最后一段**。
+    """
     if storyboard is None:
         return ""
-    for scene in storyboard.scenes:
-        if scene.start <= t <= scene.end:
-            return scene.id
-    return ""
+    current = ""
+    for scene, start, _end in _scene_spans(storyboard):
+        if start <= t:
+            current = scene.id
+        else:
+            break
+    return current
 
 
 def _flatten_strings(value) -> list[str]:
@@ -665,6 +705,17 @@ def _expected_text(segments: list[contract_mod.Segment], scene_id: str) -> str:
     return ""
 
 
+def _snap_to_frame(t: float, fps: int) -> float:
+    """把时间码吸附到帧网格上。
+
+    ffprobe 报关键帧时间只到 6 位小数（`5.958333`），比真正的帧边界
+    （143/24 = 5.9583333…）差在最后一位上。拿未吸附的时间去归属，
+    「正好落在段边界上的关键帧」就会被判给上一段——而它其实是下一段
+    的第一帧，画面上已经切过去了。
+    """
+    return round(t * fps) / fps
+
+
 def extract_frames(media: Media, out_dir: Path,
                    materials: Materials | None = None,
                    keyframe_limit: int = 12) -> list[Frame]:
@@ -674,6 +725,9 @@ def extract_frames(media: Media, out_dir: Path,
     段中点是最可能「画面已画完、字幕已烧上」的时刻，
     段尾帧补上「结论还在淡入」的时段（见 `SCENE_FRAME_POINTS`），
     关键帧往往正好落在段边界——段边界最容易出错。
+
+    **所有时间码都吸附到帧网格**：归属要按成片里的真实切点算（见
+    `_scene_spans`），而 ffprobe 给的关键帧时间差最后一位小数就会判错段。
     """
     if media.video is None or not media.video.is_file():
         return []
@@ -683,12 +737,15 @@ def extract_frames(media: Media, out_dir: Path,
 
     segments = materials.segments if materials else []
     storyboard = media.storyboard
+    fps = storyboard.video.fps if storyboard is not None else 0
     if storyboard is not None:
-        for scene in storyboard.scenes:
+        for scene, start, end in _scene_spans(storyboard):
             if scene.type != "code" or scene.duration <= 0:
                 continue
             for label, ratio in SCENE_FRAME_POINTS:
-                t = scene.start + scene.duration * ratio
+                # 用成片里的真实区间取帧：名义秒与真实切点差最多一帧，
+                # 按名义秒抽出来的「段中点」可能落在上一段的尾巴上。
+                t = _snap_to_frame(start + (end - start) * ratio, fps)
                 index += 1
                 path = out_dir / f"{index:02d}_{scene.id}_{label}.png"
                 if _grab(media.video, t, path):
@@ -700,6 +757,8 @@ def extract_frames(media: Media, out_dir: Path,
                     ))
 
     for t in _keyframe_times(media.video)[:keyframe_limit]:
+        if fps:
+            t = _snap_to_frame(t, fps)
         index += 1
         path = out_dir / f"{index:02d}_key_{t:.3f}.png"
         if _grab(media.video, t, path):
@@ -932,14 +991,32 @@ VIDEO_CHECKS = (
 )
 
 
-def _is_brand_frame(frame: Frame) -> bool:
+def _is_brand_frame(frame: Frame,
+                    storyboard: Storyboard | None = None) -> bool:
     """这一帧落在品牌片头/片尾里。
 
     品牌片是**共享素材**（`aiv/brand/clips/` 下的固定片子），不是这一期
     渲染出来的。片头第一帧是黑场（淡入），那是设计，不是漏画——
     拿 VV-01 去判它，每期都会报一条假警。
+
+    **边界帧也算品牌片**：品牌片片尾是淡出到白场的，最后几十毫秒是纯白帧；
+    编码器切出来的关键帧常正好落在「品牌片结束、正文段开始」的那一帧，
+    它在时间轴上属于正文段，实际上是品牌片的淡出。
+    实测 ep01：品牌片 2.833 s 结束，2.79 s 之后已是纯白，
+    而落在 2.8333 s 的关键帧被算进了 s01，VV-01 报了一条假警。
+    所以边界给半帧多的容差（24fps 一帧约 0.042 s）。
     """
-    return frame.scene_id.startswith("brand")
+    if frame.scene_id.startswith("brand"):
+        return True
+    if storyboard is None:
+        return False
+    for scene, start, end in _scene_spans(storyboard):
+        if not scene.id.startswith("brand"):
+            continue
+        if (abs(frame.time - start) <= BRAND_EDGE_TOLERANCE_S
+                or abs(frame.time - end) <= BRAND_EDGE_TOLERANCE_S):
+            return True
+    return False
 
 
 def check_video(episode: str, out_dir: Path | None = None) -> Report:
@@ -963,11 +1040,14 @@ def check_video(episode: str, out_dir: Path | None = None) -> Report:
     else:
         report.note("没抽到帧：VV-01、VV-02 跳过")
 
-    body_frames = [frame for frame in frames if not _is_brand_frame(frame)]
+    body_frames = [frame for frame in frames
+                   if not _is_brand_frame(frame, media.storyboard)]
     skipped = len(frames) - len(body_frames)
     if skipped:
-        report.note(f"{skipped} 帧在品牌片头/片尾里，不判 VV-01、VV-02"
-                    "（品牌片是共享素材，片头的黑场是淡入，不是漏画）")
+        report.note(f"{skipped} 帧在品牌片头/片尾（含边界那一帧）里，"
+                    "不判 VV-01、VV-02"
+                    "（品牌片是共享素材：片头第一帧的黑场、"
+                    "片尾最后几十毫秒的白场都是淡入淡出，不是漏画）")
 
     for check in VIDEO_CHECKS:
         skipped: list[str] = []
