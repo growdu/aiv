@@ -74,6 +74,7 @@
 | **内容编译层** | `tools/` + `scripts/` | `docs/` → Hexo 源、主题补丁、校验 | 只读 `docs/`，只写 `source/` |
 | **展示层** | `themes/matery/` | EJS 模板、CSS/JS、静态资源 | Hexo 运行时 |
 | **视频生产层** | `aiv/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
+| **审核层** | `review/`、`aiv/review/` | 审校规则、一期一条记录、抽帧清单 | 只读 `docs/`、`aiv/` 的契约与产物 |
 | **发布契约层** | `publish/publishkit/` | 内容契约 / 能力模型 / manifest / 调度 | **不认识任何平台** |
 | **平台适配层** | `weixin/` `toutiao/` `channels/` `bilibili/` | 平台切片、渲染、出包、发布、状态 | 只认 TOML 与 manifest JSON |
 
@@ -103,7 +104,9 @@
 | 模块 | 位置 | 干什么 |
 | --- | --- | --- |
 | 视觉分镜契约 | `aiv/contracts/<期>.json` | 一期视频的段落划分、画面文案与数字（**每期只写这里**） |
-| 渲染引擎 | `aiv/pipeline/pyv/` | `pyv/cli.py` + `scenes/` + timeline/subtitle/bgm/compose/persona/topics |
+| 发布元数据 | `aiv/publish/<期>.json` | 每期各平台的标题、简介、话题与分区（`pyv publish check` 体检） |
+| 渲染引擎 | `aiv/pipeline/pyv/` | `pyv/cli.py` + `scenes/` + 28 个模块：`align`/`render`/`compose`/`timeline`/`subtitle`/`bgm`/`brand`/`persona`/`topics`/`doctor`/`preflight`/`review`/`layout`/`components`/`fingerprint`… |
+| 审核 | `aiv/review/` + `pyv/review.py` | 文本层 `VT-*` 与成片层 `VV-*` 的规则、一期一条记录、抽帧清单 |
 | 时间轴 | `storyboard_<EP>.json` | 由旁白对齐算出的产物，**不入库** |
 | 场景模板 | `aiv/pipeline/pyv/scenes/*.py` | 位置、尺寸、配色、动效等版式常量 |
 | 形象 | `aiv/character/scripts/` | 3D 小象生成、加眼镜、铭牌盖章 |
@@ -119,6 +122,19 @@
 
 流水线按期号切：`make EP=<期号> align|validate|brand|render|compose`。
 `align` 是手工步骤（需要旁白音频），其余可全自动。
+
+同一套还有几档变体与审校命令：
+
+| 命令 | 干什么 |
+| --- | --- |
+| `make EP=<期号> nobrand` | 无品牌导流版（抖音那一档，去品牌片头/片尾；`NOBADGE=1` 再去铭牌） |
+| `make EP=<期号> vertical` | 9:16 竖版画布（抖音那一档，本来就不套品牌片） |
+| `make EP=<期号> mix-verify` | 成片级混音验收（稳态 duck 深度、电平差、真峰值） |
+| `make EP=<期号> review-text` | 审校·文本层（`VT-*`）：审要讲什么 |
+| `make EP=<期号> review-video` | 审校·成片层（`VV-*`）：审做出来是什么样 |
+| `make EP=<期号> review-frames` | 抽帧 + 清单：每段两帧 + 关键帧，给人和 Agent 逐帧看画面 |
+
+审校的规则与边界见 [`aiv/review/README.md`](aiv/review/README.md)。
 
 ### 2.4 发布契约层（`publish/publishkit/`）
 
@@ -184,6 +200,8 @@
 | 平台能力 | `publish/capabilities/<id>.toml` | 手写（对着平台文档复核） | publishkit + adapter |
 | 发布清单 manifest | JSON（内存/落盘） | publishkit | adapter |
 | 视觉分镜契约 | `aiv/contracts/<EP>.json` | 作者 | pyv 渲染引擎 |
+| 发布元数据 | `aiv/publish/<EP>.json` | 手写 | `pyv publish check` + 各平台 adapter |
+| 抽帧清单 | `aiv/review/frames/<EP>/frames.md` | 审核工具 | 审核记录（逐帧复核） |
 | 发布结果快照 | `publish/outbox/<content>__<platform>.json` | adapter | 幂等判定 + 站点发布索引 |
 | 调度状态 | `publish/schedule.json` | 调度层 | 调度层（周键幂等） |
 
@@ -199,7 +217,8 @@
 | `themes/matery/` | 主题 | ✅ |
 | `tools/`、`scripts/` | 构建与校验脚本 | ✅ |
 | `aiv/` | 视频生产线（规范 + 契约 + 代码） | ✅ 产物除外 |
-| `aiv/pipeline/build/`、`aiv/pipeline/out/` | 片段与成片 | ❌ |
+| `aiv/build/`、`aiv/out/` | 片段与成片 | ❌ |
+| `review/`、`aiv/review/` | 审校规则、一期一条记录、抽帧清单 | ✅ 帧除外 |
 | `publish/` | 契约层、调度、能力声明、outbox | ✅ |
 | `weixin/` `toutiao/` `channels/` `bilibili/` | 平台 adapter | ✅ |
 | `requirements/` | 依赖清单（按模块分文件） | ✅ |
@@ -220,6 +239,10 @@ make test             # 全量测试
 make topics           # 选题库规则检查
 make persona          # 人格规范检查
 make EP=<期号> all    # validate → brand → render → compose
+make EP=<期号> mix-verify     # 成片级混音验收
+make EP=<期号> review-text    # 审校·文本层（VT-*）
+make EP=<期号> review-video   # 审校·成片层（VV-*）
+make EP=<期号> review-frames  # 抽帧 + 清单（帧不入库，清单入库）
 
 # 发布调度
 cd publish && python3 -m publishkit.cli schedule candidates
@@ -253,10 +276,19 @@ cairo 的头文件（`pycairo`）。
 | --- | --- | --- |
 | `hexo.yml` | 构建与部署 | push 到 master |
 | `contracts.yml` | 内容契约 + 契约层 / 头条 / 公众号测试 | push 或 PR 到 master |
+| `aiv-pipeline.yml` | 在 Ubuntu 上真跑一遍 AIV：装系统依赖与内置字体，跑全部测试（含真的合成出一段成片） | push / PR 到 master 且动了 `aiv/**` |
+| `site-guard.yml` | 根级站点契约测试：部署工作流的形状、文档死链与页内锚点、站点根路径前缀 | push 或 PR 到 master |
 
 `contracts.yml` 里的四步：产出内容单元 → 内容契约闸门（违规即失败）→
 契约层测试 → 两个 adapter 的测试。视频线（aiv）不在里面：它要 cairo 与
-ffmpeg 这套系统依赖，失败模式是「渲染不出片」而不是「契约被破」。
+ffmpeg 这套系统依赖，失败模式是「渲染不出片」而不是「契约被破」；
+它有自己的 `aiv-pipeline.yml`——在 Linux 上装依赖、装内置字体，跑全部测试，
+测试里**真的会合成出一段成片**并按规格核对（逐像素基准那条在 Linux 上会
+跳过并说明原因，不是红，也不是假装绿）。
+
+`site-guard.yml` 跑的是根级 `tests/`：这些测试以前只在本机跑，CI 里没有任何
+地方执行它们，于是「测试全绿」和「CI 绿」是两件事。它**不阻塞部署**
+（独立工作流、独立并发组），挂了只报注解。
 
 ### 给一篇文章声明发布平台
 
@@ -289,7 +321,8 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | 公众号 | 已实现到**草稿箱**；发表接口无权限（`48001`），自动化边界 = 自动进草稿箱；**已进契约层**（能力声明 + outbox 幂等键） |
 | 头条号 | 出包可用；账号未认证，API 权限开不了，走「出包 + 人工发」 |
 | 视频号 / B 站 | 出包 + 人工发布清单；B 站 `ARC_BASE` 未开通 |
-| AIV | 第一季 EP01/EP02 已出片；契约化流程稳定 |
+| AIV | 六期已出片（EP01~EP06）；契约化流程稳定；抖音那两档（无品牌 / 竖版）已就位 |
+| 审校 | 文档侧（`review/`）与视频侧（`aiv/review/`）两套机制都落地了；视频侧六期文本层跑完，成片层只有本机有成片的 EP06 跑过 |
 | 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；候选集由母稿 `platforms` 决定 |
 
 **平台与契约层的关系**（四个平台，两个档位）：
@@ -301,12 +334,14 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | 视频号 | `channels.toml` | `publish/outbox/`（入库） | 出包 + 人工发布清单 |
 | B 站 | `bilibili.toml` | `publish/outbox/`（入库） | 投稿包（`ARC_BASE` 未开通） |
 
-**还没就绪的两处**（详见各 spec 的「待验证项」）：
+**还没就绪的三处**（详见各 spec 的「待验证项」）：
 
 1. 站点**看不到视频**：video widget 关着、菜单无视频入口、outbox 也没汇总成
    `publish_index`。
 2. 调度器**从未真正跑过**：`publish/deploy/` 里的 cron / launchd 模板还没安装，
    `publish/schedule.json` 仍是空的。
+3. **视频审校还没闭环**：六期的文本层信号已出，成片层只有本机有成片的 EP06 跑过；
+   「改稿 → 重出片 → 复审成片层」这一圈还没走完（见 `aiv/review/INDEX.md` 的批次表）。
 
 ---
 
@@ -319,5 +354,7 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | [`publish/spec/06-发布计划与调度.md`](publish/spec/06-发布计划与调度.md) | 调度层：候选集、选题规则、周键、触发器、失败与重试 |
 | [`publish/spec/07-视频发布契约.md`](publish/spec/07-视频发布契约.md) | 视频发布：视频单元、成片预检、切片规则、状态机 |
 | [`aiv/README.md`](aiv/README.md) | 视频生产线说明与换期流程 |
+| [`aiv/review/README.md`](aiv/review/README.md) | 视频审校：文本层 `VT-*` 与成片层 `VV-*`、抽帧方法、一期一条记录 |
+| [`review/README.md`](review/README.md) | 博客内容审校：文档侧的同构机制（`tools/review-check.py`） |
 | [`aiv/人格规范.md`](aiv/%E4%BA%BA%E6%A0%BC%E8%A7%84%E8%8C%83.md) | 小象是谁、怎么想、怎么讲（9 条可机检规则） |
 | `weixin/docs/`、`toutiao/docs/`、`channels/docs/`、`bilibili/docs/` | 各平台 adapter 的设计与实施计划 |
