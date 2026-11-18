@@ -481,6 +481,14 @@
     {
       "file": "review/plans/2026-11-16-展示审计与优化方向.md",
       "form": "repo"
+    },
+    {
+      "file": "themes/matery/layout/_partial/main-style.ejs",
+      "form": "repo"
+    },
+    {
+      "file": "themes/matery/source/css/tech.css",
+      "form": "repo"
     }
   ],
   "projects": [
