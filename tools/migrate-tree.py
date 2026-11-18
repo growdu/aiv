@@ -359,14 +359,32 @@ def category_targets(table):
 
 
 def _read_title(path):
-    """一个 markdown 文件 front matter 或首个 H1 里的标题。"""
+    """一个 markdown 文件 front matter 或首个 H1 里的标题。
+
+    **只看 front matter 里的 `title:`** —— 正文里常出现 front matter 的
+    **示例**（讲「怎么写 front matter」的文章必然带一段 YAML 例子），
+    例子里的 `title:` 不是这篇文章的标题。全文正则会把例子里的标题
+    当成真标题：博客搭建指南的正文里就有 `title: 分类中文名` 这个例子，
+    目录页上它一度显示成「分类中文名」。
+
+    口径跟 `sync-hexo.py` 一致：front matter 的 `title:` 优先，
+    没有就取首个 H1。
+    """
     with open(path, encoding="utf-8", errors="replace") as fh:
         text = fh.read()
-    m = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', text, re.MULTILINE)
-    if m:
-        return m.group(1).strip()
+    fm = _front_matter(text)
+    if fm is not None:
+        m = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', fm, re.MULTILINE)
+        if m:
+            return m.group(1).strip()
     m = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
     return m.group(1).strip() if m else ""
+
+
+def _front_matter(text):
+    """文件开头的 front matter 文本（没有就返回 None）。"""
+    m = re.match(r"^---\r?\n(.*?)\r?\n---\r?\n", text, re.DOTALL)
+    return m.group(1) if m else None
 
 
 def _rewrite_one(post_dir, new_post_dir, raw, moves, want_dir, categories=None):

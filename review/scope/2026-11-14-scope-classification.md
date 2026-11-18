@@ -252,7 +252,7 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/life/aiv/index.md`
 - `docs/life/aiv/music/README.md`
 - `docs/life/aiv/voice/README.md`
-- `docs/life/blog-to-wechat/index.md`
+- `docs/notes/site-ops/blog-to-wechat/index.md`
 - `docs/life/daxue/电子科技大学-计算机-自考-复习计划/index.md`
 - `docs/life/daxue/腾冲事业编-公务员备考计划/index.md`
 - `docs/life/doctor_test/寻康杯备战方案.md`

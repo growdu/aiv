@@ -101,15 +101,15 @@
 | `engineering/foundations/use-tools/google.md` | Google 浏览器扩展清单：油猴、广告拦截、二维码、右键搜索、octotree 等等，每一条是什么用途。 | （没抽出来） | ☐ |
 | `engineering/foundations/use-tools/other.md` | 几个日常小工具的用途速查：文本比较合并的 meld、跟踪系统调用的 strace，以及 man 的八章结构。 | （没抽出来） | ☐ |
 | `engineering/foundations/use-tools/vim.md` | vim 常用操作速查：横竖分屏、换屏、撤销、复制、删除分别按什么键。 | （没抽出来） | ☐ |
-| `blog/博客搭建指南.md` | 日常维护手册。仓库的总体布局、一次 push 之后的构建链路、各模块职责，详见 架构.md。本文只讲怎么动。 | 日常维护手册。仓库的总体布局、一次 push 之后的构建链路、各模块职责，详见 架构.md。本文只讲怎么动。 | ☐ |
-| `blog/同名文章-html-与-md-版本管理.md` | 仓库偶尔会出现 xxx.md 和 xxx.html 两个同主题、不同表达形式的源文件（一个 markdown 版、一个带丰富排版的 HTML 版）。本文说明 sync-hexo.py 处理这种情况的约定，为什么必须遵守，以及怎么做。 | 仓库偶尔会出现 xxx.md 和 xxx.html 两个同主题、不同表达形式的源文件（一个 markdown 版、一个带丰富排版的 HTML 版）。本文说明 sync-hexo.py 处理这种情况的约定，为什么必须遵守，以及怎么做。 | ☐ |
-| `blog/同步到公众号方案.md` | 把博客内容自动/半自动地发布到「growdu」微信公众号。本文先讲清楚微信公众号生态对程序化发布的硬约束，再给两套技术路线对比，最后给推荐方案与具体实施步骤。 | 把博客内容自动/半自动地发布到「growdu」微信公众号。本文先讲清楚微信公众号生态对程序化发布的硬约束，再给两套技术路线对比，最后给推荐方案与具体实施步骤。 | ☐ |
-| `blog/架构.md` | 加新文章、换样式、修构建，先看这份再下手。 | 加新文章、换样式、修构建，先看这份再下手。 | ☐ |
-| `blog/视频嵌入指南.md` | matery 主题自带的视频能力盘点 + 4 种主流嵌入方式的一步步操作。所有改动都在仓库里 git commit + push 后，CI 自动构建并部署到 growdu.cn。 | matery 主题自带的视频能力盘点 + 4 种主流嵌入方式的一步步操作。所有改动都在仓库里 git commit + push 后，CI 自动构建并部署到 growdu.cn。 | ☐ |
-| `blog/部署到服务器.md` | 把博客从 GitHub Pages 迁移到个人服务器 growdu.cn，CI 自动构建并通过 rsync over SSH 部署。总体布局、构建链路见 架构.md，日常维护见 博客搭建指南.md。本文只讲部署。 | 把博客从 GitHub Pages 迁移到个人服务器 growdu.cn，CI 自动构建并通过 rsync over SSH 部署。总体布局、构建链路见 架构.md，日常维护见 博客搭建指南.md。本文只讲部署。 | ☐ |
-| `blog/重构方案.md` | 站点要同时服务两类消费： | 站点要同时服务两类消费： | ☐ |
-| `blog/阿里云ECS选购指南.md` | 云服务器（Elastic Compute Service，简称 ECS）是云厂商卖给你的虚拟服务器。和传统物理机相比，它的好处是： | 云服务器（Elastic Compute Service，简称 ECS）是云厂商卖给你的虚拟服务器。和传统物理机相比，它的好处是： | ☐ |
-| `blog/mermaid/mermaid图渲染问题诊断与修复.md` | 本文所有数字都来自真实渲染测量（headless Chrome + 生产环境 SVG 尺寸），不是估算。 | 本文所有数字都来自真实渲染测量（headless Chrome + 生产环境 SVG 尺寸），不是估算。 | ☐ |
+| `notes/site-ops/博客搭建指南.md` | 日常维护手册。仓库的总体布局、一次 push 之后的构建链路、各模块职责，详见 架构.md。本文只讲怎么动。 | 日常维护手册。仓库的总体布局、一次 push 之后的构建链路、各模块职责，详见 架构.md。本文只讲怎么动。 | ☐ |
+| `internal/blog/同名文章-html-与-md-版本管理.md` | 仓库偶尔会出现 xxx.md 和 xxx.html 两个同主题、不同表达形式的源文件（一个 markdown 版、一个带丰富排版的 HTML 版）。本文说明 sync-hexo.py 处理这种情况的约定，为什么必须遵守，以及怎么做。 | 仓库偶尔会出现 xxx.md 和 xxx.html 两个同主题、不同表达形式的源文件（一个 markdown 版、一个带丰富排版的 HTML 版）。本文说明 sync-hexo.py 处理这种情况的约定，为什么必须遵守，以及怎么做。 | ☐ |
+| `internal/blog/同步到公众号方案.md` | 把博客内容自动/半自动地发布到「growdu」微信公众号。本文先讲清楚微信公众号生态对程序化发布的硬约束，再给两套技术路线对比，最后给推荐方案与具体实施步骤。 | 把博客内容自动/半自动地发布到「growdu」微信公众号。本文先讲清楚微信公众号生态对程序化发布的硬约束，再给两套技术路线对比，最后给推荐方案与具体实施步骤。 | ☐ |
+| `internal/blog/架构.md` | 加新文章、换样式、修构建，先看这份再下手。 | 加新文章、换样式、修构建，先看这份再下手。 | ☐ |
+| `notes/site-ops/视频嵌入指南.md` | matery 主题自带的视频能力盘点 + 4 种主流嵌入方式的一步步操作。所有改动都在仓库里 git commit + push 后，CI 自动构建并部署到 growdu.cn。 | matery 主题自带的视频能力盘点 + 4 种主流嵌入方式的一步步操作。所有改动都在仓库里 git commit + push 后，CI 自动构建并部署到 growdu.cn。 | ☐ |
+| `internal/blog/部署到服务器.md` | 把博客从 GitHub Pages 迁移到个人服务器 growdu.cn，CI 自动构建并通过 rsync over SSH 部署。总体布局、构建链路见 架构.md，日常维护见 博客搭建指南.md。本文只讲部署。 | 把博客从 GitHub Pages 迁移到个人服务器 growdu.cn，CI 自动构建并通过 rsync over SSH 部署。总体布局、构建链路见 架构.md，日常维护见 博客搭建指南.md。本文只讲部署。 | ☐ |
+| `internal/blog/重构方案.md` | 站点要同时服务两类消费： | 站点要同时服务两类消费： | ☐ |
+| `notes/site-ops/阿里云ECS选购指南.md` | 云服务器（Elastic Compute Service，简称 ECS）是云厂商卖给你的虚拟服务器。和传统物理机相比，它的好处是： | 云服务器（Elastic Compute Service，简称 ECS）是云厂商卖给你的虚拟服务器。和传统物理机相比，它的好处是： | ☐ |
+| `notes/site-ops/mermaid图渲染问题诊断与修复.md` | 本文所有数字都来自真实渲染测量（headless Chrome + 生产环境 SVG 尺寸），不是估算。 | 本文所有数字都来自真实渲染测量（headless Chrome + 生产环境 SVG 尺寸），不是估算。 | ☐ |
 | `engineering/ai-tooling/ai-foundations/chatgpt使用.md` | ChatGPT 是什么、能用来干什么：代码相关的问题怎么问它，以及日常把它当助手用的几种典型场景。 | 可点击(高效率工具——chatgpt使用_growdu_real的博客-CSDN博客)在网络上访问本文。 | ☐ |
 | `engineering/ai-tooling/ai-foundations/newbing使用教程/index.md` | New Bing 使用教程：下载 Edge Dev、修改默认搜索引擎，让新版 Bing 的 AI 搜索在国内也能用。 | 点击这里下载edge dev。 | ☐ |
 | `distributed/foundations/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md` | 之前有人问我设计一个分布式的递增的唯一id生成。想了半天不知道，偶然一个同事说起snowflake算法，我百度了一下，很简单高效。 | 之前有人问我设计一个分布式的递增的唯一id生成。想了半天不知道，偶然一个同事说起snowflake算法，我百度了一下，很简单高效。 | ☐ |
@@ -259,12 +259,12 @@
 | `source-tracks/postgresql/logical-replication/pglogical支持DDL搭建教程.md` | 使用如下命令初始化数据库： | 使用如下命令初始化数据库： | ☐ |
 | `source-tracks/postgresql/logical-replication/指定列同步对逻辑复制支持DDL的影响.md` | 在逻辑复制支持DDL的需求分析中，需要考虑如下场景： | 在逻辑复制支持DDL的需求分析中，需要考虑如下场景： | ☐ |
 | `source-tracks/postgresql/logical-replication/支持ddl评审相关问题.md` | 下面进行具体分析 ### 跨事务DDL | 下面进行具体分析 ### 跨事务DDL | ☐ |
-| `db/logical_decode/逻辑复制支持DDL开发交付计划.md` | 逻辑复制支持 DDL 的开发交付计划：用户接口、系统表、DDL 捕获与发送、订阅端 apply，以及测试与自验证文档的进度。 | （没抽出来） | ☐ |
+| `internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md` | 逻辑复制支持 DDL 的开发交付计划：用户接口、系统表、DDL 捕获与发送、订阅端 apply，以及测试与自验证文档的进度。 | （没抽出来） | ☐ |
 | `source-tracks/postgresql/logical-replication/逻辑复制支持DDL需求分析.md` | postgresql当前的逻辑复制仅支持复制DML，不支持复制DDL，需要手动在目标端执行DDL。 | postgresql当前的逻辑复制仅支持复制DML，不支持复制DDL，需要手动在目标端执行DDL。 | ☐ |
 | `source-tracks/postgresql/logical-replication/逻辑复制支持ddl问题.md` | 黎哥， 目前apply的流程基本跑通了。但是在做的过程中发现使用新增系统表这种方式总感觉比较奇怪，侵入性修改很严重。 然后后面我又查了下资料和社区的讨论，发现社区之前就预留了写逻辑日志的接口LogLogicalMessage，可以直接利用LogLogicalMessage来写入自定义的wal日志，… | 黎哥， 目前apply的流程基本跑通了。但是在做的过程中发现使用新增系统表这种方式总感觉比较奇怪，侵入性修改很严重。 然后后面我又查了下资料和社区的讨论，发现社区之前就预留了写逻辑日志的接口LogLogicalMessage，可以直接利用LogLogicalMessage来写入自定义的wal日志，… | ☐ |
 | `source-tracks/postgresql/logical-replication/逻辑复制源码分析.md` | 逻辑复制与物理复制使用相同的发送框架，都在walsender中进行发送。整体流程大致如下： | 逻辑复制与物理复制使用相同的发送框架，都在walsender中进行发送。整体流程大致如下： | ☐ |
 | `source-tracks/postgresql/logical-replication/逻辑复制解惑.md` | 在初次写入数据的时候，ddl写到了系统表，dml先写入日志，然后apply成数据。 当前逻辑复制的原理是根据lsn读取wal日志，将wal日志decode成sql，然后发送目标端。 | 在初次写入数据的时候，ddl写到了系统表，dml先写入日志，然后apply成数据。 当前逻辑复制的原理是根据lsn读取wal日志，将wal日志decode成sql，然后发送目标端。 | ☐ |
-| `db/logical_decode/逻辑复制验证步骤.md` | 后续操作都需要切换到dys用户执行。 | 后续操作都需要切换到dys用户执行。 | ☐ |
+| `internal/db/logical_decode/逻辑复制验证步骤.md` | 后续操作都需要切换到dys用户执行。 | 后续操作都需要切换到dys用户执行。 | ☐ |
 | `source-tracks/postgresql/logical-replication/逻辑解码ddl replay支持sqlserver模式.md` | 当前 PostgreSQL Logical Replication 仅支持 DML 同步。 | 当前 PostgreSQL Logical Replication 仅支持 DML 同步。 | ☐ |
 | `source-tracks/postgresql/logical-replication/ai_coding/ddl_design_improve.md` | 逻辑复制当前仅支持同步DML操作。为了提升用户使用体验和增强逻辑复制功能，需要扩展支持DDL（数据定义语言）的自动同步。 | 逻辑复制当前仅支持同步DML操作。为了提升用户使用体验和增强逻辑复制功能，需要扩展支持DDL（数据定义语言）的自动同步。 | ☐ |
 | `source-tracks/postgresql/logical-replication/ai_coding/ddl写入wal日志的影响.md` | 这个问题非常关键，而且是内核方案必须回答清楚的两个核心风险： | 这个问题非常关键，而且是内核方案必须回答清楚的两个核心风险： | ☐ |
@@ -411,7 +411,7 @@
 | `life/aiv/character/README.md` | 后续视频统一使用的讲解者形象。规范见 ../形象与音色规范.md。 | 后续视频统一使用的讲解者形象。规范见 ../形象与音色规范.md。 | ☐ |
 | `life/aiv/music/README.md` | 曲库下载的背景音乐放这里，音频不入库（媒体产物留本机）， 授权台账入库（library.json）——台账是事实，不是产物。 | 曲库下载的背景音乐放这里，音频不入库（媒体产物留本机）， 授权台账入库（library.json）——台账是事实，不是产物。 | ☐ |
 | `life/aiv/voice/README.md` | 后续视频旁白统一使用这套音色。规范见 ../形象与音色规范.md §2。 | 后续视频旁白统一使用这套音色。规范见 ../形象与音色规范.md §2。 | ☐ |
-| `life/blog-to-wechat/index.md` | 改造之前，得先承认一件事：这个博客的发布链路已经是一条完整的 CI 流水线，不是\"手动 hexo g\"。搞清楚了这一点，才知道该往哪里接。 | 改造之前，得先承认一件事：这个博客的发布链路已经是一条完整的 CI 流水线，不是"手动 hexo g"。搞清楚了这一点，才知道该往哪里接。 | ☐ |
+| `notes/site-ops/blog-to-wechat/index.md` | 改造之前，得先承认一件事：这个博客的发布链路已经是一条完整的 CI 流水线，不是\"手动 hexo g\"。搞清楚了这一点，才知道该往哪里接。 | 改造之前，得先承认一件事：这个博客的发布链路已经是一条完整的 CI 流水线，不是"手动 hexo g"。搞清楚了这一点，才知道该往哪里接。 | ☐ |
 | `life/daxue/电子科技大学-计算机-自考-复习计划/index.md` | 你的核心约束（先把这些写死）： | 你的核心约束（先把这些写死）： | ☐ |
 | `life/daxue/腾冲事业编-公务员备考计划/index.md` | ❌ 慎报：外交部、商务部、中央办公厅（400:1） | ❌ 慎报：外交部、商务部、中央办公厅（400:1） | ☐ |
 | `life/doctor_test/寻康杯备战方案.md` | 关键结构判断：70% 的分在沙盘里，且必须进前 8 名才有资格打答辩分。 答辩满分救不了沙盘失分——沙盘排不进前 8，30% 直接归零。优先级必须是沙盘 >> 答辩。 | 关键结构判断：70% 的分在沙盘里，且必须进前 8 名才有资格打答辩分。 答辩满分救不了沙盘失分——沙盘排不进前 8，30% 直接归零。优先级必须是沙盘 >> 答辩。 | ☐ |

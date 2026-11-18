@@ -1782,7 +1782,7 @@ def process(filepath, section_titles, cascades):
     tags_block = categories_yaml(all_tags)
     # 发布契约要读的两个字段，原样搬过去（没有就什么都不加）。
     passthrough = passthrough_block(fm)
-    # 履历表里那一列是现成的摘要素材（见 docs/blog/重构方案.md §八 B5）：
+    # 履历表里那一列是现成的摘要素材（见 internal/blog/重构方案.md §八 B5）：
     # 源 front matter 里已经写了 description 的以源为准，不覆盖。
     if history_desc and not _fm_scalar(fm, "description"):
         if not _fm_indented_scalar(fm, "description"):
@@ -2272,7 +2272,7 @@ def main():
                                 f"ERROR {fp}: shares basename with {twin_md} "
                                 f"but is not suffixed with -html. Rename the .html "
                                 f"file to {os.path.join(root, base_no_ext + '-html.html')} "
-                                f"(see docs/blog/同名文章-html-与-md-版本管理.md).",
+                                f"(see internal/blog/同名文章-html-与-md-版本管理.md).",
                                 file=sys.stderr,
                             )
                             sys.exit(2)
