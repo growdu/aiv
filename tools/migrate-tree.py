@@ -731,9 +731,15 @@ def write_index_files(table, moves, report):
                 desc, _series_articles(moves, f"{proj_dir}/{slug}/"),
                 table))
             series_lines.append(f"- [{scn}](./{slug}/_index.md)")
-        # 「源码主线」是 `source-tracks/` 专属的说法；别的落点（`distributed/`）
+        # 「源码主线」是 `source-tracks/` 专属的说法；`notes/` 是**副线**
+        # （留站但降级的那一支）；别的落点（`distributed/`、`engineering/`）
         # 叫「专题」。
-        kind = "源码主线" if target_root.startswith("source-tracks/") else "专题"
+        if target_root.startswith("source-tracks/"):
+            kind = "源码主线"
+        elif target_root == "notes":
+            kind = "副线"
+        else:
+            kind = "专题"
         made.append(_write_index(
             f"{proj_dir}/_index.md", proj_cn, proj_cn,
             f"{proj_cn} {kind}：{len(entries)} 个系列，由浅入深。",
@@ -918,7 +924,7 @@ def permalink_path(rel):
     return stem
 
 
-def build_redirects(moves, existing=None):
+def build_redirects(moves, existing=None, unpublish=None):
     """旧 permalink 路径 → 新 permalink 路径。
 
     ``existing`` 是上一轮的 ``data/redirects.json``：**带日期的键**
@@ -926,9 +932,17 @@ def build_redirects(moves, existing=None):
     重复文章时，旧 URL 的日期段跟新文件对不上，键里带上日期才落得准。
     ``moves`` 推不出这种条目，所以从旧表里留着；同一条路径的普通键
     （日期由新文件决定，落错地方的那个）去掉，免得白生成一个多余的页面。
+
+    ``unpublish`` 是「文章被移出 `docs/`、但站上留着它的**对外改写版**」
+    的那几条（``blog/架构.md`` → ``platform-meta/…/one-repo-three-pipelines.md``）。
+    移出 `docs/` 的文章不在 ``moves`` 里 —— 照理说它的旧地址就该 404，
+    但这一类不一样：**它是对外发过的**，读者手里的旧链接不该断，
+    应该落到改写版上去。
     """
     out = {}
     for old_rel, new_rel in sorted(moves.items()):
+        out[permalink_path(old_rel)] = permalink_path(new_rel)
+    for old_rel, new_rel in sorted((unpublish or {}).items()):
         out[permalink_path(old_rel)] = permalink_path(new_rel)
     dated = {}
     for key, value in (existing or {}).items():
@@ -1055,6 +1069,57 @@ def rewrite_refs(targets, moves, report):
     return total
 
 
+def rewrite_out_refs(targets, out_paths, report):
+    """改写**移出 `docs/`** 的文件在外部文件里的路径引用。
+
+    移出去的文件不在 `moves` 里 —— 它们不再是站上的文章，
+    所以 `rewrite_refs()` 看不见它们。可是仓库里别的地方还指着它们：
+    README 说「想改文章看 `docs/blog/架构.md`」、复核表按 docs 相对路径
+    列文章、规格文档链到它。**这些引用得跟着改**，否则指向一个
+    已经不在 `docs/` 里的路径。
+
+    三种形态：
+
+    - ``repo``：仓库相对路径（``docs/blog/架构.md`` → ``internal/blog/架构.md``）——
+      README、规格文档、工具注释里是这个写法；
+    - ``docs``：docs 相对路径（``blog/架构.md`` → ``internal/blog/架构.md``）——
+      复核表里是这个写法（那一列不写 `docs/` 前缀）；
+    - ``cid``：内容单元 id（``blog/架构`` → ``internal/blog/架构``）——
+      多平台分发的转换规则表里是这个写法。
+
+    移出去的文章**没有 permalink**，所以 `permalink` 形态不适用。
+    """
+    total = 0
+    for rel_file, form in targets:
+        path = os.path.join(REPO, rel_file)
+        if not os.path.exists(path):
+            report.append(f"外部引用：{rel_file} 不存在，跳过")
+            continue
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+        original = text
+        hits = 0
+        for old_rel, new_rel in sorted(out_paths.items()):
+            if form == "repo":
+                pairs = [("docs/" + old_rel, new_rel)]
+            elif form == "docs":
+                pairs = [(old_rel, new_rel)]
+            elif form == "cid":
+                pairs = [(os.path.splitext(old_rel)[0],
+                          os.path.splitext(new_rel)[0])]
+            else:
+                continue
+            for old_text, new_text in pairs:
+                text, n = _replace_guarded(text, old_text, new_text)
+                hits += n
+        if text != original:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            report.append(f"外部引用：{rel_file} 改了 {hits} 处（移出 docs/ 的）")
+            total += hits
+    return total
+
+
 def _permalink_pairs(old_rel, new_rel):
     """站内绝对地址里的路径段（三种写法）。
 
@@ -1175,7 +1240,8 @@ def main():
     write_index_files(table, moves, report)
 
     # 5. 常量补丁
-    redirects = build_redirects(moves, load_redirects())
+    redirects = build_redirects(moves, load_redirects(),
+                                table.get("unpublish_redirects"))
     date_overrides = build_date_overrides(moves, dates_before, out_paths)
     cat_redirects = build_category_redirects(table)
     for name, payload in (
@@ -1193,7 +1259,11 @@ def main():
     if not args.skip_refs:
         targets = [(t["file"], t["form"]) for t in table.get("ref_rewrites", [])]
         n = rewrite_refs(targets, moves, report)
-        report.append(f"外部引用：共改 {n} 处")
+        out_targets = [(t["file"], t["form"])
+                       for t in table.get("out_ref_rewrites", [])]
+        n_out = rewrite_out_refs(out_targets, out_paths, report)
+        report.append(f"外部引用：共改 {n} 处（搬进新树的）"
+                      f" + {n_out} 处（移出 docs/ 的）")
 
     # 7. 自检：日期逐篇比对
     #    重新加载一遍 —— sync-hexo.py 在**导入时**就把 `data/` 下的表读进

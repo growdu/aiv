@@ -9,6 +9,7 @@
     "FAQ": "工程与语言/速查与清单",
     "Go Web": "工程与语言/Web、前端与搜索",
     "Linux": "源码主线/Linux",
+    "Mermaid": "手记/站务手记",
     "OPC": "工程与语言/编译、测试与调试",
     "PostgreSQL": "源码主线/PostgreSQL",
     "PostgreSQL 共享内存机制(深入版)": "源码主线/PostgreSQL/存储引擎",
@@ -21,6 +22,7 @@
     "openGauss": "分布式与架构/一致性协议",
     "代码示例": "工程与语言/编译、测试与调试",
     "协议": "源码主线/Linux/网络协议与抓包",
+    "博客搭建": "手记/站务手记",
     "存储": "源码主线/Linux/存储与文件系统",
     "工具": "工程与语言",
     "数据库": "源码主线/PostgreSQL",
@@ -32,6 +34,7 @@
     "编程语言": "工程与语言/计算机基础与语言入门",
     "编辑工具": "工程与语言/编译、测试与调试",
     "网络": "源码主线/Linux/网络协议与抓包",
+    "视频与自媒体": "手记/站务手记",
     "计算机基础": "工程与语言/计算机基础与语言入门",
     "计算机通信": "工程与语言/计算机基础与语言入门",
     "集群": "分布式与架构",
@@ -135,7 +138,10 @@
     "storage/_index.md",
     "computer_communication/_index.md",
     "programmer_self_cultivation/_index.md",
-    "environment/_index.md"
+    "environment/_index.md",
+    "blog/_index.md",
+    "blog/mermaid/_index.md",
+    "life/blog-to-wechat/_index.md"
   ],
   "file_map": {
     "ai/01-ai常用工具和开发框架.md": "engineering/ai-tooling/ai-toolbox/01-ai常用工具和开发框架.md",
@@ -167,6 +173,10 @@
     "ai/ai_video/AI一镜到底视频生成平台市场调研与可行性分析报告.md": "engineering/ai-tooling/ai-video-platform/AI一镜到底视频生成平台市场调研与可行性分析报告.md",
     "ai/claude/claude配置.md": "engineering/ai-tooling/ai-toolbox/claude配置.md",
     "ai/claude安装教程/index.md": "engineering/ai-tooling/ai-toolbox/claude安装教程/index.md",
+    "blog/mermaid/mermaid图渲染问题诊断与修复.md": "notes/site-ops/mermaid图渲染问题诊断与修复.md",
+    "blog/博客搭建指南.md": "notes/site-ops/博客搭建指南.md",
+    "blog/视频嵌入指南.md": "notes/site-ops/视频嵌入指南.md",
+    "blog/阿里云ECS选购指南.md": "notes/site-ops/阿里云ECS选购指南.md",
     "chatgpt/chatgpt使用.md": "engineering/ai-tooling/ai-foundations/chatgpt使用.md",
     "chatgpt/newbing使用教程/index.md": "engineering/ai-tooling/ai-foundations/newbing使用教程/index.md",
     "cluster/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md": "distributed/foundations/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md",
@@ -324,6 +334,7 @@
     "dpdk/交叉编译.md": "source-tracks/dpdk/getting-started/交叉编译.md",
     "dpdk/抓包.md": "source-tracks/dpdk/getting-started/抓包.md",
     "dpdk/用户态驱动-UIOVFIO/index.md": "source-tracks/dpdk/getting-started/用户态驱动-UIOVFIO/index.md",
+    "life/blog-to-wechat/index.md": "notes/site-ops/blog-to-wechat/index.md",
     "linux/centos搭建离线仓库.md": "source-tracks/linux/daily-ops/centos搭建离线仓库.md",
     "linux/cpu-affinity-top-guide/index.md": "source-tracks/linux/kernel-internals/cpu-affinity-top-guide/index.md",
     "linux/gcc attribute指北.md": "source-tracks/linux/kernel-internals/gcc attribute指北.md",
@@ -404,8 +415,13 @@
     "vpp/vpp日志系统.md": "source-tracks/dpdk/getting-started/vpp日志系统.md",
     "vpp/vpp调试指北.md": "source-tracks/dpdk/getting-started/vpp调试指北.md"
   },
-  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。 「AI 工具与实践」这一块（ai/ 29 篇 + chatgpt/ 2 篇，共 31 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix，阶段归属搬完一个字都不变（L1 19、L2 5、L3 2、L4 5）。落点是 `engineering/ai-tooling/` —— 挂在「工程与语言」下面的**嵌套项目**，所以分类链是三级：工程与语言 → AI工具与实践 → 系列。§4.3 那个「移出 docs/」的桶里 ai_video 那 5 篇**这一块还没执行**：搬走它会让 ai-tools 赛道的 L4 阶段一篇不剩，而阶段结构不许改（`tests/test_learning_path.py` 钉死每个阶段非空）—— 跟 code/ 的 11 篇、self.jpg 一起留到那个桶统一执行。 「Linux 与网络」这一块剩下的 18 篇（protocol/ 11 + storage/ 5 + computer_communication/ 1 + programmer_self_cultivation/ 1）按**系列 = 一个阶段**搬：protocol/ 里的 tcp/ip 分片/fib/抓包 进「网络协议与抓包」，storage/ 里的 nfs/samba/sshfs 进「存储与文件系统」，nginx 与 otel 三篇是工程化的活 —— nginx 进「Web、前端与搜索」，otel 三篇单开一个三级系列「可观测性」，coredump 进「编译、测试与调试」，那篇文件名跟正文对不上的（正文是 vfox 使用指南）改名后进「计算机基础与语言入门」。计算机通信、程序员自我修养这两个旧分类页连同 `docs/environment/` 下的 0 字节空文件一起清掉。",
+  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。 「AI 工具与实践」这一块（ai/ 29 篇 + chatgpt/ 2 篇，共 31 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix，阶段归属搬完一个字都不变（L1 19、L2 5、L3 2、L4 5）。落点是 `engineering/ai-tooling/` —— 挂在「工程与语言」下面的**嵌套项目**，所以分类链是三级：工程与语言 → AI工具与实践 → 系列。§4.3 那个「移出 docs/」的桶里 ai_video 那 5 篇**这一块还没执行**：搬走它会让 ai-tools 赛道的 L4 阶段一篇不剩，而阶段结构不许改（`tests/test_learning_path.py` 钉死每个阶段非空）—— 跟 code/ 的 11 篇、self.jpg 一起留到那个桶统一执行。 「Linux 与网络」这一块剩下的 18 篇（protocol/ 11 + storage/ 5 + computer_communication/ 1 + programmer_self_cultivation/ 1）按**系列 = 一个阶段**搬：protocol/ 里的 tcp/ip 分片/fib/抓包 进「网络协议与抓包」，storage/ 里的 nfs/samba/sshfs 进「存储与文件系统」，nginx 与 otel 三篇是工程化的活 —— nginx 进「Web、前端与搜索」，otel 三篇单开一个三级系列「可观测性」，coredump 进「编译、测试与调试」，那篇文件名跟正文对不上的（正文是 vfox 使用指南）改名后进「计算机基础与语言入门」。计算机通信、程序员自我修养这两个旧分类页连同 `docs/environment/` 下的 0 字节空文件一起清掉。 「手记副线」这一块把 `docs/blog/` 整个拆开：留站给读者看的 4 篇（ECS 选购、博客搭建、视频嵌入、mermaid 渲染诊断）加上 `life/blog-to-wechat/`那一篇（它是全站唯一一篇「视频与自媒体」分类的文章，内容是分发链路，归到站务比归到「人生与思考」准）一起收进 `notes/site-ops/`；§4.3 那个「不发布」的桶里 blog/ 的 5 篇（架构、重构方案、部署到服务器、同步到公众号方案、同名文章版本管理）移出 `docs/` 进 `internal/blog/`。架构与重构方案**对外发过**，所以它们的旧地址不 404 —— 落点是对外改写版（`unpublish_redirects`）。三个旧分类（博客搭建 / Mermaid / 视频与自媒体）都指向「手记/站务手记」。",
   "out_map": {
+    "blog/同名文章-html-与-md-版本管理.md": "internal/blog/同名文章-html-与-md-版本管理.md",
+    "blog/同步到公众号方案.md": "internal/blog/同步到公众号方案.md",
+    "blog/架构.md": "internal/blog/架构.md",
+    "blog/部署到服务器.md": "internal/blog/部署到服务器.md",
+    "blog/重构方案.md": "internal/blog/重构方案.md",
     "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
     "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md",
     "dpdk/fastupkni功能测试.md": "internal/dpdk/fastupkni功能测试.md",
@@ -417,6 +433,40 @@
     "vpp/fastup适配ptp方案.md": "internal/vpp/fastup适配ptp方案.md",
     "vpp/fatsup-cpu间转发测试报告/": "internal/vpp/fatsup-cpu间转发测试报告/"
   },
+  "out_ref_rewrites": [
+    {
+      "file": "README.md",
+      "form": "repo"
+    },
+    {
+      "file": "publish/spec/00-架构设计.md",
+      "form": "repo"
+    },
+    {
+      "file": "_config.matery.yml",
+      "form": "repo"
+    },
+    {
+      "file": "tools/sync-hexo.py",
+      "form": "repo"
+    },
+    {
+      "file": "tools/nginx_soft404.py",
+      "form": "repo"
+    },
+    {
+      "file": "tests/test_soft_404.py",
+      "form": "repo"
+    },
+    {
+      "file": "review/description-drafts.md",
+      "form": "docs"
+    },
+    {
+      "file": "platforms/wechat/docs/01-转换规则.md",
+      "form": "cid"
+    }
+  ],
   "projects": [
     {
       "display_name": "PostgreSQL",
@@ -531,6 +581,16 @@
         "testing-and-perf": "测试、验证与性能：压测怎么打、结果怎么读 —— 丢包、错包与瓶颈出在哪一层。"
       },
       "target_root": "source-tracks/dpdk"
+    },
+    {
+      "display_name": "手记",
+      "series": {
+        "site-ops": "站务手记"
+      },
+      "series_meta": {
+        "site-ops": "站务手记：ECS 怎么选、博客怎么搭、视频怎么嵌、mermaid 画坏了怎么查，以及一份文档怎么自动发到公众号和视频号。"
+      },
+      "target_root": "notes"
     }
   ],
   "ref_rewrites": [
@@ -617,8 +677,20 @@
     {
       "file": "docs/life/aiv/人格规范.md",
       "form": "docs"
+    },
+    {
+      "file": "platforms/wechat/docs/01-转换规则.md",
+      "form": "cid"
+    },
+    {
+      "file": "publish/spec/00-架构设计.md",
+      "form": "docs"
     }
   ],
-  "updated": "2026-11-17",
+  "unpublish_redirects": {
+    "blog/架构.md": "platform-meta/platform-overview/one-repo-three-pipelines.md",
+    "blog/重构方案.md": "platform-meta/info-architecture/category-restructure-and-learning-path.md"
+  },
+  "updated": "2026-11-18",
   "version": 1
 }

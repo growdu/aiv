@@ -383,6 +383,5 @@ Host myserver
 ---
 
 > **相关阅读**：
-> - [部署到服务器](./部署到服务器.md)
-> - [博客架构](./架构.md)
+> - [一个仓库，三条产线](../platform-meta/platform-overview/one-repo-three-pipelines.md) —— 仓库的目录边界与构建链路
 > - [博客搭建指南](./博客搭建指南.md)
