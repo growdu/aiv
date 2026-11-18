@@ -24,14 +24,17 @@ import warnings
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TOOLS = REPO_ROOT / "tools"
-THEME_PARTIALS = REPO_ROOT / "themes" / "matery" / "layout" / "_partial"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+# 站点这一平台的脚本搬进了 platforms/blog/site/tools/；平台无关的还留在根 tools/。
+ROOT_TOOLS = REPO_ROOT / "tools"
+SITE_TOOLS = SITE / "tools"
+THEME_PARTIALS = SITE / "themes" / "matery" / "layout" / "_partial"
 
 
 def load_tool(name):
     """Import one of the build tools as a module."""
     spec = importlib.util.spec_from_file_location(
-        "tool_under_test_{}".format(name.replace("-", "_")), TOOLS / (name + ".py")
+        "tool_under_test_{}".format(name.replace("-", "_")), SITE_TOOLS / (name + ".py")
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -157,7 +160,7 @@ def test_the_series_page_says_how_often_it_updates(tmp_path, monkeypatch):
 
 def test_the_menu_has_an_entry_for_the_series():
     """菜单里要有一项指向系列页。"""
-    config = (REPO_ROOT / "_config.matery.yml").read_text(encoding="utf-8")
+    config = (SITE / "_config.matery.yml").read_text(encoding="utf-8")
 
     assert re.search(r"^  播客:\n    url: /videos/$", config, re.M), (
         "菜单里应当有一项「播客」指向 /videos/"
@@ -188,12 +191,12 @@ def test_the_latest_episode_block_is_in_the_repo():
 
 
 def test_the_patch_theme_injects_the_block_and_the_styles():
-    text = (TOOLS / "patch-theme.py").read_text(encoding="utf-8")
+    text = (SITE_TOOLS / "patch-theme.py").read_text(encoding="utf-8")
 
     assert "partial('_partial/latest-episode')" in text
     assert "/* LATEST-EPISODE */" in text
     assert "f.write(le_css)" in text
-    css = (REPO_ROOT / "themes" / "matery" / "source" / "css" / "my.css").read_text(
+    css = (SITE / "themes" / "matery" / "source" / "css" / "my.css").read_text(
         encoding="utf-8"
     )
     assert "/* LATEST-EPISODE */" in css
@@ -209,11 +212,11 @@ def test_the_ci_builds_the_series_page_after_the_index():
         encoding="utf-8"
     )
 
-    assert workflow.count("python3 tools/build-series-page.py") == 2
+    assert workflow.count("python3 platforms/blog/site/tools/build-series-page.py") == 2
     for build in workflow.split("- name: Build publish index")[1:]:
         segment = build.split("- name: Apply theme patches")[0]
-        assert "tools/build-podcast-index.py" in segment
-        assert "tools/build-series-page.py" in segment
+        assert "platforms/blog/site/tools/build-podcast-index.py" in segment
+        assert "platforms/blog/site/tools/build-series-page.py" in segment
 
 
 def test_only_one_tool_writes_the_series_page():
@@ -226,7 +229,7 @@ def test_only_one_tool_writes_the_series_page():
     「这个文件不由本脚本写」是说明，不是写入。
     """
     writers = []
-    for path in sorted(TOOLS.glob("*.py")):
+    for path in sorted(SITE_TOOLS.glob("*.py")) + sorted(ROOT_TOOLS.glob("*.py")):
         with warnings.catch_warnings():
             # 别的工具文件里有历史遗留的无效转义序列——解析它不是本测试的事，
             # 别把人家的警告带进测试输出里。

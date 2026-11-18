@@ -42,9 +42,9 @@
 
 用法：
 
-    python3 tools/build-learning-path.py            # 生成
-    python3 tools/build-learning-path.py --check    # 只检查，不写文件
-    python3 tools/build-learning-path.py --json out.json
+    python3 platforms/blog/site/tools/build-learning-path.py            # 生成
+    python3 platforms/blog/site/tools/build-learning-path.py --check    # 只检查，不写文件
+    python3 platforms/blog/site/tools/build-learning-path.py --json out.json
 """
 
 from __future__ import annotations
@@ -57,20 +57,25 @@ import sys
 from collections import OrderedDict
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 站点脚本比根 tools/ 深了四层：parents[4] 才是仓库根。
+# 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import CONTENT_UNITS, DOCS, REPO_ROOT, SITE_SOURCE, SITE_TOOLS  # noqa: E402
 from site_root import permalink as _permalink  # noqa: E402
 from site_root import rooted_path as _rooted_path  # noqa: E402
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-POSTS_DIR = REPO_ROOT / "source" / "_posts"
-DOCS_DIR = REPO_ROOT / "docs"
+# 内容单元仓库（平台无关）。站点脚本是内容单元的**消费者**，不是所有者——
+# 它的输入是共享仓库，输出才是站点私有的。
+POSTS_DIR = CONTENT_UNITS
+DOCS_DIR = DOCS
 RULES_FILE = REPO_ROOT / "data" / "learning-path.json"
-OUT_DIR = REPO_ROOT / "source" / "learning"
-DATA_OUT = REPO_ROOT / "source" / "_data" / "learning.json"
+OUT_DIR = SITE_SOURCE / "learning"
+DATA_OUT = SITE_SOURCE / "_data" / "learning.json"
 
 FRONT_MATTER = re.compile(r"^---\n(.*?)\n---\n", re.S)
 
-#: ``tools/sync-hexo.py`` 里的同名集合：这些目录整棵不进产物。
+#: ``platforms/blog/site/tools/sync-hexo.py`` 里的同名集合：这些目录整棵不进产物。
 #: 两处必须一致 —— 少一个，多出来的文章就成了「没归类」的噪声。
 EXCLUDED_DIR_NAMES = frozenset({
     "tests", "test", "fixtures", "plans", "pipeline",
@@ -119,7 +124,7 @@ def sort_key(post: dict):
 
 
 def _load_sync():
-    """按路径加载 ``tools/sync-hexo.py``。
+    """按路径加载 ``platforms/blog/site/tools/sync-hexo.py``。
 
     借它的 ``_front_matter_title()``：**解 YAML 标题只有一份实现**。
     sync 把标题写成 ``title: "...数据库\\"脱颖而出\\""``（引号是 YAML 转义过的），
@@ -129,7 +134,7 @@ def _load_sync():
     """
     import importlib.util
 
-    path = REPO_ROOT / "tools" / "sync-hexo.py"
+    path = SITE_TOOLS / "sync-hexo.py"
     spec = importlib.util.spec_from_file_location("sync_hexo", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -522,7 +527,7 @@ def render_overview(tracks: list[dict], total: int) -> str:
         lines.append("")
     lines.append("---")
     lines.append("")
-    lines.append("这份路径由 `tools/build-learning-path.py` 生成，")
+    lines.append("这份路径由 `platforms/blog/site/tools/build-learning-path.py` 生成，")
     lines.append("分类规则在仓库根的 `data/learning-path.json`。")
     lines.append("加了新文章却没归类的话，CI 会红。")
     lines.append("")
@@ -599,7 +604,7 @@ def main(argv=None) -> int:
 
     if not POSTS_DIR.is_dir():
         raise SystemExit(
-            "没有 %s —— 先跑 python3 tools/sync-hexo.py（学习路径读的是 sync "
+            "没有 %s —— 先跑 python3 platforms/blog/site/tools/sync-hexo.py（学习路径读的是 sync "
             "之后的产物，front matter 和 permalink 都在那儿）" % POSTS_DIR)
 
     result = build()
@@ -610,7 +615,7 @@ def main(argv=None) -> int:
     # 那学习路径覆盖的就是另一批文章。
     mismatch = corpus_mismatch()
     if mismatch:
-        print("语料对不上：docs/ 和 source/_posts/ 不是同一批文章", file=sys.stderr)
+        print("语料对不上：docs/ 和 platforms/blog/site/source/_posts/ 不是同一批文章", file=sys.stderr)
         for line in mismatch[:20]:
             print("  " + line, file=sys.stderr)
         return 1

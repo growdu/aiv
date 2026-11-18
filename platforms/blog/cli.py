@@ -8,7 +8,8 @@
 站点是**全量构建**：一次 push 到 master，CI 重建全部 2400 个页面
 （`.github/workflows/hexo.yml`）。别的平台是「逐篇出包、发一篇文章」，
 站点不是——站点没有「一篇一篇发」这回事，只有「整站重建一次」。
-把逐篇出包在这里重写一遍，等于把 `tools/sync-hexo.py` + hexo
+把逐篇出包在这里重写一遍，等于把
+`platforms/blog/site/tools/sync-hexo.py` + hexo
 再写一遍，而两份必然漂移。
 
 所以这里只回答两个问题：
@@ -43,7 +44,7 @@ CAPABILITY_PATH = Path(__file__).resolve().parent / "capability.toml"
 SITE_URL = "https://growdu.cn"
 
 #: 站上标题的第二个来源：正文里第一个 H1。
-#: 口径与 `tools/sync-hexo.py::extract_title` 对齐。
+#: 口径与 `platforms/blog/site/tools/sync-hexo.py::extract_title` 对齐。
 H1_PATTERN = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 
 
@@ -100,7 +101,7 @@ def _snapshots() -> list:
 def _first_h1(path: Path) -> str | None:
     """正文里第一个 H1——站上标题的第二个来源。
 
-    口径与 `tools/sync-hexo.py::extract_title` 对齐：
+    口径与 `platforms/blog/site/tools/sync-hexo.py::extract_title` 对齐：
     取第一个 `# ` 开头的行，去掉行尾空白。
     """
     try:
@@ -185,7 +186,7 @@ def _check(content_id: str) -> int:
 
     # ① front matter：站上要的是「能取到标题」，不是「front matter 里有 title」
     #    —— 标题优先取 front matter 的 title，没有就剥第一个 H1
-    #    （`tools/sync-hexo.py::extract_title` 就是这个口径）。
+    #    （`platforms/blog/site/tools/sync-hexo.py::extract_title` 就是这个口径）。
     fields = _front_matter(target)
     title = fields.get("title") or _first_h1(target)
     if title:

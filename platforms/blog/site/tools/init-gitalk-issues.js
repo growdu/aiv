@@ -8,6 +8,10 @@
 const fs = require('fs');
 const path = require('path');
 
+// 站点的构建链搬进了 platforms/blog/site/，本脚本住在
+// platforms/blog/site/tools/ —— 产物目录是同级的 ../public。
+const PUBLIC_DIR = path.resolve(__dirname, '..', 'public');
+
 const REPO = process.env.GITHUB_REPOSITORY || 'growdu/blog';
 const TOKEN = process.env.GITHUB_TOKEN;
 // SITE_URL is the canonical URL where users will read the post.
@@ -45,7 +49,7 @@ function findGitalkPosts(dir, results) {
         const idM = html.match(/data-gitalk-id="([^"]+)"/);
         const titleM = html.match(/data-gitalk-title="([^"]+)"/);
         if (idM) {
-          const relPath = full.replace(/^public\//, '').replace(/\/index\.html$/, '/');
+          const relPath = path.relative(PUBLIC_DIR, full).replace(/\/index\.html$/, '/');
           results.push({
             id: idM[1],
             title: titleM ? decodeEntities(titleM[1]) : 'Untitled',
@@ -73,7 +77,7 @@ async function gh(url, opts) {
 }
 
 async function main() {
-  const posts = findGitalkPosts('public');
+  const posts = findGitalkPosts(PUBLIC_DIR);
   console.log('Found ' + posts.length + ' posts with gitalk');
 
   // Collect existing Gitalk issue labels.

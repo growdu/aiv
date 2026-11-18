@@ -443,11 +443,11 @@
       "form": "repo"
     },
     {
-      "file": "_config.matery.yml",
+      "file": "platforms/blog/site/_config.matery.yml",
       "form": "repo"
     },
     {
-      "file": "tools/sync-hexo.py",
+      "file": "platforms/blog/site/tools/sync-hexo.py",
       "form": "repo"
     },
     {
@@ -483,11 +483,11 @@
       "form": "repo"
     },
     {
-      "file": "themes/matery/layout/_partial/main-style.ejs",
+      "file": "platforms/blog/site/themes/matery/layout/_partial/main-style.ejs",
       "form": "repo"
     },
     {
-      "file": "themes/matery/source/css/tech.css",
+      "file": "platforms/blog/site/themes/matery/source/css/tech.css",
       "form": "repo"
     }
   ],
@@ -619,7 +619,7 @@
   ],
   "ref_rewrites": [
     {
-      "file": "tools/sync-hexo.py",
+      "file": "platforms/blog/site/tools/sync-hexo.py",
       "form": "docs"
     },
     {
@@ -631,7 +631,7 @@
       "form": "postid"
     },
     {
-      "file": "tools/templates/database.md",
+      "file": "platforms/blog/site/tools/templates/database.md",
       "form": "permalink"
     },
     {

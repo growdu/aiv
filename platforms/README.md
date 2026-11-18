@@ -60,8 +60,8 @@
 - 每加一个平台，**下游**要各自适配一遍（内容适配 → 视频生成 → review → output → upload），
   **上游**（`docs/` `video/` `drafts/` `review/`）一个字都不用改。
 
-> 站点这一平台的构建链（hexo / `public/` / 主题 / 站点脚本）**现在还在仓库根**，
-> 目标位置是 `platforms/blog/site/`。搬完之后，这句话对六个平台**全都**成立。
+> 站点这一平台的构建链（hexo / `public/` / 主题 / 站点脚本）**已经搬进 `platforms/blog/site/`**，
+> 所以「加平台只动 `platforms/`」这句话对六个平台**全都**成立。
 
 ---
 
@@ -153,7 +153,7 @@ image_bytes = 20971520
 
 每个平台的 adapter 干的是同一件事，五个步骤：
 
-| 步 | 干什么 | 站点上的对应物（目标位置 `platforms/blog/site/`） |
+| 步 | 干什么 | 站点上的对应物（`platforms/blog/site/`） |
 | --- | --- | --- |
 | **适配** | 按 `capability.toml` 的限额裁标题、压正文、配图、转换格式 | `platforms/blog/site/tools/sync-hexo.py` |
 | **生成** | 渲染成平台要的形态（HTML / 竖版切片 / 投稿包 / 静态站） | hexo + `platforms/blog/site/themes/matery/` |
@@ -165,9 +165,9 @@ image_bytes = 20971520
 另外五个是逐篇的一次。所以站点没有 `publish` 子命令。
 
 > **站点的构建链也是平台层的东西。** hexo、`public/`、主题、站点脚本
-> 目标位置是 `platforms/blog/site/`，跟站点 adapter 放在一起——
+> 都住在 `platforms/blog/site/`，跟站点 adapter 放在一起——
 > 这样「加平台只动 `platforms/`」对站点也成立。
-> 搬移计划见 `review/specs/2026-11-18-顶层设计与目录调整.md` §4.2（D9 / D10）。
+> 搬移见 `review/specs/2026-11-18-顶层设计与目录调整.md` §4.2（D9 / D10）。
 
 ---
 

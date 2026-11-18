@@ -2,8 +2,16 @@
 """Scan all docs/**/*.md for common markdown format issues."""
 import os, re, sys
 from collections import defaultdict
+from pathlib import Path
 
-ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs')
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import DOCS  # noqa: E402
+
+ROOT = str(DOCS)
 
 def line_iter(p):
     with open(p, 'r', encoding='utf-8', errors='replace') as f:

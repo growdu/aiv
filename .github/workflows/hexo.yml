@@ -59,7 +59,7 @@ jobs:
               ("__GITALK_PAGES_CLIENT_ID__",     "GITALK_PAGES_CLIENT_ID"),
               ("__GITALK_PAGES_CLIENT_SECRET__", "GITALK_PAGES_CLIENT_SECRET"),
           ]
-          path = "_config.matery.yml"
+          path = "platforms/blog/site/_config.matery.yml"
           with open(path, "r", encoding="utf-8") as f:
               content = f.read()
           missing = False
@@ -80,64 +80,73 @@ jobs:
           node-version: '22'
       - name: Install Hexo dependencies
         run: npm install
+        working-directory: platforms/blog/site
       - name: Security audit
         run: npm audit --audit-level=high || true
+        working-directory: platforms/blog/site
       - name: Sync content to Hexo
-        run: python3 tools/sync-hexo.py
+        run: python3 platforms/blog/site/tools/sync-hexo.py
       - name: Build video pages
         # AIV 的口播稿 → 站上的视频内容单元与合集页。
         run: python3 tools/build-video-pages.py
+      - name: Adapt content units into the site
+        # 内容单元住在 content/units/（平台无关，所有平台共用），
+        # 站点要渲染它们得先有一份自己的副本。
+        # **必须在 build-video-pages.py 之后**——视频内容单元是那一步生成的，
+        # 适配器早一步跑，站点就少了那 6 期，而且不报错（少的是内容，不是崩）。
+        run: python3 platforms/blog/site/tools/adapt-units.py
       - name: Build learning path
         # 全站文章 → 赛道 + 阶段的学习路径页（/learning/ 和每条赛道一页）。
-        # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物）、
+        # 必须在 sync-hexo.py 之后（它读 platforms/blog/site/source/_posts/ 里的编译产物）、
         # 必须在 build-video-pages.py 之后（那 6 期视频内容单元也是文章，
         # 要一起归类）、必须在 hexo generate 之前（页面要进产物）。
         # 规则在仓库根的 data/learning-path.json，文章一条都没归上的话
         # 这一步非零退出——「漏归类」不许悄悄发生。
-        run: python3 tools/build-learning-path.py
+        run: python3 platforms/blog/site/tools/build-learning-path.py
       - name: Build publish index
         # platforms/<plat>/outbox 的发布状态 → 站点用的发布索引（文章页的「这篇还发到了」）。
-        run: python3 tools/build-publish-index.py
+        run: python3 platforms/blog/site/tools/build-publish-index.py
       - name: Build podcast index
         # 母稿的期号字段 → 站点用的期号索引（母稿页顶部那一块期号区块）。
-        # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物），
+        # 必须在 sync-hexo.py 之后（它读 platforms/blog/site/source/_posts/ 里的编译产物），
         # 必须在 patch-theme.py 之前（partial 在渲染时读它）。
-        run: python3 tools/build-podcast-index.py
+        run: python3 platforms/blog/site/tools/build-podcast-index.py
       - name: Build series page
         # 期号索引 → 系列页（/videos/）。一期一行：期号、钩子、时长、
         # 完整版（母稿页）、平台。
-        run: python3 tools/build-series-page.py
+        run: python3 platforms/blog/site/tools/build-series-page.py
       - name: Build podcast feed
         # 期号索引 → 播客 feed（/feed.xml）+ 旁白音频的站点副本。
         # 成片 mp4 不托管，旁白 mp3 托管——RSS 的 <enclosure> 需要
         # 自己域名下的稳定音频直链。
-        run: python3 tools/build-podcast-feed.py
+        run: python3 platforms/blog/site/tools/build-podcast-feed.py
       - name: Apply theme patches
-        run: python3 tools/patch-theme.py
+        run: python3 platforms/blog/site/tools/patch-theme.py
       - name: Copy vendor assets
-        run: python3 tools/copy-vendor.py
+        run: python3 platforms/blog/site/tools/copy-vendor.py
       - name: Build with Hexo
         run: npx hexo generate
+        working-directory: platforms/blog/site
       - name: Verify episode blocks
         # 期号区块必须在**渲染产物**里真的在：期号头、钩子、播放器、
         # 平台链接、源码清单、复现命令、系列导航。
         # 这一步不能省——期号数据走三条通道（母稿透传 / 发布索引 / 主题
         # partial），任何一环断了页面照常渲染，只是那一块是空的。
-        run: python3 tools/check-episode-block.py
+        run: python3 platforms/blog/site/tools/check-episode-block.py
       - name: Verify home tabs
         # 首页那三个 tab（最新发布 / 编辑推荐 / 近期热门）必须真的对应
         # 三个面板：标签 href ↔ 面板 id 一一对应，面板带 home-tab-panel 类名，
         # 默认激活「最新发布」。
         # 这一步不能省——tab 曾经是**假控件**：模板写了、代码调了 .tabs()，
         # 但面板 id 与 href 对不上时，页面照常渲染，那个 tab 点了不切换。
-        run: python3 tools/check-home-tabs.py
+        run: python3 platforms/blog/site/tools/check-home-tabs.py
       - name: Verify card excerpts
         # 首页那 18 张卡片的摘要必须是真的摘要：不能以「TL;DR」「[TOC]」开头
         # （那是正文漏出来了），不能以履历前缀开头（「初稿，」说的是这次改了
         # 什么），也不能是空的。
         # 这一步不能省——572 篇文章里只有 1 篇写了 <!-- more -->，摘要曾经
         # 一律退回正文的前 80 个字，页面上好几张卡以「TL;DR」开头。
-        run: python3 tools/check-card-excerpts.py
+        run: python3 platforms/blog/site/tools/check-card-excerpts.py
       - name: Subset Font Awesome fonts
         # 字体裁剪是锦上添花：裁成功省 240 KB，裁失败就保持原样。
         # 所以这一步**不许**把整条流水线带崩——失败只发一条 ::warning:: 注解，
@@ -154,7 +163,7 @@ jobs:
         run: |
           python3 -m pip install --quiet fonttools \
             || echo "::warning::fontTools 装不上，跳过字体裁剪（原字体照常发布）"
-          python3 tools/subset-icons.py --public public \
+          python3 platforms/blog/site/tools/subset-icons.py --public platforms/blog/site/public --theme platforms/blog/site/themes/matery \
             || echo "::warning::字体裁剪失败，保留原字体（站点不受影响）"
       - name: Verify rendered HTML body tags
         # Catches regressions like the 2026-08-10 broken <body> tag
@@ -163,7 +172,7 @@ jobs:
           python3 - <<'PYCHECK'
           import re, sys
           bad = []
-          targets = ['public/index.html']
+          targets = ['platforms/blog/site/public/index.html']
           for p in targets:
               try:
                   with open(p, encoding='utf-8') as f:
@@ -187,38 +196,39 @@ jobs:
               sys.exit(1)
           PYCHECK
       - name: Inject SW build version
-        # Stamps a fresh cache name into public/sw.js so existing
+        # Stamps a fresh cache name into platforms/blog/site/public/sw.js so existing
         # browsers will install the new SW and evict old caches on
         # activate (fixes stale-cache regressions on big releases).
         run: |
           # Combine git short SHA + UTC timestamp + $RANDOM so even back-to-back
           # deploys (same second) get distinct cache names, and we can correlate
           # the cache version back to a commit when debugging in the field.
-          # source/sw.js is listed under skip_render in _config.yml, so hexo
-          # generate does NOT copy it into public/. Force-copy here so the
+          # platforms/blog/site/source/sw.js is listed under skip_render in
+          # platforms/blog/site/_config.yml, so hexo generate does NOT copy it
+          # into platforms/blog/site/public/. Force-copy here so the
           # __SW_CACHE_NAME__ placeholder is actually present.
-          cp source/sw.js public/sw.js
+          cp platforms/blog/site/source/sw.js platforms/blog/site/public/sw.js
           SHORT_SHA=$(git rev-parse --short HEAD)
           BUILD_ID="${SHORT_SHA}-$(date -u +%Y%m%d%H%M%S)-${RANDOM}"
-          sed -i "s|__SW_CACHE_NAME__|blog-v${BUILD_ID}|" public/sw.js
-          grep -o "const CACHE='[^']*'" public/sw.js
+          sed -i "s|__SW_CACHE_NAME__|blog-v${BUILD_ID}|" platforms/blog/site/public/sw.js
+          grep -o "const CACHE='[^']*'" platforms/blog/site/public/sw.js
           # Fail loudly if the placeholder was not replaced (e.g. CI
           # skipped the sed step). Otherwise the SW would use a literal
           # "__SW_CACHE_NAME__" cache name and evict its own cache on
           # every load.
-          if grep -q '__SW_CACHE_NAME__' public/sw.js; then
+          if grep -q '__SW_CACHE_NAME__' platforms/blog/site/public/sw.js; then
             echo 'ERROR: SW cache name placeholder not replaced' >&2
             exit 1
           fi
       - name: Publish Vercount verification file
         run: |
-          mkdir -p public/.well-known
-          cp source/.well-known/vercount-verify-zd5pj09shdfkbm6h83ra5zzk.txt public/.well-known/ 2>/dev/null || true
+          mkdir -p platforms/blog/site/public/.well-known
+          cp platforms/blog/site/source/.well-known/vercount-verify-zd5pj09shdfkbm6h83ra5zzk.txt platforms/blog/site/public/.well-known/ 2>/dev/null || true
       - name: Fix XML escaping in sitemap and feed
         run: |
           python3 -c "
           import re
-          for fpath in ['public/sitemap.xml', 'public/atom.xml']:
+          for fpath in ['platforms/blog/site/public/sitemap.xml', 'platforms/blog/site/public/atom.xml']:
               try:
                   with open(fpath, 'r', encoding='utf-8') as f:
                       content = f.read()
@@ -241,6 +251,8 @@ jobs:
         # 万一服务器这套 build 挂了，Pages 那套会先上线：那时候评论区的
         # issue 由第一个留言的人自行创建（Gitalk 的本来行为），不会卡住。
         run: node tools/init-gitalk-issues.js
+        # 脚本读的是相对路径 public/，所以工作目录必须是站点目录。
+        working-directory: platforms/blog/site
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # growdu.cn is the primary domain; the growdu.github.io/blog
@@ -251,7 +263,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: blog-public
-          path: ./public
+          path: ./platforms/blog/site/public
           retention-days: 3
 
   deploy-server:
@@ -276,7 +288,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: blog-public
-          path: ./public
+          path: ./platforms/blog/site/public
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -321,7 +333,7 @@ jobs:
           # 1. rsync 到新的 release 目录
           rsync -avz --delete ${LINK_OPT} \
             -e "ssh ${SSH_OPTS}" \
-            ./public/ \
+            ./platforms/blog/site/public/ \
             "${REMOTE}:${REL_DIR}/${TIMESTAMP}/"
           # 2. 原子切换 symlink
           ssh ${SSH_OPTS} "${REMOTE}" "
@@ -362,6 +374,7 @@ jobs:
           node-version: '22'
       - name: Install Hexo dependencies
         run: npm install
+        working-directory: platforms/blog/site
       - name: Configure GitHub Pages build
         env:
           PAGES_CLIENT_ID: ${{ secrets.GITALK_PAGES_CLIENT_ID }}
@@ -371,7 +384,7 @@ jobs:
           import json, os, re
           from pathlib import Path
 
-          site = Path('_config.yml')
+          site = Path('platforms/blog/site/_config.yml')
           content = site.read_text(encoding='utf-8')
           content = re.sub(r'^url:.*$', 'url: https://growdu.github.io/blog', content, count=1, flags=re.M)
           content = re.sub(r'^root:.*$', 'root: /blog/', content, count=1, flags=re.M)
@@ -382,79 +395,86 @@ jobs:
           if not client_id or not client_secret:
               raise SystemExit('GitHub Pages Gitalk credentials are missing')
 
-          theme = Path('_config.matery.yml')
+          theme = Path('platforms/blog/site/_config.matery.yml')
           content = theme.read_text(encoding='utf-8')
           # GitHub Pages build: keep the dedicated gitalk_pages block, leave gitalk untouched
           print('Configured url/root for growdu.github.io/blog; gitalk_pages will be used at runtime')
           PY
       - name: Sync content to Hexo
-        run: python3 tools/sync-hexo.py
+        run: python3 platforms/blog/site/tools/sync-hexo.py
       - name: Build video pages
         run: python3 tools/build-video-pages.py
+      - name: Adapt content units into the site
+        # 内容单元住在 content/units/（平台无关，所有平台共用），
+        # 站点要渲染它们得先有一份自己的副本。
+        # **必须在 build-video-pages.py 之后**——视频内容单元是那一步生成的，
+        # 适配器早一步跑，站点就少了那 6 期，而且不报错（少的是内容，不是崩）。
+        run: python3 platforms/blog/site/tools/adapt-units.py
       - name: Build learning path
         # 全站文章 → 赛道 + 阶段的学习路径页（/learning/ 和每条赛道一页）。
-        # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物）、
+        # 必须在 sync-hexo.py 之后（它读 platforms/blog/site/source/_posts/ 里的编译产物）、
         # 必须在 build-video-pages.py 之后（那 6 期视频内容单元也是文章）、
         # 必须在 hexo generate 之前（页面要进产物）。
         # 这一步跑在 root: /blog/ 改写之后，所以生成的页面里的站内链接
         # 自带 /blog 前缀——镜像站上不会 404。
-        run: python3 tools/build-learning-path.py
+        run: python3 platforms/blog/site/tools/build-learning-path.py
       - name: Build publish index
-        run: python3 tools/build-publish-index.py
+        run: python3 platforms/blog/site/tools/build-publish-index.py
       - name: Build podcast index
         # 母稿的期号字段 → 站点用的期号索引（母稿页顶部那一块期号区块）。
-        # 必须在 sync-hexo.py 之后（它读 source/_posts/ 里的编译产物），
+        # 必须在 sync-hexo.py 之后（它读 platforms/blog/site/source/_posts/ 里的编译产物），
         # 必须在 patch-theme.py 之前（partial 在渲染时读它）。
-        run: python3 tools/build-podcast-index.py
+        run: python3 platforms/blog/site/tools/build-podcast-index.py
       - name: Build series page
         # 期号索引 → 系列页（/videos/）。一期一行：期号、钩子、时长、
         # 完整版（母稿页）、平台。
-        run: python3 tools/build-series-page.py
+        run: python3 platforms/blog/site/tools/build-series-page.py
       - name: Build podcast feed
         # 期号索引 → 播客 feed（/feed.xml）+ 旁白音频的站点副本。
         # 成片 mp4 不托管，旁白 mp3 托管——RSS 的 <enclosure> 需要
         # 自己域名下的稳定音频直链。
-        run: python3 tools/build-podcast-feed.py
+        run: python3 platforms/blog/site/tools/build-podcast-feed.py
       - name: Apply theme patches
-        run: python3 tools/patch-theme.py
+        run: python3 platforms/blog/site/tools/patch-theme.py
       - name: Copy vendor assets
-        run: python3 tools/copy-vendor.py
+        run: python3 platforms/blog/site/tools/copy-vendor.py
       - name: Build GitHub Pages site
         run: npx hexo generate
+        working-directory: platforms/blog/site
       - name: Verify episode blocks
         # 期号区块必须在**渲染产物**里真的在：期号头、钩子、播放器、
         # 平台链接、源码清单、复现命令、系列导航。
         # 这一步不能省——期号数据走三条通道（母稿透传 / 发布索引 / 主题
         # partial），任何一环断了页面照常渲染，只是那一块是空的。
-        run: python3 tools/check-episode-block.py
+        run: python3 platforms/blog/site/tools/check-episode-block.py
       - name: Verify home tabs
         # 首页那三个 tab（最新发布 / 编辑推荐 / 近期热门）必须真的对应
         # 三个面板：标签 href ↔ 面板 id 一一对应，面板带 home-tab-panel 类名，
         # 默认激活「最新发布」。
         # 这一步不能省——tab 曾经是**假控件**：模板写了、代码调了 .tabs()，
         # 但面板 id 与 href 对不上时，页面照常渲染，那个 tab 点了不切换。
-        run: python3 tools/check-home-tabs.py
+        run: python3 platforms/blog/site/tools/check-home-tabs.py
       - name: Verify card excerpts
         # 首页那 18 张卡片的摘要必须是真的摘要：不能以「TL;DR」「[TOC]」开头
         # （那是正文漏出来了），不能以履历前缀开头（「初稿，」说的是这次改了
         # 什么），也不能是空的。
         # 这一步不能省——572 篇文章里只有 1 篇写了 <!-- more -->，摘要曾经
         # 一律退回正文的前 80 个字，页面上好几张卡以「TL;DR」开头。
-        run: python3 tools/check-card-excerpts.py
+        run: python3 platforms/blog/site/tools/check-card-excerpts.py
       - name: Subset Font Awesome fonts
         # 与 growdu.cn 那套 build 同一个裁剪步骤（两边的图标清单一样）。
         # 同样是"失败不阻断"：失败只发一条 ::warning:: 注解。
         run: |
           python3 -m pip install --quiet fonttools \
             || echo "::warning::fontTools 装不上，跳过字体裁剪（原字体照常发布）"
-          python3 tools/subset-icons.py --public public \
+          python3 platforms/blog/site/tools/subset-icons.py --public platforms/blog/site/public --theme platforms/blog/site/themes/matery \
             || echo "::warning::字体裁剪失败，保留原字体（站点不受影响）"
       - name: Verify rendered HTML body tags
         run: |
           python3 - <<'PYCHECK'
           import re, sys
           bad = []
-          targets = ['public/index.html']
+          targets = ['platforms/blog/site/public/index.html']
           for p in targets:
               try:
                   with open(p, encoding='utf-8') as f:
@@ -482,26 +502,27 @@ jobs:
           # Combine git short SHA + UTC timestamp + $RANDOM so even back-to-back
           # deploys (same second) get distinct cache names, and we can correlate
           # the cache version back to a commit when debugging in the field.
-          # source/sw.js is listed under skip_render in _config.yml, so hexo
-          # generate does NOT copy it into public/. Force-copy here so the
+          # platforms/blog/site/source/sw.js is listed under skip_render in
+          # platforms/blog/site/_config.yml, so hexo generate does NOT copy it
+          # into platforms/blog/site/public/. Force-copy here so the
           # __SW_CACHE_NAME__ placeholder is actually present.
-          cp source/sw.js public/sw.js
+          cp platforms/blog/site/source/sw.js platforms/blog/site/public/sw.js
           SHORT_SHA=$(git rev-parse --short HEAD)
           BUILD_ID="${SHORT_SHA}-$(date -u +%Y%m%d%H%M%S)-${RANDOM}"
-          sed -i "s|__SW_CACHE_NAME__|blog-v${BUILD_ID}|" public/sw.js
-          grep -o "const CACHE='[^']*'" public/sw.js
+          sed -i "s|__SW_CACHE_NAME__|blog-v${BUILD_ID}|" platforms/blog/site/public/sw.js
+          grep -o "const CACHE='[^']*'" platforms/blog/site/public/sw.js
           # Fail loudly if the placeholder was not replaced (e.g. CI
           # skipped the sed step). Otherwise the SW would use a literal
           # "__SW_CACHE_NAME__" cache name and evict its own cache on
           # every load.
-          if grep -q '__SW_CACHE_NAME__' public/sw.js; then
+          if grep -q '__SW_CACHE_NAME__' platforms/blog/site/public/sw.js; then
             echo 'ERROR: SW cache name placeholder not replaced' >&2
             exit 1
           fi
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./public
+          path: ./platforms/blog/site/public
 
   deploy-github-pages:
     name: Deploy to GitHub Pages

@@ -1,7 +1,7 @@
 """首页是单页设计，不该再分页。
 
 首页的内容（统计条 / 学习路径 / 三个 Tab 的卡片）全都渲染在
-``themes/matery/layout/_partial/home-content.ejs`` 里，而那个 partial
+``platforms/blog/site/themes/matery/layout/_partial/home-content.ejs`` 里，而那个 partial
 **只在第一页渲染**::
 
     <% if (is_home() && page.current === 1) { %>
@@ -18,9 +18,10 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CONFIG = REPO_ROOT / "_config.yml"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+CONFIG = SITE / "_config.yml"
 HOME_CONTENT = (
-    REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
+    SITE / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
 )
 
 
@@ -75,8 +76,8 @@ def test_nothing_links_to_the_pagination_pages():
     """
     offenders = []
     for path in (
-        *sorted((REPO_ROOT / "themes" / "matery" / "layout").rglob("*.ejs")),
-        REPO_ROOT / "tools" / "patch-theme.py",
+        *sorted((SITE / "themes" / "matery" / "layout").rglob("*.ejs")),
+        SITE / "tools" / "patch-theme.py",
     ):
         text = path.read_text(encoding="utf-8")
         for number, line in enumerate(text.splitlines(), start=1):

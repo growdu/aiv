@@ -37,8 +37,9 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-THEME_LAYOUT = REPO_ROOT / "themes" / "matery" / "layout" / "layout.ejs"
-HOME_CONTENT = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+THEME_LAYOUT = SITE / "themes" / "matery" / "layout" / "layout.ejs"
+HOME_CONTENT = SITE / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
 FETCHER = REPO_ROOT / "tools" / "fetch-view-counts.py"
 SNAPSHOT = REPO_ROOT / "data" / "view-counts.json"
 NODE = shutil.which("node")
@@ -409,7 +410,7 @@ def test_the_snapshot_file_is_a_valid_counts_object():
 
 
 def _load_sync():
-    spec = importlib.util.spec_from_file_location("sync_hexo_view_counts", REPO_ROOT / "tools" / "sync-hexo.py")
+    spec = importlib.util.spec_from_file_location("sync_hexo_view_counts", SITE / "tools" / "sync-hexo.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -417,7 +418,7 @@ def _load_sync():
 
 
 def test_the_snapshot_reaches_the_hexo_data_dir(tmp_path):
-    """快照必须被复制到 ``source/_data/``——hexo 才会把它挂到 site.data 上。
+    """快照必须被复制到站点的 ``source/_data/``——hexo 才会把它挂到 site.data 上。
 
     复制不到 ``_data/`` 的话，模板里的 ``site.data['view-counts']``
     永远是 undefined，页面会一直显示不出阅读量。

@@ -23,7 +23,8 @@ import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-THEME = REPO / "themes" / "matery"
+SITE = REPO / "platforms" / "blog" / "site"
+THEME = SITE / "themes" / "matery"
 PARTIAL = THEME / "layout" / "_partial"
 ALL_EJS = THEME / "layout" / "all.ejs"
 HOME_CONTENT = PARTIAL / "home-content.ejs"
@@ -108,11 +109,11 @@ def test_the_built_all_page_redirects_without_a_nested_document():
     产物是 gitignore 的，本地构建过才有；CI 的 site-guard 不构建，
     所以没构建时跳过，而不是红。
     """
-    built = REPO / "public" / "all" / "index.html"
+    built = SITE / "public" / "all" / "index.html"
     if not built.is_file():
         import pytest
 
-        pytest.skip("还没构建（public/all/index.html 不存在）")
+        pytest.skip("还没构建（platforms/blog/site/public/all/index.html 不存在）")
 
     html = built.read_text(encoding="utf-8")
 
@@ -127,13 +128,13 @@ def test_the_archive_page_exists_in_the_built_site():
     产物是 gitignore 的，本地构建过才有；CI 的 site-guard 不构建，
     所以没构建时跳过，而不是红。
     """
-    built = REPO / "public" / "archives" / "index.html"
+    built = SITE / "public" / "archives" / "index.html"
     if not built.is_file():
         import pytest
 
-        pytest.skip("还没构建（public/archives/index.html 不存在）")
+        pytest.skip("还没构建（platforms/blog/site/public/archives/index.html 不存在）")
 
-    assert built.stat().st_size > 0, "public/archives/index.html 是空的"
+    assert built.stat().st_size > 0, "platforms/blog/site/public/archives/index.html 是空的"
 
 
 # --- 独立页不该被注入主题资源 -----------------------------------------------
@@ -145,7 +146,7 @@ def _patcher_function(name: str):
     那个脚本是一路执行下来的（没有 ``main()`` 保护），import 它会把整个
     主题改一遍——所以只能抠出函数体自己 exec。
     """
-    text = (REPO / "tools" / "patch-theme.py").read_text(encoding="utf-8")
+    text = (SITE / "tools" / "patch-theme.py").read_text(encoding="utf-8")
     rest = text[text.index("def {}(".format(name)):]
     # 函数体到**第一个顶格行**为止（下一个模块级语句）。
     lines = rest.split("\n")

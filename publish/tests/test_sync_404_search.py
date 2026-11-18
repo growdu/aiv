@@ -22,32 +22,12 @@ import json
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SYNC_SCRIPT = REPO_ROOT / "tools" / "sync-hexo.py"
+# 集成测试的假仓库：把站点构建链的落点重定向到临时目录。
+from sync_harness import build_corpus, run_sync, site_source_dir
+
 NODE = shutil.which("node")
-
-
-def build_corpus(root: Path, drafts) -> None:
-    for rel, text in drafts.items():
-        path = root / "docs" / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    shutil.copy(REPO_ROOT / "_config.matery.yml", root / "_config.matery.yml")
-
-
-def run_sync(root: Path) -> None:
-    result = subprocess.run(
-        [sys.executable, str(SYNC_SCRIPT)],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, "sync-hexo.py 失败：\n{}\n{}".format(
-        result.stdout, result.stderr
-    )
 
 
 DRAFT = "---\ntitle: {title}\n---\n\n{body}\n"
@@ -64,7 +44,8 @@ CORPUS = {
 
 
 def read_lite_index(root: Path):
-    path = root / "source" / "search-lite.json"
+    """读精简索引（站点私有的源目录里）。"""
+    path = site_source_dir(root) / "search-lite.json"
     assert path.exists(), "sync 没有写出 source/search-lite.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -111,7 +92,7 @@ def test_the_404_page_no_longer_looks_for_a_file_that_does_not_exist(tmp_path):
     build_corpus(tmp_path, CORPUS)
     run_sync(tmp_path)
 
-    page = (tmp_path / "source" / "404.html").read_text(encoding="utf-8")
+    page = (site_source_dir(tmp_path) / "404.html").read_text(encoding="utf-8")
 
     # 只看代码，不看注释——那段 JS 里留了注释说明「当年就是去 fetch 一个不存在的
     # 文件」，注释里当然会出现 search.xml。断言要管的是**代码**还会不会去取它。
@@ -171,8 +152,8 @@ def run_404_script(root: Path, query: str) -> subprocess.CompletedProcess:
             NODE,
             "-e",
             HARNESS,
-            str(root / "source" / "404.html"),
-            str(root / "source" / "search-lite.json"),
+            str(site_source_dir(root) / "404.html"),
+            str(site_source_dir(root) / "search-lite.json"),
             query,
         ],
         capture_output=True,
@@ -235,7 +216,7 @@ def test_the_lite_index_is_small_enough_to_fetch_from_an_error_page(tmp_path):
     build_corpus(tmp_path, CORPUS)
     run_sync(tmp_path)
 
-    size = (tmp_path / "source" / "search-lite.json").stat().st_size
+    size = (site_source_dir(tmp_path) / "search-lite.json").stat().st_size
 
     assert size < 200 * 1024, "精简索引有 {} 字节，太大了".format(size)
 

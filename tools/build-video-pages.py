@@ -5,7 +5,7 @@
 入库的唯一真相；画面契约在 ``video/contracts/<期号>.json``，发布状态在
 ``platforms/<平台>/outbox/*.json``。
 
-生成的是**内容单元**（``source/_posts/video/<期号>.md``），不是页面：
+生成的是**内容单元**（``content/units/video/<期号>.md``），不是页面：
 视频和文章走同一套渲染、同一个 permalink、同一条「已发布到」通道。
 这也补上了规格 §9.3 说的那句话——站点是内容谱系的根，而视频此前
 在站上零呈现（video widget 关着、菜单无入口）。
@@ -14,7 +14,7 @@
 ``ifeq ($(EP),<期号>)`` 登记），**不另建一份映射表**——两个地方各记一遍
 就会漂。
 
-生成物是派生产物：``source/`` 不入库，每次构建现生成（与 ``sync-hexo.py``
+生成物是派生产物：``content/units/video/`` 每次构建现生成（与 ``sync-hexo.py``
 的产物一个待遇）。
 
 用法：
@@ -23,10 +23,10 @@
 
 产物：
 
-    source/_posts/video/<期号>.md    每期一个内容单元
+    content/units/video/<期号>.md    每期一个内容单元
 
-**合集页（``source/videos/index.md``）不由这个脚本写**：它由
-``tools/build-series-page.py`` 生成——那一页是**系列页**，按期号排，
+**合集页（``platforms/blog/site/source/videos/index.md``）不由这个脚本写**：它由
+``platforms/blog/site/tools/build-series-page.py`` 生成——那一页是**系列页**，按期号排，
 每期带钩子、时长与完整版（母稿页）的链接，数据来自期号索引
 （母稿是唯一真相）。一个文件一个写入者。
 """
@@ -37,12 +37,16 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+# 根 tools/ 的脚本：parents[1] 就是仓库根。
+# 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from paths import CONTENT_UNITS, REPO_ROOT  # noqa: E402
+
 AIV_ROOT = REPO_ROOT / "video"
 MAKEFILE = AIV_ROOT / "pipeline" / "Makefile"
 CONTRACTS_DIR = AIV_ROOT / "contracts"
 PLATFORMS_DIR = REPO_ROOT / "platforms"
-POSTS_DIR = REPO_ROOT / "source" / "_posts"
+POSTS_DIR = CONTENT_UNITS
 
 CATEGORY = "视频"
 AUTHOR = "growdu"
@@ -251,7 +255,7 @@ def main(argv=None) -> int:
     print("生成视频内容单元 {} 个：{}".format(
         len(pages), "、".join(episode for episode, *_ in pages)
     ))
-    print("合集页（系列页）由 tools/build-series-page.py 生成")
+    print("合集页（系列页）由 platforms/blog/site/tools/build-series-page.py 生成")
     return 0
 
 

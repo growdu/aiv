@@ -7,8 +7,8 @@
 
 守卫有两条，都在这儿：
 
-1. **集成**：真的跑一遍 ``tools/sync-hexo.py``——``docs/`` 下工程目录里的文件
-   **不**进产物，而同名文件（``README.md``）照旧进；
+1. **集成**：真的跑一遍 ``platforms/blog/site/tools/sync-hexo.py``——``docs/``
+   下工程目录里的文件**不**进产物，而同名文件（``README.md``）照旧进；
 2. **防回归**：仓库里今天 ``docs/`` 下命中排除名单的**必须是空集**——空集才
    说明这条规则没有改变任何现有产物的去留（§4.3「当前状态：规则命中 0 个
    文件」）。
@@ -19,13 +19,18 @@
 """
 
 import importlib.util
-import shutil
-import subprocess
-import sys
 from pathlib import Path
 
+# 集成测试的假仓库：把站点构建链的落点重定向到临时目录。
+from sync_harness import (
+    SYNC_SCRIPT,
+    build_corpus,
+    content_units_dir,
+    run_sync,
+    site_source_dir,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SYNC_SCRIPT = REPO_ROOT / "tools" / "sync-hexo.py"
 DOCS = REPO_ROOT / "docs"
 
 #: §4.3 的排除名单（原文）：路径中任意一级目录名命中即排除，大小写不敏感。
@@ -48,7 +53,10 @@ CONTENT_UNIT_FLOOR = 500
 
 
 def load_sync_module():
-    """Load ``tools/sync-hexo.py`` as a module (it is a script, not a package).
+    """Load ``platforms/blog/site/tools/sync-hexo.py`` as a module.
+
+    它是个脚本，不是包——所以用 importlib 按路径加载。
+    
 
     只读常量与纯函数，不跑 ``main()``——脚本的入口有 ``__main__`` 守卫。
     """
@@ -162,30 +170,6 @@ def test_the_content_unit_count_stays_above_the_floor():
 # --- 集成：真的跑一遍 sync-hexo.py ---------------------------------------
 
 
-def build_corpus(root: Path, drafts) -> None:
-    for rel, text in drafts.items():
-        path = root / "docs" / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    shutil.copy(REPO_ROOT / "_config.matery.yml", root / "_config.matery.yml")
-
-
-def run_sync(root: Path) -> None:
-    # **解码必须显式。** `text=True` 会按 `locale.getpreferredencoding()`
-    # 解码（中文 Windows 是 cp936），而子进程输出的是 UTF-8——
-    # 两边对不上就会在读取线程里炸出 UnicodeDecodeError，`stdout` 变 None。
-    result = subprocess.run(
-        [sys.executable, str(SYNC_SCRIPT)],
-        cwd=str(root),
-        capture_output=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    assert result.returncode == 0, "sync-hexo.py 失败：\n{}\n{}".format(
-        result.stdout, result.stderr
-    )
-
-
 DRAFT = "---\ntitle: {title}\n---\n\n{body}\n"
 
 CORPUS = {
@@ -205,7 +189,7 @@ def test_engineering_directories_are_not_published(tmp_path):
     build_corpus(tmp_path, CORPUS)
     run_sync(tmp_path)
 
-    posts = tmp_path / "source" / "_posts"
+    posts = content_units_dir(tmp_path)
 
     # 该发的照发
     assert (posts / "blog" / "ok.md").is_file()
@@ -232,7 +216,8 @@ def test_the_excluded_directories_leave_no_trace_in_the_product(tmp_path):
     )
     run_sync(tmp_path)
 
-    source = tmp_path / "source"
+    units = content_units_dir(tmp_path)
+    source = site_source_dir(tmp_path)
 
-    assert not (source / "_posts" / "blog" / "pipeline").exists()
+    assert not (units / "blog" / "pipeline").exists()
     assert not (source / "images" / "blog" / "pipeline").exists()

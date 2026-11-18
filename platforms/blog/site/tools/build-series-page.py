@@ -16,23 +16,25 @@
 
 用法：
 
-    python3 tools/build-series-page.py [--out <路径>]
+    python3 platforms/blog/site/tools/build-series-page.py [--out <路径>]
 """
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 站点脚本比根 tools/ 深了四层：parents[4] 才是仓库根。
+# 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_SOURCE  # noqa: E402
 from site_root import permalink as _permalink  # noqa: E402
 from site_root import rooted_path as _rooted_path  # noqa: E402
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = REPO_ROOT / "source" / "_data"
+DATA_DIR = SITE_SOURCE / "_data"
 PODCAST_INDEX = DATA_DIR / "podcast_index.json"
-SERIES_DIR = REPO_ROOT / "source" / "videos"
+SERIES_DIR = SITE_SOURCE / "videos"
 
 #: 系列的更新节奏。规格 §7.1：「承诺了就要兑现」。
 CADENCE = "每周一期"

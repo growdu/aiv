@@ -32,7 +32,8 @@ import subprocess
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-PARTIAL = REPO / "themes" / "matery" / "layout" / "_partial"
+SITE = REPO / "platforms" / "blog" / "site"
+PARTIAL = SITE / "themes" / "matery" / "layout" / "_partial"
 POST_CARD = PARTIAL / "post-card.ejs"
 POST_TLDR = PARTIAL / "post-tldr.ejs"
 NODE = shutil.which("node")

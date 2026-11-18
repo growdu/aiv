@@ -140,7 +140,7 @@ def workspace(tmp_path):
     全部在 ``tmp_path`` 里——测试一个字节都不许写进仓库。
     """
     root = tmp_path / "blog"
-    posts = root / "source" / "_posts"
+    posts = root / "content" / "units"
     posts.mkdir(parents=True)
     (posts / "db").mkdir(parents=True)
     (posts / "db" / "demo.md").write_text(

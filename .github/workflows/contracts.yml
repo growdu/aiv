@@ -58,7 +58,13 @@ jobs:
       - name: Build content units
         # 内容单元是 sync 的产物，也是契约层与 adapter 真正读的东西。
         # 没有它，adapter 的测试没有语料。
-        run: python3 tools/sync-hexo.py
+        run: python3 platforms/blog/site/tools/sync-hexo.py
+
+      - name: Adapt content units into the site
+        # 站点拿到的那份内容单元副本（source/_posts/）。
+        # 微信与头条的 adapter 读的是**站点那份**（图片按「文章目录的上一级」
+        # 解析，图片住在站点的 source/images/ 里），所以这一步不能省。
+        run: python3 platforms/blog/site/tools/adapt-units.py
 
       - name: Content contract gate
         # 违规即失败：标题超长、platforms 不是列表、difficulty 越界……

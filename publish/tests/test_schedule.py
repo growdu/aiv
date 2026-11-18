@@ -8,8 +8,8 @@
 3. **候选集只认文档类平台**——视频平台走它们自己那套 CLI；
 4. **写盘的位置全都能配**——环境变量给默认值，命令行选项覆盖环境变量。
 
-语料是**临时造的**：``source/_posts/`` 不入库（``.gitignore`` 第 3 行
-``/source/``），干净检出里它根本不存在，测试不能依赖它。
+语料是**临时造的**：``content/units/`` 不入库（``.gitignore`` 第 10 行
+``/content/units/``），干净检出里它根本不存在，测试不能依赖它。
 """
 
 from datetime import date
@@ -165,7 +165,7 @@ def test_config_defaults_to_the_repository_layout(tmp_path):
     """没有环境变量时：仓库根从 cwd 往上找，状态目录在 ``publish/``。"""
     root = tmp_path / "blog"
     (root / "publish" / "publishkit").mkdir(parents=True)
-    (root / "source" / "_posts").mkdir(parents=True)
+    (root / "content" / "units").mkdir(parents=True)
 
     config = resolve_config(repo_root=root)
 
@@ -173,7 +173,7 @@ def test_config_defaults_to_the_repository_layout(tmp_path):
     assert config.state_dir == root / "publish"
     assert config.schedule_file == root / "publish" / "schedule.json"
     assert config.outbox_root == root / "platforms"
-    assert config.posts_dir == root / "source" / "_posts"
+    assert config.posts_dir == root / "content" / "units"
     assert config.platforms_dir == root / "platforms"
     assert config.secrets_file == root / "platforms" / "wechat" / "secrets.json"
 
@@ -597,8 +597,8 @@ def test_every_schedule_error_is_a_publishkit_error():
 def test_the_whole_selection_flow_over_a_temporary_corpus(tmp_path):
     """从语料到选题走一遍：发现 → 读 outbox → 选题。
 
-    语料是临时造的：``source/_posts/`` 不入库（``.gitignore`` 第 3 行
-    ``/source/``），干净检出里它根本不存在，测试不能依赖它。
+    语料是临时造的：``content/units/`` 不入库（``.gitignore`` 第 10 行
+    ``/content/units/``），干净检出里它根本不存在，测试不能依赖它。
     """
     posts = tmp_path / "_posts"
     write_post(
@@ -634,7 +634,7 @@ def test_the_selection_flow_over_a_configured_repository_layout(tmp_path):
     语料与 outbox 都在临时目录里——测试一个字节都不许写进仓库。
     """
     root = tmp_path / "blog"
-    posts = root / "source" / "_posts"
+    posts = root / "content" / "units"
     write_post(
         posts,
         "db/demo.md",

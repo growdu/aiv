@@ -11,11 +11,21 @@ Run AFTER patch-theme.py and theme clone, BEFORE sync-hexo.py.
 The manifest is consumed by tools/copy-vendor.py AFTER sync-hexo.py.
 """
 import os, re, json, sys
+from pathlib import Path
 
-THEME = 'themes/matery'
+# 站点的构建链搬进了 platforms/blog/site/，但这个脚本**留在根 tools/**——
+# 它是平台无关的工具，只是处理站点这一平台的主题而已。
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import ROOT_TOOLS, SITE, SITE_THEMES  # noqa: E402
+
+THEME = str(SITE_THEMES / 'matery')
 CONFIG = os.path.join(THEME, '_config.yml')
 ROOT = '/blog/lib/'
-MANIFEST_PATH = 'tools/cdn-manifest.json'
+MANIFEST_PATH = str(ROOT_TOOLS / 'cdn-manifest.json')
+#: node_modules 跟着站点搬了家（package.json 在 platforms/blog/site/）。
+#: 清单里写的 'node_modules/...' 是**逻辑路径**，copy-vendor.py 负责落成实际路径。
+NODE_MODULES = str(SITE / 'node_modules')
 
 copies = []  # list of [node_modules_path, source_lib_path]
 
@@ -86,7 +96,7 @@ def make_copy_instruction(pkg, file_path):
 
 def file_installed(pkg, file_path):
     """Check if the file exists in node_modules."""
-    return os.path.isfile(f'node_modules/{pkg}/{file_path}')
+    return os.path.isfile(os.path.join(NODE_MODULES, pkg, file_path))
 
 
 def process_value(val):

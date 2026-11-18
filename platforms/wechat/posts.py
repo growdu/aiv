@@ -1,6 +1,7 @@
 """Discover blog posts and validate them against WeChat's hard limits.
 
-Input is ``source/_posts/``, the output of ``tools/sync-hexo.py``.  That
+Input is the site's posts directory, the output of
+``platforms/blog/site/tools/sync-hexo.py``.  That
 step already rewrote image paths, rewrote relative links into absolute
 permalinks, stripped the leading H1 and rebuilt the front-matter, so this
 module never re-implements any of that.  It only reads what sync produced
@@ -123,8 +124,9 @@ def _unquote(value: str) -> str:
 def parse_front_matter(text: str):
     """Split YAML-ish front-matter from the body.
 
-    ``tools/sync-hexo.py`` generates the front-matter itself, so the shape
-    is known and fixed: ``key: value`` scalars plus ``key:`` followed by
+    ``platforms/blog/site/tools/sync-hexo.py`` generates the front-matter
+    itself, so the shape is known and fixed: ``key: value`` scalars plus
+    ``key:`` followed by
     ``  - item`` lists.  A tiny hand-written parser avoids adding a YAML
     dependency for a format we control.
 
@@ -173,7 +175,7 @@ def build_permalink(slug: str, date: str) -> str:
     """Build the canonical site URL of a post.
 
     Hexo's ``permalink: :year/:month/:day/:title/`` expands ``:title`` to
-    the post path relative to ``source/_posts/`` (verified against the
+    the post path relative to the posts directory (verified against the
     published sitemap), so the permalink mirrors that path exactly.
     """
     parts = date[:10].split("-")
@@ -214,7 +216,8 @@ def discover(posts_dir: Path) -> list:
     posts_dir = Path(posts_dir)
     if not posts_dir.is_dir():
         raise FileNotFoundError(
-            "source/_posts not found at {}. Run `python3 tools/sync-hexo.py` first "
+            "posts directory not found at {}. Run "
+            "`python3 platforms/blog/site/tools/sync-hexo.py` first "
             "(it takes about three minutes).".format(posts_dir)
         )
     return [load_post(path, posts_dir) for path in sorted(posts_dir.rglob("*.md"))]

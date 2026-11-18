@@ -10,7 +10,7 @@
 ``home-tab-panel`` 类名、三个面板被 ``id`` 写重了，页面照样渲染，
 只是那个 tab 点了不切换——回到今天这个「假控件」的状态。
 
-所以要在**渲染产物**（``public/index.html``）上断言：
+所以要在**渲染产物**（``platforms/blog/site/public/index.html``）上断言：
 
 1. 三个 tab 标签的 href 与三个面板的 id 一一对应；
 2. 三个面板都带 ``home-tab-panel`` 类名；
@@ -19,7 +19,7 @@
 
 用法：
 
-    python3 tools/check-home-tabs.py [--public public]
+    python3 platforms/blog/site/tools/check-home-tabs.py [--public platforms/blog/site/public]
 
 退出码 0 = 全部通过；1 = 有问题（问题逐条打印在 stdout）。
 """
@@ -29,8 +29,14 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_DIR = REPO_ROOT / "public"
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_PUBLIC  # noqa: E402
+
+PUBLIC_DIR = SITE_PUBLIC
 
 #: 首页文章区的三个面板 id。顺序 = 期望的显示顺序。
 TAB_IDS = ["home-tab-latest", "home-tab-featured", "home-tab-hot"]
@@ -93,7 +99,7 @@ def main(argv=None):
     parser.add_argument(
         "--public",
         default=str(PUBLIC_DIR),
-        help="渲染产物目录（默认 public）",
+        help="渲染产物目录（默认 platforms/blog/site/public）",
     )
     args = parser.parse_args(argv)
 

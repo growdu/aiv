@@ -1,17 +1,15 @@
-"""集成测试：真的跑一遍 tools/sync-hexo.py，产物里真的带上 platforms / publish_on。
+"""集成测试：真的跑一遍 sync-hexo.py，产物里真的带上 platforms / publish_on。
 
 契约层说「母稿说了什么就透传什么」——这句话要由**真的跑一遍发布脚本**来验，
-不是靠读代码。本文件用一份最小母稿语料跑完整的 sync-hexo.py，再检查
-source/_posts/ 下生成出来的 front matter。
+不是靠读代码。本文件用一份最小母稿语料跑完整的
+``platforms/blog/site/tools/sync-hexo.py``，再检查 ``content/units/``
+下生成出来的 front matter。
 
 语料是合成的（跑全量 docs/ 要三分钟，不适合放进单元测试），
-但跑的是**仓库里那一份真的** tools/sync-hexo.py。
+但跑的是**仓库里那一份真的** sync-hexo.py。
 """
 
 import re
-import shutil
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -23,39 +21,13 @@ from publishkit.contract import (
     validate_fields,
 )
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SYNC_SCRIPT = REPO_ROOT / "tools" / "sync-hexo.py"
-
-
-def build_corpus(root: Path, drafts) -> None:
-    """Write a minimal docs/ tree plus the config sync-hexo.py reads."""
-    for rel, text in drafts.items():
-        path = root / "docs" / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    # sync-hexo.py 用 _config.matery.yml 生成关于页；缺了它脚本会中断。
-    shutil.copy(REPO_ROOT / "_config.matery.yml", root / "_config.matery.yml")
-
-
-def run_sync(root: Path) -> None:
-    """Run the repository's sync-hexo.py over the corpus in ``root``."""
-    # **解码必须显式。** `text=True` 会按 `locale.getpreferredencoding()`
-    # 解码（中文 Windows 是 cp936），而子进程输出的是 UTF-8——
-    # 两边对不上就会在读取线程里炸出 UnicodeDecodeError，`stdout` 变 None。
-    result = subprocess.run(
-        [sys.executable, str(SYNC_SCRIPT)],
-        cwd=str(root),
-        capture_output=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    assert result.returncode == 0, "sync-hexo.py 失败：\n{}\n{}".format(
-        result.stdout, result.stderr
-    )
+# 集成测试的假仓库：把站点构建链的落点重定向到临时目录。
+from sync_harness import SYNC_SCRIPT, build_corpus, content_units_dir, run_sync
 
 
 def read_post(root: Path, rel: str) -> str:
-    path = root / "source" / "_posts" / rel
+    """读编译出来的内容单元（内容单元仓库住在 ``content/units/``）。"""
+    path = content_units_dir(root) / rel
     assert path.is_file(), "sync-hexo.py 没有生成 {}".format(path)
     return path.read_text(encoding="utf-8")
 
@@ -474,4 +446,4 @@ def test_every_post_is_written(tmp_path, draft_name):
     build_corpus(tmp_path, drafts)
     run_sync(tmp_path)
 
-    assert (tmp_path / "source" / "_posts" / "blog" / draft_name).is_file()
+    assert (content_units_dir(tmp_path) / "blog" / draft_name).is_file()

@@ -2,11 +2,11 @@
 
 这一层测三件事：
 
-1. **构建工具**——``tools/build-podcast-index.py`` 从内容单元里读出期号线：
+1. **构建工具**——``platforms/blog/site/tools/build-podcast-index.py`` 从内容单元里读出期号线：
    地址是**派生**的、期号是排好序的、平台链接来自发布索引。
 2. **主题装配**——期号区块的 partial 在库里、渲染位在正文之前、
    CSS 与 mermaid 适配都接上了、CI 里跑得着那两步。
-3. **渲染产物**——``tools/check-episode-block.py`` 在**渲染出来的 HTML** 上
+3. **渲染产物**——``platforms/blog/site/tools/check-episode-block.py`` 在**渲染出来的 HTML** 上
    断言区块该有的东西都在。这是唯一能证明「区块真的在」的地方：
    静态检查模板只证明模板里有那几行字，不证明页面上有那一块。
 
@@ -23,8 +23,9 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TOOLS = REPO_ROOT / "tools"
-THEME_PARTIALS = REPO_ROOT / "themes" / "matery" / "layout" / "_partial"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+TOOLS = SITE / "tools"
+THEME_PARTIALS = SITE / "themes" / "matery" / "layout" / "_partial"
 
 #: 六期母稿：期号 slug → 母稿路径（docs/ 下）。
 #: 母稿是唯一真相（不变量一），期号线由它们认领。
@@ -70,7 +71,7 @@ def _split_front_matter(text):
 def _content_unit_text(draft_path, date_text):
     """母稿 → 内容单元的 front matter。
 
-    真实构建里这一步是 ``tools/sync-hexo.py`` 做的（它还处理标签、分类、
+    真实构建里这一步是 ``platforms/blog/site/tools/sync-hexo.py`` 做的（它还处理标签、分类、
     摘要）。这里只取 front matter，够期号索引用。
 
     日期用测试给的固定值：真实构建里日期来自 git 提交历史（最早一次
@@ -388,7 +389,7 @@ def test_the_patch_theme_injects_the_block_and_the_styles():
     # 样式得**真的被写进 my.css**：只声明一段 CSS 而不写，页面照样没有样式。
     assert "f.write(ep_css)" in text
     # 样式得进 my.css，主题文件里没有第二份副本。
-    css = (REPO_ROOT / "themes" / "matery" / "source" / "css" / "my.css").read_text(
+    css = (SITE / "themes" / "matery" / "source" / "css" / "my.css").read_text(
         encoding="utf-8"
     )
     assert "/* EPISODE-BLOCK */" in css
@@ -418,15 +419,17 @@ def test_the_ci_builds_the_index_and_checks_the_rendered_pages():
         encoding="utf-8"
     )
 
-    assert workflow.count("python3 tools/build-podcast-index.py") == 2
-    assert workflow.count("python3 tools/check-episode-block.py") == 2
+    assert workflow.count("python3 platforms/blog/site/tools/build-podcast-index.py") == 2
+    assert workflow.count("python3 platforms/blog/site/tools/check-episode-block.py") == 2
 
     # 顺序：索引要在 patch-theme 之前（partial 渲染时读它），
     # 检查要在 hexo generate 之后（渲染产物那时候才有）。
     for build in workflow.split("- name: Build publish index")[1:]:
-        assert "tools/build-podcast-index.py" in build.split("- name: Apply theme patches")[0]
+        assert "platforms/blog/site/tools/build-podcast-index.py" in build.split(
+            "- name: Apply theme patches"
+        )[0]
     for build in workflow.split("npx hexo generate")[1:]:
-        assert "tools/check-episode-block.py" in build
+        assert "platforms/blog/site/tools/check-episode-block.py" in build
 
 
 # --- 3. 渲染产物 -----------------------------------------------------------

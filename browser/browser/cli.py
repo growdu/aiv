@@ -683,7 +683,7 @@ def build_parser() -> argparse.ArgumentParser:
                            help="给**已经在平台上的草稿**补图（头条号，只更新不新建）")
     add_common(p_tt)
     p_tt.add_argument("content_ids", nargs="*",
-                       help="文章在站点里的 id（就是 source/_posts 下的相对路径，去掉 .md）")
+                       help="文章在站点里的 id（就是 content/units 下的相对路径，去掉 .md）")
     p_tt.add_argument("--all", dest="all_posts", action="store_true",
                        help="把账本里所有 drafted 的文章都过一遍")
     p_tt.add_argument("--packages-dir", default=None,

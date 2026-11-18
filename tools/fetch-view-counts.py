@@ -52,8 +52,12 @@ import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+from paths import SITE_MATERY_CONFIG  # noqa: E402
+
 DEFAULT_OUT = REPO_ROOT / "data" / "view-counts.json"
-CONFIG_PATH = REPO_ROOT / "_config.matery.yml"
+# 站点的主题覆盖配置跟着站点搬了家（platforms/blog/site/）。
+CONFIG_PATH = SITE_MATERY_CONFIG
 
 #: 统计区间的起点。取一个很早的日期——我们要的是**累计**阅读量。
 DEFAULT_START = "2020-01-01T00:00:00Z"

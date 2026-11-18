@@ -12,17 +12,15 @@
 1. **URL 派生**（单元）——拼出来的路径长什么样；
 2. **content_id 派生**（单元）——母稿怎么对应到内容单元；
 3. **字段校验**（单元）——缺一个必填字段就报错，绝不静默补默认值；
-4. **接缝**（集成）——真跑一遍 ``tools/sync-hexo.py``，验母稿派生的
-   content_id 与**编译产物**里的内容单元 id 一致、期号字段真的到了产物。
+4. **接缝**（集成）——真跑一遍 ``platforms/blog/site/tools/sync-hexo.py``，
+   验母稿派生的 content_id 与**编译产物**里的内容单元 id 一致、期号字段
+   真的到了产物。
 
 另外有两条**漂移守卫**：期号字段的两份白名单必须一致、规格里写的钩子
 字数区间必须与代码里的常量一致。
 """
 
-import os
 import re
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -45,8 +43,10 @@ from publishkit.episode import (
     validate_episode_series,
 )
 
+# 集成测试的假仓库：把站点构建链的落点重定向到临时目录。
+from sync_harness import SYNC_SCRIPT, build_corpus, content_units_dir, run_sync
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SYNC_SCRIPT = REPO_ROOT / "tools" / "sync-hexo.py"
 SPEC = REPO_ROOT / "publish" / "spec" / "08-站点IP骨架.md"
 
 #: 六期母稿 → 内容单元 id。
@@ -84,37 +84,9 @@ SIX_EPISODE_DRAFTS = {
 # --- 工具 -------------------------------------------------------------------
 
 
-def build_corpus(root: Path, drafts) -> None:
-    """Write a minimal docs/ tree plus the config sync-hexo.py reads."""
-    for rel, text in drafts.items():
-        path = root / "docs" / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    # sync-hexo.py 用 _config.matery.yml 生成关于页；缺了它脚本会中断。
-    shutil.copy(REPO_ROOT / "_config.matery.yml", root / "_config.matery.yml")
-
-
-def run_sync(root: Path) -> None:
-    """Run the repository's sync-hexo.py over the corpus in ``root``."""
-    # **解码必须显式。** `text=True` 会按 `locale.getpreferredencoding()`
-    # 解码（中文 Windows 是 cp936），而子进程输出的是 UTF-8——
-    # 两边对不上就会在读取线程里炸出 UnicodeDecodeError，`stdout` 变 None。
-    env = dict(os.environ, PYTHONIOENCODING="utf-8")
-    result = subprocess.run(
-        [sys.executable, str(SYNC_SCRIPT)],
-        cwd=str(root),
-        capture_output=True,
-        encoding="utf-8",
-        errors="replace",
-        env=env,
-    )
-    assert result.returncode == 0, "sync-hexo.py 失败：\n{}\n{}".format(
-        result.stdout, result.stderr
-    )
-
-
 def read_post(root: Path, rel: str) -> str:
-    path = root / "source" / "_posts" / rel
+    """读编译出来的内容单元（内容单元仓库住在 ``content/units/``）。"""
+    path = content_units_dir(root) / rel
     assert path.is_file(), "sync-hexo.py 没有生成 {}".format(path)
     return path.read_text(encoding="utf-8")
 
@@ -213,7 +185,7 @@ def test_landing_url_matches_the_site_build_layers_permalink():
 
 
 def test_content_id_for_draft_maps_index_md_to_its_own_directory():
-    """``docs/<目录>/index.md`` 编译成 ``source/_posts/<目录>.md``。
+    """``docs/<目录>/index.md`` 编译成 ``content/units/<目录>.md``。
 
     直接拿母稿路径去后缀会得到 ``.../index``——派生的落地 URL 指向一个
     **不存在**的页面。
@@ -430,7 +402,8 @@ def test_validate_episode_series_ignores_articles_without_a_series():
 def test_reading_a_draft_leaves_the_date_empty():
     """母稿的 ``date:`` 不是站点的日期。
 
-    ``tools/sync-hexo.py`` 编译时把母稿的 ``date:`` 覆盖成 git 里最早的
+    ``platforms/blog/site/tools/sync-hexo.py`` 编译时把母稿的 ``date:``
+    覆盖成 git 里最早的
     一次提交时间——站点 permalink 用的是那个值。2026-11-14 实测：六期
     母稿里**四期根本没写** ``date:``。
 
@@ -522,11 +495,12 @@ def test_the_draft_content_id_matches_the_compiled_content_unit(tmp_path):
     """**母稿 → content_id** 必须与**编译产物**里的内容单元 id 逐字相同。
 
     两边算法不同：母稿在 ``docs/`` 下（``index.md`` 要变成它所在的
-    目录），产物在 ``source/_posts/`` 下（已经是 ``<目录>.md``）。
+    目录），产物在 ``content/units/`` 下（已经是 ``<目录>.md``）。
     算法错了，落地 URL 就指向一个不存在的页面——而服务器对未知路径
     返回 200 + 首页，**探活看不出来**。
 
-    所以这条测试真的跑一遍 ``tools/sync-hexo.py``，把两边对上。
+    所以这条测试真的跑一遍 ``platforms/blog/site/tools/sync-hexo.py``，
+    把两边对上。
     """
     build_corpus(tmp_path, {"source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md": EPISODE_DRAFT})
     run_sync(tmp_path)
@@ -537,7 +511,7 @@ def test_the_draft_content_id_matches_the_compiled_content_unit(tmp_path):
         tmp_path / "docs",
     )
     compiled = (
-        tmp_path / "source" / "_posts" / "source-tracks" / "postgresql"
+        content_units_dir(tmp_path) / "source-tracks" / "postgresql"
         / "transaction-mvcc" / "postgresql-row-lock-deep-dive.md"
     )
 
@@ -555,10 +529,10 @@ def test_the_landing_url_is_derived_from_the_compiled_content_unit(tmp_path):
     run_sync(tmp_path)
 
     post = (
-        tmp_path / "source" / "_posts" / "source-tracks" / "postgresql"
+        content_units_dir(tmp_path) / "source-tracks" / "postgresql"
         / "transaction-mvcc" / "postgresql-row-lock-deep-dive.md"
     )
-    episode = read_episode(post, posts_root=tmp_path / "source" / "_posts")
+    episode = read_episode(post, posts_root=content_units_dir(tmp_path))
 
     assert episode.content_id == "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"
     assert episode.date is not None
@@ -620,7 +594,8 @@ def test_a_draft_without_episode_fields_is_untouched(tmp_path):
 
 
 def test_the_sync_script_lists_every_episode_field():
-    """期号字段**逐个**出现在 ``tools/sync-hexo.py`` 的白名单里。
+    """期号字段**逐个**出现在 ``platforms/blog/site/tools/sync-hexo.py``
+    的白名单里。
 
     这一层**不许** import 契约层（有测试盯着），所以两份清单各写一份
     字面量，一致性靠这两条测试钉住。

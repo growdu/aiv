@@ -18,7 +18,8 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-HOME_CONTENT = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+HOME_CONTENT = SITE / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
 
 NODE = shutil.which("node")
 needs_node = pytest.mark.skipif(NODE is None, reason="这台机器上没有 node")

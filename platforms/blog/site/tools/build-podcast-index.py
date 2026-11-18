@@ -21,22 +21,25 @@ date，走 ``tools/site_root.py`` 的 ``permalink``——那是站点构建层�
 
 用法：
 
-    python3 tools/build-podcast-index.py [--out <路径>]
+    python3 platforms/blog/site/tools/build-podcast-index.py [--out <路径>]
 """
 
 import argparse
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 站点脚本比根 tools/ 深了四层：parents[4] 才是仓库根。
+# 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import CONTENT_UNITS, SITE_SOURCE  # noqa: E402
 from site_root import permalink as _permalink  # noqa: E402
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-POSTS_DIR = REPO_ROOT / "source" / "_posts"
-DATA_DIR = REPO_ROOT / "source" / "_data"
+# 内容单元仓库（平台无关）——站点是消费者，不是所有者。
+POSTS_DIR = CONTENT_UNITS
+DATA_DIR = SITE_SOURCE / "_data"
 PUBLISH_INDEX = DATA_DIR / "publish_index.json"
 
 #: 系列的一句话定位。规格 §7.1 系列页的口径。

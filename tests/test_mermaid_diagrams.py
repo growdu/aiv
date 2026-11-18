@@ -2,7 +2,7 @@
 
 **背景**
 ------
-mermaid 解析失败时，``themes/matery/layout/layout.ejs`` 会把那张图换成
+mermaid 解析失败时，``platforms/blog/site/themes/matery/layout/layout.ejs`` 会把那张图换成
 一行「⚠ 此图语法错误，未能渲染」。从页面截图上看，那只是一块提示框，
 不点开源码根本不知道原来画的是什么——于是「图坏了」这件事在站点上
 一直是隐形的。
@@ -37,7 +37,7 @@ EP01 的首图（``postgresql-logical-replication-end-to-end-flow`` 的
 --------
 1. ``docs/`` 里的 mermaid 图不许出现 ``-->|"..."]`` 这种写法
    （结尾的省略号后面紧跟 ``]``）。这条是纯文本规则，不需要浏览器。
-2. ``tools/check-mermaid.py`` 必须用 ``mermaid.render()`` 检查，
+2. ``platforms/blog/site/tools/check-mermaid.py`` 必须用 ``mermaid.render()`` 检查，
    不能用 ``parse()``——``parse`` 只查语法，查不出布局期的错误
    （比如 gantt 的 ``Invalid date``），用它会漏掉 11 张。
 3. 工具收集 mermaid 源码时要去重、并且把 HTML 实体还原
@@ -45,7 +45,7 @@ EP01 的首图（``postgresql-logical-replication-end-to-end-flow`` 的
    ``&lt;br&#x2F;&gt;``，不还原的话量的是转义后的文本）。
 
 放在根级 ``tests/``，随 ``site-guard.yml`` 进 CI（不构建产物）。
-全站 110 张坏图的清单用 ``python3 tools/check-mermaid.py --list`` 现量，
+全站 110 张坏图的清单用 ``python3 platforms/blog/site/tools/check-mermaid.py --list`` 现量，
 不在这个测试里钉死——那是内容清理的活，不是契约。
 """
 
@@ -56,8 +56,9 @@ import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+SITE = REPO / "platforms" / "blog" / "site"
 DOCS = REPO / "docs"
-TOOL = REPO / "tools" / "check-mermaid.py"
+TOOL = SITE / "tools" / "check-mermaid.py"
 
 MERMAID_BLOCK = re.compile(r"```mermaid\n(.*?)```", re.S)
 
@@ -68,7 +69,7 @@ BROKEN_EDGE_LABEL = re.compile(r'-->\|"[^"]*\.\.\."\s*\]')
 
 
 def _load_tool():
-    """按路径加载 ``tools/check-mermaid.py``。
+    """按路径加载 ``platforms/blog/site/tools/check-mermaid.py``。
 
     ``tools/`` 不是包，所以走文件加载。模块顶层没有副作用
     （Chrome 是用到才起的），import 不会拉起浏览器。

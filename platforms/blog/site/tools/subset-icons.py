@@ -29,14 +29,14 @@ Font Awesome 全集几千个字形，一个图标少一个，文件大小几乎�
 ------
 1. 从 ``all.min.css`` 里读出每个图标类的码位——以 CSS 为准，不依赖
    fontawesome 的 metadata，两者版本对不上时 CSS 才是浏览器真正认的东西；
-2. 从构建产物 ``public/**/*.html`` 和主题模板里找出真正用到的图标类，
-   并从**同一段 class** 里认出字体族；
-3. 用 fontTools 把每个字体裁到用到的码位，原地替换 ``public`` 里的字体文件。
+2. 从构建产物 ``platforms/blog/site/public/**/*.html`` 和主题模板里找出
+   真正用到的图标类，并从**同一段 class** 里认出字体族；
+3. 用 fontTools 把每个字体裁到用到的码位，原地替换产物目录里的字体文件。
 
 用法::
 
-    python3 tools/subset-icons.py --public public
-    python3 tools/subset-icons.py --public public --dry-run
+    python3 platforms/blog/site/tools/subset-icons.py --public platforms/blog/site/public
+    python3 platforms/blog/site/tools/subset-icons.py --public platforms/blog/site/public --dry-run
 
 依赖 fontTools（裁 woff2 还需要 brotli）。CI 里现装现用，不进仓库依赖。
 """
@@ -48,6 +48,13 @@ import os
 import re
 import sys
 from pathlib import Path
+
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_PUBLIC, SITE_THEMES  # noqa: E402
 
 # 一条图标规则：.fa-a:before,.fa-b:before{content:"\fYYY"}
 _ICON_RULE = re.compile(
@@ -232,11 +239,13 @@ def _patch_css(css_path: Path, names: list[str]) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--public", default="public", help="构建产物目录（默认 public）"
+        "--public",
+        default=str(SITE_PUBLIC),
+        help="构建产物目录（默认 platforms/blog/site/public）",
     )
     parser.add_argument(
         "--theme",
-        default=os.path.join("themes", "matery"),
+        default=str(SITE_THEMES / "matery"),
         help="主题目录，用来补扫模板里动态插入的图标",
     )
     parser.add_argument(

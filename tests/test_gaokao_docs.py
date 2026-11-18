@@ -91,7 +91,7 @@ def _fenced_regions(markdown: str) -> list[tuple[int, int]]:
 def _heading_ids(markdown: str) -> list[str]:
     """Heading ids the Hexo renderer would emit for this document.
 
-    The leading ``# Title`` is skipped: ``tools/sync-hexo.py`` strips it
+    The leading ``# Title`` is skipped: ``platforms/blog/site/tools/sync-hexo.py`` strips it
     before handing the body to the renderer, because the title already
     lives in the front matter.
 

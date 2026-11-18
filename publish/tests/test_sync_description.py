@@ -21,13 +21,12 @@
 import importlib.util
 import difflib
 import re
-import shutil
-import subprocess
-import sys
 from pathlib import Path
 
+# 集成测试的假仓库：把站点构建链的落点重定向到临时目录。
+from sync_harness import SYNC_SCRIPT, build_corpus, content_units_dir, run_sync
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SYNC_SCRIPT = REPO_ROOT / "tools" / "sync-hexo.py"
 DRAFT_SCRIPT = REPO_ROOT / "tools" / "draft-descriptions.py"
 DOCS = REPO_ROOT / "docs"
 
@@ -36,7 +35,10 @@ DESCRIPTION_LIMIT = 150
 
 
 def load_sync_module():
-    """Load ``tools/sync-hexo.py`` as a module (it is a script, not a package)."""
+    """Load ``platforms/blog/site/tools/sync-hexo.py`` as a module.
+
+    它是个脚本，不是包——所以用 importlib 按路径加载。
+    """
     spec = importlib.util.spec_from_file_location("sync_hexo_description", SYNC_SCRIPT)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -301,26 +303,6 @@ def test_the_description_survives_the_content_contract():
 # --- 集成：真的跑一遍 sync-hexo.py ---------------------------------------
 
 
-def build_corpus(root: Path, drafts) -> None:
-    for rel, text in drafts.items():
-        path = root / "docs" / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    shutil.copy(REPO_ROOT / "_config.matery.yml", root / "_config.matery.yml")
-
-
-def run_sync(root: Path) -> None:
-    result = subprocess.run(
-        [sys.executable, str(SYNC_SCRIPT)],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, "sync-hexo.py 失败：\n{}\n{}".format(
-        result.stdout, result.stderr
-    )
-
-
 TABLE = (
     "| 编写人 | 编写内容 | 编写时间 |\n"
     "| --- | --- | --- |\n"
@@ -336,7 +318,8 @@ CORPUS = {
 
 
 def read_generated(root: Path, rel: str) -> str:
-    path = root / "source" / "_posts" / rel
+    """读编译出来的内容单元（内容单元仓库住在 ``content/units/``）。"""
+    path = content_units_dir(root) / rel
     assert path.exists(), "sync 没有生成 {}".format(rel)
     return path.read_text(encoding="utf-8")
 
@@ -395,7 +378,7 @@ def test_a_description_written_by_hand_is_not_overwritten(tmp_path):
 
 
 def load_draft_module():
-    """Load ``tools/draft-descriptions.py`` as a module."""
+    """Load ``tools/draft-descriptions.py`` as a module（它留在根 tools/）。"""
     spec = importlib.util.spec_from_file_location("draft_descriptions", DRAFT_SCRIPT)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

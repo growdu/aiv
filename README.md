@@ -58,9 +58,9 @@
                    适配 → 生成 → review → output → upload
 
   站点这个平台（blog/）的实现是 hexo 那一套：
-     docs/ ──sync-hexo.py──▶ source/_posts/ ──hexo generate──▶ public/ ──CI──▶ growdu.cn
-  （构建链的目标位置是 platforms/blog/site/，
-    见 review/specs/2026-11-18-顶层设计与目录调整.md §4.2）
+     docs/ ──sync-hexo.py──▶ content/units/ ──adapt-units.py──▶ platforms/blog/site/source/_posts/
+            ──hexo generate──▶ platforms/blog/site/public/ ──CI──▶ growdu.cn
+  （站点这一平台的构建链就住在 platforms/blog/site/）
 ```
 
 > **存量说明**：`docs/` 里现有的 560 篇、`video/` 里现有的 6 期成片是**存量**——
@@ -74,9 +74,9 @@
 
 | 产线 | 输入 | 产物 | 事实来源 |
 | --- | --- | --- | --- |
-| 技术站点 | `docs/` | 静态站 `public/` | `docs/` |
+| 技术站点 | `docs/` | 静态站 `platforms/blog/site/public/` | `docs/` |
 | 品牌视频 AIV | `video/contracts/*.json` + 口播稿 + 旁白 | 1920×1080 成片 | 契约 + 规范文档 |
-| 多平台分发 | `source/_posts/` 内容单元 + 能力声明 | 草稿 / 出包 / 已发链接 | `docs/`（内容）+ `platforms/<plat>/outbox/`（状态） |
+| 多平台分发 | `content/units/` 内容单元 + 能力声明 | 草稿 / 出包 / 已发链接 | `docs/`（内容）+ `platforms/<plat>/outbox/`（状态） |
 
 按**内容类型**切，是**两条流水线**（文档流 / 视频流）——见上面的图。
 两种切法**正交**：文档流的下游既有站点（`docs/`）也有文本平台（公众号、头条），
@@ -97,8 +97,8 @@
 | --- | --- | --- | --- |
 | **草稿层** | `drafts/` | 主题 → 手动编写 / 自动生成 → 底稿；两条流水线的共同入口 | 只读 `docs/`、`video/` |
 | **内容层** | `docs/` | 母稿、图片、分类元数据 | 无（纯内容） |
-| **内容编译层** | `tools/` + `scripts/`（**站点这一平台的实现**，目标是 `platforms/blog/site/`） | `docs/` → Hexo 源、主题补丁、校验 | 只读 `docs/`，只写 `source/` |
-| **展示层** | `themes/matery/`（同上，目标是 `platforms/blog/site/themes/`） | EJS 模板、CSS/JS、静态资源 | Hexo 运行时 |
+| **内容编译层** | `tools/`（平台无关）+ `platforms/blog/site/tools/`（站点这一平台的实现） | `docs/` → 内容单元、主题补丁、校验 | 只读 `docs/`，只写 `content/units/` 与站点源目录 |
+| **展示层** | `platforms/blog/site/themes/matery/` | EJS 模板、CSS/JS、静态资源 | Hexo 运行时 |
 | **视频生产层** | `video/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
 | **审核层** | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | 只读 `docs/`、`video/` 的契约与产物 |
 | **发布契约层** | `publish/publishkit/` | 内容契约 / 能力模型 / manifest / 调度 | **不认识任何平台** |
@@ -110,26 +110,29 @@
 
 ### 2.2 站点构建链
 
+**站点这一平台的构建链住在 `platforms/blog/site/`**——站点是六个平台之一，
+它的实现就该住在自己的目录里，「加平台只动 `platforms/`」这句话对站点才成立。
+
 | 模块 | 位置 | 干什么 |
 | --- | --- | --- |
-| 内容编译 | `tools/sync-hexo.py` | `docs/` → `source/_posts/` + `source/images/`，重建 front matter，生成 landing page |
-| 主题补丁 | `tools/patch-theme.py` | marker-based 幂等注入：SEO meta、相关文章、PV、OG 卡片等 |
-| 素材搬运 | `tools/copy-vendor.py` | logo、打赏图 → 主题 `medias/` |
-| 内容校验 | `tools/check-markdown.py` / `fix-markdown.py` | front matter、链接、格式校验与修复 |
+| 内容编译 | `platforms/blog/site/tools/sync-hexo.py` | `docs/` → `content/units/` + 站点 `source/images/`，重建 front matter，生成 landing page |
+| 内容单元适配 | `platforms/blog/site/tools/adapt-units.py` | `content/units/` → 站点 `source/_posts/`（站点是内容单元的**一个消费者**） |
+| 主题补丁 | `platforms/blog/site/tools/patch-theme.py` | marker-based 幂等注入：SEO meta、相关文章、PV、OG 卡片等 |
+| 素材搬运 | `platforms/blog/site/tools/copy-vendor.py` | logo、打赏图 → 主题 `medias/` |
+| 内容校验 | `platforms/blog/site/tools/check-markdown.py` / `tools/fix-markdown.py` | front matter、链接、格式校验与修复 |
 | 契约闸门 | `tools/check-content-contract.py` | 按内容契约校验所有内容单元，违规退出码 1（CI 用） |
 | CDN 本地化 | `tools/localize-cdn.py` | 把主题的 jsDelivr CDN 换成本地资源（国内访问） |
-| 评论初始化 | `tools/init-gitalk-issues.js` | 为新文章预创建 Gitalk issue |
-| Hexo 扩展 | `scripts/*.js` | filter/helper：mermaid 渲染、HTML 文章处理、智能摘要 |
-| 主题 | `themes/matery/` | 站点外观；覆盖配置在根目录 `_config.matery.yml`（**不要改主题自带的 `_config.yml`**） |
+| 评论初始化 | `platforms/blog/site/tools/init-gitalk-issues.js` | 为新文章预创建 Gitalk issue |
+| Hexo 扩展 | `platforms/blog/site/scripts/*.js` | filter/helper：mermaid 渲染、HTML 文章处理、智能摘要 |
+| 主题 | `platforms/blog/site/themes/matery/` | 站点外观；覆盖配置在 `platforms/blog/site/_config.matery.yml`（**不要改主题自带的 `_config.yml`**） |
 
 配置分工：`_config.yml` 是 Hexo 自身的；`_config.matery.yml` 是对主题的覆盖。
-`source/` 与 `public/` 都在 `.gitignore` 里，CI 现生成。
+站点的 `source/` 与 `public/` 都在 `.gitignore` 里，CI 现生成；
+`content/units/` 同理——它也是构建产物。
 
-> **这一整套在目标结构里属于 `platforms/blog/site/`。**
-> 站点是六个平台之一，它的实现就该住在自己的目录里——
-> 否则「加平台只动 `platforms/`」这句话对站点仍然不成立。
-> 搬移分两批（先搬配置与产物，再搬脚本），见
-> [`review/specs/2026-11-18-顶层设计与目录调整.md`](review/specs/2026-11-18-顶层设计与目录调整.md) §4.2。
+> **内容单元住在 `content/units/`**，不在站点目录里：它**所有平台共用**，
+> 是「内容单元」这一层与各平台之间的接缝。站点通过 `adapt-units.py` 拿自己那份副本。
+> 见 [`review/specs/2026-11-18-顶层设计与目录调整.md`](review/specs/2026-11-18-顶层设计与目录调整.md) §4.2。
 
 ### 2.3 AIV 视频生产线
 
@@ -263,17 +266,19 @@
 | 路径 | 内容 | 是否入库 |
 | --- | --- | --- |
 | `docs/` | 内容母稿（唯一真相） | ✅ |
-| `source/` | Hexo 源（CI 生成；站点平台的产物） | ❌ 仅 `all/`、`recommended/` |
-| `public/` | 构建产物（站点平台的产物） | ❌ |
-| `themes/matery/` | 主题（站点平台的实现） | ✅ |
-| `tools/`、`scripts/` | 构建与校验脚本（**站点那一平台的那部分**，目标 `platforms/blog/site/`） | ✅ |
+| `content/units/` | 内容单元仓库（CI 生成；**所有平台共用的那一半**） | ❌ 构建产物 |
+| `platforms/blog/site/source/` | Hexo 源（CI 生成；站点平台的产物） | ❌ 仅 `all/`、`recommended/` |
+| `platforms/blog/site/public/` | 构建产物（站点平台的产物） | ❌ |
+| `platforms/blog/site/themes/matery/` | 主题（站点平台的实现） | ✅ |
+| `platforms/blog/site/` | 站点这一平台的构建链：配置、主题、脚本、hexo 扩展 | ✅（产物除外） |
+| `tools/` | 平台无关的构建与校验脚本（含 `paths.py`——路径常量的唯一出处） | ✅ |
 | `video/` | 视频生产线（规范 + 契约 + 代码） | ✅ 产物除外 |
 | `video/build/`、`video/out/` | 片段与成片 | ❌ |
 | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | ✅ 帧除外 |
 | `drafts/` | 草稿箱（主题 → 手动编写/自动生成 → 底稿；两条流水线的共同入口，底稿不参与派生） | ✅ |
 | `publish/` | 契约层与调度（发布契约规格、能力模型加载、manifest、周键） | ✅ |
 | `platforms/<plat>/` | 平台 adapter（**六个**平台各一个目录，含能力声明 `capability.toml` 与发布快照 `outbox/`；目录名即平台 id） | ✅ |
-| `platforms/blog/site/` | 站点这一平台的构建链（**目标位置**，尚未搬移） | — |
+| `platforms/blog/site/` | 站点这一平台的构建链（已搬到位） | ✅ |
 | `requirements/` | 依赖清单（按模块分文件） | ✅ |
 | `.github/workflows/` | `hexo.yml`（构建部署）、`contracts.yml`（契约闸门） | ✅ |
 
@@ -282,8 +287,8 @@
 ## 六、常用命令
 
 ```bash
-# 站点
-npm run sync          # docs → source（等价 tools/sync-hexo.py）
+# 站点（在 platforms/blog/site/ 里）
+npm run sync          # docs → content/units/ → 站点 source/_posts/（等价 platforms/blog/site/tools/sync-hexo.py + adapt-units.py）
 npm run build         # hexo generate
 npm run server        # 本地预览
 
@@ -307,8 +312,8 @@ python3 -m blog.cli status                # 这个平台是什么、有什么限
 python3 -m blog.cli check <content_id>    # 这一篇能不能进站（标题 / 构建排除 / 分类链）
 
 # 契约闸门
-python3 tools/sync-hexo.py                 # 先产出内容单元
-python3 tools/check-content-contract.py   # 校验 578 个内容单元（572 篇文章 + 6 期视频内容单元），违规退出码 1
+python3 platforms/blog/site/tools/sync-hexo.py   # 先产出内容单元（content/units/）
+python3 tools/check-content-contract.py         # 校验 578 个内容单元（572 篇文章 + 6 期视频内容单元），违规退出码 1
 ```
 
 ---

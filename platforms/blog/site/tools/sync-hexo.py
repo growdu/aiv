@@ -10,11 +10,26 @@ Does NOT modify docs/ — runs in CI on a fresh checkout.
 """
 
 import os, re, shutil, subprocess, sys, json, glob
+from pathlib import Path
 from typing import TypeGuard
+
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import (  # noqa: E402
+    CONTENT_UNITS as _CONTENT_UNITS,
+    DOCS as _DOCS,
+    SITE_CONFIG as _SITE_CONFIG,
+    SITE_SOURCE as _SITE_SOURCE,
+)
 
 # The permalinks this tool emits must carry the mount point the
 # site is served under (`root:` in _config.yml): the primary domain
 # is at `/`, the GitHub Pages mirror at `/blog/`.
+# `site_root.py` 留在根 tools/（契约层不许 import 站点层，
+# publish/tests/test_episode.py 要从那儿 import 它）。
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from site_root import permalink as _permalink
 from site_root import root_prefix_urls as _root_prefix_urls
@@ -23,10 +38,14 @@ from site_root import site_root as _site_root
 SITE_ROOT = _site_root()
 from urllib.parse import quote, unquote
 
-DOCS = "docs"
-SRC = "source"
-POSTS = os.path.join(SRC, "_posts")
-IMGS = os.path.join(SRC, "images")
+DOCS = str(_DOCS)
+# 站点私有的源目录（hexo 的 source_dir）。
+SRC = str(_SITE_SOURCE)
+# 内容单元仓库：平台无关，所有平台共用的那一半。
+POSTS = str(_CONTENT_UNITS)
+IMGS = os.path.join(str(_SITE_SOURCE), "images")
+# 站点自己的 hexo 配置（跟着站点搬了家）。
+MATERY_CONFIG = os.path.join(os.path.dirname(str(_SITE_CONFIG)), "_config.matery.yml")
 IMG_EXT = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".ico"}
 
 # 内部工程目录（§4.3 的路径排除规则）：路径中任意一级目录名命中即排除，
@@ -198,8 +217,7 @@ CATEGORY_REDIRECTS = {
 # 编译时读。表不存在就当没有（首次 clone、或还没跑过迁移）。
 def _load_data_table(name):
     """读 `data/` 下的一张策展表。"""
-    path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), name)
+    path = os.path.join(str(_REPO_ROOT), name)
     if not os.path.isfile(path):
         return {}
     with open(path, encoding="utf-8") as fh:
@@ -949,7 +967,7 @@ def read_matery_about_config():
     Returns (profile, my_projects, my_skills, my_education, my_honors,
     my_timeline) as dicts.
     """
-    config_path = "_config.matery.yml"
+    config_path = MATERY_CONFIG
     if not os.path.isfile(config_path):
         # **返回值个数要与末尾那条 return 一致**：调用方解包 6 个，少给一个
         # 就是 ValueError——配置文件不在时反而把整个构建搞崩。
@@ -2190,7 +2208,7 @@ def copy_view_counts_snapshot(src_dir=None, repo_root=None):
     if src_dir is None:
         src_dir = SRC
     if repo_root is None:
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        repo_root = str(_REPO_ROOT)
     src = os.path.join(repo_root, "data", "view-counts.json")
     if not os.path.isfile(src):
         return None
@@ -2221,6 +2239,11 @@ def main():
     if rec_preserved:
         shutil.move(os.path.join(preserved, "recommended"), rec_path)
     shutil.rmtree(preserved)
+    # 内容单元仓库在 SRC 之外（它是平台无关的仓库，不是站点私有的），
+    # 所以上面那次 rmtree(SRC) 清不到它。**每次构建从头来过**——
+    # 否则上一轮的旧内容单元会留在仓库里，越攒越多。
+    if os.path.exists(POSTS):
+        shutil.rmtree(POSTS)
     os.makedirs(POSTS)
 
     verification_dir = os.path.join(SRC, ".well-known")
@@ -2484,9 +2507,14 @@ footer a:hover{color:var(--c1)}
     print("Created 404.html")
 
     # Recent posts JSON: consumed by the 404 page.
-    # Source: source/_posts/**/*.md, sorted by `top` desc then `date` desc.
+    # Source: the content-unit repo (content/units/), sorted by `top` desc then `date` desc.
     # Skips the `META_CATS` meta-docs and any path starting with `_index`.
-    posts_root = os.path.join(SRC, "_posts")
+    #
+    # 扫的是**内容单元仓库**（POSTS），不是站点的 source/_posts：
+    # 站点那份是 adapt-units.py 的副本，而适配器在 sync **之后**才跑——
+    # 扫站点那份的话，这里永远扫不到东西，404 页的「最近发布」和精简搜索
+    # 索引就都是空的（不报错，只是空）。相对路径两者一致，url 不变。
+    posts_root = POSTS
     records = collect_index_posts(posts_root)
 
     # 404 页的「最近发布」：编辑推荐在前，其余按时间。
@@ -2524,7 +2552,7 @@ footer a:hover{color:var(--c1)}
     # 真相在仓库根的 data/featured.json —— 作者改那个文件就能换首屏，
     # 不用去改模板。source/ 是 gitignore 的，所以必须复制到
     # source/_data/，hexo 才会把它挂到 site.data.featured 上。
-    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _repo_root = str(_REPO_ROOT)
     _featured_src = os.path.join(_repo_root, "data", "featured.json")
     if os.path.isfile(_featured_src):
         _featured_dir = os.path.join(SRC, "_data")

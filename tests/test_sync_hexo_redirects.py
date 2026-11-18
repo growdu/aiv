@@ -1,4 +1,4 @@
-"""重定向页生成器的三条硬规矩（tools/sync-hexo.py）。
+"""重定向页生成器的三条硬规矩（platforms/blog/site/tools/sync-hexo.py）。
 
 一是**旧 URL 必须还在**：文章换了目录、分类改了名，旧链接要能跳到新地方，
 所以生成器在旧路径上放一个 meta refresh 的静态页。
@@ -23,7 +23,8 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SYNC_TOOL = REPO_ROOT / "tools" / "sync-hexo.py"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+SYNC_TOOL = SITE / "tools" / "sync-hexo.py"
 
 #: 文件名里不能有的字符（Windows NTFS 与 GitHub artifact 的共同限制）
 INVALID = ':*?"<>|'
@@ -31,7 +32,7 @@ INVALID = ':*?"<>|'
 
 @pytest.fixture(scope="module")
 def sync():
-    """Import ``tools/sync-hexo.py`` as a module.
+    """Import ``platforms/blog/site/tools/sync-hexo.py`` as a module.
 
     Its ``main()`` is guarded by ``if __name__ == '__main__'``, so importing
     it only defines functions -- it does not rewrite ``source/``.

@@ -18,9 +18,40 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-THEME = REPO_ROOT / "themes" / "matery"
-PATCH_THEME = REPO_ROOT / "tools" / "patch-theme.py"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+THEME = SITE / "themes" / "matery"
+PATCH_THEME = SITE / "tools" / "patch-theme.py"
 LAYOUT_EJS = THEME / "layout" / "layout.ejs"
+
+
+def _sandboxed_site(tmp_path):
+    """在临时目录里搭一份**同构的仓库骨架**，把 patcher 指到它。
+
+    patcher 的主题目录来自 ``tools/paths.py`` 里的 ``SITE_THEMES``。
+    路径常量集中之后它就不再随 cwd 走了——直接在仓库里跑 patcher 会改
+    真主题（真主题是 git 跟踪的）。所以这里把 ``tools/paths.py``、
+    ``tools/site_root.py`` 与 patcher 一起复制到临时目录里那份同构的骨架下：
+
+    - ``paths.py`` 按自己的位置算仓库根（``parents[1]``），于是整套常量
+      自然落在临时目录里；
+    - 骨架的目录深度跟仓库一致（``<root>/platforms/blog/site/...``），
+      脚本里写死的 ``parents[4]`` 也照样对得上。
+
+    ``paths.py`` import 时会断言仓库根下有 ``docs/`` 与 ``platforms/``，
+    所以那个空目录也得先建出来。
+    """
+    root = tmp_path
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "tools").mkdir(parents=True, exist_ok=True)
+    for name in ("paths.py", "site_root.py"):
+        shutil.copy2(REPO_ROOT / "tools" / name, root / "tools" / name)
+
+    site = root / "platforms" / "blog" / "site"
+    (site / "tools").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(PATCH_THEME, site / "tools" / "patch-theme.py")
+    shutil.copytree(THEME, site / "themes" / "matery")
+    shutil.copytree(SITE / "theme-assets", site / "theme-assets")
+    return site
 
 
 def test_the_patcher_keeps_no_second_copy_of_the_sidebar():
@@ -51,16 +82,15 @@ def test_the_sidebar_that_stays_in_the_theme_can_still_be_collapsed():
 def test_running_the_patcher_leaves_the_sidebar_alone(tmp_path):
     """跑一遍 patcher，主题里的侧栏还是**那一份**。
 
-    patcher 是在主题目录上跑的（``themes/matery``），所以在临时目录里放一份
-    主题的拷贝再跑它——跑完侧栏应该还在原处、还带着折叠开关、
+    patcher 是在站点的主题目录上跑的，所以在临时目录里搭一份同构的骨架、
+    把主题的拷贝放进去再跑它——跑完侧栏应该还在原处、还带着折叠开关、
     而且**只有一份**。
     """
-    theme_copy = tmp_path / "themes" / "matery"
-    theme_copy.parent.mkdir(parents=True)
-    shutil.copytree(str(THEME), str(theme_copy))
+    site = _sandboxed_site(tmp_path)
+    theme_copy = site / "themes" / "matery"
 
     result = subprocess.run(
-        [sys.executable, str(PATCH_THEME)],
+        [sys.executable, str(site / "tools" / "patch-theme.py")],
         cwd=str(tmp_path),
         capture_output=True,
         text=True,

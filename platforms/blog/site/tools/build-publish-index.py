@@ -16,7 +16,7 @@
 
 用法：
 
-    python3 tools/build-publish-index.py
+    python3 platforms/blog/site/tools/build-publish-index.py
 
 退出码：0 = 生成成功；2 = 用法或环境错误。
 """
@@ -27,10 +27,16 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+# 站点脚本比根 tools/ 深了四层：parents[4] 才是仓库根。
+# 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import CONTENT_UNITS, REPO_ROOT, SITE_SOURCE  # noqa: E402
+
 PLATFORMS_DIR = REPO_ROOT / "platforms"
-POSTS_DIR = REPO_ROOT / "source" / "_posts"
-DATA_DIR = REPO_ROOT / "source" / "_data"
+# 内容单元仓库（平台无关）——站点是消费者，不是所有者。
+POSTS_DIR = CONTENT_UNITS
+DATA_DIR = SITE_SOURCE / "_data"
 
 # 平台的中文名。索引里放中文名，主题 partial 直接用，不在模板里做映射。
 PLATFORM_NAMES = {
@@ -224,7 +230,7 @@ def main(argv=None) -> int:
 
     if not POSTS_DIR.is_dir():
         print(
-            f"找不到 {POSTS_DIR}：先跑 python3 tools/sync-hexo.py 产出内容单元。",
+            f"找不到 {POSTS_DIR}：先跑 python3 platforms/blog/site/tools/sync-hexo.py 产出内容单元。",
             file=sys.stderr,
         )
         return 2

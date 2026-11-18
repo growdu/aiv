@@ -31,12 +31,13 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-THEME_LAYOUT = REPO / "themes" / "matery" / "layout"
+SITE = REPO / "platforms" / "blog" / "site"
+THEME_LAYOUT = SITE / "themes" / "matery" / "layout"
 HEAD_EJS = THEME_LAYOUT / "_partial" / "head.ejs"
 LAYOUT_EJS = THEME_LAYOUT / "layout.ejs"
 COVER_EJS = THEME_LAYOUT / "_partial" / "bg-cover-content.ejs"
-PATCH_THEME = REPO / "tools" / "patch-theme.py"
-IMG_FILTER = REPO / "scripts" / "img-dimensions.js"
+PATCH_THEME = SITE / "tools" / "patch-theme.py"
+IMG_FILTER = SITE / "scripts" / "img-dimensions.js"
 
 SAMPLE_PNG = REPO / "docs" / "source-tracks" / "postgresql" / "logical-replication" / "pa_decode" / "image.png"
 SAMPLE_JPG = REPO / "docs" / "source-tracks" / "linux" / "networking" / "ipv6_img" / "07-55785c722b16.jpg"

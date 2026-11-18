@@ -35,7 +35,8 @@ import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-THEME = REPO / "themes" / "matery"
+SITE = REPO / "platforms" / "blog" / "site"
+THEME = SITE / "themes" / "matery"
 LAYOUT = THEME / "layout"
 PARTIAL = LAYOUT / "_partial"
 
@@ -44,7 +45,7 @@ EPISODE_BLOCK = PARTIAL / "episode-block.ejs"
 HEADER = PARTIAL / "header.ejs"
 MATERIALIZE_CSS = THEME / "source" / "libs" / "materialize" / "materialize.min.css"
 
-PUBLIC = REPO / "public"
+PUBLIC = SITE / "public"
 
 # 头部那条导航条：Materialize 的样式就是给它写的，唯一允许的 ``<nav>``。
 HEADER_NAV = '<nav id="headNav"'
@@ -153,7 +154,7 @@ def test_the_built_home_page_has_no_content_nav():
     if not index.is_file():
         import pytest
 
-        pytest.skip("没有 public/index.html（本地没构建，跳过产物复核）")
+        pytest.skip("没有 platforms/blog/site/public/index.html（本地没构建，跳过产物复核）")
     html = _read(index)
     bad = [t for t in _nav_tags(html) if not t.startswith(HEADER_NAV)]
     assert not bad, "构建出来的首页里有内容用的 <nav>：{}".format(bad)

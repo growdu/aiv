@@ -359,7 +359,7 @@ def test_the_deploys_still_wait_for_their_own_build() -> None:
 def test_the_icon_subset_step_never_blocks_the_deploy() -> None:
     """字体裁剪是锦上添花，不许把发布带崩。
 
-    ``tools/subset-icons.py`` 裁成功省 240 KB，裁失败保持原字体——网站照常
+    ``platforms/blog/site/tools/subset-icons.py`` 裁成功省 240 KB，裁失败保持原字体——网站照常
     上线。所以这一步必须 ``continue-on-error``：让"省了点体积"去换"站点
     发不出去"，不划算。
 
@@ -382,7 +382,9 @@ def test_the_icon_subset_step_never_blocks_the_deploy() -> None:
             "字体裁剪步骤没有 continue-on-error、也没有 || echo 兜底——"
             "裁剪失败会把发布一起带崩"
         )
-        assert "tools/subset-icons.py" in step, "裁剪步骤调的不是 tools/subset-icons.py"
+        assert "platforms/blog/site/tools/subset-icons.py" in step, (
+            "裁剪步骤调的不是 platforms/blog/site/tools/subset-icons.py"
+        )
         assert "::warning::" in step, (
             "裁剪失败要发一条 ::warning:: 注解，否则日志里只有一句"
             "「exit code 1」，看不出是没装上还是裁不动"

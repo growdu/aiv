@@ -6,7 +6,7 @@
 读者从一篇文章落地之后，站点没有告诉他「下一篇该读什么」。学习路径
 （``/learning/`` 和每条赛道一页）就是补这个洞的。
 
-分类是脚本做的（``tools/build-learning-path.py`` + ``data/learning-path.json``），
+分类是脚本做的（``platforms/blog/site/tools/build-learning-path.py`` + ``data/learning-path.json``），
 所以它有三种失败方式，每一种都得有人拦：
 
 1. **漏归类** —— 新加一篇文章，忘了写规则，它就悄悄从学习路径里消失了。
@@ -46,24 +46,27 @@ from urllib.parse import quote
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-TOOLS = REPO_ROOT / "tools"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+# 生成器搬进了 platforms/blog/site/tools/；site_root.py 留在根 tools/。
+ROOT_TOOLS = REPO_ROOT / "tools"
+SITE_TOOLS = SITE / "tools"
 RULES_FILE = REPO_ROOT / "data" / "learning-path.json"
-TOOL = TOOLS / "build-learning-path.py"
+TOOL = SITE_TOOLS / "build-learning-path.py"
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "hexo.yml"
-THEME_LAYOUT = REPO_ROOT / "themes" / "matery" / "layout" / "learning.ejs"
-HOME_HERO = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "home-hero.ejs"
-HOME_PANEL = (REPO_ROOT / "themes" / "matery" / "layout" / "_partial"
+THEME_LAYOUT = SITE / "themes" / "matery" / "layout" / "learning.ejs"
+HOME_HERO = SITE / "themes" / "matery" / "layout" / "_partial" / "home-hero.ejs"
+HOME_PANEL = (SITE / "themes" / "matery" / "layout" / "_partial"
               / "learning-path.ejs")
 
-if str(TOOLS) not in sys.path:
-    sys.path.insert(0, str(TOOLS))
+if str(ROOT_TOOLS) not in sys.path:
+    sys.path.insert(0, str(ROOT_TOOLS))
 
 import site_root  # noqa: E402  (path set up above)
 
 
 @pytest.fixture(scope="module")
 def tool():
-    """Import ``tools/build-learning-path.py`` as a module.
+    """Import ``platforms/blog/site/tools/build-learning-path.py`` as a module.
 
     ``main()`` is guarded by ``if __name__ == '__main__'``, so importing
     it only defines functions -- it does not write any file.
@@ -326,7 +329,7 @@ def test_internal_links_carry_the_site_root(tool, rules, corpus, classified):
             for post in stage["posts"]:
                 post["url"] = ""
 
-    config_path = str(REPO_ROOT / "_config.yml")
+    config_path = str(SITE / "_config.yml")
     cached = site_root._ROOT_CACHE.get(config_path)
     site_root._ROOT_CACHE[config_path] = "/blog"
     try:
@@ -422,7 +425,7 @@ def test_a_yaml_escaped_title_comes_back_clean(tool):
     """标题按 YAML 解析，而不是照抄原文。
 
     这条针对的是**构建产物**里的标题：sync 把标题写成 YAML 双引号串，
-    引号被转义成 ``\\"``。生成器读 ``source/_posts/`` 时必须用 YAML 的
+    引号被转义成 ``\\"``。生成器读 ``platforms/blog/site/source/_posts/`` 时必须用 YAML 的
     规则把它还原回来。
 
     顺带钉住「解标题只有一份实现」：生成器借的是 sync 的解析器，
@@ -536,7 +539,8 @@ def test_the_generated_data_describes_every_track(tool, rules, classified):
 def test_the_workflow_builds_the_learning_path_in_both_jobs():
     """Both jobs must build it: the primary domain and the Pages mirror.
 
-    It has to run *after* the content sync (it reads ``source/_posts/``)
+    It has to run *after* the content sync (it reads
+    ``platforms/blog/site/source/_posts/``)
     and *before* ``hexo generate`` (the pages have to be in the output).
     In the Pages job it must also run after the ``root:`` rewrite, or
     the links in the generated pages would be missing the ``/blog``
@@ -559,8 +563,8 @@ def test_the_workflow_builds_the_learning_path_in_both_jobs():
 def test_the_learning_pages_are_built_after_the_content_sync():
     """Ordering: sync → video pages → learning path → hexo generate."""
     text = WORKFLOW.read_text(encoding="utf-8")
-    sync_at = text.index("python3 tools/sync-hexo.py")
-    learning_at = text.index("python3 tools/build-learning-path.py")
+    sync_at = text.index("python3 platforms/blog/site/tools/sync-hexo.py")
+    learning_at = text.index("python3 platforms/blog/site/tools/build-learning-path.py")
     generate_at = text.index("npx hexo generate")
     assert sync_at < learning_at < generate_at, (
         "生成器必须排在 sync 之后、hexo generate 之前"

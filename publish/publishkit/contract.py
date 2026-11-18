@@ -33,7 +33,7 @@
 互相绑定（§11.1 的「各改各的」）。代价是两边对同一段文本给出不同答案
 ——所以那句话不能说「逐条一致」，差异钉在测试里。
 
-（第二处差异在**生产链路上碰不到**：weixin 读的是 ``source/_posts/``，
+（第二处差异在**生产链路上碰不到**：weixin 读的是 ``content/units/``，
 那里的缩进标量已被 sync 折叠成单行 ``key: value``。它只在直接读作者原稿
 ``docs/`` 时才会出现——而那正是 ``read_contract()`` 承诺支持的用法。）
 
@@ -62,13 +62,13 @@ date         str             ``YYYY-MM-DD`` 或 ``YYYY-MM-DD HH:MM:SS``
 
 没有 ``episode`` 键的母稿**不是**一期，它不进期号线，也不需要写其余字段。
 
-**``date`` 不是作者写的字段，是 sync 写进 ``source/_posts/`` 的那一个。**
+**``date`` 不是作者写的字段，是 sync 写进 ``content/units/`` 的那一个。**
 调度层的选题规则要按日期排序（06 规格 §3.3「按 ``publish_on``（缺省用
 ``date``）升序」），所以这一层得认它。
 
 但它**不在透传白名单里**：``PASSTHROUGH_FIELDS`` 是 sync 的白名单，
-加进去会改变站点渲染结果（``tools/sync-hexo.py`` 写的 ``date`` 决定
-permalink）。``date`` 只是被**读**，不被**搬**。
+加进去会改变站点渲染结果
+（``platforms/blog/site/tools/sync-hexo.py`` 写的 ``date`` 决定 permalink）。``date`` 只是被**读**，不被**搬**。
 """
 
 from __future__ import annotations
@@ -102,7 +102,8 @@ __all__ = [
 #: 不是同一套取值：这里说的是「这篇是什么」，那边说的是「这个平台发什么」。
 CONTENT_KINDS = ("post", "video")
 
-#: 主题（matery）支持的转载声明取值（``themes/matery/_config.yml``）。
+#: 主题（matery）支持的转载声明取值
+#: （``platforms/blog/site/themes/matery/_config.yml``）。
 REPRINT_POLICIES = (
     "cc_by",
     "cc_by_nd",
@@ -173,7 +174,7 @@ _FIELD_MAX_CHARS = {
 _FM_RE = re.compile(r"^---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 #: ``date`` 字段认两种形态：纯日期与带时分秒的日期。后者是
-#: ``tools/sync-hexo.py`` 写进 ``source/_posts/`` 的形状。
+#: ``platforms/blog/site/tools/sync-hexo.py`` 写进 ``content/units/`` 的形状。
 _DATE_FIELD_RE = re.compile(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$")
 _INT_RE = re.compile(r"^-?\d+$")
 
@@ -201,10 +202,10 @@ def _unquote(value: str) -> str:
 def parse_front_matter(text: str) -> tuple:
     """Split YAML-ish front-matter from the body.
 
-    ``tools/sync-hexo.py`` generates the front-matter itself, so the shape is
-    known and fixed: ``key: value`` scalars plus ``key:`` followed by
-    ``  - item`` lists.  A tiny hand-written parser avoids adding a YAML
-    dependency for a format we control.
+    ``platforms/blog/site/tools/sync-hexo.py`` generates the front-matter
+    itself, so the shape is known and fixed: ``key: value`` scalars plus
+    ``key:`` followed by ``  - item`` lists.  A tiny hand-written parser
+    avoids adding a YAML dependency for a format we control.
 
     Returns ``(fields, body)``.  A list field maps to a list of strings;
     a single-item list is kept as a one-element list so callers do not have
@@ -384,7 +385,7 @@ def parse_content_date(value: str) -> date:
     """把 front matter 的 ``date`` 解析成 :class:`datetime.date`。
 
     认两种形态：``YYYY-MM-DD`` 与 ``YYYY-MM-DD HH:MM:SS``——后者是
-    ``tools/sync-hexo.py`` 写进 ``source/_posts/`` 的形状（它把 git 的
+    ``platforms/blog/site/tools/sync-hexo.py`` 写进 ``content/units/`` 的形状（它把 git 的
     时间戳去掉时区偏移后原样写下来）。
 
     解析不了就抛 :class:`ContractFieldError`：``date`` 是外部输入，
@@ -479,11 +480,11 @@ def contract_from_fields(fields: dict, *, path=None) -> ContentContract:
 def read_contract(path) -> ContentContract:
     """Read one master draft and return its content contract.
 
-    母稿可以是 ``docs/`` 下的原稿，也可以是 ``source/_posts/`` 下的内容单元
+    母稿可以是 ``docs/`` 下的原稿，也可以是 ``content/units/`` 下的内容单元
     ——两者的 front matter 是同一套。
 
     有一处例外：**缩进标量**（``platforms:`` 下面缩进一个非列表项）在原稿
-    里是作者写的，在 ``source/_posts/`` 里已被 sync 折叠成单行
+    里是作者写的，在 ``content/units/`` 里已被 sync 折叠成单行
     ``platforms: wechat``。同一份内容，两条路径给出的**判定不同**：原稿那条
     路径报「platforms 必须是列表」（响亮失败），sync 那条路径也是同一条报错
     ——所以这里不会出现「同一篇文章，一个说不发、另一个说发」的分裂。

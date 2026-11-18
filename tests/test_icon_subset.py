@@ -6,7 +6,7 @@
 103 KB——浏览器第一次访问时整个拉下来，woff2 本来就压过一轮，再上 gzip 也
 省不了多少。而站点实际只用到 90 个左右的图标，裁剪后能省下 240 KB 上下。
 
-``tools/subset-icons.py`` 负责这件事。裁剪的失败模式很隐蔽，所以这里把
+``platforms/blog/site/tools/subset-icons.py`` 负责这件事。裁剪的失败模式很隐蔽，所以这里把
 它盯住：
 
 1. **图标类必须都存在**。站点里写了一个 CSS 里没有的图标类，那个图标就是
@@ -33,13 +33,14 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-TOOL = REPO / "tools" / "subset-icons.py"
-THEME = REPO / "themes" / "matery"
+SITE = REPO / "platforms" / "blog" / "site"
+TOOL = SITE / "tools" / "subset-icons.py"
+THEME = SITE / "themes" / "matery"
 FA_CSS = THEME / "source" / "libs" / "awesome" / "css" / "all.min.css"
 
 
 def _load_tool():
-    """按路径加载 ``tools/subset-icons.py``。
+    """按路径加载 ``platforms/blog/site/tools/subset-icons.py``。
 
     ``tools/`` 不是包，所以走文件加载。模块顶层没有副作用（fontTools 是
     在函数里延迟导入的），没装 fontTools 也能 import。

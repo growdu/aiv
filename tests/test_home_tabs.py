@@ -31,12 +31,13 @@ import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-THEME = REPO / "themes" / "matery"
+SITE = REPO / "platforms" / "blog" / "site"
+THEME = SITE / "themes" / "matery"
 HOME_CONTENT = THEME / "layout" / "_partial" / "home-content.ejs"
 MATERY_JS = THEME / "source" / "js" / "matery.js"
 MY_CSS = THEME / "source" / "css" / "my.css"
-PATCH_THEME = REPO / "tools" / "patch-theme.py"
-CHECKER = REPO / "tools" / "check-home-tabs.py"
+PATCH_THEME = SITE / "tools" / "patch-theme.py"
+CHECKER = SITE / "tools" / "check-home-tabs.py"
 WORKFLOW = REPO / ".github" / "workflows" / "hexo.yml"
 
 # tab 标签与面板的 id。三个面板各对应一个 tab。
@@ -283,7 +284,7 @@ def test_the_materalize_tabs_component_is_actually_available():
     换了版本而那个版本没有 Tabs，``.tabs()`` 就不存在——那时候
     「代码里有调用」这个断言是绿的，页面却仍然是个假控件。
     """
-    vendored = REPO / "themes" / "matery" / "source" / "libs" / "materialize" / "materialize.min.js"
+    vendored = SITE / "themes" / "matery" / "source" / "libs" / "materialize" / "materialize.min.js"
     assert vendored.is_file(), "找不到 vendored 的 materialize.min.js"
 
     source = vendored.read_text(encoding="utf-8", errors="replace")
@@ -351,8 +352,8 @@ def test_the_ci_runs_the_home_tabs_checker_in_both_builds():
     """两个 build job 都要跑——少一个就有一处不设防。"""
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
-    assert workflow.count("python3 tools/check-home-tabs.py") == 2
+    assert workflow.count("python3 platforms/blog/site/tools/check-home-tabs.py") == 2
     # 必须在 hexo generate 之后——检查的是渲染产物
     for build in workflow.split("- name: Build with Hexo")[1:]:
         segment = build.split("- name: Subset Font Awesome fonts")[0]
-        assert "tools/check-home-tabs.py" in segment
+        assert "platforms/blog/site/tools/check-home-tabs.py" in segment

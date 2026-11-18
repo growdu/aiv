@@ -211,7 +211,7 @@ def _corpus(tmp_path, content_id="db/demo", platforms=("toutiao",), day="2026-01
     for platform in platforms:
         front_matter += "  - {}\n".format(platform)
     write_post(
-        tmp_path / "blog" / "source" / "_posts",
+        tmp_path / "blog" / "content" / "units",
         "{}.md".format(content_id),
         front_matter,
     )
@@ -337,7 +337,7 @@ def test_an_empty_candidate_set_is_stated_out_loud(tmp_path):
     """候选集为空（没有一篇声明 platforms）→ 明确说。"""
     config = make_config(tmp_path)
     write_post(
-        tmp_path / "blog" / "source" / "_posts",
+        tmp_path / "blog" / "content" / "units",
         "db/demo.md",
         "title: 演示\ndate: 2026-01-01",
     )
@@ -369,7 +369,7 @@ def test_a_broken_post_does_not_stop_the_run(tmp_path):
     """一篇坏了不是其余的都不发——但坏的那篇要**说出来**。"""
     config = make_config(tmp_path)
     write_post(
-        tmp_path / "blog" / "source" / "_posts",
+        tmp_path / "blog" / "content" / "units",
         "bad.md",
         "title: 坏的\npublish_on: 2026-02-30",
     )
@@ -387,7 +387,7 @@ def test_a_publish_on_inside_this_week_wins_over_the_oldest_one(tmp_path):
     config = make_config(tmp_path)
     _corpus(tmp_path, content_id="db/old", day="2026-01-01")
     write_post(
-        tmp_path / "blog" / "source" / "_posts",
+        tmp_path / "blog" / "content" / "units",
         "db/this-week.md",
         "title: 本周\ndate: 2026-01-02\npublish_on: 2026-11-12\nplatforms:\n  - toutiao",
     )

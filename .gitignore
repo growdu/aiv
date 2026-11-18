@@ -1,8 +1,13 @@
 # Build output
-public/
-/source/
-!/source/all/
-!/source/recommended/
+/platforms/blog/site/public/
+/platforms/blog/site/source/
+!/platforms/blog/site/source/all/
+!/platforms/blog/site/source/recommended/
+
+# 内容单元仓库：母稿编译出来的产物（规格 §4.2）。
+# 它是**所有平台共用的那一半**——契约层与各平台 adapter 真正读的东西，
+# 但它是 build product，所以不入库；CI 里现编。
+/content/units/
 
 # Dependencies
 node_modules/

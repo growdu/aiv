@@ -10,8 +10,14 @@ import os
 import re
 import sys
 import argparse
+from pathlib import Path
 
-SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'source', '_posts')
+# 站点的构建链搬进了 platforms/blog/site/——文章编译产物现在住在
+# platforms/blog/site/source/_posts/。路径常量统一从根 tools/paths.py 取。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from paths import SITE_POSTS  # noqa: E402
+
+SRC = str(SITE_POSTS)
 
 
 def parse_frontmatter(content):

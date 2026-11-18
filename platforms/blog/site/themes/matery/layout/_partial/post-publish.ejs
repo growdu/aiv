@@ -3,10 +3,11 @@
 
   The site is the root of the content lineage (publish/spec/00 §9.3): an
   article page should answer "where else did this go?".  The answer comes
-  from `source/_data/publish_index.json`, which `tools/build-publish-index.py`
-  builds out of the publish layer's snapshots (`platforms/<platform>/outbox/*.json`).
+  from `platforms/blog/site/source/_data/publish_index.json`, which
+  `platforms/blog/site/tools/build-publish-index.py` builds out of the publish
+  layer's snapshots (`platforms/<platform>/outbox/*.json`).
 
-  The content id is the path under `source/_posts/` without the suffix --
+  The content id is the path under `platforms/blog/site/source/_posts/` without the suffix --
   the same id the publish layer uses as its idempotency key.
 */%>
 <%

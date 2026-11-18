@@ -21,15 +21,18 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TOOLS = REPO_ROOT / "tools"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+# 生成器搬进了 platforms/blog/site/tools/；site_root.py 留在根 tools/。
+ROOT_TOOLS = REPO_ROOT / "tools"
+SITE_TOOLS = SITE / "tools"
 
-sys.path.insert(0, str(TOOLS))
+sys.path.insert(0, str(ROOT_TOOLS))
 import site_root  # noqa: E402
 
 
 def load_tool(name):
     spec = importlib.util.spec_from_file_location(
-        "tool_under_test_{}".format(name.replace("-", "_")), TOOLS / (name + ".py")
+        "tool_under_test_{}".format(name.replace("-", "_")), SITE_TOOLS / (name + ".py")
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -252,11 +255,11 @@ def test_the_ci_builds_the_feed():
         encoding="utf-8"
     )
 
-    assert workflow.count("python3 tools/build-podcast-feed.py") == 2
+    assert workflow.count("python3 platforms/blog/site/tools/build-podcast-feed.py") == 2
     for build in workflow.split("- name: Build publish index")[1:]:
         segment = build.split("- name: Apply theme patches")[0]
-        assert "tools/build-podcast-index.py" in segment
-        assert "tools/build-podcast-feed.py" in segment
+        assert "platforms/blog/site/tools/build-podcast-index.py" in segment
+        assert "platforms/blog/site/tools/build-podcast-feed.py" in segment
 
 
 def test_an_empty_index_does_not_wipe_the_feed(tmp_path, monkeypatch):

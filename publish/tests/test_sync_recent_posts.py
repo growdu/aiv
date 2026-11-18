@@ -1,6 +1,7 @@
 """404 页的「最近发布」链接必须真的指向一篇文章。
 
-**病根**：``tools/sync-hexo.py`` 生成 ``source/recent-posts.json`` 时拼的
+**病根**：``platforms/blog/site/tools/sync-hexo.py`` 生成
+``source/recent-posts.json`` 时拼的
 URL 是 ``/{cat}/{slug}/``，而站点真实的 permalink 是
 ``/:year/:month/:day/:title/``（``_config.yml`` 的 ``permalink``）。
 
@@ -12,7 +13,7 @@ URL 是 ``/{cat}/{slug}/``，而站点真实的 permalink 是
 目录中间那层掉了。
 
 这条测试用 ``test_sync_exclusions.py`` 那套办法：造一小份语料，
-**真的跑一遍** ``tools/sync-hexo.py``，然后看它吐出来的
+**真的跑一遍** ``platforms/blog/site/tools/sync-hexo.py``，然后看它吐出来的
 ``recent-posts.json``。
 """
 
@@ -20,41 +21,27 @@ import importlib.util
 import json
 import os
 import re
-import shutil
-import subprocess
-import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SYNC_SCRIPT = REPO_ROOT / "tools" / "sync-hexo.py"
+# 集成测试的假仓库：把站点构建链的落点重定向到临时目录。
+from sync_harness import (
+    SYNC_SCRIPT,
+    build_corpus,
+    content_units_dir,
+    run_sync,
+    site_source_dir,
+)
 
 
 def load_sync_module():
-    """Load ``tools/sync-hexo.py`` as a module (it is a script, not a package)."""
+    """Load ``platforms/blog/site/tools/sync-hexo.py`` as a module.
+
+    它是个脚本，不是包——所以用 importlib 按路径加载。
+    """
     spec = importlib.util.spec_from_file_location("sync_hexo_recent_posts", SYNC_SCRIPT)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-
-
-def build_corpus(root: Path, drafts) -> None:
-    for rel, text in drafts.items():
-        path = root / "docs" / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    shutil.copy(REPO_ROOT / "_config.matery.yml", root / "_config.matery.yml")
-
-
-def run_sync(root: Path) -> None:
-    result = subprocess.run(
-        [sys.executable, str(SYNC_SCRIPT)],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, "sync-hexo.py 失败：\n{}\n{}".format(
-        result.stdout, result.stderr
-    )
 
 
 DRAFT = "---\ntitle: {title}\n---\n\n{body}\n"
@@ -67,7 +54,8 @@ CORPUS = {
 
 
 def read_recent_posts(root: Path):
-    path = root / "source" / "recent-posts.json"
+    """读 404 页用的「最近发布」索引（站点私有的源目录里）。"""
+    path = site_source_dir(root) / "recent-posts.json"
     assert path.exists(), "sync 没有写出 source/recent-posts.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -107,7 +95,7 @@ def test_every_recent_post_url_points_at_a_generated_post(tmp_path):
     run_sync(tmp_path)
 
     posts = read_recent_posts(tmp_path)
-    posts_root = tmp_path / "source" / "_posts"
+    posts_root = content_units_dir(tmp_path)
     generated = set()
     for path in posts_root.rglob("*.md"):
         text = path.read_text(encoding="utf-8")

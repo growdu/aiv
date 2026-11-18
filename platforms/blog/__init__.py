@@ -2,8 +2,10 @@
 
 **站点是六个第三方平台之一**——这是 2026-11-18 顶层设计定下的事。
 
-在这之前站点不在平台层里：它走 `docs/` → `tools/sync-hexo.py` → `source/`
-→ `public/` 这条链，跟另外五个平台（公众号、头条号、抖音、视频号、B 站）
+在这之前站点不在平台层里：它走 `docs/` →
+`platforms/blog/site/tools/sync-hexo.py` → `content/units/` →
+`platforms/blog/site/source/` → `public/` 这条链，跟另外五个平台
+（公众号、头条号、抖音、视频号、B 站）
 是**两套东西**——那五个走「能力声明 → 发布清单 → outbox 快照」，
 站点不走。于是顶层的心智模型缺了一块：目录里数得出来五个平台，
 设计里说的是六个。
@@ -57,7 +59,7 @@ MAX_CATEGORY_DEPTH = 5
 
 #: 构建期被整棵排除的工程目录名。
 #:
-#: `tools/sync-hexo.py` 扫 `docs/` 时会把这些目录**整棵剪掉**——
+#: `platforms/blog/site/tools/sync-hexo.py` 扫 `docs/` 时会把这些目录**整棵剪掉**——
 #: 文章、分类页、图片都不进产物。这份名单是那边 `EXCLUDED_DIR_NAMES` 的副本：
 #: **改那边要改这边**。之所以抄一份而不是 import：
 #: 平台层不 import 编译层（接缝原则），而这九个名字两年不会变。

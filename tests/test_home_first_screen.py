@@ -36,7 +36,8 @@ import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-THEME = REPO / "themes" / "matery"
+SITE = REPO / "platforms" / "blog" / "site"
+THEME = SITE / "themes" / "matery"
 LAYOUT = THEME / "layout"
 PARTIAL = LAYOUT / "_partial"
 
@@ -47,8 +48,8 @@ MY_CSS = THEME / "source" / "css" / "my.css"
 TECH_CSS = THEME / "source" / "css" / "tech.css"
 LAYOUT_EJS = LAYOUT / "layout.ejs"
 MAIN_STYLE = PARTIAL / "main-style.ejs"
-PATCH_THEME = REPO / "tools" / "patch-theme.py"
-SYNC_HEXO = REPO / "tools" / "sync-hexo.py"
+PATCH_THEME = SITE / "tools" / "patch-theme.py"
+SYNC_HEXO = SITE / "tools" / "sync-hexo.py"
 FEATURED_JSON = REPO / "data" / "featured.json"
 
 
@@ -119,7 +120,7 @@ def test_the_hero_is_not_full_screen():
     注释先剥掉再扫：tech.css 里写着「别用 100vh」的那句说明本身含有这个
     词，把它算成一条违规规则，就等于逼着文档不许提这件事。
     """
-    assert TECH_CSS.is_file(), "找不到 themes/matery/source/css/tech.css"
+    assert TECH_CSS.is_file(), "找不到 platforms/blog/site/themes/matery/source/css/tech.css"
 
     css = re.sub(r"/\*.*?\*/", "", _read(TECH_CSS), flags=re.S)
 
@@ -160,7 +161,7 @@ def test_the_hero_lead_is_a_short_sentence_and_not_the_seo_description():
     所以：短句单独放一个配置项 ``home_hero_lead``，长句留给 meta。
     """
     hero = _read(HOME_HERO)
-    config = _read(REPO / "_config.yml")
+    config = _read(SITE / "_config.yml")
 
     assert "config.home_hero_lead" in hero, (
         "home-hero.ejs 应当读 config.home_hero_lead 当首屏大标题"
@@ -201,21 +202,21 @@ def test_the_hero_does_not_repeat_the_category_list_as_an_eyebrow():
 def test_the_built_home_page_shows_the_short_lead():
     """构建产物里，h1 是那句短句——不是 SEO 的长描述。
 
-    对着 ``public/index.html`` 查，不是对着模板查：模板对了、产物没对，
+    对着 ``platforms/blog/site/public/index.html`` 查，不是对着模板查：模板对了、产物没对，
     中间隔着的正是 sync-hexo 和 patch-theme 那两步。
     """
-    built = REPO / "public" / "index.html"
+    built = SITE / "public" / "index.html"
     if not built.is_file():
         import pytest
 
-        pytest.skip("还没构建（public/index.html 不存在）")
+        pytest.skip("还没构建（platforms/blog/site/public/index.html 不存在）")
 
     html = built.read_text(encoding="utf-8")
     m = re.search(r'<h1 class="home-hero__lead">(.*?)</h1>', html, re.S)
     assert m, "首页的 h1 不见了"
     lead = m.group(1).strip()
 
-    config = _read(REPO / "_config.yml")
+    config = _read(SITE / "_config.yml")
     m2 = re.search(r"^home_hero_lead:\s*(.+)$", config, re.M)
     assert m2, "_config.yml 里没有 home_hero_lead"
     expect = m2.group(1).strip().strip("'\"")
@@ -285,7 +286,7 @@ def test_the_featured_entries_point_at_real_posts():
     清单是手写的，文章会改名、会删。指着一个不存在的 slug，
     首屏就少一张卡——而构建不会报错。
 
-    对着 ``docs/`` 查，不是 ``source/_posts/``：后者是 gitignore 的构建
+    对着 ``docs/`` 查，不是 ``platforms/blog/site/source/_posts/``：后者是 gitignore 的构建
     产物，而 CI 的 site-guard **不跑** sync-hexo.py——在那边查，
     这条测试就成了「本地绿、CI 红」。
     """

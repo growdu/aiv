@@ -37,6 +37,12 @@ from .notify import build_message, send
 from .publish import PackageResult, snapshot_name, write_package, write_snapshot
 from .state import StateStore, fingerprint, needs_publish
 
+# platforms/toutiao/ 下的入口脚本：parents[2] 就是仓库根。
+# 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_POSTS  # noqa: E402
+
 __all__ = [
     "EXIT_ERROR", "EXIT_INELIGIBLE", "EXIT_OK", "EXIT_USAGE", "main",
 ]
@@ -50,8 +56,10 @@ EXIT_USAGE = 1
 EXIT_INELIGIBLE = 2
 EXIT_ERROR = 3
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_POSTS_DIR = _REPO_ROOT / "source" / "_posts"
+# 文章目录：站点拿到的那份内容单元副本（`platforms/blog/site/source/_posts/`）。
+# **不是** `content/units/`——图片按「文章目录的上一级」解析，
+# 图片还住在站点的 `source/images/` 里（它们进内容单元仓库是下一个模块的事）。
+DEFAULT_POSTS_DIR = SITE_POSTS
 DEFAULT_OUT_DIR = _REPO_ROOT / "platforms" / "toutiao" / "out"
 DEFAULT_OUTBOX_DIR = _REPO_ROOT / "platforms" / "toutiao" / "outbox"
 DEFAULT_CAPABILITY = default_capability_path()
@@ -156,7 +164,8 @@ def _resolve_post(posts_dir: Path, slug: str):
     posts_dir = Path(posts_dir)
     if not posts_dir.is_dir():
         raise FileNotFoundError(
-            "找不到 {}。先跑 `python3 tools/sync-hexo.py`（约 3 分钟）。".format(posts_dir)
+            "找不到 {}。先跑 `python3 platforms/blog/site/tools/sync-hexo.py`"
+            "（约 3 分钟）。".format(posts_dir)
         )
     direct = posts_dir / (slug + ".md")
     if not _inside(direct, posts_dir):
@@ -193,7 +202,7 @@ def cmd_scan(args) -> int:
     try:
         posts = discover(args.posts_dir)
     except FileNotFoundError as error:
-        # 目录不存在：错误消息里已经带了「先跑 tools/sync-hexo.py」的指引。
+        # 目录不存在：错误消息里已经带了「先跑 sync-hexo.py」的指引。
         print("扫描失败：{}".format(error), file=sys.stderr)
         return EXIT_USAGE
     except ValueError as error:
@@ -350,7 +359,7 @@ def cmd_convert_all(args) -> int:
     try:
         posts = discover(args.posts_dir)
     except FileNotFoundError as error:
-        # 目录不存在：错误消息里已经带了「先跑 tools/sync-hexo.py」的指引。
+        # 目录不存在：错误消息里已经带了「先跑 sync-hexo.py」的指引。
         print("扫描失败：{}".format(error), file=sys.stderr)
         return EXIT_USAGE
     except ValueError as error:
@@ -543,7 +552,7 @@ def _add_common_options(parser: argparse.ArgumentParser) -> None:
     the value that was given before the command name.
     """
     parser.add_argument("--posts-dir", type=Path, default=argparse.SUPPRESS,
-                        help="母稿目录（默认：source/_posts）")
+                        help="站点文章目录（默认：platforms/blog/site/source/_posts）")
     parser.add_argument("--out-dir", type=Path, default=argparse.SUPPRESS,
                         help="发布包目录（默认：platforms/toutiao/out）")
     parser.add_argument("--outbox-dir", type=Path, default=argparse.SUPPRESS,
@@ -574,7 +583,7 @@ def build_parser() -> argparse.ArgumentParser:
     convert = sub.add_parser("convert", help="切片并产出发布包（不调接口）",
                              parents=[_common_parser()])
     convert.add_argument("slug", nargs="?",
-                         help="文章在 source/_posts 下的相对路径（去掉 .md）")
+                         help="文章在站点文章目录下的相对路径（去掉 .md）")
     convert.add_argument("--all", dest="all_posts", action="store_true",
                          help="把整个语料一次性出包")
     convert.add_argument("--packages-only", dest="packages_only", action="store_true",

@@ -646,7 +646,7 @@ def test_the_indented_scalar_form_is_the_second_deliberate_divergence():
     不进发布候选集，而作者明明写了 platforms。契约层是唯一的闸门，闸门
     不能自己把人放过去——响亮地报「platforms 必须是列表」才是它该做的。
 
-    （生产链路上碰不到这个分歧：weixin 读的是 ``source/_posts/``，那里的
+    （生产链路上碰不到这个分歧：weixin 读的是 ``content/units/``，那里的
     缩进标量已被 sync 折叠成单行 ``key: value``。）
     """
     weixin_parser = _weixin_parser()

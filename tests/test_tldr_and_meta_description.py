@@ -7,7 +7,7 @@
 
 两个下游会把它当文章摘要显示出来：
 
-1. ``themes/matery/layout/_partial/post-tldr.ejs`` 的 TL;DR 框
+1. ``platforms/blog/site/themes/matery/layout/_partial/post-tldr.ejs`` 的 TL;DR 框
 2. ``head.ejs`` 的 ``og:description`` / ``twitter:description``
 
 **这条契约在 2026-11-16 被反转了（阶段 1 的 Task 4）。**
@@ -41,9 +41,10 @@ import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TLDR_PARTIAL = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "post-tldr.ejs"
-HEAD_PARTIAL = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "head.ejs"
-PATCH_THEME = REPO_ROOT / "tools" / "patch-theme.py"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+TLDR_PARTIAL = SITE / "themes" / "matery" / "layout" / "_partial" / "post-tldr.ejs"
+HEAD_PARTIAL = SITE / "themes" / "matery" / "layout" / "_partial" / "head.ejs"
+PATCH_THEME = SITE / "tools" / "patch-theme.py"
 NODE = shutil.which("node")
 
 

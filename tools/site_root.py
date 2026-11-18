@@ -42,6 +42,12 @@ from urllib.parse import quote
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# 站点的构建链搬进 platforms/blog/site/ 之后，_config.yml 跟着搬了家。
+# 这个模块留在根 tools/（publish/tests/test_episode.py 要从这儿 import 它，
+# 契约层不许 import 站点层），所以它自己认一下站点目录。
+SITE_DIR = os.path.join(REPO_ROOT, "platforms", "blog", "site")
+SITE_CONFIG = os.path.join(SITE_DIR, "_config.yml")
+
 # A root-absolute media path inside a quoted string.  The leading quote
 # is what makes it safe to match: `https://cdn.example/libs/x.js` has
 # no quote immediately before `/libs/`, so it never matches.
@@ -63,7 +69,7 @@ def site_root(config_path: str | None = None) -> str:
     for each of them is pure overhead.
     """
     if config_path is None:
-        config_path = os.path.join(REPO_ROOT, '_config.yml')
+        config_path = SITE_CONFIG
     cached = _ROOT_CACHE.get(config_path)
     if cached is not None:
         return cached
@@ -96,7 +102,7 @@ def site_url(config_path: str | None = None) -> str:
     mount point, so the two must not be concatenated blindly.
     """
     if config_path is None:
-        config_path = os.path.join(REPO_ROOT, '_config.yml')
+        config_path = SITE_CONFIG
     cached = _URL_CACHE.get(config_path)
     if cached is not None:
         return cached

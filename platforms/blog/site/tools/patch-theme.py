@@ -11,8 +11,17 @@ import os
 import re
 import shutil
 import sys
+from pathlib import Path
 
-theme_dir = "themes/matery"
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE, SITE_THEMES  # noqa: E402
+
+#: 主题目录（站点这一平台自己那份 matery）
+theme_dir = str(SITE_THEMES / "matery")
 
 # --- 1. Remove default menu ---
 path = os.path.join(theme_dir, "_config.yml")
@@ -64,9 +73,9 @@ else:
 # --- 1.6. Publish computer-themed cover/banner/feature images ---
 # The default matery theme ships nature photos (pegasi, snow mountains,
 # deserts, ...).  We replace them with computer-industry images generated
-# into ./theme-assets/ so the hero, banner rotation and post thumbnails
+# into platforms/blog/site/theme-assets/ so the hero, banner rotation and post thumbnails
 # fit the database-kernel focus of the blog.
-THEME_ASSETS_DIR = "theme-assets"
+THEME_ASSETS_DIR = str(SITE / "theme-assets")
 MEDIAS = os.path.join(theme_dir, "source", "medias")
 if os.path.isdir(THEME_ASSETS_DIR):
     os.makedirs(MEDIAS, exist_ok=True)
@@ -92,7 +101,7 @@ else:
 # matery's default reward.ejs partial reads theme.reward.wechat /
 # theme.reward.alipay and renders the corresponding /medias/reward/*
 # images next to the article body.  Copy the user's weixin.jpg /
-# zhifubao.jpg from the repo root into themes/matery/source/medias/reward/
+# zhifubao.jpg from the repo root into platforms/blog/site/themes/matery/source/medias/reward/
 # so that the configured paths resolve at build time.
 REWARD_DIR = os.path.join(theme_dir, "source", "medias", "reward")
 reward_pairs = [
@@ -1594,17 +1603,19 @@ else:
 
 # --- 3.6. Publish spectrum (where this piece also went) ---
 # 站点是内容谱系的根（发布架构 §9.3）：文章页要能回答「这篇还发到了哪些平台」。
-# 数据来自 source/_data/publish_index.json（tools/build-publish-index.py 从
-# platforms/<平台>/outbox/ 的快照汇总而来），partial 只读它，不做任何推断。
+# 数据来自 platforms/blog/site/source/_data/publish_index.json
+# （platforms/blog/site/tools/build-publish-index.py 从 platforms/<平台>/outbox/
+# 的快照汇总而来），partial 只读它，不做任何推断。
 publish_ejs = """<%/*
   Publish spectrum — where this piece also went.
 
   The site is the root of the content lineage (publish/spec/00 §9.3): an
   article page should answer "where else did this go?".  The answer comes
-  from `source/_data/publish_index.json`, which `tools/build-publish-index.py`
-  builds out of the publish layer's snapshots (`platforms/<platform>/outbox/*.json`).
+  from `platforms/blog/site/source/_data/publish_index.json`, which
+  `platforms/blog/site/tools/build-publish-index.py` builds out of the publish
+  layer's snapshots (`platforms/<platform>/outbox/*.json`).
 
-  The content id is the path under `source/_posts/` without the suffix --
+  The content id is the path under `platforms/blog/site/source/_posts/` without the suffix --
   the same id the publish layer uses as its idempotency key.
 */%>
 <%
@@ -1680,7 +1691,8 @@ video_ejs = """<%/*
   carries the BV id, which is what the player needs; 视频号 has no
   embeddable page, so it gets a plain link.
 
-  Same data source as the publish spectrum: source/_data/publish_index.json.
+  Same data source as the publish spectrum:
+  platforms/blog/site/source/_data/publish_index.json.
 */%>
 <%
 var videoIndex = (site.data && site.data.publish_index) ? site.data.publish_index : null;
@@ -1754,15 +1766,16 @@ else:
 # 契约七 §4.2：母稿页顶部那一块期号区块（期号头 / 钩子 / 播放器 / 平台链接 /
 # 机制图 / 速览 / 源码与复现 / 系列导航）。
 #
-# **partial 手写入库**（themes/matery/layout/_partial/episode-block.ejs），
+# **partial 手写入库**（platforms/blog/site/themes/matery/layout/_partial/episode-block.ejs），
 # 这里只做两件事：
 #
 #   1. 注入渲染位：在正文之前 include 期号区块（D3：期号区块在正文之前）。
 #   2. 搬运机制图：正文里的第一张 mermaid 搬进区块，正文里去掉那张图——
 #      一张图只该出现一次（区块里一份 + 正文里一份是重复内容）。
 #
-# 数据源是 ``source/_data/podcast_index.json``（``tools/build-podcast-index.py``
-# 的产物），partial 只读它，不做任何推断。
+# 数据源是 ``platforms/blog/site/source/_data/podcast_index.json``
+# （``platforms/blog/site/tools/build-podcast-index.py`` 的产物），partial 只读它，
+# 不做任何推断。
 #
 # 幂等：文件里已经有 episode-block 就不重复注入。
 EPISODE_BLOCK_SNIPPET = r"""<%
@@ -1819,8 +1832,8 @@ else:
 # --- 3.9. Latest episode (首页的「最新一期」) -----------------------------
 # 站点入口之一（契约七 §7.2）：首页上要能一眼看到「最新一期是什么」。
 #
-# partial 手写入库（themes/matery/layout/_partial/latest-episode.ejs），
-# 这里只注入渲染位。数据源是 ``source/_data/podcast_index.json``——
+# partial 手写入库（platforms/blog/site/themes/matery/layout/_partial/latest-episode.ejs），
+# 这里只注入渲染位。数据源是 ``platforms/blog/site/source/_data/podcast_index.json``——
 # 与文章页的期号区块同一个源，首页与期号页说的必须是同一件事。
 LATEST_EPISODE_ANCHORS = (
     "<%- partial('_partial/learning-path') %>",
@@ -2067,7 +2080,7 @@ if os.path.isfile(_bg_content):
 # 侧栏（分类导航 + 最多阅读）**不再**由这个脚本注入。
 #
 # 它原来往主题文件里塞一份侧栏模板的抄本。可那份抄本跟主题里真正生效的
-# 那段（themes/matery/layout/layout.ejs）早就对不上了——抄本少了折叠开关
+# 那段（platforms/blog/site/themes/matery/layout/layout.ejs）早就对不上了——抄本少了折叠开关
 # （onclick="toggleSidebar('cat')"）和定义 window.toggleSidebar 的那段脚本。
 # 哪天它真的注入进去，侧栏就再也折叠不了，而构建不会报错、测试也不会红。
 #
@@ -2279,7 +2292,7 @@ else:
 # Replaces the standard grid layout on index, category, and tag pages
 # with a 3D rotating carousel that arranges cards in a circle.
 
-# 9a. Ensure CSS and JS files exist under themes/matery/source/
+# 9a. Ensure CSS and JS files exist under platforms/blog/site/themes/matery/source/
 carousel_css = os.path.join(theme_dir, "source", "css", "3d-carousel.css")
 carousel_js = os.path.join(theme_dir, "source", "js", "3d-carousel.js")
 
@@ -3335,7 +3348,7 @@ if os.path.isfile(my_css_path):
 else:
     print("my.css not found, skipping home-tabs CSS")
 
-# --- 8. Drop unused vendored libs from themes/matery/source/libs/ ---
+# --- 8. Drop unused vendored libs from platforms/blog/site/themes/matery/source/libs/ ---
 # The vendored theme ships 30+ libs but the live templates only reference
 # 13 (animate, aos, awesome, codeBlock, instantpage, jqcloud, jquery,
 # lightGallery, materialize, prism, scrollprogress, tocbot, typed, share).

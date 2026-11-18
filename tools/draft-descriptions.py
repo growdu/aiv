@@ -40,7 +40,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SYNC_SCRIPT = REPO_ROOT / "tools" / "sync-hexo.py"
+# 站点的构建链搬进了 platforms/blog/site/——sync-hexo.py 现在住在那里。
+SYNC_SCRIPT = REPO_ROOT / "platforms" / "blog" / "site" / "tools" / "sync-hexo.py"
 
 #: 摘要的下限：比这更短的段落当摘要没有意义（读者看不出这篇文章讲什么）。
 #: 「pg」「idm」「node1」这种碎片就在这个门槛底下——它们会被丢掉，

@@ -129,13 +129,73 @@ REPO_TOP_DIRS = {
     "scripts", "source", "tests", "themes", "tools", "video",
 }
 
-# **生成目录**：`.gitignore` 里的 `/source/`（只放行 `source/all/` 与
-# `source/recommended/`）与 `public/`。它们的内容由 `sync-hexo.py` 与
+# **生成目录**：`.gitignore` 里的 `/platforms/blog/site/source/`
+# （只放行 `source/all/` 与 `source/recommended/`）与
+# `/platforms/blog/site/public/`。它们的内容由 `sync-hexo.py` 与
 # `hexo generate` 编译出来，**干净检出里不存在**。
 #
 # 这条守卫若把它们当普通路径要求存在，**在干净检出上必然红**——
 # 那不是规格错了，是守卫把构建产物当成了仓库事实。
-GENERATED_PREFIXES = ("source/", "public/")
+GENERATED_PREFIXES = (
+    "source/",
+    "public/",
+    "platforms/blog/site/source/",
+    "platforms/blog/site/public/",
+)
+
+# **搬过家的路径**：站点的构建链搬进了 `platforms/blog/site/`（2026-11-18），
+# 内容单元搬进了 `content/units/`。规格是**当时**写的，里面引用的还是旧路径；
+# 旧路径已经不在仓库里了，但它们**搬到了别处**。
+#
+# 这里登记对照，让守卫照旧认为「这个路径存在」——守卫的语义一个字没变：
+# 规格引用的每个仓库路径都得在仓库里找得到。
+RELOCATED_PREFIXES = {
+    "themes/": "platforms/blog/site/themes/",
+    "source/": "platforms/blog/site/source/",
+    "public/": "platforms/blog/site/public/",
+    "scripts/": "platforms/blog/site/scripts/",
+}
+
+#: `tools/` 里**属于站点平台**的那些脚本（跟着站点搬了家）；其余留在根 `tools/`。
+RELOCATED_TOOLS = frozenset({
+    "build-learning-path.py",
+    "build-podcast-feed.py",
+    "build-podcast-index.py",
+    "build-publish-index.py",
+    "build-series-page.py",
+    "check-built-links.py",
+    "check-card-excerpts.py",
+    "check-episode-block.py",
+    "check-home-tabs.py",
+    "check-internal-links.py",
+    "check-markdown.py",
+    "check-mermaid.py",
+    "copy-vendor.py",
+    "init-gitalk-issues.js",
+    "patch-theme.py",
+    "subset-icons.py",
+    "sync-hexo.py",
+})
+
+
+def _relocated(rel: str) -> str | None:
+    """这个旧路径搬到了哪儿？没搬过就返回 None。"""
+    for old_prefix, new_prefix in RELOCATED_PREFIXES.items():
+        if rel.startswith(old_prefix):
+            return new_prefix + rel[len(old_prefix):]
+    if rel.startswith("tools/"):
+        name = rel[len("tools/"):]
+        if name in RELOCATED_TOOLS:
+            return "platforms/blog/site/tools/" + name
+    return None
+
+
+def _exists_in_repo(rel: str) -> bool:
+    """路径在仓库里存在——**旧位置或搬过后的新位置**都算。"""
+    if (REPO / rel).exists():
+        return True
+    moved = _relocated(rel)
+    return bool(moved) and (REPO / moved).exists()
 
 SRC_PATH_RE = re.compile(
     r"(?:docs|src|include|backend)/[A-Za-z0-9_\-/]*\.(?:c|h|cc|cpp|hpp|py|go|rs|java|sql)"
@@ -412,7 +472,7 @@ def _missing_paths(spec_path: Path) -> list[str]:
         p for p in candidates
         if p not in PLANNED_PATHS
         and not p.startswith(GENERATED_PREFIXES)
-        and not (REPO / p).exists()
+        and not _exists_in_repo(p)
     )
 
 
@@ -434,8 +494,12 @@ def test_generated_prefixes_are_really_gitignored():
     `.gitignore` 里放出来，守卫会提醒重新审视 GENERATED_PREFIXES。
     """
     gitignore = (REPO / ".gitignore").read_text(encoding="utf-8")
-    assert "/source/" in gitignore, "/source/ 应当仍在 .gitignore 里"
-    assert "public/" in gitignore, "public/ 应当仍在 .gitignore 里"
+    assert "/platforms/blog/site/source/" in gitignore, (
+        "/platforms/blog/site/source/ 应当仍在 .gitignore 里"
+    )
+    assert "/platforms/blog/site/public/" in gitignore, (
+        "/platforms/blog/site/public/ 应当仍在 .gitignore 里"
+    )
 
 
 def _git_tracked_paths() -> set[str]:

@@ -13,7 +13,7 @@
 
 读者看到这种开头，只会觉得这个博客没写完。
 
-所以要在**渲染产物**（``public/index.html``）上断言：
+所以要在**渲染产物**（``platforms/blog/site/public/index.html``）上断言：
 
 1. 摘要不以「TL;DR」「[TOC]」开头；
 2. 摘要不以履历前缀开头（「初稿，」「修订：」——那是「这次改了什么」，
@@ -22,7 +22,7 @@
 
 用法::
 
-    python3 tools/check-card-excerpts.py [--public public]
+    python3 platforms/blog/site/tools/check-card-excerpts.py [--public platforms/blog/site/public]
 
 退出码 0 = 全部通过；1 = 有问题（问题逐条打印在 stdout）。
 """
@@ -32,8 +32,14 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_DIR = REPO_ROOT / "public"
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_PUBLIC  # noqa: E402
+
+PUBLIC_DIR = SITE_PUBLIC
 
 #: 卡片摘要在渲染产物里的容器。
 EXCERPT_CLASS = "post-card__excerpt"
@@ -107,7 +113,7 @@ def main(argv=None):
     parser.add_argument(
         "--public",
         default=str(PUBLIC_DIR),
-        help="渲染产物目录（默认 public）",
+        help="渲染产物目录（默认 platforms/blog/site/public）",
     )
     args = parser.parse_args(argv)
 

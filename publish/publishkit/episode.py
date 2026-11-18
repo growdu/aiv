@@ -12,7 +12,7 @@
 一篇期号文章身上有**两个** id，它们各管一头：
 
 ============================  =========================================
-``content_id``                博客侧的内容单元 id = 相对 ``source/_posts/``
+``content_id``                博客侧的内容单元 id = 相对 ``content/units/``
                               的路径去后缀（``database/postgresql-row-lock-
                               deep-dive``）。**落地 URL 由它派生。**
 ``episode``                   AIV 侧的期号 slug（``row-lock``）。它是契约、
@@ -39,7 +39,7 @@
 --------------------
 front matter 的格式规则（契约一 §4.2）只允许扁平的 ``key: value`` 与单层的
 ``key:`` + ``  - item`` 列表，嵌套仅 ``cascade:`` 允许。两道透传白名单
-（``tools/sync-hexo.py`` 的 ``PASSTHROUGH_*`` 与本层的
+（``platforms/blog/site/tools/sync-hexo.py`` 的 ``PASSTHROUGH_*`` 与本层的
 ``PASSTHROUGH_FIELDS``）也都是按**扁平的键名**逐个搬的。
 
 所以期号字段是一组扁平键，**没有** ``episode_media:`` 这种嵌套结构——
@@ -61,7 +61,8 @@ front matter 的格式规则（契约一 §4.2）只允许扁平的 ``key: value
 - 平台重发会换链接。两处都写必然漂：母稿里的旧链接指向已失效的地址，
   而且**没人会发现**，因为页面照常渲染。
 
-期号页的「在 B站看」按钮由构建期汇总的 ``source/_data/podcast_index.json``
+期号页的「在 B站看」按钮由构建期汇总的
+``platforms/blog/site/source/_data/podcast_index.json``
 提供（commit 6 落地），它读的是 outbox 快照。
 
 为什么不 import ``tools/site_root.py``
@@ -187,7 +188,8 @@ class Episode:
         year / month / day, and without them there is no honest answer.
 
         ``date`` must be the **content unit's** date (the one
-        ``tools/sync-hexo.py`` writes into ``source/_posts/``), not the
+        ``platforms/blog/site/tools/sync-hexo.py`` writes into
+        ``content/units/``), not the
         master draft's ``date:`` field.  The build overwrites the draft's
         date with the earliest git commit date, and four of the six episode
         drafts carry no ``date:`` at all — so a URL derived from the draft
@@ -407,10 +409,11 @@ def content_id_for_draft(path, drafts_root) -> str:
     """内容单元 id：**母稿**路径（相对 ``docs/``）去后缀。
 
     与 :func:`publishkit.schedule.content_id_for` 的区别只有一处，但它
-    是**必需**的：编译目录 ``source/_posts/`` 里没有 ``index.md``。
+    是**必需**的：编译目录 ``content/units/`` 里没有 ``index.md``。
 
-    ``tools/sync-hexo.py`` 编译时会把 ``docs/<目录>/index.md`` 写成
-    ``source/_posts/<上层目录>/<目录名>.md``（``index.md`` 变成它所在的
+    ``platforms/blog/site/tools/sync-hexo.py`` 编译时会把
+    ``docs/<目录>/index.md`` 写成
+    ``content/units/<上层目录>/<目录名>.md``（``index.md`` 变成它所在的
     目录本身），其余文件原样搬。所以：
 
     ==========================================  ==========================================
@@ -425,7 +428,8 @@ def content_id_for_draft(path, drafts_root) -> str:
     派生的落地 URL 指向一个**不存在**的页面——所以这一条不能省。
 
     与编译产物的等价性由 ``publish/tests/test_episode.py`` 的集成测试钉住：
-    真跑一遍 ``tools/sync-hexo.py``，逐个比对母稿派生值与产物里的内容单元 id。
+    真跑一遍 ``platforms/blog/site/tools/sync-hexo.py``，逐个比对母稿派生值与
+    产物里的内容单元 id。
     """
     root = Path(drafts_root).resolve()
     relative = Path(path).resolve().relative_to(root)
@@ -551,12 +555,12 @@ def episode_from_fields(
 def read_episode(path, posts_root=None, drafts_root=None) -> Episode:
     """Read one master draft and return its episode fields.
 
-    母稿可以是 ``docs/`` 下的原稿，也可以是 ``source/_posts/`` 下的内容单元
+    母稿可以是 ``docs/`` 下的原稿，也可以是 ``content/units/`` 下的内容单元
     ——两者的 front matter 是同一套。
 
     两个 root 各自对应一种内容单元 id 的算法，**不能混用**：
 
-    - ``posts_root``（``source/_posts/``）：由
+    - ``posts_root``（``content/units/``）：由
       :func:`publishkit.schedule.content_id_for` 算；
     - ``drafts_root``（``docs/``）：由 :func:`content_id_for_draft` 算
       ——``index.md`` 要变成它所在的目录本身（见那条函数的说明）。
@@ -564,7 +568,8 @@ def read_episode(path, posts_root=None, drafts_root=None) -> Episode:
     两个都不给时 ``content_id`` 是空字符串——**不猜**
     （见 :func:`episode_from_fields`）。
 
-    **日期只有内容单元才有。** ``tools/sync-hexo.py`` 编译时把母稿的
+    **日期只有内容单元才有。**
+    ``platforms/blog/site/tools/sync-hexo.py`` 编译时把母稿的
     ``date:`` 覆盖成 git 里最早的一次提交时间，站点 permalink 用的是
     那个值——不是作者写在母稿里的那个（2026-11-14 实测：六期母稿里
     **四期根本没写** ``date:``，两期写了的也只与 git 日期同一天、

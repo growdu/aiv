@@ -19,7 +19,8 @@ __all__ = [
 # The front matter block is opened and closed by a line holding ``---``.
 _DELIMITER = "---"
 
-# The escapes ``tools/sync-hexo.py`` writes into a double-quoted value.
+# The escapes ``platforms/blog/site/tools/sync-hexo.py`` writes into a
+# double-quoted value.
 # ``yaml_escape`` doubles a backslash and escapes a double quote, so these
 # two are exactly what can come back out of a quoted title.
 _ESCAPES = {"\\": "\\", '"': '"'}
@@ -28,7 +29,7 @@ _ESCAPE_RE = re.compile(r"\\(.)")
 
 @dataclass(frozen=True)
 class SourcePost:
-    """One blog post as it exists in ``source/_posts``."""
+    """One blog post as it exists in the site's posts directory."""
 
     slug: str
     title: str
@@ -40,7 +41,8 @@ class SourcePost:
 def _unquote(value: str) -> str:
     """Strip the surrounding quotes and undo the escapes inside them.
 
-    ``tools/sync-hexo.py`` writes the title as a double-quoted YAML scalar
+    ``platforms/blog/site/tools/sync-hexo.py`` writes the title as a
+    double-quoted YAML scalar
     and escapes what it has to (``yaml_escape``).  Hexo reads that back
     with a real YAML parser, which turns ``\\"`` into ``"`` again -- so we
     must undo the same escapes, otherwise the published title carries
@@ -104,7 +106,8 @@ def _split_front_matter(text: str) -> tuple[list[str], str] | None:
 def parse_front_matter(text: str) -> tuple[dict[str, object], str]:
     """Split front matter from the body.
 
-    ``tools/sync-hexo.py`` generates the front matter itself, so its shape is
+    ``platforms/blog/site/tools/sync-hexo.py`` generates the front matter
+    itself, so its shape is
     known and fixed: ``key: value`` scalars plus ``key:`` followed by
     ``  - item`` lists.  Unknown keys are kept as they are, so a future
     contract field cannot break the parser.
@@ -175,20 +178,21 @@ def discover(posts_dir: Path) -> list[SourcePost]:
     posts_dir = Path(posts_dir)
     if not posts_dir.is_dir():
         raise FileNotFoundError(
-            "找不到 {}。先跑 `python3 tools/sync-hexo.py`（约 3 分钟）。".format(posts_dir)
+            "找不到 {}。先跑 `python3 platforms/blog/site/tools/sync-hexo.py`"
+            "（约 3 分钟）。".format(posts_dir)
         )
     return [load_post(path, posts_dir) for path in sorted(posts_dir.rglob("*.md"))]
 
 
 def discover_unsupported(posts_dir: Path) -> list[str]:
-    """列出 source/_posts 下本适配器不支持的文件（当前是 .html 母稿）。
+    """列出文章目录下本适配器不支持的文件（当前是 .html 母稿）。
 
     这些文件会被站点发布，但头条号 adapter 不解析它们。
     返回相对 posts_dir 的路径字符串列表，排序后返回。
     目录不存在时返回空列表。
 
-    ``tools/sync-hexo.py`` 也会把 ``docs/`` 下的 .html 博文写进
-    ``source/_posts/``，而 ``discover()`` 只收 .md —— 这些母稿不会进头条号
+    ``platforms/blog/site/tools/sync-hexo.py`` 也会把 ``docs/`` 下的 .html
+    博文写进站点的文章目录，而 ``discover()`` 只收 .md —— 这些母稿不会进头条号
     的发布流程。把它们显式列出来，扫描方才能说清楚「哪些没发」而不是
     静默少发几篇。
 

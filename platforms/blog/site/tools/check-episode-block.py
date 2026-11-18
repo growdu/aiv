@@ -18,8 +18,9 @@
 
 用法：
 
-    python3 tools/check-episode-block.py [--public public]
-                                         [--index source/_data/podcast_index.json]
+    python3 platforms/blog/site/tools/check-episode-block.py \\
+        [--public platforms/blog/site/public] \\
+        [--index platforms/blog/site/source/_data/podcast_index.json]
 
 退出码 0 = 全部通过；1 = 有问题（问题逐条打印在 stdout）。
 """
@@ -30,9 +31,15 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_DIR = REPO_ROOT / "public"
-PODCAST_INDEX = REPO_ROOT / "source" / "_data" / "podcast_index.json"
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_PUBLIC, SITE_SOURCE  # noqa: E402
+
+PUBLIC_DIR = SITE_PUBLIC
+PODCAST_INDEX = SITE_SOURCE / "_data" / "podcast_index.json"
 
 #: 区块的根 class。partial 里写着，主题文件被改动时会跟着变。
 BLOCK_CLASS = "episode-block"
@@ -189,18 +196,31 @@ def check_all(index, public_dir):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="检查期号区块的渲染产物")
-    parser.add_argument("--public", help="渲染产物目录（默认 public/）")
-    parser.add_argument("--index", help="期号索引（默认 source/_data/podcast_index.json）")
+    parser.add_argument(
+        "--public", help="渲染产物目录（默认 platforms/blog/site/public/）"
+    )
+    parser.add_argument(
+        "--index",
+        help="期号索引（默认 platforms/blog/site/source/_data/podcast_index.json）",
+    )
     args = parser.parse_args(argv)
 
     public_dir = Path(args.public) if args.public else PUBLIC_DIR
     index_path = Path(args.index) if args.index else PODCAST_INDEX
 
     if not index_path.is_file():
-        print("期号索引不存在：{}（先跑 tools/build-podcast-index.py）".format(index_path))
+        print(
+            "期号索引不存在：{}（先跑 platforms/blog/site/tools/build-podcast-index.py）".format(
+                index_path
+            )
+        )
         return 1
     if not public_dir.is_dir():
-        print("渲染产物不存在：{}（先跑 npx hexo generate）".format(public_dir))
+        print(
+            "渲染产物不存在：{}（先在 platforms/blog/site 下跑 npx hexo generate）".format(
+                public_dir
+            )
+        )
         return 1
 
     index = json.loads(index_path.read_text(encoding="utf-8"))

@@ -151,7 +151,7 @@ def _common_options() -> _Parser:
         "--posts-dir",
         metavar="路径",
         default=argparse.SUPPRESS,
-        help="内容单元目录（默认：<仓库>/source/_posts）",
+        help="内容单元目录（默认：<仓库>/content/units）",
     )
     parser.add_argument(
         "--outbox-root",
@@ -245,7 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     publish.add_argument(
-        "content_id", help="内容单元 id（相对 source/_posts/ 的路径，去掉 .md）"
+        "content_id", help="内容单元 id（相对 content/units/ 的路径，去掉 .md）"
     )
     publish.add_argument("--platform", metavar="id", required=True, help="目标平台 id")
     publish.add_argument(

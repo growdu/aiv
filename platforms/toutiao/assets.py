@@ -103,10 +103,10 @@ def is_remote(path: str) -> bool:
 def resolve_asset(path: str, posts_dir: Path) -> Path:
     """Resolve an asset path from a post to a real file.
 
-    ``tools/sync-hexo.py`` rewrites every image reference to
-    ``images/<path relative to docs/>`` and copies the files to
+    ``platforms/blog/site/tools/sync-hexo.py`` rewrites every image reference to
+    ``images/<path relative to docs/>`` and copies the files to the site's
     ``source/images/``.  So an asset path resolves against the ``source/``
-    root -- the parent of ``_posts/``.
+    root -- the parent of the posts directory.
 
     Three things are refused here, and each of them says what went wrong:
 

@@ -24,8 +24,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-HOME_HERO = REPO / "themes" / "matery" / "layout" / "_partial" / "home-hero.ejs"
-SYNC_SCRIPT = REPO / "tools" / "sync-hexo.py"
+SITE = REPO / "platforms" / "blog" / "site"
+HOME_HERO = SITE / "themes" / "matery" / "layout" / "_partial" / "home-hero.ejs"
+SYNC_SCRIPT = SITE / "tools" / "sync-hexo.py"
 NODE = shutil.which("node")
 
 #: 首屏搜索那段 JS 在模板里的标记——patcher 往同一个文件里注入打字机，
@@ -110,20 +111,47 @@ def test_the_search_hint_says_what_it_can_search():
 # --- 精简索引本身的字段 -----------------------------------------------------
 
 
+def _sandboxed_site(tmp_path):
+    """在临时目录里搭一份**同构的仓库骨架**，把 sync 指到它。
+
+    sync 的输入输出目录都来自 ``tools/paths.py``（``DOCS`` /
+    ``CONTENT_UNITS`` / ``SITE_SOURCE``）。路径常量集中之后它们不再随
+    cwd 走——直接在仓库里跑 sync 会改真内容单元、真站点源目录。
+    所以这里把 ``tools/paths.py``、``tools/site_root.py`` 与 sync 一起
+    复制到临时目录里那份同构骨架下：``paths.py`` 按自己的位置算仓库根
+    （``parents[1]``），整套常量于是自然落在临时目录里；骨架的目录深度
+    跟仓库一致，脚本里写死的 ``parents[4]`` 也照样对得上。
+
+    ``paths.py`` import 时会断言仓库根下有 ``docs/`` 与 ``platforms/``，
+    所以语料目录也得先建出来。
+    """
+    root = tmp_path
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "tools").mkdir(parents=True, exist_ok=True)
+    for name in ("paths.py", "site_root.py"):
+        shutil.copy2(REPO / "tools" / name, root / "tools" / name)
+
+    site = root / "platforms" / "blog" / "site"
+    shutil.copytree(SITE / "tools", site / "tools")
+    shutil.copy2(SITE / "_config.yml", site / "_config.yml")
+    shutil.copy2(SITE / "_config.matery.yml", site / "_config.matery.yml")
+    return site
+
+
 def test_the_lite_index_has_the_fields_the_search_needs(tmp_path):
     """精简索引每条都要有 title / url / cat。
 
     索引是 sync 生成的（``source/`` 是 gitignore 的，CI 里没有现成文件），
     所以这里造一个临时语料跑一遍 sync，看它真的写出这三个字段。
     """
+    site = _sandboxed_site(tmp_path)
     for rel, text in CORPUS.items():
         path = tmp_path / "docs" / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
-    shutil.copy(REPO / "_config.matery.yml", tmp_path / "_config.matery.yml")
 
     result = subprocess.run(
-        [sys.executable, str(SYNC_SCRIPT)],
+        [sys.executable, str(site / "tools" / "sync-hexo.py")],
         cwd=str(tmp_path),
         capture_output=True,
         text=True,
@@ -132,9 +160,20 @@ def test_the_lite_index_has_the_fields_the_search_needs(tmp_path):
         result.stdout, result.stderr
     )
 
-    index = json.loads(
-        (tmp_path / "source" / "search-lite.json").read_text(encoding="utf-8")
+    # 站点接住内容单元的那一步（CI 里在 sync 之后）。
+    result = subprocess.run(
+        [sys.executable, str(site / "tools" / "adapt-units.py")],
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
     )
+    assert result.returncode == 0, "adapt-units.py 失败：\n{}\n{}".format(
+        result.stdout, result.stderr
+    )
+
+    lite_path = site / "source" / "search-lite.json"
+    assert lite_path.is_file(), "sync-hexo.py 没写出精简索引：{}".format(lite_path)
+    index = json.loads(lite_path.read_text(encoding="utf-8"))
 
     assert index, "精简索引是空的"
     for entry in index:

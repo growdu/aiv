@@ -6,7 +6,7 @@
 那只是一块空白的提示框，不点开源码根本不知道原来画的是什么。
 于是「图坏了」这件事在站点上一直是隐形的。
 
-**怎么量的**：把构建产物 ``public/**/*.html`` 里所有
+**怎么量的**：把构建产物 ``platforms/blog/site/public/**/*.html`` 里所有
 ``<div class="mermaid">`` 的源码收集起来（去重），在一个 headless Chrome
 里逐张调用 **站点自己用的那个** ``mermaid.render()``（不是 parse——
 render 才是真正画出 SVG 的那条路径；parse 只查语法，查不出布局期的错误，
@@ -14,10 +14,10 @@ render 才是真正画出 SVG 的那条路径；parse 只查语法，查不出�
 
 **怎么用**：
 
-    npx hexo generate          # 先构建产物
-    python3 tools/check-mermaid.py                # 报告（退出码 1 = 有坏图）
-    python3 tools/check-mermaid.py --list         # 逐条列出（含所在页面）
-    python3 tools/check-mermaid.py --json out.json
+    npx hexo generate          # 先构建产物（在 platforms/blog/site 下）
+    python3 platforms/blog/site/tools/check-mermaid.py   # 报告（退出码 1 = 有坏图）
+    python3 platforms/blog/site/tools/check-mermaid.py --list   # 逐条列出（含所在页面）
+    python3 platforms/blog/site/tools/check-mermaid.py --json out.json
 
 **依赖**：本机有 ``google-chrome``（或 ``chromium``）和 ``websocket-client``
 （``pip install websocket-client``）。
@@ -44,9 +44,16 @@ import threading
 import time
 import urllib.request
 from collections import OrderedDict
+from pathlib import Path
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PUBLIC = os.path.join(REPO, "public")
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_PUBLIC  # noqa: E402
+
+PUBLIC = str(SITE_PUBLIC)
 
 MERMAID_DIV = re.compile(r'<div class="mermaid"[^>]*>([\s\S]*?)</div>')
 
@@ -196,7 +203,9 @@ def render_all(chrome: Chrome, sources: list[str], boot_url: str, timeout_s: int
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="找出渲染不出来的 mermaid 图")
-    ap.add_argument("--public", default=PUBLIC, help="产物目录（默认 public/）")
+    ap.add_argument(
+        "--public", default=PUBLIC, help="产物目录（默认 platforms/blog/site/public/）"
+    )
     ap.add_argument("--list", action="store_true", help="逐条列出坏图（含所在页面）")
     ap.add_argument("--filter", metavar="PREFIX", default="",
                     help="只列出页面路径以 PREFIX 开头的坏图")
@@ -205,7 +214,10 @@ def main() -> int:
     args = ap.parse_args()
 
     if not os.path.isdir(args.public):
-        raise SystemExit("没有产物目录 %s —— 先跑 npx hexo generate" % args.public)
+        raise SystemExit(
+            "没有产物目录 %s —— 先在 platforms/blog/site 下跑 npx hexo generate"
+            % args.public
+        )
 
     sources = collect_sources(args.public)
     if not sources:

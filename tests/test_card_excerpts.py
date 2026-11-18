@@ -7,7 +7,7 @@
 
 读者看到「TL;DR」「[TOC]」这种开头，只会觉得这个博客没写完。
 
-**这个检查器在渲染产物上跑**（``public/index.html``），不是查模板——
+**这个检查器在渲染产物上跑**（``platforms/blog/site/public/index.html``），不是查模板——
 模板改了但产物没重建，模板看着对、页面还是坏的，这正是要防的那件事。
 
 它盯三样：
@@ -16,7 +16,7 @@
 2. 摘要不以履历前缀开头（「初稿，」「修订：」——那是「这次改了什么」）；
 3. 摘要不是空的。
 
-用法：``python3 tools/check-card-excerpts.py --public public``。
+用法：``python3 platforms/blog/site/tools/check-card-excerpts.py --public platforms/blog/site/public``。
 退出码 0 = 全过；1 = 有问题（逐条打印）。
 """
 
@@ -26,7 +26,8 @@ import importlib.util
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-CHECKER = REPO / "tools" / "check-card-excerpts.py"
+SITE = REPO / "platforms" / "blog" / "site"
+CHECKER = SITE / "tools" / "check-card-excerpts.py"
 
 
 def load_checker():

@@ -28,9 +28,10 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SEARCH_EJS = REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "search.ejs"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+SEARCH_EJS = SITE / "themes" / "matery" / "layout" / "_partial" / "search.ejs"
 MINISEARCH_JS = (
-    REPO_ROOT / "themes" / "matery" / "source" / "libs" / "minisearch" / "minisearch.min.js"
+    SITE / "themes" / "matery" / "source" / "libs" / "minisearch" / "minisearch.min.js"
 )
 
 NODE = shutil.which("node")

@@ -4,11 +4,12 @@ Two build steps turn the publish layer's state into something a reader can
 see on the site:
 
 - ``tools/build-video-pages.py`` turns each AIV episode's narration script
-  into a content unit (``source/_posts/video/<episode>.md``) plus a
+  into a content unit (``content/units/video/<episode>.md``) plus a
   collection page.
-- ``tools/build-publish-index.py`` summarises ``platforms/<platform>/outbox/*.json``
-  into ``source/_data/publish_index.json``, which the theme renders as the
-  "where else did this go" block.
+- ``platforms/blog/site/tools/build-publish-index.py`` summarises
+  ``platforms/<platform>/outbox/*.json`` into
+  ``platforms/blog/site/source/_data/publish_index.json``, which the theme
+  renders as the "where else did this go" block.
 
 Both are build steps over committed inputs, so they are testable without
 touching the repository: the tools read their inputs from module-level
@@ -22,17 +23,20 @@ import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TOOLS = REPO_ROOT / "tools"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+# build-video-pages.py 留在根 tools/；build-publish-index.py 搬进了站点那边。
+ROOT_TOOLS = REPO_ROOT / "tools"
+SITE_TOOLS = SITE / "tools"
 
 
-def load_tool(name):
+def load_tool(name, tool_dir):
     """Import one of the build tools as a module.
 
     ``main()`` is guarded by ``if __name__ == '__main__'``, so importing
     only defines functions -- it does not rewrite ``source/``.
     """
     spec = importlib.util.spec_from_file_location(
-        "tool_under_test_{}".format(name.replace("-", "_")), TOOLS / (name + ".py")
+        "tool_under_test_{}".format(name.replace("-", "_")), tool_dir / (name + ".py")
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -40,8 +44,8 @@ def load_tool(name):
     return module
 
 
-video_pages = load_tool("build-video-pages")
-publish_index = load_tool("build-publish-index")
+video_pages = load_tool("build-video-pages", ROOT_TOOLS)
+publish_index = load_tool("build-publish-index", SITE_TOOLS)
 
 
 # --- 视频内容单元 ---------------------------------------------------------
@@ -177,7 +181,7 @@ def test_the_video_pages_tool_reads_the_real_snapshots():
 
 
 def test_the_index_maps_a_content_id_to_its_page():
-    """content_id 是内容单元相对 source/_posts 的路径（去后缀）。"""
+    """content_id 是内容单元相对站点 ``_posts`` 副本的路径（去后缀）。"""
     posts = {
         "database/demo": {
             "title": "一篇",

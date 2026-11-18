@@ -1,4 +1,4 @@
-"""Reuse of ``tools/sync-hexo.py``.
+"""Reuse of the site's compiler, ``platforms/blog/site/tools/sync-hexo.py``.
 
 The converter must not re-implement anything the site build already
 knows.  ``sync-hexo.py`` carries the ``slugize`` rule that turns a
@@ -16,19 +16,25 @@ definition, and the work happens inside ``main()`` behind an
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
+
+# platforms/wechat/ 下的模块：parents[2] 就是仓库根。
+# 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_TOOLS  # noqa: E402
 
 __all__ = ["slugize", "sync_module"]
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_SYNC_PATH = _REPO_ROOT / "tools" / "sync-hexo.py"
+_SYNC_PATH = SITE_TOOLS / "sync-hexo.py"
 
 _module = None
 _slugize = None
 
 
 def sync_module():
-    """Load ``tools/sync-hexo.py`` as a module, once per process."""
+    """Load the site's compiler as a module, once per process."""
     global _module
     if _module is None:
         if not _SYNC_PATH.is_file():

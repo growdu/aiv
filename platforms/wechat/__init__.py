@@ -1,8 +1,8 @@
 """Convert blog posts into WeChat official account articles.
 
-The package turns the Hexo source tree (``source/_posts/``, produced by
-``tools/sync-hexo.py``) into WeChat-ready HTML and pushes it to the
-official account draft box.
+The package turns the site's posts directory (``source/_posts/``, produced by
+``platforms/blog/site/tools/sync-hexo.py``) into WeChat-ready HTML and pushes
+it to the official account draft box.
 
 Modules are layered so each one can be tested on its own:
 

@@ -16,15 +16,15 @@
    `_resolve_link_target()` 同一套规则解析，解析不到就报出来（附「往上一级
    目录再试一次」的兄弟兜底 —— 那是作者写 `./x/` 想指同级 bundle 时的常见笔误，
    编译期会自愈，所以自愈过的**不算断**）。
-2. **产物侧**：`public/**/*.html` 里所有站内 `href`，看它指向的页面在
-   `public/` 里到底存不存在（死链）。
+2. **产物侧**：`platforms/blog/site/public/**/*.html` 里所有站内 `href`，
+   看它指向的页面在 `platforms/blog/site/public/` 里到底存不存在（死链）。
 
 用法：
 
 ```bash
-python3 tools/check-internal-links.py                 # 查两边
-python3 tools/check-internal-links.py --docs-only
-python3 tools/check-internal-links.py --json /tmp/links.json
+python3 platforms/blog/site/tools/check-internal-links.py                 # 查两边
+python3 platforms/blog/site/tools/check-internal-links.py --docs-only
+python3 platforms/blog/site/tools/check-internal-links.py --json /tmp/links.json
 ```
 
 退出码：有断链 → 1；没有 → 0。
@@ -35,11 +35,18 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 from urllib.parse import unquote
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DOCS = os.path.join(REPO, "docs")
-PUBLIC = os.path.join(REPO, "public")
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import DOCS as _DOCS, SITE_PUBLIC  # noqa: E402
+
+DOCS = str(_DOCS)
+PUBLIC = str(SITE_PUBLIC)
 
 # 普通 markdown 链接（不含图片，图片是 ![]()）
 LINK_RE = re.compile(r"(?<!!)\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
@@ -171,7 +178,7 @@ def _public_pages():
 
 
 def check_public():
-    """产物侧：href 指向的页面在 public/ 里存不存在。"""
+    """产物侧：href 指向的页面在 platforms/blog/site/public/ 里存不存在。"""
     pages = _public_pages()
     if not pages:
         return {"total": 0, "broken": []}

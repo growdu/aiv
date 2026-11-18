@@ -168,7 +168,7 @@ def resolve_config(
         repo_root=root,
         posts_dir=Path(posts_dir)
         if posts_dir is not None
-        else root / "source" / "_posts",
+        else root / "content" / "units",
         outbox_root=(
             Path(outbox_root) if outbox_root is not None else root / "platforms"
         ),
@@ -233,7 +233,7 @@ def week_window(day: date) -> tuple:
 class ContentUnit:
     """一个内容单元：内容契约 + 调度层要用的日期。
 
-    ``content_id`` 是**站内路径**（相对 ``source/_posts/``，去后缀），
+    ``content_id`` 是**站内路径**（相对 ``content/units/``，去后缀），
     不是文件名——``db/postgresql/demo`` 就是一个内容单元的 id。
     """
 
@@ -261,7 +261,7 @@ class ContentUnit:
 
 
 def content_id_for(path, posts_dir) -> str:
-    """内容单元 id：相对 ``source/_posts/`` 的路径去掉 ``.md``。
+    """内容单元 id：相对 ``content/units/`` 的路径去掉 ``.md``。
 
     例：``source-tracks/postgresql/logical-replication/postgresql逻辑复制-DML.md`` →
     ``source-tracks/postgresql/logical-replication/postgresql逻辑复制-DML``。

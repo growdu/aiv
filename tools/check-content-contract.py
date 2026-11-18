@@ -15,15 +15,15 @@ CI 里，违规的标题能一路走到线上。
 
 校验对象
 --------
-默认是 ``source/_posts/`` 下的内容单元（sync 的产物，也是发布层真正读的
+默认是 ``content/units/`` 下的内容单元（编译器的产物，也是发布层真正读的
 东西）。也可以指到 ``docs/`` 的母稿上——母稿的 front matter 与内容单元
 是同一套格式，两边校验的规则相同（缩进标量那处差异见 contract.py 的
 模块 docstring，两条路径都会报同一条错，不会分裂）。
 
 用法
 ----
-    python3 tools/sync-hexo.py                       # 先产出内容单元
-    python3 tools/check-content-contract.py          # 校验 source/_posts
+    python3 platforms/blog/site/tools/sync-hexo.py   # 先产出内容单元
+    python3 tools/check-content-contract.py          # 校验 content/units
     python3 tools/check-content-contract.py docs/    # 校验母稿
 
 退出码：0 = 没有违规；1 = 有违规（CI 应失败）；2 = 用法或环境错误。
@@ -34,7 +34,10 @@ import importlib
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+# 根 tools/ 的脚本：parents[1] 就是仓库根。
+# 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from paths import CONTENT_UNITS, REPO_ROOT  # noqa: E402
 
 # publish/ 本身不是 Python 包，publishkit 挂在它下面。
 sys.path.insert(0, str(REPO_ROOT / "publish"))
@@ -79,15 +82,16 @@ def main(argv=None) -> int:
     parser.add_argument(
         "root",
         nargs="?",
-        default=str(REPO_ROOT / "source" / "_posts"),
-        help="要校验的目录或文件（默认：source/_posts）",
+        default=str(CONTENT_UNITS),
+        help="要校验的目录或文件（默认：content/units）",
     )
     args = parser.parse_args(argv)
 
     root = Path(args.root)
     if not root.exists():
         print(
-            f"找不到 {root}：先跑 python3 tools/sync-hexo.py 产出内容单元。",
+            f"找不到 {root}：先跑 python3 platforms/blog/site/tools/sync-hexo.py "
+            "产出内容单元。",
             file=sys.stderr,
         )
         return 2

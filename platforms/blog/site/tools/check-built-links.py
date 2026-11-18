@@ -3,7 +3,7 @@
 
 Run after ``npx hexo generate``::
 
-    python3 tools/check-built-links.py
+    python3 platforms/blog/site/tools/check-built-links.py
 
 Scope is the ``life/gaokao`` section of the generated site, discovered
 dynamically so the checker never has to be updated when a post is added,
@@ -30,14 +30,22 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-PUBLIC = REPO_ROOT / "public"
+# 站点的构建链搬进了 platforms/blog/site/，本脚本深了四层：
+# parents[0]=tools, [1]=site, [2]=blog, [3]=platforms, [4]=仓库根。
+# 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from paths import SITE_PUBLIC  # noqa: E402
+
+PUBLIC = SITE_PUBLIC
 
 # The mount point the site is built for (`root:` in _config.yml).  The
 # GitHub Pages build mounts the site under /blog/, and its links carry
-# that prefix; the paths inside public/ never do, so the prefix has to
-# come back off before a link is resolved against the built tree.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# that prefix; the paths inside platforms/blog/site/public/ never do, so
+# the prefix has to come back off before a link is resolved against the
+# built tree.
+# site_root.py 留在根 tools/（契约层不许 import 站点层），
+# 所以上面那句 sys.path.insert 已经把根 tools/ 加进路径了。
 from site_root import site_root  # noqa: E402
 
 ROOT_PREFIX = site_root()
@@ -72,7 +80,7 @@ def gaokao_pages() -> list[Path]:
 
 def main() -> int:
     if not PUBLIC.is_dir():
-        print(f"找不到 {PUBLIC}，请先执行 npx hexo generate")
+        print(f"找不到 {PUBLIC}，请先在 platforms/blog/site 下执行 npx hexo generate")
         return 2
 
     pages = gaokao_pages()

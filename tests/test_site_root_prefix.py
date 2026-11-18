@@ -34,23 +34,27 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TOOLS = REPO_ROOT / "tools"
-SYNC_TOOL = TOOLS / "sync-hexo.py"
-PATCH_TOOL = TOOLS / "patch-theme.py"
-CHECK_TOOL = TOOLS / "check-built-links.py"
-THEME_LAYOUT = REPO_ROOT / "themes" / "matery" / "layout"
+SITE = REPO_ROOT / "platforms" / "blog" / "site"
+# 站点的构建脚本搬进了 platforms/blog/site/tools/；site_root.py 留在根 tools/
+# （契约层不许 import 站点层，publish/tests/test_episode.py 要从那儿 import 它）。
+ROOT_TOOLS = REPO_ROOT / "tools"
+SITE_TOOLS = SITE / "tools"
+SYNC_TOOL = SITE_TOOLS / "sync-hexo.py"
+PATCH_TOOL = SITE_TOOLS / "patch-theme.py"
+CHECK_TOOL = SITE_TOOLS / "check-built-links.py"
+THEME_LAYOUT = SITE / "themes" / "matery" / "layout"
 
 # Put tools/ on sys.path so `import site_root` resolves the way the two
 # build scripts resolve it.
-if str(TOOLS) not in sys.path:
-    sys.path.insert(0, str(TOOLS))
+if str(ROOT_TOOLS) not in sys.path:
+    sys.path.insert(0, str(ROOT_TOOLS))
 
 import site_root  # noqa: E402  (path set up above)
 
 
 @pytest.fixture(scope="module")
 def sync():
-    """Import ``tools/sync-hexo.py`` as a module.
+    """Import ``platforms/blog/site/tools/sync-hexo.py`` as a module.
 
     Its ``main()`` is guarded by ``if __name__ == '__main__'``, so
     importing it only defines functions -- it does not rewrite ``source/``.
@@ -65,7 +69,7 @@ def sync():
 
 
 def test_site_root_defaults_to_empty_for_primary_domain():
-    """The repo's `_config.yml` mounts the primary domain at `/`."""
+    """The site's `_config.yml` mounts the primary domain at `/`."""
     assert site_root.site_root() == ""
 
 
@@ -202,7 +206,7 @@ def test_no_template_combines_config_url_with_url_for():
 
 
 def test_theme_head_uses_a_root_less_absolute_url_for_canonical():
-    source = (REPO_ROOT / "themes" / "matery" / "layout" / "_partial" / "head.ejs").read_text(
+    source = (SITE / "themes" / "matery" / "layout" / "_partial" / "head.ejs").read_text(
         encoding="utf-8"
     )
     assert '<link rel="canonical" href="<%- _selfUrl %>">' in source
@@ -250,7 +254,7 @@ def test_link_checker_leaves_root_less_links_alone():
 def test_link_checker_resolves_a_mounted_link_to_the_built_file():
     checker = _load_link_checker()
     if not checker.PUBLIC.is_dir():
-        pytest.skip("还没有构建产物（public/ 不存在）")
+        pytest.skip("还没有构建产物（platforms/blog/site/public/ 不存在）")
     link = f"{checker.ROOT_PREFIX}/2026/11/11/life/gaokao/chemistry-methods/"
     target = checker.PUBLIC / checker.strip_root(link).strip("/") / "index.html"
     assert target.exists(), f"干净检出里应存在 {target}"
