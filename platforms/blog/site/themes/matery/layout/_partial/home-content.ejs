@@ -35,14 +35,14 @@
   });
 
   // Tab data: 3 distinct sources, 6 cards each.
-  //   featured: **策展清单**（data/featured.json 的 featured 组）
+  //   featured: **策展清单**（站点的 data/featured.json 的 featured 组）
   //   hot:      **真实阅读量**（GoatCounter 快照）；没有快照才退回 top
   //   latest:   newest by date
   // site.posts 是 warehouse 的 Query，不是数组——filter/sort/slice 返回的
   // 还是 Query，而 Query 没有 concat。所以先 toArray() 拿真正的数组。
   var allPosts = site.posts.toArray();
 
-  // 「编辑推荐」是**策展**出来的：清单在仓库根的 data/featured.json
+  // 「编辑推荐」是**策展**出来的：清单在站点的 data/featured.json
   // （跟首屏那三篇代表作同一个文件），sync 复制到 source/_data/，
   // 这里通过 site.data.featured 读到。作者改清单就能换这一格。
   //
@@ -78,7 +78,7 @@
 
   // 阅读量快照（GoatCounter 的真实 PV）。
   //
-  // 真相在仓库根的 data/view-counts.json —— tools/fetch-view-counts.py 抓的，
+  // 真相在站点的 data/view-counts.json —— tools/fetch-view-counts.py 抓的，
   // sync-hexo.py 复制到 source/_data/，hexo 挂到 site.data 上。
   //
   // 这个 tab 以前排的是手写的 top 分数：568 篇文章里只有 19 篇有 top，

@@ -37,6 +37,11 @@ SITE_TOOLS = SITE / "tools"
 SITE_CONFIG = SITE / "_config.yml"
 #: 站点自己的主题覆盖配置（对 matery 的覆盖层）
 SITE_MATERY_CONFIG = SITE / "_config.matery.yml"
+#: 主题外的自制素材（logo、头像、收款码……）——站点自己的资产，
+#: 不该让构建链伸手到仓库根去拿。
+SITE_ASSETS = SITE / "theme-assets"
+#: 站点私有的数据表（首屏策展、学习路径规则、重定向、阅读量快照……）
+SITE_DATA = SITE / "data"
 
 # 根 tools/ —— 平台无关的工具住这儿
 ROOT_TOOLS = REPO_ROOT / "tools"

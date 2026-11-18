@@ -1,7 +1,7 @@
 # 个人站点 growdu.cn 的平台能力声明。
 #
 # 这是**站点第一次被当成第三方平台登记**的地方。在这之前，站点走的是
-# 另一条路：docs/ 母稿 → tools/sync-hexo.py → source/ → public/，
+# 另一条路：docs/ 母稿 → platforms/blog/site/tools/sync-hexo.py → content/units/ → 站点 source/_posts/ → public/，
 # 不经能力声明、不经发布清单、不经 outbox 快照。
 #
 # 现在它跟公众号、头条号、抖音、视频号、B 站住在一个目录下，

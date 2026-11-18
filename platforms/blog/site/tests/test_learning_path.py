@@ -44,10 +44,10 @@ from urllib.parse import quote
 
 import pytest
 
-from paths import REPO_ROOT, ROOT_TOOLS, SITE
+from paths import REPO_ROOT, ROOT_TOOLS, SITE, SITE_DATA
 # 生成器搬进了 platforms/blog/site/tools/；site_root.py 留在根 tools/。
 SITE_TOOLS = SITE / "tools"
-RULES_FILE = REPO_ROOT / "data" / "learning-path.json"
+RULES_FILE = SITE_DATA / "learning-path.json"
 TOOL = SITE_TOOLS / "build-learning-path.py"
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "hexo.yml"
 THEME_LAYOUT = SITE / "themes" / "matery" / "layout" / "learning.ejs"

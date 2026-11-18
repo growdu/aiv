@@ -36,11 +36,11 @@ from pathlib import Path
 
 import pytest
 
-from paths import REPO_ROOT, ROOT_TOOLS, SITE
+from paths import REPO_ROOT, ROOT_TOOLS, SITE, SITE_DATA
 THEME_LAYOUT = SITE / "themes" / "matery" / "layout" / "layout.ejs"
 HOME_CONTENT = SITE / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
 FETCHER = ROOT_TOOLS / "fetch-view-counts.py"
-SNAPSHOT = REPO_ROOT / "data" / "view-counts.json"
+SNAPSHOT = SITE_DATA / "view-counts.json"
 NODE = shutil.which("node")
 
 needs_node = pytest.mark.skipif(NODE is None, reason="node 不在 PATH 上")

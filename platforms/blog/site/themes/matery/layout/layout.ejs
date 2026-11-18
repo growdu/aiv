@@ -190,7 +190,7 @@
   var getDate = function(p) { return p.date ? new Date(p.date).getTime() : 0; };
   // 阅读量快照 —— GoatCounter 的**真实** PV。
   //
-  // 真相在仓库根的 data/view-counts.json：tools/fetch-view-counts.py 抓来的，
+  // 真相在站点的 data/view-counts.json：tools/fetch-view-counts.py 抓来的，
   // sync-hexo.py 复制到 source/_data/，hexo 挂到 site.data 上。
   //
   // 这里曾经是**假的**：旧代码写的是 Math.max(5, Math.floor(字数 / 50))，
