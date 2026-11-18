@@ -1,7 +1,7 @@
 {
   "version": 1,
   "updated": "2026-11-17",
-  "note": "学习路径的分类规则表。**这里是人工策展的部分**，tools/build-learning-path.py 按它把每篇文章落到「赛道 + 阶段」。改这个文件就能改路径，不用改代码。\n\n规则从上往下第一条命中即生效；track_match 决定文章属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**每篇文章都该有一条自己的规则**：fallback_stage 只是防崩溃的兜底（没有专属规则的文章会落进去），守卫测试 tests/test_learning_path.py 钉住它是空的 —— 加了新文章，就得给它写规则。\n\n`platform-meta/`（平台元数据赛道：讲这个站本身怎么造）目前**临时挂在「博客与自媒体」这条赛道下** —— 按语义它属于「把内容变成作品：建站、排版、传播、视频生产线」，等赛道树整体重排时再决定要不要单独立一条赛道。\n\n可用的匹配键：path_prefix（前缀）、path_regex（正则）、path_exact（全等）、category（分类）、tag（标签）、title_contains（标题含）、any / all（组合）、catch_all（无条件，只能写在最后一个阶段）。 「工程与语言」这一块按**系列 = 一个教学阶段**重排：foundations + cheatsheets → L1，engineering-practice → L2，containers → L3，web-and-frontend → L4，规则全部写成 path_prefix。「速查与清单」这个系列原来散在 L2/L4，收进 L1（语言与基础那一层）。",
+  "note": "学习路径的分类规则表。**这里是人工策展的部分**，tools/build-learning-path.py 按它把每篇文章落到「赛道 + 阶段」。改这个文件就能改路径，不用改代码。\n\n规则从上往下第一条命中即生效；track_match 决定文章属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**每篇文章都该有一条自己的规则**：fallback_stage 只是防崩溃的兜底（没有专属规则的文章会落进去），守卫测试 tests/test_learning_path.py 钉住它是空的 —— 加了新文章，就得给它写规则。\n\n`platform-meta/`（平台元数据赛道：讲这个站本身怎么造）目前**临时挂在「博客与自媒体」这条赛道下** —— 按语义它属于「把内容变成作品：建站、排版、传播、视频生产线」，等赛道树整体重排时再决定要不要单独立一条赛道。\n\n可用的匹配键：path_prefix（前缀）、path_regex（正则）、path_exact（全等）、category（分类）、tag（标签）、title_contains（标题含）、any / all（组合）、catch_all（无条件，只能写在最后一个阶段）。 「工程与语言」这一块按**系列 = 一个教学阶段**重排：foundations + cheatsheets → L1，engineering-practice → L2，containers → L3，web-and-frontend → L4，规则全部写成 path_prefix。「速查与清单」这个系列原来散在 L2/L4，收进 L1（语言与基础那一层）。 「AI 与工具」这一块（ai/ + chatgpt/，31 篇）搬进 `engineering/ai-tooling/`，四个系列按阶段一一对应（ai-foundations → L1、ai-toolbox → L2、ai-leverage → L3、ai-video-platform → L4），规则全部写成 path_prefix —— **阶段归属一个字都没变**。注意：`ai-tools` 这条赛道必须排在 `engineering` 前面 —— 工程与语言那条赛道的 `track_match` 是 `engineering/`，会把 `engineering/ai-tooling/` 下的文章一起吞掉；赛道按顺序遍历、第一条命中即生效，所以靠的是**顺序**，不是更长的前缀。",
   "tracks": [
     {
       "id": "db-internals",
@@ -340,10 +340,7 @@
       "goal": "走完这条线，你知道 AI 到底怎么做到的，能挑出该用的那一款工具，也知道自己被它替代的是哪一段工作。",
       "track_match": [
         {
-          "path_prefix": "ai/"
-        },
-        {
-          "path_prefix": "chatgpt/"
+          "path_prefix": "engineering/ai-tooling/"
         }
       ],
       "fallback_stage": "L4",
@@ -354,10 +351,7 @@
           "goal": "先弄懂它到底怎么做到的 —— 不神秘化，也不妖魔化。",
           "match": [
             {
-              "path_regex": "^ai/(01_开场白目录|02_|03_|04_|05_|06_|07_|08_|09_|10_|11_|12_|13_|14_|15_|16_|17_)"
-            },
-            {
-              "path_prefix": "chatgpt/"
+              "path_prefix": "engineering/ai-tooling/ai-foundations/"
             }
           ]
         },
@@ -367,13 +361,7 @@
           "goal": "把它接进你的日常：装好、配好、知道它能替人做哪一步。",
           "match": [
             {
-              "path_regex": "^ai/(01-ai常用工具和开发框架|20_|22_)"
-            },
-            {
-              "path_regex": "^ai/claude(/|$)"
-            },
-            {
-              "path_regex": "^ai/claude安装教程($|/)"
+              "path_prefix": "engineering/ai-tooling/ai-toolbox/"
             }
           ]
         },
@@ -383,7 +371,7 @@
           "goal": "从「用 AI 干活」到「靠 AI 放大自己的能力」—— 同样的时间，产出差一个量级。",
           "match": [
             {
-              "path_regex": "^ai/(18_|19_)"
+              "path_prefix": "engineering/ai-tooling/ai-leverage/"
             }
           ]
         },
@@ -393,7 +381,7 @@
           "goal": "AI 生成视频的平台怎么设计：竞品怎么拆、选型怎么定、架构怎么搭。",
           "match": [
             {
-              "path_prefix": "ai/ai_video/"
+              "path_prefix": "engineering/ai-tooling/ai-video-platform/"
             }
           ]
         }

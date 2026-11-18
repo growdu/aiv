@@ -1,6 +1,8 @@
 {
   "category_redirects": {
+    "AI": "工程与语言/AI工具与实践",
     "BenchmarkSQL 基准测试": "源码主线/PostgreSQL/扩展、性能与生态",
+    "ChatGPT": "工程与语言/AI工具与实践",
     "DPDK": "源码主线/DPDK与VPP",
     "Docker": "工程与语言/容器与环境",
     "Elasticsearch": "工程与语言/Web、前端与搜索",
@@ -31,8 +33,10 @@
     "页面": "工程与语言/速查与清单"
   },
   "dir_map": {
+    "ai/": "engineering/ai-tooling/",
     "alg/": "engineering/foundations/",
     "base/": "engineering/foundations/",
+    "chatgpt/": "engineering/ai-tooling/",
     "cluster/DCF/": "distributed/consensus/",
     "cluster/corosync/": "distributed/field-notes/",
     "cluster/ha/": "distributed/ha-and-dr/",
@@ -112,9 +116,42 @@
     "vue/_index.md",
     "web/_index.md",
     "dpdk/_index.md",
-    "vpp/_index.md"
+    "vpp/_index.md",
+    "ai/_index.md",
+    "chatgpt/_index.md"
   ],
   "file_map": {
+    "ai/01-ai常用工具和开发框架.md": "engineering/ai-tooling/ai-toolbox/01-ai常用工具和开发框架.md",
+    "ai/01_开场白目录.md": "engineering/ai-tooling/ai-foundations/01_开场白目录.md",
+    "ai/02_AI到底聪明在哪从手机人脸识别说起.md": "engineering/ai-tooling/ai-foundations/02_AI到底聪明在哪从手机人脸识别说起.md",
+    "ai/03_AI怎么读懂文字国王减去男人等于什么.md": "engineering/ai-tooling/ai-foundations/03_AI怎么读懂文字国王减去男人等于什么.md",
+    "ai/04_AI是怎么突然变厉害的2012所有人以为他们作弊了.md": "engineering/ai-tooling/ai-foundations/04_AI是怎么突然变厉害的2012所有人以为他们作弊了.md",
+    "ai/05_神经网络到底是什么6000万个旋钮的真相.md": "engineering/ai-tooling/ai-foundations/05_神经网络到底是什么6000万个旋钮的真相.md",
+    "ai/06_AI是怎么学会的从做错一道题说起.md": "engineering/ai-tooling/ai-foundations/06_AI是怎么学会的从做错一道题说起.md",
+    "ai/07_ChatGPT为什么能对话一篇引用17万次的论文.md": "engineering/ai-tooling/ai-foundations/07_ChatGPT为什么能对话一篇引用17万次的论文.md",
+    "ai/08_AI为什么会撒谎一个律师被ChatGPT骗了.md": "engineering/ai-tooling/ai-foundations/08_AI为什么会撒谎一个律师被ChatGPT骗了.md",
+    "ai/09_ChatGPT回答你的三秒钟里发生了什么.md": "engineering/ai-tooling/ai-foundations/09_ChatGPT回答你的三秒钟里发生了什么.md",
+    "ai/10_AI 到底有多聪明一份让 AI 研究者也困惑的成绩单.md": "engineering/ai-tooling/ai-foundations/10_AI 到底有多聪明一份让 AI 研究者也困惑的成绩单.md",
+    "ai/11_AI 能创造吗从一团噪声到一幅画.md": "engineering/ai-tooling/ai-foundations/11_AI 能创造吗从一团噪声到一幅画.md",
+    "ai/12_为什么 AI 能赢世界冠军却开不好车一条藏在所有 AI 背后的分界线.md": "engineering/ai-tooling/ai-foundations/12_为什么 AI 能赢世界冠军却开不好车一条藏在所有 AI 背后的分界线.md",
+    "ai/13_这个框架会过时吗AI 的天花板和你的判断力.md": "engineering/ai-tooling/ai-foundations/13_这个框架会过时吗AI 的天花板和你的判断力.md",
+    "ai/14_怎么让AI听懂你的话同一个AI为什么他用得比你好10倍.md": "engineering/ai-tooling/ai-foundations/14_怎么让AI听懂你的话同一个AI为什么他用得比你好10倍.md",
+    "ai/15_怎么跟AI协作不翻车AI说的话你该信几分.md": "engineering/ai-tooling/ai-foundations/15_怎么跟AI协作不翻车AI说的话你该信几分.md",
+    "ai/16_AI 写代码有多厉害快了 55但错多了 75.md": "engineering/ai-tooling/ai-foundations/16_AI 写代码有多厉害快了 55但错多了 75.md",
+    "ai/17_AI会取代我们吗它不懂孤独是什么意思.md": "engineering/ai-tooling/ai-foundations/17_AI会取代我们吗它不懂孤独是什么意思.md",
+    "ai/18_AI是你的杠杆但前提是你自己得会.md": "engineering/ai-tooling/ai-leverage/18_AI是你的杠杆但前提是你自己得会.md",
+    "ai/19_AI是你的杠杆普通人也能用的AI实战教程.md": "engineering/ai-tooling/ai-leverage/19_AI是你的杠杆普通人也能用的AI实战教程.md",
+    "ai/20_外网与AI工具使用指南.md": "engineering/ai-tooling/ai-toolbox/20_外网与AI工具使用指南.md",
+    "ai/22_普通人谷歌与AI使用培训教程.md": "engineering/ai-tooling/ai-toolbox/22_普通人谷歌与AI使用培训教程.md",
+    "ai/ai_video/AI Video Orchestrator 平台总体架构设计.md": "engineering/ai-tooling/ai-video-platform/AI Video Orchestrator 平台总体架构设计.md",
+    "ai/ai_video/AI Video Orchestrator 技术选型文档.md": "engineering/ai-tooling/ai-video-platform/AI Video Orchestrator 技术选型文档.md",
+    "ai/ai_video/AI Video Orchestrator 概要设计.md": "engineering/ai-tooling/ai-video-platform/AI Video Orchestrator 概要设计.md",
+    "ai/ai_video/AI一镜到底视频平台竞品拆解与产品定位报告.md": "engineering/ai-tooling/ai-video-platform/AI一镜到底视频平台竞品拆解与产品定位报告.md",
+    "ai/ai_video/AI一镜到底视频生成平台市场调研与可行性分析报告.md": "engineering/ai-tooling/ai-video-platform/AI一镜到底视频生成平台市场调研与可行性分析报告.md",
+    "ai/claude/claude配置.md": "engineering/ai-tooling/ai-toolbox/claude配置.md",
+    "ai/claude安装教程/index.md": "engineering/ai-tooling/ai-toolbox/claude安装教程/index.md",
+    "chatgpt/chatgpt使用.md": "engineering/ai-tooling/ai-foundations/chatgpt使用.md",
+    "chatgpt/newbing使用教程/index.md": "engineering/ai-tooling/ai-foundations/newbing使用教程/index.md",
     "cluster/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md": "distributed/foundations/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md",
     "cluster/C语言雪花算法,记一次雪花算法的实现.md": "distributed/foundations/C语言雪花算法,记一次雪花算法的实现.md",
     "cluster/Patroni详解.md": "distributed/ha-and-dr/Patroni详解.md",
@@ -349,7 +386,7 @@
     "vpp/vpp日志系统.md": "source-tracks/dpdk/getting-started/vpp日志系统.md",
     "vpp/vpp调试指北.md": "source-tracks/dpdk/getting-started/vpp调试指北.md"
   },
-  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。",
+  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。 「AI 工具与实践」这一块（ai/ 29 篇 + chatgpt/ 2 篇，共 31 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix，阶段归属搬完一个字都不变（L1 19、L2 5、L3 2、L4 5）。落点是 `engineering/ai-tooling/` —— 挂在「工程与语言」下面的**嵌套项目**，所以分类链是三级：工程与语言 → AI工具与实践 → 系列。§4.3 那个「移出 docs/」的桶里 ai_video 那 5 篇**这一块还没执行**：搬走它会让 ai-tools 赛道的 L4 阶段一篇不剩，而阶段结构不许改（`tests/test_learning_path.py` 钉死每个阶段非空）—— 跟 code/ 的 11 篇、self.jpg 一起留到那个桶统一执行。",
   "out_map": {
     "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
     "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md",
@@ -441,6 +478,22 @@
         "web-and-frontend": "Web、前端与搜索：Vue、React、Elasticsearch 搜索界面与桌面打包。"
       },
       "target_root": "engineering"
+    },
+    {
+      "display_name": "AI工具与实践",
+      "series": {
+        "ai-foundations": "AI认知与入门",
+        "ai-leverage": "把AI变成杠杆",
+        "ai-toolbox": "AI工具箱",
+        "ai-video-platform": "AI视频平台设计"
+      },
+      "series_meta": {
+        "ai-foundations": "AI 认知与入门：AI 到底怎么做到的、为什么会撒谎、怎么跟它打交道 —— 先把黑箱拆开，再谈用法。",
+        "ai-leverage": "把 AI 变成杠杆：不是「用 AI 干活」，而是「靠 AI 放大自己的能力」—— 同样的时间，产出差一个量级。",
+        "ai-toolbox": "AI 工具箱：把它接进你的日常 —— 常用工具与开发框架、外网与代理、Claude / ChatGPT / NewBing 的上手。",
+        "ai-video-platform": "AI 视频平台设计：AI 生成视频的平台怎么设计 —— 竞品怎么拆、选型怎么定、架构怎么搭。"
+      },
+      "target_root": "engineering/ai-tooling"
     },
     {
       "display_name": "DPDK与VPP",

@@ -654,7 +654,23 @@ def write_index_files(table, moves, report):
     """
     made = []
     tops_done = set()
-    for proj in _projects(table):
+    projects = _projects(table)
+    roots = {p["target_root"] for p in projects}
+    # **嵌套项目**：落点的上一层目录本身就是另一个项目的落点 ——
+    # `engineering/ai-tooling/` 挂在 `engineering/` 下面。
+    # 这种项目的目录页由它自己写，父项目的目录页由父项目写；
+    # 父项目的「## 系列」清单里要把它列进去（它是一个入口），
+    # 但**不能**替它写目录页 —— 那个目录页要列的是它下面的 4 个系列，
+    # 不是文章清单。
+    children_of = {}
+    for proj in projects:
+        root = proj["target_root"]
+        if "/" not in root:
+            continue
+        parent = root.rsplit("/", 1)[0]
+        if parent in roots:
+            children_of.setdefault(parent, []).append(proj)
+    for proj in projects:
         series_cn = proj.get("series", {})
         series_meta = proj.get("series_meta", {})
         target_root = proj["target_root"]
@@ -669,7 +685,8 @@ def write_index_files(table, moves, report):
         top = parts[0]
         top_cn = TOP_DISPLAY_NAMES.get(top, top)
         single_segment = len(parts) == 1
-        if top not in tops_done and not single_segment:
+        # 顶层目录本身就是别的项目的落点（`engineering/`）→ 这一页归父项目写
+        if top not in tops_done and not single_segment and top not in roots:
             tops_done.add(top)
             made.append(_write_index(
                 f"{top}/_index.md", top_cn, top_cn,
@@ -693,8 +710,21 @@ def write_index_files(table, moves, report):
         proj_name = parts[-1]
         proj_cn = (proj.get("display_name")
                    or PROJECT_DISPLAY_NAMES.get(proj_name, proj_name))
+        # 系列清单 = 本项目的系列 + 挂在它下面的嵌套项目（也算一个入口）。
+        # 按 slug 排序 —— 跟已有的系列清单一个口径。
+        child_slugs = {}
+        for child in children_of.get(target_root, []):
+            child_slug = child["target_root"].rsplit("/", 1)[1]
+            child_cn = (child.get("display_name")
+                        or PROJECT_DISPLAY_NAMES.get(child_slug, child_slug))
+            child_slugs[child_slug] = child_cn
+        entries = sorted(list(series_cn.items()) + list(child_slugs.items()))
         series_lines = []
-        for slug, scn in series_cn.items():
+        for slug, scn in entries:
+            if slug in child_slugs:
+                # 嵌套项目：目录页由它自己写（那页列的是它下面的系列）
+                series_lines.append(f"- [{scn}](./{slug}/_index.md)")
+                continue
             desc = series_meta.get(slug, f"{proj_cn} 的{scn}方向。")
             made.append(_write_index(
                 f"{proj_dir}/{slug}/_index.md", scn, proj_cn,
@@ -706,8 +736,8 @@ def write_index_files(table, moves, report):
         kind = "源码主线" if target_root.startswith("source-tracks/") else "专题"
         made.append(_write_index(
             f"{proj_dir}/_index.md", proj_cn, proj_cn,
-            f"{proj_cn} {kind}：{len(series_cn)} 个系列，由浅入深。",
-            [], table, extra=["## 系列", ""] + series_lines + [""]))
+            f"{proj_cn} {kind}：{len(entries)} 个系列，由浅入深。",
+            [], table, extra=[SERIES_SECTION, ""] + series_lines + [""]))
     report.append(f"目录页：新建 {len(made)} 个")
     return made
 
@@ -810,6 +840,7 @@ def _write_index(rel, title, parent_cn, description, articles, table, extra=None
 
 
 ARTICLE_SECTION = "## 本系列文章"
+SERIES_SECTION = "## 系列"
 
 
 def _section_span(text, heading):
@@ -831,16 +862,28 @@ def _section_span(text, heading):
 
 
 def _merge_article_section(old, body):
-    """只把「本系列文章」那一节换成新的，其余原样保留。"""
-    new_span = _section_span(body, ARTICLE_SECTION)
-    if not new_span:
-        # 新版没有这一节（项目目录页就是）—— 旧文一个字都不动。
-        return old
-    new_sec = body[new_span[0]:new_span[1]]
-    old_span = _section_span(old, ARTICLE_SECTION)
-    if not old_span:
-        return old.rstrip("\n") + "\n\n" + new_sec.rstrip("\n") + "\n"
-    return old[:old_span[0]] + new_sec + old[old_span[1]:]
+    """只把新版里有的小节换成新的，其余原样保留。
+
+    两个小节都要刷：
+
+    - 「本系列文章」—— 系列目录页的文章清单；
+    - 「## 系列」—— 项目目录页的系列清单。项目的系列会增减
+      （`engineering/` 下面挂上了 `ai-tooling/`），清单不刷新就跟实际不符。
+
+    新版里没有的小节（旧文有、新版没有）一个字都不动 ——
+    目录页可能被人手写过（项目目录页后来并进了一整张几百行的总览）。
+    """
+    for heading in (ARTICLE_SECTION, SERIES_SECTION):
+        new_span = _section_span(body, heading)
+        if not new_span:
+            continue
+        new_sec = body[new_span[0]:new_span[1]]
+        old_span = _section_span(old, heading)
+        if not old_span:
+            old = old.rstrip("\n") + "\n\n" + new_sec.rstrip("\n") + "\n"
+        else:
+            old = old[:old_span[0]] + new_sec + old[old_span[1]:]
+    return old
 
 
 # --------------------------------------------------------------------------
