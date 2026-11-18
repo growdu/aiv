@@ -12,7 +12,7 @@ RSS 的 ``<enclosure>`` 必须是自己域名下的**稳定音频直链**——B
     source/audio/<期号>.mp3       旁白音频的站点副本
 
 **数据源**：``source/_data/podcast_index.json``（期号线，母稿是唯一真相）
-与 ``aiv/narration_<期号>.mp3``（旁白，入库）。
+与 ``video/narration_<期号>.mp3``（旁白，入库）。
 
 **地址是派生的**：条目链接走 ``tools/site_root.py`` 的 ``permalink``，
 音频地址走 ``absolute_url``（域名 + 站内路径，挂载点前缀只加一次）。
@@ -39,7 +39,7 @@ from site_root import site_url as _site_url  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO_ROOT / "source" / "_data"
 PODCAST_INDEX = DATA_DIR / "podcast_index.json"
-AIV_ROOT = REPO_ROOT / "aiv"
+AIV_ROOT = REPO_ROOT / "video"
 AUDIO_DIR = REPO_ROOT / "source" / "audio"
 
 #: feed 里的条目数上限。与 ``atom.xml`` 的 ``limit: 20`` 一致。

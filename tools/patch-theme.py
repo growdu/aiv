@@ -1595,14 +1595,14 @@ else:
 # --- 3.6. Publish spectrum (where this piece also went) ---
 # 站点是内容谱系的根（发布架构 §9.3）：文章页要能回答「这篇还发到了哪些平台」。
 # 数据来自 source/_data/publish_index.json（tools/build-publish-index.py 从
-# publish/outbox/ 的快照汇总而来），partial 只读它，不做任何推断。
+# platforms/<平台>/outbox/ 的快照汇总而来），partial 只读它，不做任何推断。
 publish_ejs = """<%/*
   Publish spectrum — where this piece also went.
 
   The site is the root of the content lineage (publish/spec/00 §9.3): an
   article page should answer "where else did this go?".  The answer comes
   from `source/_data/publish_index.json`, which `tools/build-publish-index.py`
-  builds out of the publish layer's snapshots (`publish/outbox/*.json`).
+  builds out of the publish layer's snapshots (`platforms/<platform>/outbox/*.json`).
 
   The content id is the path under `source/_posts/` without the suffix --
   the same id the publish layer uses as its idempotency key.

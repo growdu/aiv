@@ -52,7 +52,7 @@ def test_the_three_templates_are_committed():
 # --- launchd -----------------------------------------------------------
 
 
-def test_the_template_is_valid_plist():
+def test_the_job_has_the_expected_label():
     assert _load_launchd()["Label"] == "com.growdu.publish.schedule"
 
 
@@ -81,7 +81,7 @@ def test_the_job_gets_the_repo_and_the_secrets_from_the_environment():
     """规格 5.4：仓库路径与凭据路径由环境变量给，不写死在代码里。"""
     env = _load_launchd()["EnvironmentVariables"]
     assert env["PUBLISH_REPO"] == "/repo"
-    assert env["PUBLISH_SECRETS"].endswith("/weixin/secrets.json")
+    assert env["PUBLISH_SECRETS"].endswith("/platforms/wechat/secrets.json")
 
 
 def test_the_schedule_is_friday_nine():

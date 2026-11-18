@@ -96,7 +96,7 @@ jobs:
         # 这一步非零退出——「漏归类」不许悄悄发生。
         run: python3 tools/build-learning-path.py
       - name: Build publish index
-        # publish/outbox 的发布状态 → 站点用的发布索引（文章页的「这篇还发到了」）。
+        # platforms/<plat>/outbox 的发布状态 → 站点用的发布索引（文章页的「这篇还发到了」）。
         run: python3 tools/build-publish-index.py
       - name: Build podcast index
         # 母稿的期号字段 → 站点用的期号索引（母稿页顶部那一块期号区块）。
@@ -135,7 +135,7 @@ jobs:
         # 首页那 18 张卡片的摘要必须是真的摘要：不能以「TL;DR」「[TOC]」开头
         # （那是正文漏出来了），不能以履历前缀开头（「初稿，」说的是这次改了
         # 什么），也不能是空的。
-        # 这一步不能省——568 篇文章里只有 1 篇写了 <!-- more -->，摘要曾经
+        # 这一步不能省——572 篇文章里只有 1 篇写了 <!-- more -->，摘要曾经
         # 一律退回正文的前 80 个字，页面上好几张卡以「TL;DR」开头。
         run: python3 tools/check-card-excerpts.py
       - name: Subset Font Awesome fonts
@@ -438,7 +438,7 @@ jobs:
         # 首页那 18 张卡片的摘要必须是真的摘要：不能以「TL;DR」「[TOC]」开头
         # （那是正文漏出来了），不能以履历前缀开头（「初稿，」说的是这次改了
         # 什么），也不能是空的。
-        # 这一步不能省——568 篇文章里只有 1 篇写了 <!-- more -->，摘要曾经
+        # 这一步不能省——572 篇文章里只有 1 篇写了 <!-- more -->，摘要曾经
         # 一律退回正文的前 80 个字，页面上好几张卡以「TL;DR」开头。
         run: python3 tools/check-card-excerpts.py
       - name: Subset Font Awesome fonts

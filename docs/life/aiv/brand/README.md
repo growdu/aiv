@@ -54,7 +54,7 @@ brand/
 挑窗口：
 
 ```bash
-cd aiv/pipeline
+cd video/pipeline
 python -m pyv.cli bgm windows       # 重挑并写进 brand/brand_windows.json
 python -m pyv.cli bgm brand-check   # 校验：首尾相接 / 曲子指纹 / 能量
 ```
@@ -108,7 +108,7 @@ H3 视频生成最短 4 秒，做不出 3 秒以内的片头，所以整条链�
 改旁白要重新合成，音色与参数见《形象与音色规范》§2.2：
 
 ```bash
-cd aiv
+cd video
 python3 voice/scripts/synthesize_narration.py \
   --text "下次卡住的时候，记得回来。" --out brand/audio/voice_outro.mp3
 ```
@@ -116,7 +116,7 @@ python3 voice/scripts/synthesize_narration.py \
 ## 重新生成
 
 ```bash
-cd aiv/pipeline
+cd video/pipeline
 python -m pyv.cli bgm windows          # 挑片头片尾的配乐窗口（写进 brand/brand_windows.json）
 cd ../brand
 python3 scripts/make_audio_brand.py    # 按窗口从曲库取 motif，混出成品音轨
@@ -135,7 +135,7 @@ python3 scripts/render_brand.py        # 铭牌盖章 + 渲染片头 + 片尾（
 路线可复现）：
 
 ```bash
-cd aiv
+cd video
 python3 character/scripts/make_white.py        # 白底主形象（从入库的透明底合成）
 cd brand
 python3 scripts/generate_poses.py              # 点赞 / 挥手姿态（眼镜修补 + 抠底 + 盖章）
@@ -184,7 +184,7 @@ python3 scripts/render_brand.py                # 重渲两支片
   闭环淡没。现在片头淡入 0.08 秒、淡出 0.08 秒，片尾不淡入（它的窗口是曲子
   中段的接缝，淡入像另起一段），成品混音再收 0.05 秒。
 
-## 在 aiv 流水线里的用法
+## 在 video 流水线里的用法
 
 品牌片是流水线的一等公民，`pipeline/pyv/brand.py` 负责接入：
 

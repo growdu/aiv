@@ -17,7 +17,7 @@ description: "后续视频旁白统一使用这套音色。规范见 ../形象�
 }
 ```
 
-对标参照：`aiv/ddl-voiceover.mp3`。实测基频偏差 **+0.1 半音**、
+对标参照：`video/ddl-voiceover.mp3`。实测基频偏差 **+0.1 半音**、
 F2 偏差 +31 Hz、动态跨度 107 Hz vs 参照 102 Hz。
 
 ## 试听样本
@@ -31,7 +31,7 @@ F2 偏差 +31 Hz、动态跨度 107 Hz vs 参照 102 Hz。
 ## 合成
 
 ```bash
-cd aiv/voice
+cd video/voice
 python3 scripts/synthesize_narration.py --text "大家好，我是growdu。"
 python3 scripts/synthesize_narration.py --script 字幕.md --out narration.mp3
 ```
@@ -49,7 +49,7 @@ python3 scripts/synthesize_narration.py --script 字幕.md --out narration.mp3
 `[ɕ]`（xíng）的摩擦噪声集中在 4–6 kHz，`[x]`（háng）在 2–3 kHz。
 
 ```bash
-cd aiv/voice
+cd video/voice
 # 量一个词的首字声母（会合成探针，需要联网）
 python3 scripts/check_pronunciation.py --word 行锁 --samples 5
 # 判据的两端：原词念 xíng、替身念 háng
@@ -87,7 +87,7 @@ make -C pipeline pronunciation
 ### 这把尺子：`scripts/measure_voice.py`
 
 ```bash
-cd aiv/voice
+cd video/voice
 # 量参照稿
 python3 scripts/measure_voice.py --path ../ddl-voiceover.mp3 --chars 226
 # 量候选稿，并与参照稿逐项比
@@ -101,7 +101,7 @@ python3 scripts/measure_voice.py --path 候选.mp3 --chars 255 \
 
 ## 定标：openGauss 并行逻辑解码（EP01 · 2026-11-12 改版）
 
-口播稿 260 字（10 句），旁白落在 `aiv/narration_pg-parallel-decode.mp3`
+口播稿 260 字（10 句），旁白落在 `video/narration_pg-parallel-decode.mp3`
 （媒体产物，不入库）。
 
 这一期按 **openGauss 归属口径**整期重做（稿子、契约、画面都换了），
@@ -137,7 +137,7 @@ pitch / speed 的前提「相对参照稿标定」已经不成立。
 
 ## 定标：CSN 全序（EP02）
 
-口播稿 267 字（10 句），旁白落在 `aiv/narration_csn-total-ordering.mp3`
+口播稿 267 字（10 句），旁白落在 `video/narration_csn-total-ordering.mp3`
 （媒体产物，不入库）。
 
 同样的做法：**定稿参数不变**，合三条实例，量出来挑最贴参照的那一条。
@@ -169,7 +169,7 @@ pitch / speed 的前提「相对参照稿标定」已经不成立。
 
 ## 定标：WAL 顺序（EP03）
 
-口播稿 254 字（10 句），旁白落在 `aiv/narration_wal-interleave.mp3`
+口播稿 254 字（10 句），旁白落在 `video/narration_wal-interleave.mp3`
 （媒体产物，不入库）。
 
 同样的做法：**定稿参数不变**（pitch −1 / speed 1.33），合三条实例，量出来挑最贴参照的那一条。
@@ -194,7 +194,7 @@ cand3 的语速偏差更小（−2.8 %），但基频偏了 +0.52 半音。
 
 ## 定标：并行 apply（EP04）
 
-口播稿 251 字（10 句），旁白落在 `aiv/narration_parallel-apply.mp3`
+口播稿 251 字（10 句），旁白落在 `video/narration_parallel-apply.mp3`
 （媒体产物，不入库）。
 
 | 候选 | 时长 | 语速 | Δ语速 | F0 中位 | ΔF0 |
@@ -214,7 +214,7 @@ cand2 的基频更贴（−0.19），但语速掉到 −10.2 %，比 cand1 差�
 
 ## 定标：结构化 DDL（EP05）
 
-口播稿 260 字（10 句），旁白落在 `aiv/narration_structured-ddl.mp3`
+口播稿 260 字（10 句），旁白落在 `video/narration_structured-ddl.mp3`
 （媒体产物，不入库）。
 
 | 候选 | 时长 | 语速 | Δ语速 | F0 中位 | ΔF0 |
@@ -229,7 +229,7 @@ cand2 明显最好：语速偏差只有 −1.3 %（三条里唯一进入 ±2 % �
 
 ## 定标：行锁（EP06）
 
-口播稿 275 字（10 句），旁白落在 `aiv/narration_row-lock.mp3`
+口播稿 275 字（10 句），旁白落在 `video/narration_row-lock.mp3`
 （媒体产物，不入库）。
 
 第二季第一期。同样的做法：**定稿参数不变**（pitch −1 / speed 1.33），

@@ -281,7 +281,7 @@ def test_a_capability_without_limits_is_tolerated():
 # --- 两种 limits 形态 ----------------------------------------------------
 #
 # 契约层自己的 capability 用 dict，平台 adapter 自己的 capability 用 dataclass
-# （toutiao/toutiao/capability.py 的 Limits）。validate() 的签名是鸭子类型，
+# （platforms/toutiao/capability.py 的 Limits）。validate() 的签名是鸭子类型，
 # 两种形态都要能校验——而且这一层只抛 PublishKitError 这一族，裸 AttributeError
 # 不许漏出去。
 

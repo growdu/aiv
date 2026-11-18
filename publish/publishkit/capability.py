@@ -1,4 +1,4 @@
-"""平台能力模型：读 ``publish/capabilities/<platform>.toml``。
+"""平台能力模型：读 ``platforms/<platform>/capability.toml``。
 
 能力声明是**数据**：平台规则变了改 TOML，不改 Python
 （``publish/spec/00-架构设计.md`` §5、§5.2）。
@@ -9,7 +9,7 @@
 * 契约层这一份读**任意**平台（wechat / youtube / bilibili / toutiao /
   channels），所以顶层是「核心必填 + 平台扩展可选」，``[limits]`` 里
   平台自有的键原样保留、不做类型判断。
-* adapter 那一份只读**自己**平台（``toutiao/toutiao/capability.py``），
+* adapter 那一份只读**自己**平台（``platforms/toutiao/capability.py``），
   所以它那份的限额字段全是必填——缺一个就报错。
 * 两边**互不 import**：契约层不 import 平台内部模块，平台也不 import
   契约层。它们认的是**同一份 TOML 文件**，不是同一份代码。
@@ -18,13 +18,13 @@
 取值不在域内，一律抛 :class:`CapabilityFieldError` 并在消息里点名字段，
 绝不漏出裸 KeyError / TypeError，也不与内建 ValueError 混用。
 
-**这一层是唯一的闸门。** §11.1 的流程是「契约层先读 ``capabilities/*.toml``
-→ 校验 → 再按 ``[adapter].command`` 调 adapter」，所以一份坏 TOML 在**派发
-之前**就被这一层拦住了。
+**这一层是唯一的闸门。** §11.1 的流程是「契约层先读
+``platforms/*/capability.toml`` → 校验 → 再按 ``[adapter].command`` 调
+adapter」，所以一份坏 TOML 在**派发之前**就被这一层拦住了。
 
 **两边的解读严格度不一样，逐条列在这里**（同一份 TOML 喂两边的结论；adapter
 那一列依据的是 ``feat/toutiao-adapter`` 分支上的
-``toutiao/toutiao/capability.py``，截至 ``bee4dfc``）：
+``platforms/toutiao/capability.py``，截至 ``bee4dfc``）：
 
 =====================================  ==========  =====================
 TOML 写法                                 契约层      toutiao adapter
@@ -38,7 +38,7 @@ TOML 写法                                 契约层      toutiao adapter
 顶层缺 ``review``                        REJECT      REJECT
 ``kinds =``（拼错）                      REJECT      REJECT
 ``automation = "api"``（值域外）         REJECT      REJECT
-``id`` 与文件名不一致                     REJECT      ACCEPT
+``id`` 与目录名不一致                     REJECT      ACCEPT
 ``[adapter]`` 多一个键                   REJECT      ACCEPT
 ``[limits]`` 里的键拼错                   ACCEPT      REJECT
 =====================================  ==========  =====================
@@ -51,8 +51,8 @@ TOML 写法                                 契约层      toutiao adapter
 
 **剩下三行，每一处都是「一边更严」，而且更严的那一边能抓住问题**：
 
-- ``id`` 与文件名不一致 → **契约层**更严。它多一道「这个平台到底是哪个」
-  的核对（文件名是注册表的名字）。adapter 不做这道核对。
+- ``id`` 与目录名不一致 → **契约层**更严。它多一道「这个平台到底是哪个」
+  的核对（目录名是注册表的名字）。adapter 不做这道核对。
 - ``[adapter]`` 多一个键 → **契约层**更严。
 - ``[limits]`` 里的键拼错 → **adapter** 更严。方向相反是有原因的：契约层把
   ``limits`` 当成**不透明**的平台自有键集合原样保留——它不读这些限额，
@@ -84,7 +84,7 @@ __all__ = [
     "CapabilityFieldError",
     "CapabilityFileError",
     "available_platforms",
-    "default_capabilities_dir",
+    "default_platforms_dir",
     "list_capabilities",
     "load_capability",
     "load_capability_file",
@@ -129,7 +129,7 @@ class CapabilityError(PublishKitError):
 
 
 class CapabilityFileError(CapabilityError):
-    """声明文件不存在、不是合法 TOML，或 id 与文件名对不上。"""
+    """声明文件不存在、不是合法 TOML，或 id 与目录名对不上。"""
 
 
 class CapabilityFieldError(CapabilityError):
@@ -367,13 +367,18 @@ def _validate_verified(value: object) -> str:
     return text
 
 
-def default_capabilities_dir() -> Path:
-    """仓库里那份能力声明目录（``publish/capabilities/``）。"""
-    return Path(__file__).resolve().parents[1] / "capabilities"
+def default_platforms_dir() -> Path:
+    """平台目录（``<仓库>/platforms/``）——每个平台一个子目录。"""
+    return Path(__file__).resolve().parents[2] / "platforms"
 
 
 def load_capability_file(path) -> Capability:
-    """Load and validate one capability declaration."""
+    """Load and validate one capability declaration.
+
+    声明里的 ``id`` 必须等于**它所在目录的名字**——
+    能力声明住在 ``<platforms_dir>/<id>/capability.toml``，目录名就是它在注册表里的名字。
+    文件名自由（统一叫 ``capability.toml``），目录名不自由。
+    """
     path = Path(path)
     try:
         with path.open("rb") as handle:
@@ -401,11 +406,11 @@ def load_capability_file(path) -> Capability:
                 platform_id
             )
         )
-    if path.stem != platform_id:
-        # 文件名是注册表的名字，id 必须与它一致——否则「哪个平台」就有两个答案。
+    if path.parent.name != platform_id:
+        # 目录名是注册表的名字，id 必须与它一致——否则「哪个平台」就有两个答案。
         raise CapabilityFileError(
-            "能力声明 id 与文件名不一致：文件 {} 的 id 是 {!r}".format(
-                path.name, platform_id
+            "能力声明 id 与目录名不一致：目录 {} 的 id 是 {!r}（文件 {}）".format(
+                path.parent.name, platform_id, path
             )
         )
 
@@ -480,18 +485,18 @@ def load_capability_file(path) -> Capability:
     )
 
 
-def load_capability(platform_id: str, *, capabilities_dir=None) -> Capability:
+def load_capability(platform_id: str, *, platforms_dir=None) -> Capability:
     """Load the capability declaration of one platform, by its id."""
     if not isinstance(platform_id, str) or not PLATFORM_ID_RE.match(platform_id):
         raise CapabilityFieldError(
             "平台 id 不合法：{!r}（应为小写字母开头的标识符）".format(platform_id)
         )
     directory = (
-        Path(capabilities_dir)
-        if capabilities_dir is not None
-        else default_capabilities_dir()
+        Path(platforms_dir)
+        if platforms_dir is not None
+        else default_platforms_dir()
     )
-    path = directory / "{}.toml".format(platform_id)
+    path = directory / platform_id / "capability.toml"
     if not path.is_file():
         raise CapabilityFileError(
             "找不到平台 {!r} 的能力声明：{}".format(platform_id, path)
@@ -499,21 +504,22 @@ def load_capability(platform_id: str, *, capabilities_dir=None) -> Capability:
     return load_capability_file(path)
 
 
-def list_capabilities(*, capabilities_dir=None) -> list:
-    """Load every ``*.toml`` under the capabilities directory, sorted by id."""
+def list_capabilities(*, platforms_dir=None) -> list:
+    """Load every platform's ``capability.toml``, sorted by id."""
     directory = (
-        Path(capabilities_dir)
-        if capabilities_dir is not None
-        else default_capabilities_dir()
+        Path(platforms_dir)
+        if platforms_dir is not None
+        else default_platforms_dir()
     )
     if not directory.is_dir():
         return []
     capabilities = [
-        load_capability_file(path) for path in sorted(directory.glob("*.toml"))
+        load_capability_file(path)
+        for path in sorted(directory.glob("*/capability.toml"))
     ]
     return sorted(capabilities, key=lambda cap: cap.id)
 
 
-def available_platforms(*, capabilities_dir=None) -> list:
+def available_platforms(*, platforms_dir=None) -> list:
     """The ids of every declared platform, sorted."""
-    return [cap.id for cap in list_capabilities(capabilities_dir=capabilities_dir)]
+    return [cap.id for cap in list_capabilities(platforms_dir=platforms_dir)]

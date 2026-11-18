@@ -30,7 +30,7 @@ jobs:
         working-directory: publish
         env:
           PUBLISH_REPO: ${{ github.workspace }}
-          PUBLISH_SECRETS: ${{ github.workspace }}/weixin/secrets.json
+          PUBLISH_SECRETS: ${{ github.workspace }}/platforms/wechat/secrets.json
           PYTHONPATH: ${{ github.workspace }}/publish
         run: |
           python3 -m publishkit.cli schedule weekly

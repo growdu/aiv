@@ -27,7 +27,7 @@
 6. 生成器必须在**两个** CI job 里都跑（主站和 GitHub Pages 镜像），
    而且要排在 sync 之后、hexo generate 之前。
 
-这个测试**不需要构建产物**：语料直接从 ``docs/`` 和 ``aiv/`` 推出来，
+这个测试**不需要构建产物**：语料直接从 ``docs/`` 和 ``video/`` 推出来，
 所以它能进 ``site-guard.yml``（那条工作流不构建产物）。
 
 放在根级 ``tests/``，随 ``site-guard.yml`` 进 CI。
@@ -83,7 +83,7 @@ def rules():
 def corpus(tool):
     """The whole site's article list, derived **without** a build.
 
-    ``docs/`` for the articles, ``aiv/pipeline/Makefile`` for the video
+    ``docs/`` for the articles, ``video/pipeline/Makefile`` for the video
     episodes.  ``url`` is a placeholder that encodes the article's
     identity (``/`` + flattened path) -- the real permalink needs the
     git date, and the coverage questions below don't care about dates.

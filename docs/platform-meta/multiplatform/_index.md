@@ -27,6 +27,10 @@ tags:
 下一篇会讲幂等的另一半：出包与发布状态怎么分开记，
 为什么「已出包」也算「处理过了」，以及写盘为什么必须原子。
 
+那份声明现在住在 `platforms/<plat>/capability.toml`——
+目录名就是平台 id，也是 Python 包名；平台自己的发布快照住在
+同目录下的 `outbox/`。
+
 ## 相关
 
 - [内容单元与内容契约](../content-model/content-unit-and-contract.md) — 分发链路的输入长什么样

@@ -16,11 +16,15 @@ from datetime import date
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 
 from publishkit import (
     PublishKitError,
+    cli,
+    load_capability,
 )
 from publishkit.schedule import (
     PUBLISHED_STATUSES,
@@ -40,7 +44,7 @@ from publishkit.schedule import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-REPO_OUTBOX = REPO_ROOT / "publish" / "outbox"
+REPO_OUTBOX = REPO_ROOT / "platforms"
 
 #: 2026-11-13 是周五，属于 2026-W46（周一 2026-11-09，周日 2026-11-15）。
 FRIDAY = date(2026, 11, 13)
@@ -79,6 +83,14 @@ def make_unit(content_id, *, platforms=("wechat",), publish_on=None, day=None):
             "sort_date": publish_on or day or date.max,
         },
     )()
+
+
+def outbox_of(tmp_path: Path, platform: str) -> Path:
+    """某个平台的快照目录——放在临时的「平台根」下面。
+
+    真实的布局是 ``<平台根>/<平台>/outbox/``，索引扫的是平台根。
+    """
+    return tmp_path / "platforms" / platform / "outbox"
 
 
 def write_snapshot(outbox_dir: Path, content_id, platform, status="packaged", **extra):
@@ -152,7 +164,7 @@ def test_week_window_crosses_the_year_boundary():
 def test_config_defaults_to_the_repository_layout(tmp_path):
     """没有环境变量时：仓库根从 cwd 往上找，状态目录在 ``publish/``。"""
     root = tmp_path / "blog"
-    (root / "publish" / "capabilities").mkdir(parents=True)
+    (root / "publish" / "publishkit").mkdir(parents=True)
     (root / "source" / "_posts").mkdir(parents=True)
 
     config = resolve_config(repo_root=root)
@@ -160,10 +172,10 @@ def test_config_defaults_to_the_repository_layout(tmp_path):
     assert config.repo_root == root
     assert config.state_dir == root / "publish"
     assert config.schedule_file == root / "publish" / "schedule.json"
-    assert config.outbox_dir == root / "publish" / "outbox"
+    assert config.outbox_root == root / "platforms"
     assert config.posts_dir == root / "source" / "_posts"
-    assert config.capabilities_dir == root / "publish" / "capabilities"
-    assert config.secrets_file == root / "weixin" / "secrets.json"
+    assert config.platforms_dir == root / "platforms"
+    assert config.secrets_file == root / "platforms" / "wechat" / "secrets.json"
 
 
 def test_config_reads_the_environment_variables(tmp_path):
@@ -180,8 +192,8 @@ def test_config_reads_the_environment_variables(tmp_path):
     assert config.secrets_file == tmp_path / "creds.json"
     assert config.state_dir == tmp_path / "state"
     assert config.schedule_file == tmp_path / "state" / "schedule.json"
-    # 状态目录一改，outbox 跟着走——不是钉死在 $REPO/publish/outbox。
-    assert config.outbox_dir == tmp_path / "state" / "outbox"
+    # 状态目录一改，outbox **不**跟着走——它住在平台目录里，不是状态目录的附属。
+    assert config.outbox_root == tmp_path / "blog" / "platforms"
 
 
 def test_command_line_options_override_the_environment(tmp_path):
@@ -194,9 +206,9 @@ def test_command_line_options_override_the_environment(tmp_path):
     config = resolve_config(
         repo_root=tmp_path / "other",
         state_dir=tmp_path / "other-state",
-        outbox_dir=tmp_path / "other-outbox",
+        outbox_root=tmp_path / "other-outbox",
         posts_dir=tmp_path / "other-posts",
-        capabilities_dir=tmp_path / "other-caps",
+        platforms_dir=tmp_path / "other-caps",
         schedule_file=tmp_path / "other-schedule.json",
         secrets=tmp_path / "other-secrets.json",
         environ=env,
@@ -204,16 +216,16 @@ def test_command_line_options_override_the_environment(tmp_path):
 
     assert config.repo_root == tmp_path / "other"
     assert config.state_dir == tmp_path / "other-state"
-    assert config.outbox_dir == tmp_path / "other-outbox"
+    assert config.outbox_root == tmp_path / "other-outbox"
     assert config.posts_dir == tmp_path / "other-posts"
-    assert config.capabilities_dir == tmp_path / "other-caps"
+    assert config.platforms_dir == tmp_path / "other-caps"
     assert config.schedule_file == tmp_path / "other-schedule.json"
     assert config.secrets_file == tmp_path / "other-secrets.json"
 
 
 def test_repo_root_is_discovered_from_the_working_directory(tmp_path, monkeypatch):
     root = tmp_path / "blog"
-    (root / "publish" / "capabilities").mkdir(parents=True)
+    (root / "publish" / "publishkit").mkdir(parents=True)
     deep = root / "a" / "b"
     deep.mkdir(parents=True)
     monkeypatch.chdir(deep)
@@ -336,9 +348,9 @@ def test_publish_on_wins_over_date_when_sorting():
 
 
 def test_already_published_units_are_dropped(tmp_path):
-    outbox = tmp_path / "outbox"
+    outbox = outbox_of(tmp_path, "wechat")
     write_snapshot(outbox, "older", "wechat", status="packaged")
-    index = load_outbox_index(outbox)
+    index = load_outbox_index(tmp_path / "platforms")
     units = [
         make_unit("older", day=date(2020, 1, 1)),
         make_unit("newer", day=date(2026, 7, 27)),
@@ -351,9 +363,9 @@ def test_already_published_units_are_dropped(tmp_path):
 
 def test_a_failed_record_is_not_treated_as_published(tmp_path):
     """失败 ≠ 已发过——失败的那篇还要能被选出来重试。"""
-    outbox = tmp_path / "outbox"
+    outbox = outbox_of(tmp_path, "wechat")
     write_snapshot(outbox, "older", "wechat", status="failed")
-    index = load_outbox_index(outbox)
+    index = load_outbox_index(tmp_path / "platforms")
     units = [make_unit("older", day=date(2020, 1, 1))]
 
     chosen, _ = select_for_platform(units, "wechat", window=THIS_WEEK, outbox=index)
@@ -363,9 +375,9 @@ def test_a_failed_record_is_not_treated_as_published(tmp_path):
 
 def test_nothing_to_publish_is_stated_out_loud(tmp_path):
     """一个都不剩 → 明确说「本周没有可发的」，不静默成功。"""
-    outbox = tmp_path / "outbox"
+    outbox = outbox_of(tmp_path, "wechat")
     write_snapshot(outbox, "only-one", "wechat", status="packaged")
-    index = load_outbox_index(outbox)
+    index = load_outbox_index(tmp_path / "platforms")
     units = [make_unit("only-one", day=date(2020, 1, 1))]
 
     chosen, reason = select_for_platform(units, "wechat", window=THIS_WEEK, outbox=index)
@@ -408,8 +420,8 @@ def test_a_unit_without_any_date_still_can_be_chosen():
 
 def test_the_index_is_built_by_reading_the_files_not_by_computing_names(tmp_path):
     """快照是自描述的——文件名改了也照样读得出来。"""
-    outbox = tmp_path / "outbox"
-    outbox.mkdir()
+    outbox = outbox_of(tmp_path, "wechat")
+    outbox.mkdir(parents=True)
     (outbox / "随便一个名字.json").write_text(
         json.dumps(
             {"content_id": "a/b", "platform": "wechat", "status": "published"},
@@ -418,18 +430,18 @@ def test_the_index_is_built_by_reading_the_files_not_by_computing_names(tmp_path
         encoding="utf-8",
     )
 
-    index = load_outbox_index(outbox)
+    index = load_outbox_index(tmp_path / "platforms")
 
     assert index.is_published("a/b", "wechat") is True
     assert index.get("a/b", "wechat").status == "published"
 
 
 def test_the_index_reports_a_broken_snapshot(tmp_path):
-    outbox = tmp_path / "outbox"
-    outbox.mkdir()
+    outbox = outbox_of(tmp_path, "wechat")
+    outbox.mkdir(parents=True)
     (outbox / "broken.json").write_text("{不是 JSON", encoding="utf-8")
 
-    index = load_outbox_index(outbox)
+    index = load_outbox_index(tmp_path / "platforms")
 
     assert index.errors
     assert "broken.json" in index.errors[0]
@@ -451,6 +463,17 @@ def test_the_packaged_status_counts_as_already_handled():
     assert "published" in PUBLISHED_STATUSES
     assert "failed" not in PUBLISHED_STATUSES
     assert "unknown" not in PUBLISHED_STATUSES
+
+
+def test_the_real_outbox_index_finds_every_snapshot():
+    """真实仓库里的 566 条快照必须一条不落地被索引到。
+
+    这是「读侧漏改」的唯一防线：outbox 分平台之后，任何还在扫单一
+    目录的读者都会把已发过的内容看成没发过——于是重复发布。
+    """
+    index = load_outbox_index(REPO_ROOT / "platforms")
+    assert len(index.records) == 566, f"索引到 {len(index.records)} 条快照，应为 566"
+    assert not index.errors, f"有快照读不出来：{index.errors}"
 
 
 # --- outbox 文件名约定（§6.5） -------------------------------------------
@@ -475,10 +498,10 @@ def test_the_snapshot_name_matches_the_files_already_in_the_repository():
     （``__bilibili.json`` 那批）时它自动多验几条，不用改测试。
     """
     if not REPO_OUTBOX.is_dir():
-        pytest.skip("仓库里没有 publish/outbox/")
+        pytest.skip("仓库里没有 platforms/")
 
     checked = 0
-    for path in sorted(REPO_OUTBOX.glob("*.json")):
+    for path in sorted(REPO_OUTBOX.glob("*/outbox/*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         content_id = data["content_id"]
         platform = data["platform"]
@@ -493,10 +516,13 @@ def test_the_snapshot_name_matches_the_files_already_in_the_repository():
 
 
 def _capability_dir(tmp_path, **tomls):
-    directory = tmp_path / "capabilities"
+    """摆几份能力声明：新布局是 ``<平台名>/capability.toml``。"""
+    directory = tmp_path / "platforms"
     directory.mkdir(parents=True, exist_ok=True)
     for name, text in tomls.items():
-        (directory / "{}.toml".format(name)).write_text(text, encoding="utf-8")
+        platform = directory / name
+        platform.mkdir(parents=True, exist_ok=True)
+        (platform / "capability.toml").write_text(text, encoding="utf-8")
     return directory
 
 
@@ -529,7 +555,7 @@ def test_only_document_platforms_are_driven(tmp_path):
     """视频平台走它们自己那套 CLI——不进这一期的候选集。"""
     config = resolve_config(
         repo_root=tmp_path,
-        capabilities_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML, channels=VIDEO_TOML),
+        platforms_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML, channels=VIDEO_TOML),
     )
 
     platforms = target_platforms(config)
@@ -541,7 +567,7 @@ def test_a_video_platform_is_refused_loudly(tmp_path):
     """点名要一个视频平台 → 报错，不静默跳过、更不假装发过了。"""
     config = resolve_config(
         repo_root=tmp_path,
-        capabilities_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML, channels=VIDEO_TOML),
+        platforms_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML, channels=VIDEO_TOML),
     )
 
     with pytest.raises(ScheduleConfigError) as error:
@@ -553,7 +579,7 @@ def test_a_video_platform_is_refused_loudly(tmp_path):
 def test_an_unknown_platform_is_refused_loudly(tmp_path):
     config = resolve_config(
         repo_root=tmp_path,
-        capabilities_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML),
+        platforms_dir=_capability_dir(tmp_path, toutiao=DOCUMENT_TOML),
     )
 
     with pytest.raises(ScheduleConfigError):
@@ -590,11 +616,11 @@ def test_the_whole_selection_flow_over_a_temporary_corpus(tmp_path):
         "c/other.md",
         "title: 别的平台的\ndate: 2019-01-01 00:00:00\nplatforms:\n  - toutiao",
     )
-    outbox = tmp_path / "outbox"
+    outbox = outbox_of(tmp_path, "wechat")
     write_snapshot(outbox, "a/old", "wechat", status="packaged")
 
     units, errors = discover_units(posts)
-    index = load_outbox_index(outbox)
+    index = load_outbox_index(tmp_path / "platforms")
     chosen, reason = select_for_platform(units, "wechat", window=THIS_WEEK, outbox=index)
 
     assert errors == []
@@ -614,12 +640,12 @@ def test_the_selection_flow_over_a_configured_repository_layout(tmp_path):
         "db/demo.md",
         "title: 演示\ndate: 2021-03-04 05:06:07\nplatforms:\n  - wechat\n  - toutiao",
     )
-    outbox = root / "publish" / "outbox"
+    outbox = root / "platforms" / "toutiao" / "outbox"
     write_snapshot(outbox, "db/demo", "toutiao", status="packaged")
 
     config = resolve_config(repo_root=root)
     units, errors = discover_units(config.posts_dir)
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
 
     # toutiao 上这篇已经出包了 → 换成 wechat 选。
     chosen, _ = select_for_platform(units, "toutiao", window=THIS_WEEK, outbox=index)
@@ -634,12 +660,53 @@ def test_a_corpus_where_everything_is_published_says_so(tmp_path):
     """整个候选集都发过了 → 明确说「本周没有可发的」。"""
     posts = tmp_path / "_posts"
     write_post(posts, "only.md", "title: 唯一\ndate: 2020-01-01\nplatforms:\n  - wechat")
-    outbox = tmp_path / "outbox"
+    outbox = outbox_of(tmp_path, "wechat")
     write_snapshot(outbox, "only", "wechat", status="published")
 
     units, _errors = discover_units(posts)
-    index = load_outbox_index(outbox)
+    index = load_outbox_index(tmp_path / "platforms")
     chosen, reason = select_for_platform(units, "wechat", window=THIS_WEEK, outbox=index)
 
     assert chosen is None
     assert "本周没有可发的" in reason
+
+
+def test_the_adapter_runs_inside_the_platforms_directory(monkeypatch):
+    """压平后包在 platforms/<plat>/ 下，子进程的 cwd 必须是 platforms/。"""
+    captured = {}
+
+    def fake_run(argv, cwd=None, env=None, **kwargs):
+        captured["argv"] = argv
+        captured["cwd"] = cwd
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    # 用仓库里真实的 toutiao 能力声明与真实的 resolve_config()，只换掉 subprocess.run
+    config = resolve_config(repo_root=REPO_ROOT)
+    capability = load_capability("toutiao",
+                                  platforms_dir=REPO_ROOT / "platforms")
+    cli.invoke_adapter(config, capability, "some-content-id", 300)
+    assert captured["cwd"] == str(REPO_ROOT / "platforms")
+    assert captured["argv"][:3] == ["python3", "-m", "toutiao.cli"]
+
+
+def test_the_adapter_runs_inside_the_configured_platforms_directory(monkeypatch, tmp_path):
+    """能力声明从哪儿读，子进程的 cwd 就得是哪儿——不能一个走 tmp_path、一个走仓库。"""
+    captured = {}
+
+    def fake_run(argv, cwd=None, env=None, **kwargs):
+        captured["argv"] = argv
+        captured["cwd"] = cwd
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    # 能力声明抄一份真的到 tmp_path，只换掉它的位置，不改内容
+    target = tmp_path / "toutiao"
+    target.mkdir()
+    shutil.copyfile(REPO_ROOT / "platforms" / "toutiao" / "capability.toml",
+                    target / "capability.toml")
+    config = resolve_config(repo_root=REPO_ROOT, platforms_dir=tmp_path)
+    capability = load_capability("toutiao", platforms_dir=tmp_path)
+    cli.invoke_adapter(config, capability, "some-content-id", 300)
+    assert captured["cwd"] == str(tmp_path)
+    assert captured["argv"][:3] == ["python3", "-m", "toutiao.cli"]

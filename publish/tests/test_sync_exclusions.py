@@ -66,7 +66,7 @@ PUBLISHABLE_SUFFIXES = (".md", ".html", ".htm")
 def excluded_hits(docs_dir, module):
     """Every **publishable** file that sits in an excluded directory.
 
-    按**目录名**匹配，不按文件名——所以 ``aiv/voice/README.md`` 不会被算进来。
+    按**目录名**匹配，不按文件名——所以 ``video/voice/README.md`` 不会被算进来。
 
     只算会被发布的文件（md / html）：``docs/src/test/`` 底下确实有几个
     ``.c`` 与 ``Makefile``，但它们从来不会变成文章，落在排除目录里也不改变
@@ -197,7 +197,7 @@ CORPUS = {
     # 隐藏目录：现有的守卫，与新规则并列
     ".hidden/secret.md": DRAFT.format(title="隐藏目录", body="不该发布。"),
     # **文件名**叫 README.md 但所在目录不命中——按目录名排除，不按文件名
-    "blog/aiv/voice/README.md": DRAFT.format(title="音色规范", body="该发布。"),
+    "blog/video/voice/README.md": DRAFT.format(title="音色规范", body="该发布。"),
 }
 
 
@@ -210,7 +210,7 @@ def test_engineering_directories_are_not_published(tmp_path):
     # 该发的照发
     assert (posts / "blog" / "ok.md").is_file()
     # 同名文件按目录名判定——README.md 不因为名字被排除
-    assert (posts / "blog" / "aiv" / "voice" / "README.md").is_file()
+    assert (posts / "blog" / "video" / "voice" / "README.md").is_file()
 
     # 工程目录里的文件不进产物
     assert not (posts / "src" / "test" / "test_module" / "notes.md").exists()

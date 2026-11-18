@@ -1,12 +1,9 @@
 {
   "extraPaths": [
     "publish",
-    "weixin",
-    "toutiao",
-    "channels",
-    "bilibili",
+    "platforms",
     "browser",
-    "aiv/pipeline"
+    "video/pipeline"
   ],
   "venvPath": ".",
   "venv": ".venv",

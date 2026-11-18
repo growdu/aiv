@@ -3,7 +3,7 @@
     "抖音创作者中心（creator.douyin.com）的页面结构与接口表。",
     "**数据全是 2026-11-17 实测的**（EP02 csn-total-ordering 真发出去那一条）：",
     "选择器从当时的 DOM 抄的，接口路径从平台自己的请求里抓的。",
-    "抖音没有开放平台凭据（个人主体批不下来，见 publish/capabilities/douyin.toml），",
+    "抖音没有开放平台凭据（个人主体批不下来，见 platforms/douyin/capability.toml），",
     "所以这一档走**网页后台 + 浏览器自动化**，与视频号同一套路。"
   ],
 

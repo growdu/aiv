@@ -3,7 +3,7 @@ episode: structured-ddl
 episode_no: 5
 series: 数据库内核机制
 episode_hook: "社区讨论的方向不是「把 DDL 当字符串发过去」，而是拆成带语义的结构化对象"
-episode_subtitle: aiv/字幕-结构化DDL.md
+episode_subtitle: video/字幕-结构化DDL.md
 episode_duration_s: "34.128"
 episode_license: "PostgreSQL BSD"
 episode_sources:

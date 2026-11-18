@@ -214,7 +214,7 @@ def _limit(limits, name):
     """Read one limit from either shape of ``limits``.
 
     契约层自己的 capability 用 **dict**（``Capability.limits``），平台 adapter
-    自己的 capability 用 **dataclass**（``toutiao/toutiao/capability.py`` 的
+    自己的 capability 用 **dataclass**（``platforms/toutiao/capability.py`` 的
     ``Limits``）。``validate()`` 的签名是鸭子类型——「拿任何一层的 capability
     都能校验」正是它存在的理由，所以两种形态都要能读。
 

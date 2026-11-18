@@ -27,6 +27,9 @@ tags:
 下一篇会讲长视频三档怎么落地：母稿怎么被解析成骨架、
 角色标记怎么决定哪几段进哪一档，以及「不做自动裁剪」这条取舍。
 
+那份契约现在住在 `video/contracts/`——
+与 `platforms/` 同级，是仓库根级的视频模块。
+
 ## 相关
 
 - [一个仓库，三条产线](../platform-overview/one-repo-three-pipelines.md) — 视频线在整体架构里的位置

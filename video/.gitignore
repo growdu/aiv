@@ -1,0 +1,81 @@
+# 本目录入库的是「代码 + 契约 + 出片必需的最小素材集」。
+#
+# 产物（成片、片段、时间轴、发布包）一律不入库——它们由本机的素材算出来，
+# 跟着本机的素材走。
+#
+# 但**出片必需的输入**要入库：另一台机器（尤其是 Linux）clone 完就能
+# 直接出片，不用从 macOS 上搬文件、不用重新下载、不用重新合成。
+# 白名单在文件末尾，规则是「先全拦，再逐个放行」。
+
+# 媒体文件
+*.mp4
+*.mp3
+*.wav
+*.m4a
+*.mov
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+
+# 渲染产物
+build/
+out/
+frames/
+
+# 时间轴产物（由旁白对齐算出，跟着本地旁白走；按期命名）
+storyboard*.json
+
+# 送进 TTS 的文本留底（多音字替换后的那一版；跟着本地旁白走）
+*.spoken.txt
+
+# Design 运行时状态（画布节点图与资产索引，由应用与流水线共同写入）
+.hilo/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# macOS
+.DS_Store
+
+# ---------------------------------------------------------------- 放行清单
+#
+# 下面这些是「换台机器要跑出片就必须有」的东西。删掉任何一条，
+# `video/pipeline/tests/test_assets_are_tracked.py` 会变红。
+
+# 抽帧的**清单**要入库，帧本身不入库。
+#
+# 帧是产物（跟着本机的成片走）；清单是「这一期抽了哪些帧、每帧该有
+# 什么文案」的对照表——审核记录里的判断要能对着它复核，所以它入库。
+# 放行顺序要紧：先放行目录（git 才会往里走），再拦内容，最后放行清单。
+!review/frames/
+review/frames/**
+!review/frames/*/
+!review/frames/*/frames.md
+
+# 旁白（六期）。没有它就对齐不了、渲染不了。
+!narration_*.mp3
+
+# 定标参照稿：音色参数（pitch/speed）是相对它标定的。
+!ddl-voiceover.mp3
+
+# 形象原型（重新生成主形象的唯一来源）+ 透明底主形象（合成进画面用这个）。
+!growdu2.jpeg
+!character/growdu_character_2k_nobg.png
+# 无标牌形象：抖音这一档备用（胸口那枚 growdu 铭牌也是品牌标识）。
+# 由 `character/scripts/clear_badge.py` 从上面那份派生，可复现。
+!character/growdu_character_2k_nobg_nobadge.png
+
+# 品牌片头片尾与成品音轨（缺了也能出片，只是成片不带品牌片）。
+!brand/clips/growdu_intro_3s_1080p.mp4
+!brand/clips/growdu_outro_3s_1080p.mp4
+!brand/audio/intro_mix.wav
+!brand/audio/outro_mix.wav
+
+# 曲库（台账里登记的两首，授权 CC0-1.0）。bed 是正文铺底，motif 是片头片尾闭环。
+!music/tracks/series-bed-01.wav
+!music/tracks/series-motif-01.wav

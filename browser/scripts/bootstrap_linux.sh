@@ -12,7 +12,7 @@
 #   * Python 依赖：playwright
 #   * 浏览器本体：chromium（连同它需要的系统库）
 #
-# **为什么浏览器单独一个脚本，不并进 aiv/pipeline 的 bootstrap。**
+# **为什么浏览器单独一个脚本，不并进 video/pipeline 的 bootstrap。**
 # 出片的机器需要 ffmpeg 与中文字体，发帖的机器需要 chromium——
 # 两台机器的依赖不一样，捆在一起会让「只想出片」的人被迫装一个几百兆的浏览器。
 set -euo pipefail

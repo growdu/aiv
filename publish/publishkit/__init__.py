@@ -1,6 +1,6 @@
 """契约层：内容契约 · 平台能力模型 · 发布清单。
 
-这一层**不认识任何具体平台**。它读 ``publish/capabilities/<platform>.toml``，
+这一层**不认识任何具体平台**。它读 ``platforms/<platform>/capability.toml``，
 产出 manifest JSON，再把 TOML 与 manifest 交给平台 adapter。
 平台 adapter 也**不 import 这一层**——两边唯一的接缝是那份 TOML 与那份
 manifest JSON（``publish/spec/00-架构设计.md`` §5、§6、§11.1）。
@@ -29,7 +29,7 @@ from .capability import (  # noqa: E402
     CapabilityFieldError,
     CapabilityFileError,
     available_platforms,
-    default_capabilities_dir,
+    default_platforms_dir,
     list_capabilities,
     load_capability,
     load_capability_file,
@@ -144,7 +144,7 @@ __all__ = [
     "content_id_for",
     "contract_from_fields",
     "content_id_for_draft",
-    "default_capabilities_dir",
+    "default_platforms_dir",
     "discover_episodes",
     "discover_units",
     "episode_from_fields",

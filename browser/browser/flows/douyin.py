@@ -2,7 +2,7 @@
 
 **这一档只能走网页后台。** 抖音开放平台的内容发布能力（scope
 ``video.create.bind``）要求**党政机关或事业单位**主体，个人主体批不下来
-（见 ``publish/capabilities/douyin.toml``），所以没有 API 凭据可用，
+（见 ``platforms/douyin/capability.toml``），所以没有 API 凭据可用，
 跟视频号一样是浏览器自动化。
 
 **它做的是「上传 + 填表 + 点发表」，不碰封面。** 2026-11-17 实测：抖音的封面
@@ -131,7 +131,7 @@ def check_limits(title: str, description: str, topics: list[str],
     """文案过不过平台的上限。返回问题清单（空=没问题）。
 
     **超限一律报错，不静默截断。** 让作者改元数据，而不是悄悄裁一刀
-    （与 ``douyin/douyin/contract.py`` 的口径一致）。
+    （与 ``platforms/douyin/contract.py`` 的口径一致）。
     """
     rules = {"title_chars": 30, "description_chars": 1000,
              "topics_max": 5, "topic_chars": 15}
