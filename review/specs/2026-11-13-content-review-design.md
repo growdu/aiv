@@ -93,10 +93,10 @@ README 原则 1「先保真，再润色」要求判断必须带上下文；原�
 
 ```bash
 # 单篇，人读摘要
-python3 tools/review-check.py docs/database/postgresql-mvcc/index.md
+python3 tools/review-check.py docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md
 
 # 单篇，JSON
-python3 tools/review-check.py docs/database/postgresql-mvcc/index.md --json
+python3 tools/review-check.py docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md --json
 
 # 批量（四支柱），JSON 落盘
 python3 tools/review-check.py docs/database docs/db docs/pgsql docs/cluster \
@@ -178,7 +178,7 @@ python3 tools/review-check.py docs/database docs/db docs/pgsql docs/cluster \
 
 ```json
 {
-  "source": "docs/database/postgresql-mvcc/index.md",
+  "source": "docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md",
   "pillar": "database",
   "slug": "postgresql-mvcc",
   "title": "PostgreSQL MVCC：一条数据是如何拥有\"分身术\"的",
@@ -209,8 +209,8 @@ python3 tools/review-check.py docs/database docs/db docs/pgsql docs/cluster \
 
 | 原文 | 记录 |
 |---|---|
-| `docs/database/postgresql-mvcc/index.md` | `review/database/postgresql-mvcc.md` |
-| `docs/database/pg-dont-do-this.md` | `review/database/pg-dont-do-this.md` |
+| `docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md` | `review/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc.md` |
+| `docs/source-tracks/postgresql/extensions-perf/pg-dont-do-this.md` | `review/source-tracks/postgresql/extensions-perf/pg-dont-do-this.md` |
 | `docs/db/postgresql/xxx.md` | `review/db/postgresql/xxx.md`（层级原样保留） |
 
 规则：`<支柱>/<相对路径去后缀>.md`。四支柱中仅 `_index` 跨支柱重名，
@@ -221,7 +221,7 @@ python3 tools/review-check.py docs/database docs/db docs/pgsql docs/cluster \
 
 **非文章类文档同样不在范围内**：四支柱里混着交付计划、配置流程、安装步骤、
 源码编译笔记这类工作文档（如 `db/logical_decode/逻辑复制支持DDL开发交付计划`、
-`db/mysql/macos安装mysql`）。它们是项目记录不是文章，审校目标是「读者读完能学会
+`source-tracks/postgresql/extensions-perf/macos安装mysql`）。它们是项目记录不是文章，审校目标是「读者读完能学会
 什么」，对它们不成立。这类文档在 INDEX 里标「非文章，跳过」，不产出审校记录。
 
 判据：文章有「面向读者的技术解释」结构——问题、机制、证据、取舍；

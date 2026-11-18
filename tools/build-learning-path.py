@@ -168,8 +168,8 @@ def read_posts(posts_dir: Path) -> list[dict]:
     permalink。要在这儿重算一遍 sync 的那套逻辑（git 日期、路径扁平化）
     只会造出第二份真相。
 
-    **``.html`` 的文章也在内**：站上有 3 篇是 HTML 写的（``db/ddl同步架构-html``、
-    ``db/sqlserver/sqlserver逻辑复制ddl-html``、``life/hometown/家中对联-html``）。
+    **``.html`` 的文章也在内**：站上有 3 篇是 HTML 写的（``source-tracks/postgresql/logical-replication/ddl同步架构-html``、
+    ``source-tracks/postgresql/logical-replication/sqlserver/sqlserver逻辑复制ddl-html``、``life/hometown/家中对联-html``）。
     它们同样是文章，同样该出现在学习路径里 —— 只收 ``*.md`` 的话，
     学习路径就漏了它们。
     """

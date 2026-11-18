@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/logical-replication/逻辑解码支持DDL",
+  "draft_id": "7708375720333951529",
+  "package_dir": "toutiao/out/source-tracks-postgresql-logical-replication-逻辑解码支持DDL",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "逻辑解码支持DDL",
+  "updated_at": "2026-11-15T20:43:45+08:00"
+}

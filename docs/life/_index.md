@@ -77,7 +77,7 @@ tags:
 2. 再读 [电子科技大学计算机自考复习计划](./daxue/电子科技大学-计算机-自考-复习计划/index.html)：在已知约束下评估**学历补救路径**
 
 ### 路径 B：留在互联网（PG 内核深度路线）
-- 技术文档请查阅 [docs/database/postgresql-senior-kernel-developer](../database/postgresql-senior-kernel-developer/index.html) —— **如何成为资深的 PG 内核开发者**（含 18 月路径图 + 36 主题地图 + 12 子系统架构）
+- 技术文档请查阅 [docs/source-tracks/postgresql/getting-started/postgresql-senior-kernel-developer](../source-tracks/postgresql/getting-started/postgresql-senior-kernel-developer/index.html) —— **如何成为资深的 PG 内核开发者**（含 18 月路径图 + 36 主题地图 + 12 子系统架构）
 
 ### 路径 C：周期与个人防线（宏观 → 公司 → 自己 → 家庭）
 1. 先读 [大环境之下：一个数据库内核开发工程师的思考、建议与自处](./shehui/economic-downturn-strategy/index.html)：**我怎么想 → 给公司的建议 → 我自己的策略**（304 行，只给结论）
@@ -140,7 +140,7 @@ tags:
 - **年龄线**：本科 35 / 硕士 40 / 博士 45（公务员考试通用，部分省份已松动）
 - **专业代码**：云南省考/事业单位计算机岗多用 **B0809 计算机类**
 - **决策窗口**：38 岁即转向，**任何低估 35 岁线的方案都是失败的**
-- **技术深度**：PG 内核开发方向见 `docs/database/`，不在本人生分类
+- **技术深度**：PG 内核开发方向见 `docs/source-tracks/postgresql/`，不在本人生分类
 - **周期约束**：外部需求收缩时，先保**现金流安全垫与收入韧性**，再谈成长（见《大环境之下：一个数据库内核开发工程师的思考、建议与自处》）
 
 ## 决策矩阵速览

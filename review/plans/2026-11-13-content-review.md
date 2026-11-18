@@ -232,7 +232,7 @@ Expected: FAIL —— `tools/review-check.py` 不存在，collection error。
 
 用法::
 
-    python3 tools/review-check.py docs/database/postgresql-mvcc/index.md
+    python3 tools/review-check.py docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md
     python3 tools/review-check.py docs/database docs/db --json --out /tmp/s.json
 
 只读：不修改任何被检文件，也不往仓库里写文件。
@@ -329,8 +329,8 @@ RULES: list = []
 def derive_identity(path: Path, docs_root: Path = DOCS_ROOT) -> tuple[str, str]:
     """Derive ``(pillar, slug)`` from a docs/-relative path.
 
-    ``docs/database/postgresql-mvcc/index.md`` -> ``("database", "postgresql-mvcc")``
-    ``docs/database/pg-dont-do-this.md``      -> ``("database", "pg-dont-do-this")``
+    ``docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md`` -> ``("database", "postgresql-mvcc")``
+    ``docs/source-tracks/postgresql/extensions-perf/pg-dont-do-this.md``      -> ``("database", "pg-dont-do-this")``
     ``docs/db/postgresql/xxx.md``             -> ``("db", "postgresql/xxx")``
 
     ``docs_root`` exists so the rule can be exercised on a temporary tree
@@ -1300,7 +1300,7 @@ Expected: PASS（31 passed）。
 Run:
 
 ```bash
-python3 tools/review-check.py docs/database/postgresql-mvcc/index.md
+python3 tools/review-check.py docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md
 python3 tools/review-check.py docs/database docs/db docs/pgsql docs/cluster --json --out /tmp/review-signals.json
 python3 -c "
 import json
@@ -1340,7 +1340,7 @@ docs/database/a/index.md 里的 ./b/index.html 指的是 docs/database/b/。
 **Files:**
 - Create: `tests/test_review_records.py`
 - Create: `review/INDEX.md`
-- Create: `review/database/postgresql-mvcc.md`
+- Create: `review/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc.md`
 
 **Interfaces:**
 - Consumes: Task 1~4 的检查器（仅用于给记录填「信号」列）
@@ -1530,18 +1530,18 @@ Expected: PASS（当前没有记录，断言空集成立）——**这不是想�
 
 - [ ] **Step 3: 建立第一条试点记录与索引**
 
-先读原文：`docs/database/postgresql-mvcc/index.md`，再跑检查器：
+先读原文：`docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md`，再跑检查器：
 
 ```bash
-python3 tools/review-check.py docs/database/postgresql-mvcc/index.md
+python3 tools/review-check.py docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md
 ```
 
-按 README 模板创建 `review/database/postgresql-mvcc.md`：
+按 README 模板创建 `review/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc.md`：
 
 ```markdown
 # 审校：PostgreSQL MVCC：一条数据是如何拥有"分身术"的
 
-- 原文：`docs/database/postgresql-mvcc/index.md`
+- 原文：docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md
 - 范围：全文
 - 目标读者：用过 PostgreSQL、想知道并发下「读到的是哪一版数据」的开发者
 - 一句话定位：<从原文开头 3 段提炼，读者读完能回答「快照是怎么来的」
@@ -1589,7 +1589,7 @@ python3 tools/review-check.py docs/database/postgresql-mvcc/index.md
 
 | 记录 | 支柱 | 状态 | 信号 | 待确认 | 批次 |
 | --- | --- | --- | --- | --- | --- |
-| [postgresql-mvcc](database/postgresql-mvcc.md) | database | 建议中 | 0 | 0 | 试点 |
+| [postgresql-mvcc](source-tracks/postgresql/transaction-mvcc/postgresql-mvcc.md) | database | 建议中 | 0 | 0 | 试点 |
 ```
 
 （「信号」「待确认」两列填检查器给出的 warn 数与未销掉的待核事实数。）
@@ -1614,13 +1614,13 @@ feat(review): 审校记录契约与进度索引
 外加一条防泄露守卫：docs/ 下不得出现审校记录——docs/ 会被 sync-hexo.py
 发布成站点文章，内部流程漏进去就变成线上页面。
 
-附第一篇试点记录（database/postgresql-mvcc）。
+附第一篇试点记录（source-tracks/postgresql/transaction-mvcc/postgresql-mvcc）。
 ```
 
 然后：
 
 ```bash
-git add tests/test_review_records.py review/INDEX.md review/database/postgresql-mvcc.md
+git add tests/test_review_records.py review/INDEX.md review/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc.md
 git commit -F /tmp/review-task5-commit.txt
 ```
 
@@ -1646,14 +1646,14 @@ git commit -F /tmp/review-task5-commit.txt
 
 | 支柱 | 候选 |
 |---|---|
-| database | `docs/database/postgresql-row-lock-deep-dive/index.md` |
+| database | `docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md` |
 | db | `docs/db/postgresql/` 下任选一篇非 index 的文章 |
 | pgsql | `docs/pgsql/` 下任选一篇 |
 | cluster | `docs/cluster/raft/` 或 `docs/cluster/DCF/` 下任选一篇 |
 | 系列 | `docs/database/postgresql-logical-replication-*/index.md` 任选一篇 |
 
 ```bash
-for f in docs/database/postgresql-row-lock-deep-dive/index.md \
+for f in docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md \
          docs/db/postgresql/*.md docs/pgsql/*.md \
          docs/cluster/raft/*.md docs/cluster/DCF/*.md \
          docs/database/postgresql-logical-replication-*/index.md; do
@@ -1681,7 +1681,7 @@ python3 tools/review-check.py <原文路径>          # 看信号
 
 **先判是不是「文章」**：四支柱里混着交付计划、配置流程、安装步骤、源码编译笔记
 这类工作文档（`db/logical_decode/逻辑复制支持DDL开发交付计划`、
-`db/mysql/macos安装mysql` 等）。它们是项目流水账不是技术文章，审校目标
+`source-tracks/postgresql/extensions-perf/macos安装mysql` 等）。它们是项目流水账不是技术文章，审校目标
 「读者读完能学会什么」不成立——这类跳过，在 INDEX 里标「非文章，跳过」，
 不产出审校记录。判据：文章有「问题→机制→证据→取舍」的结构。
 
@@ -1699,7 +1699,7 @@ commit message 格式固定为 `docs(review): 记录 <slug>`，正文写这条�
 每写完一篇，在 `review/INDEX.md` 表格里加一行：
 
 ```
-| [postgresql-row-lock-deep-dive](database/postgresql-row-lock-deep-dive.md) | database | 建议中 | 2 | 1 | 试点 |
+| [postgresql-row-lock-deep-dive](source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive.md) | database | 建议中 | 2 | 1 | 试点 |
 ```
 
 - [ ] **Step 4: 跑全量测试**

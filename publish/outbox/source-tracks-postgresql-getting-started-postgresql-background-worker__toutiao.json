@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/getting-started/postgresql-background-worker",
+  "draft_id": "7708375143143309843",
+  "package_dir": "toutiao/out/source-tracks-postgresql-getting-started-postgresql-background-worker",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL Background Worker",
+  "updated_at": "2026-11-15T20:43:41+08:00"
+}

@@ -27,24 +27,24 @@ DOCS_ROOT = REPO_ROOT / "docs"
 REVIEW_ROOT = REPO_ROOT / "review"
 TOOL = REPO_ROOT / "tools" / "review-check.py"
 
-COROSYNC = DOCS_ROOT / "cluster/corosync/corosync-down网卡仍处于多数派/index.md"
+COROSYNC = DOCS_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派/index.md"
 
 # 已知的「裸 URL 吞中文」文章清单：这些还没修，是后续批次的待办。
 # 清单里的文章修好了，这条守卫照样绿（子集判断）；清单外的文章中招，这条会红。
 KNOWN_BARE_URL_ARTICLES = frozenset({
     "docs/chatgpt/chatgpt使用.md",
-    "docs/cluster/DCF/一文读懂openguass dcf网络模块.md",
-    "docs/database/database-specialization-taxonomy/index.md",
-    "docs/db/postgresql/postgresql-community-gems/index.md",
+    "docs/distributed/consensus/一文读懂openguass dcf网络模块.md",
+    "docs/source-tracks/postgresql/getting-started/database-specialization-taxonomy/index.md",
+    "docs/source-tracks/postgresql/extensions-perf/postgresql-community-gems/index.md",
     "docs/life/road/左耳朵耗子的话——关于技术的一些思考.md",
-    "docs/linux/ebpf/rust-ebpf编程基础.md",
-    "docs/linux/linux下RANDOM和uuid的区别.md",
-    "docs/linux/linux内存管理指北.md",
-    "docs/linux/linux系统接口.md",
-    "docs/network/【网络】MTU相关网络丢包问题分析处理.md",
-    "docs/tools/clash-meta-mihomo-install-guide.md",
-    "docs/tools/clash-meta-user-guide.md",
-    "docs/vue/html简单教程.md",
+    "docs/source-tracks/linux/memory-and-linking/ebpf/rust-ebpf编程基础.md",
+    "docs/source-tracks/linux/daily-ops/linux下RANDOM和uuid的区别.md",
+    "docs/source-tracks/linux/memory-and-linking/linux内存管理指北.md",
+    "docs/source-tracks/linux/kernel-internals/linux系统接口.md",
+    "docs/source-tracks/linux/networking/【网络】MTU相关网络丢包问题分析处理.md",
+    "docs/engineering/web-and-frontend/clash-meta-mihomo-install-guide.md",
+    "docs/engineering/web-and-frontend/clash-meta-user-guide.md",
+    "docs/engineering/web-and-frontend/html简单教程.md",
 })
 
 # 扫描用的三个正则。顺序有讲究：先去掉围栏代码块与行内代码（里面的 URL
@@ -197,9 +197,9 @@ def test_the_merged_article_is_the_only_one_with_this_title():
         f"全树有多篇同名文章：{same}")
 
     # -1 的目录、审校记录与索引行都不能回来
-    assert not (DOCS_ROOT / "cluster/corosync/corosync-down网卡仍处于多数派-1").exists(), (
+    assert not (DOCS_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派-1").exists(), (
         "-1 的 docs 目录又被建回来了")
-    assert not (REVIEW_ROOT / "cluster/corosync/corosync-down网卡仍处于多数派-1.md").exists(), (
+    assert not (REVIEW_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派-1.md").exists(), (
         "-1 的审校记录又被建回来了")
     index = (REVIEW_ROOT / "INDEX.md").read_text(encoding="utf-8")
     assert "corosync-down网卡仍处于多数派-1" not in index, (
@@ -226,7 +226,7 @@ def test_no_new_article_swallows_chinese_into_a_url():
 
 # --- 两地三中心（tptc.md 与 tptc_improve.md 合并后） ------------------------
 
-TPTC = DOCS_ROOT / "cluster/kingbase/tptc.md"
+TPTC = DOCS_ROOT / "distributed/ha-and-dr/tptc.md"
 
 
 def test_the_disaster_recovery_levels_match_the_standard():
@@ -326,11 +326,11 @@ def test_the_two_tptc_articles_are_merged_into_one():
                           path.read_text(encoding="utf-8", errors="replace"), re.M)
         if match and match.group(1).strip() == title:
             same.append(path.relative_to(REPO_ROOT).as_posix())
-    assert same == ["docs/cluster/kingbase/tptc.md"], f"全树有多篇同名文章：{same}"
+    assert same == ["docs/distributed/ha-and-dr/tptc.md"], f"全树有多篇同名文章：{same}"
 
-    assert not (DOCS_ROOT / "cluster/kingbase/tptc_improve.md").exists(), (
+    assert not (DOCS_ROOT / "distributed/ha-and-dr/tptc_improve.md").exists(), (
         "tptc_improve.md 又被建回来了")
-    assert not (REVIEW_ROOT / "cluster/kingbase/tptc_improve.md").exists(), (
+    assert not (REVIEW_ROOT / "distributed/ha-and-dr/tptc_improve.md").exists(), (
         "tptc_improve 的审校记录又被建回来了")
     # 只看进度表的**行**——正文里提到「并掉了 tptc_improve」是说明，不是条目。
     index = (REVIEW_ROOT / "INDEX.md").read_text(encoding="utf-8")
@@ -341,7 +341,7 @@ def test_the_two_tptc_articles_are_merged_into_one():
 
 # --- IPv6 上网不稳定 ------------------------------------------------------
 
-IPV6 = DOCS_ROOT / "network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"
+IPV6 = DOCS_ROOT / "source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"
 
 
 def test_the_ipv6_article_has_a_title_and_an_info_table():
@@ -526,13 +526,13 @@ def test_only_one_ipv6_article_with_this_title():
                           path.read_text(encoding="utf-8", errors="replace"), re.M)
         if match and match.group(1).strip() == title:
             same.append(path.relative_to(REPO_ROOT).as_posix())
-    assert same == ["docs/network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"], (
+    assert same == ["docs/source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"], (
         f"全树有多篇同名文章：{same}")
 
 
 # --- PostgreSQL 存储、索引及系统优化、主备切换 -----------------------------
 
-PG_SWITCH = DOCS_ROOT / "pgsql/replication/Postgresql存储、索引及系统优化、主备切换/index.md"
+PG_SWITCH = DOCS_ROOT / "source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md"
 
 
 def test_the_pg_article_has_a_clean_title_and_a_visible_version_baseline():
@@ -726,5 +726,5 @@ def test_only_one_pg_article_with_this_title():
         if match and match.group(1).strip() == title:
             same.append(path.relative_to(REPO_ROOT).as_posix())
     assert same == [
-        "docs/pgsql/replication/Postgresql存储、索引及系统优化、主备切换/index.md",
+        "docs/source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
     ], f"全树有多篇同名文章：{same}"

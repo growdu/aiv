@@ -1,0 +1,12 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/getting-started/postgresql-schema-search-path",
+  "draft_id": "7708374760732246571",
+  "package_dir": "toutiao/out/source-tracks-postgresql-getting-started-postgresql-schema-search-path",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
+  "status": "drafted",
+  "title": "PostgreSQL Schema 与",
+  "updated_at": "2026-11-15T20:43:42+08:00"
+}

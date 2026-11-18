@@ -170,7 +170,7 @@ cd "$(git rev-parse --show-toplevel)"/toutiao && python3 -m toutiao.cli status
 真的失败（写盘出错、状态文件坏过）才让退出码变成 3。
 
 `<slug>` 是文章相对 `source/_posts/` 的路径去掉 `.md`，
-例如 `db/postgresql/postgresql-logical-replication-add-guc`。
+例如 `source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc`。
 
 每个命令都能把落盘位置指到别处，**但要把每一处都指走**，否则还是会写进仓库：
 `--posts-dir` / `--out-dir` / `--outbox-dir` / `--state-file` / `--capability`。

@@ -132,22 +132,23 @@ def test_load_doc_reads_first_h1_as_title(tmp_path):
 
 def test_cli_json_output_has_expected_shape():
     """集成：真跑一次 CLI，检查 JSON 结构。"""
-    target = REPO_ROOT / "docs" / "database" / "postgresql-mvcc" / "index.md"
+    target = (REPO_ROOT / "docs" / "source-tracks" / "postgresql" /
+              "transaction-mvcc" / "postgresql-mvcc" / "index.md")
     assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
     result = run_tool(str(target), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert "docs" in payload
     doc = payload["docs"][0]
-    assert doc["pillar"] == "database"
-    assert doc["slug"] == "postgresql-mvcc"
+    assert doc["pillar"] == "source-tracks"
+    assert doc["slug"] == "postgresql/transaction-mvcc/postgresql-mvcc"
     assert doc["stats"]["paragraphs"] > 0
     assert isinstance(doc["signals"], list)
 
 
 def test_cli_runs_over_a_whole_pillar():
     """集成：整目录跑一遍，不许崩。"""
-    pillar = REPO_ROOT / "docs" / "database"
+    pillar = REPO_ROOT / "docs" / "source-tracks" / "postgresql"
     result = run_tool(str(pillar), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
@@ -163,16 +164,16 @@ def test_cli_reports_missing_path():
 # 审校过的正文合入后，段落不该又长回去——AIF-03 盯的就是「单段 > 200 字」。
 # 改文章时把两段并回一段，这条测试会报出来：审校完的稿子不能带新债。
 REVIEWED_ARTICLES = (
-    "docs/database/postgresql-mvcc/index.md",
-    "docs/database/postgresql-logical-replication-worker-model/index.md",
-    "docs/db/postgresql/learning-path/06-heap-and-mvcc.md",
-    "docs/pgsql/checkpoint机制浅析.md",
-    "docs/cluster/分布式一致性协议.md",
-    "docs/base/file.md",
-    "docs/cluster/corosync/corosync-down网卡仍处于多数派/index.md",
-    "docs/cluster/kingbase/tptc.md",
-    "docs/network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
-    "docs/pgsql/replication/Postgresql存储、索引及系统优化、主备切换/index.md",
+    "docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md",
+    "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
+    "docs/source-tracks/postgresql/transaction-mvcc/learning-path/06-heap-and-mvcc.md",
+    "docs/source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
+    "docs/distributed/foundations/分布式一致性协议.md",
+    "docs/engineering/foundations/file.md",
+    "docs/distributed/field-notes/corosync-down网卡仍处于多数派/index.md",
+    "docs/distributed/ha-and-dr/tptc.md",
+    "docs/source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
+    "docs/source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
 )
 
 
@@ -600,6 +601,39 @@ def test_fig_01_counts_a_node_whose_name_starts_with_end(tmp_path):
     assert module._mermaid_size("graph TB\n    endpoint --> server\n") == (2, 2, 1)
 
 
+def test_fig_01_longest_path_is_stable_on_a_graph_with_a_cycle():
+    """回归：图里有环时，最长路径必须每次算出同一个数。
+
+    早先的实现用「在途标记」在 DFS 里当场截断环，而 DFS 从哪个框出发
+    取决于 ``set`` 的迭代顺序 —— 字符串的哈希每进程随机，于是同一张图
+    在不同进程里算出不同的路径长度（实测 3 / 4 / 5 都出现过）。
+    FIG-01 命中与否跟着抖，审校台账上的 warn 数也跟着抖：
+    同一棵树连跑四次，warn 在 509 与 510 之间来回跳。
+
+    这张图的最长简单路径是 4 个框：A→B→D→E（环 A→B→C→A 只能算一次）。
+    """
+    snippet = (
+        "import importlib.util, sys\n"
+        f"spec = importlib.util.spec_from_file_location('review_check', {str(TOOL)!r})\n"
+        "m = importlib.util.module_from_spec(spec)\n"
+        "sys.modules['review_check'] = m\n"
+        "spec.loader.exec_module(m)\n"
+        "print(m._longest_path({'A','B','C','D','E'},"
+        " [('A','B'),('B','C'),('C','A'),('B','D'),('D','E')]))\n"
+    )
+    values = set()
+    for seed in ("1", "2", "3", "4", "5", "6"):
+        env = dict(os.environ, PYTHONHASHSEED=seed)
+        proc = subprocess.run(
+            [sys.executable, "-c", snippet],
+            capture_output=True, encoding="utf-8", errors="replace",
+            cwd=REPO_ROOT, env=env,
+        )
+        values.add(proc.stdout.strip())
+    assert len(values) == 1, f"同一张图在不同哈希种子下算出不同的结果：{values}"
+    assert values == {"4"}
+
+
 def test_fig_01_flags_an_over_long_mindmap(tmp_path):
     body = "mindmap\n" + "\n".join(f"    分支{i}" for i in range(21))
     doc = make_doc(tmp_path, _mermaid(body))
@@ -648,7 +682,7 @@ def test_fig_02_finds_a_reference_in_the_middle_of_a_paragraph(tmp_path):
 
 def test_the_checker_reports_fig_signals_for_a_real_article():
     """集成：真实文章上跑一遍，FIG-01/FIG-02 真的会报出来。"""
-    target = REPO_ROOT / "docs" / "cluster" / "DCF" / "一文读懂openguass dcf网络模块.md"
+    target = REPO_ROOT / "docs" / "distributed" / "consensus" / "一文读懂openguass dcf网络模块.md"
     assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
     result = run_tool(str(target), "--json")
     assert result.returncode == 0, result.stderr

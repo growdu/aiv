@@ -294,7 +294,7 @@ python3 aiv/scripts/sync_publish_docs.py
 | `docs/life/_index.md` | 2 |
 | `docs/life/blog-to-wechat/index.md` | 3 |
 | `docs/life/shehui/media-account/index.md` | 2 |
-| `docs/database/_index.md` | 1（路径另错了一层，一并改成 `../life/aiv/index.html`） |
+| `docs/source-tracks/postgresql/_index.md` | 1（路径另错了一层，一并改成 `../../life/aiv/index.html`） |
 
 落地方式：正本 `index.md` + 发布副本 `docs/life/aiv/index.md`，
 并把 `index.md` 加进 `aiv/scripts/sync_publish_docs.py` 的 `PUBLISH_DOCS`，

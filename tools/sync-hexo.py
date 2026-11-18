@@ -76,21 +76,21 @@ def prune_excluded_dirs(dirs):
 FEATURED_POSTS = {
     "life/road/00-intro.md": 100,
     "life/road/01-how_to_learn_program.md": 90,
-    "cluster/分布式存储需要解决的问题.md": 85,
-    "es/oh-my-search.md": 80,
-    "db/logical_decode/逻辑解码DDL-Replay框架设计/index.md": 75,
-    "cluster/DCF/一文读懂openguass dcf网络模块.md": 70,
-    "cluster/分布式一致性协议.md": 65,
-    "cluster/分布式系统设计必知必会.md": 60,
-    "pgsql/postgresql基操.md": 55,
-    "linux/linux内核指北.md": 50,
+    "distributed/foundations/分布式存储需要解决的问题.md": 85,
+    "engineering/web-and-frontend/oh-my-search.md": 80,
+    "source-tracks/postgresql/logical-replication/逻辑解码DDL-Replay框架设计/index.md": 75,
+    "distributed/consensus/一文读懂openguass dcf网络模块.md": 70,
+    "distributed/foundations/分布式一致性协议.md": 65,
+    "distributed/foundations/分布式系统设计必知必会.md": 60,
+    "source-tracks/postgresql/getting-started/postgresql基操.md": 55,
+    "source-tracks/linux/kernel-internals/linux内核指北.md": 50,
     "dpdk/dpdk常用接口指北.md": 45,
-    "docker/docker基础指北.md": 40,
+    "engineering/containers/docker基础指北.md": 40,
     "ai/07_ChatGPT为什么能对话一篇引用17万次的论文.md": 35,
-    "db/logical_decode/逻辑解码/index.md": 30,
-    "language/rust/rust设计原则.md": 25,
-    "tools/那些你不得不会的提高工作效率的软件神器.md": 20,
-    "network/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md": 15,
+    "source-tracks/postgresql/logical-replication/逻辑解码/index.md": 30,
+    "engineering/foundations/rust/rust设计原则.md": 25,
+    "engineering/containers/那些你不得不会的提高工作效率的软件神器.md": 20,
+    "source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md": 15,
     "ai/01_开场白目录.md": 10,
 }
 
@@ -151,6 +151,7 @@ REDIRECTS = {
     "life/zhuangxiu": "life/shehui/zhuangxiu",
 }
 
+
 # Redirect pages are Hexo *pages* with `layout: false`.  Hexo's page
 # generator (hexo/dist/plugins/generator/page.js) emits such pages
 # verbatim -- no theme layout -- so the page keeps its own <head> with the
@@ -185,6 +186,31 @@ CATEGORY_REDIRECTS = {
     "stock": "股票与金融",
     "hometown": "人生/家乡",
 }
+
+
+# --- `data/` 下的策展表 ---------------------------------------------------
+#
+# 上面三张表的内容是**人工策展的映射**，不是代码逻辑：目录重排一次就是
+# 几百条，写成 Python 字面量会让这个文件长到几千行，而且每次迁移都要
+# 手改一遍 —— 改漏一条，死链就多一条。
+#
+# 放进 `data/` 之后，迁移脚本（`tools/migrate-tree.py`）直接写，
+# 编译时读。表不存在就当没有（首次 clone、或还没跑过迁移）。
+def _load_data_table(name):
+    """读 `data/` 下的一张策展表。"""
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), name)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+# 顺序：后读到的覆盖先读到的。`data/` 里的表是最新的，
+# 上面写死的字面量保留为「这段历史是怎么来的」的记录。
+DATE_OVERRIDES.update(_load_data_table("data/date-overrides.json"))
+REDIRECTS.update(_load_data_table("data/redirects.json"))
+CATEGORY_REDIRECTS.update(_load_data_table("data/category-redirects.json"))
 
 TOPIC_DEFS = [
     # (name, icon, color, blurb)
@@ -231,12 +257,55 @@ TOPIC_DEFS = [
 # Inference rules: a post belongs to a topic if any path_contains substring
 # matches its docs/-relative path OR any title_contains keyword matches
 # its title (case-insensitive). A post can belong to multiple topics.
+#
+# The path fragments below are **the new tree's** paths
+# (`source-tracks/postgresql/<series>/…`).  The fragments used to point at
+# `db/postgresql/…` — a path that stopped existing two restructures ago,
+# so the topic cards had quietly emptied out (the database landing page
+# listed 10 posts instead of ~200).  Series directories are used as the
+# coarse rule and the individual article paths as the precise one; the
+# bare basenames still match because the migration kept the file names.
+#
+# One more set of fragments lives in DISTRIBUTED_DB_KERNEL (below): the
+# openGauss DCF / Raft articles used to sit in `cluster/DCF/` and
+# `cluster/raft/`, and after the distributed-block migration they are
+# neighbours of ZooKeeper and corosync articles inside one series — so
+# they can no longer be picked out by a directory name.
+
+#: The distributed-database kernel articles (openGauss DCF + Raft).
+#:
+#: They used to live in two directories -- ``cluster/DCF/`` and
+#: ``cluster/raft/`` -- and the database landing page whitelisted exactly
+#: those two directories.  After the distributed-block migration both
+#: groups sit in ``distributed/consensus/`` side by side with ZooKeeper,
+#: totem and corosync articles, which are *not* database-kernel
+#: material, so a directory name can no longer pick them out.
+#:
+#: The entries are exact article paths rather than directory prefixes:
+#: ``distributed/consensus/openguass dcf源码阅读.md`` (from
+#: ``cluster/DCF/``) and ``distributed/consensus/openguass dcf启动详解.md``
+#: (from ``openguass/``) differ by three characters, and only the
+#: former was ever whitelisted.
+DISTRIBUTED_DB_KERNEL = (
+    "distributed/consensus/c-raft分布式存储方案.md",
+    "distributed/consensus/c-rart.md",
+    "distributed/consensus/raft协议动态调整quorum.md",
+    "distributed/consensus/raft重要概念.md",
+    "distributed/consensus/dcf投票系统详解.md",
+    "distributed/consensus/dcf网络模块详解",
+    "distributed/consensus/dcf写入机制.md",
+    "distributed/consensus/dcf运行机制.md",
+    "distributed/consensus/openguass dcf源码阅读.md",
+    "distributed/consensus/一文读懂openguass dcf网络模块",
+    "distributed/consensus/常用压缩算法编程.md",
+)
+
 TOPIC_RULES = {
     "MVCC 与事务": {
         "path_contains": [
             "postgresql-mvcc",
             "postgresql-transaction-lifecycle",
-            "db/postgresql/postgresql-row-lock",
+            "source-tracks/postgresql/transaction-mvcc",
         ],
         "title_contains": [
             "MVCC",
@@ -249,17 +318,8 @@ TOPIC_RULES = {
     "逻辑复制": {
         "path_contains": [
             "postgresql-logical-replication",
-            "db/logical_decode",
-            "db/postgresql/postgresql-snapbuild",
-            "db/postgresql/postgresql-reorder",
-            "db/postgresql/postgresql-apply",
-            "db/postgresql/postgresql-create-replication-slot",
-            "db/postgresql/postgresql-logical-replication-catalog-visibility",
-            "db/postgresql/postgresql-logical-replication-stream-publisher",
-            "db/postgresql/postgresql-logical-replication-add-guc",
-            "db/postgresql/pgsql-hackers-parallel-apply",
-            "db/opengauss-parallel-decoding-design",
-            "db/opengauss-csn-total-ordering",
+            "source-tracks/postgresql/logical-replication",
+            "source-tracks/postgresql/replication-ha/postgresql-create-replication-slot",
         ],
         "title_contains": [
             "逻辑复制",
@@ -294,7 +354,13 @@ TOPIC_RULES = {
         "title_contains": ["分区", "Partition", "partitioned"],
     },
     "高可用与复制": {
-        "path_contains": ["cluster/postgresql"],
+        "path_contains": [
+            # 伪双写那一组，原先是 cluster/postgresql/ 下的四篇
+            "distributed/distributed-storage/haproxy",
+            "distributed/distributed-storage/postgresql伪双写",
+            "distributed/distributed-storage/事务管理",
+            "source-tracks/postgresql/replication-ha",
+        ],
         "title_contains": [
             "HAProxy",
             "PGBouncer",
@@ -306,13 +372,17 @@ TOPIC_RULES = {
         ],
     },
     "分布式一致性": {
-        "path_contains": ["cluster/raft", "cluster/DCF", "cluster/分布式一致性"],
+        "path_contains": [
+            *DISTRIBUTED_DB_KERNEL,
+            # 「分布式一致性协议」那篇原先在 cluster 根目录，现在在「分布式基础」
+            "distributed/foundations/分布式一致性协议",
+        ],
         "title_contains": ["Raft", "DCF", "openGauss DCF", "分布式一致性"],
     },
     "性能调优": {
         "path_contains": [
-            "db/postgresql/postgresql-flame-graph",
-            "db/postgresql/postgresql-logical-replication-apply-parallel-tuning",
+            "source-tracks/postgresql/extensions-perf/postgresql-flame-graph",
+            "source-tracks/postgresql/logical-replication/postgresql-logical-replication-apply-parallel-tuning",
         ],
         "title_contains": [
             "调优",
@@ -333,26 +403,10 @@ TOPIC_RULES = {
     "内核基础": {
         "path_contains": [
             "postgresql-memory-management",
-            "db/postgresql/learning-path",
-            "db/postgresql/part1",
-            "db/postgresql/postgresql-syscache-deep-dive",
-            "db/postgresql/postgresql-shared-memory",
-            "db/postgresql/postgresql-injection-points",
-            "db/postgresql/postgresql-row-lock",
-            "db/postgresql/postgresql-wal-record-types",
-            "db/postgresql/postgresql-rangevar-and-data-structures",
-            "db/postgresql/postgresql-catalog-storage",
-            "db/postgresql/postgresql-read-catalog-table",
-            "db/postgresql/postgresql-background-worker",
-            "db/postgresql/postgresql-parallel-worker",
-            "db/postgresql/postgresql-latch-mechanism",
-            "db/postgresql/postgresql-libpq-mechanism",
-            "db/postgresql/postgresql-module-architecture",
-            "db/postgresql/postgresql-process",
-            "db/postgresql/postgresql-toast",
-            "db/postgresql/postgresql-transaction-lifecycle",
-            "db/postgresql/postgresql-mvcc",
-            "db/linux-shared-memory",
+            "source-tracks/postgresql/getting-started",
+            "source-tracks/postgresql/storage-engine",
+            "source-tracks/postgresql/index-and-query",
+            "source-tracks/postgresql/wal-and-recovery",
         ],
         "title_contains": [
             "源码",
@@ -381,9 +435,8 @@ TOPIC_RULES = {
             "pg-challahscript-tips",
             "pg-dont-do-this",
             "postgresql-for-everything",
-            "db/postgresql/postgresql-injection-points",
-            "db/postgresql/postgresql-community-gems",
-            "db/postgresql/pgsql-hackers-parallel-apply",
+            "source-tracks/postgresql/extensions-perf/postgresql-injection-points",
+            "source-tracks/postgresql/extensions-perf/postgresql-community-gems",
         ],
         "title_contains": [
             "Don't Do This",
@@ -425,7 +478,7 @@ def slugize(name, separator="-"):
 def infer_topics(rel, title):
     """Return the list of topic names a post belongs to.
 
-    rel: docs/-relative path, e.g. 'database/postgresql-mvcc/index.md'.
+    rel: docs/-relative path, e.g. 'source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md'.
     title: post title (already extracted).
     """
     matched = []
@@ -546,19 +599,23 @@ def collect_database_posts(section_titles, cascades):
                     else fallback_title(filepath)
                 )
             categories = resolve_post_categories(rel, section_titles, cascades)
-            # Database landing page surfaces two flavours:
+            # Database landing page surfaces three flavours:
             #   1. Posts whose cascade tag is "数据库" or "PostgreSQL 源码修炼之路".
-            #   2. Posts under docs/cluster/DCF/ and docs/cluster/raft/ — these
-            #      are distributed-DB kernel material (openGauss DCF, Raft),
-            #      even though their cascade is "集群". Whitelist them by path
-            #      rather than whole-sale pulling in "集群" (which would also
-            #      pull Patroni / snowflake / unrelated cluster tools).
+            #   2. Posts under docs/source-tracks/postgresql/ — the PostgreSQL
+            #      source-code main line (the cascade tags there are the series
+            #      names: 存储引擎 / WAL 与恢复 / …, not "数据库").
+            #   3. The distributed-DB kernel articles (openGauss DCF, Raft) —
+            #      they used to live in docs/cluster/DCF/ and docs/cluster/raft/,
+            #      now they share one series with ZooKeeper / corosync articles,
+            #      so they are whitelisted one by one (DISTRIBUTED_DB_KERNEL).
+            #      Whitelisting them by path rather than whole-sale pulling in
+            #      the whole series keeps Patroni / snowflake / unrelated
+            #      cluster tools off this landing page.
             if (
                 "数据库" not in categories
                 and "PostgreSQL 源码修炼之路" not in categories
-                and not (
-                    rel.startswith("cluster/DCF/") or rel.startswith("cluster/raft/")
-                )
+                and not rel.startswith("source-tracks/postgresql/")
+                and not any(rel.startswith(p) for p in DISTRIBUTED_DB_KERNEL)
             ):
                 continue
             fdir = os.path.dirname(rel)
@@ -1408,7 +1465,7 @@ def rewrite_links(content, rel):
     """Rewrite relative markdown links to absolute Hexo permalinks.
 
     `rel` is the docs/-relative path of the post being processed, e.g.
-    'database/postgresql-mvcc/index.md'.  Relative links of the form
+    'source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md'.  Relative links of the form
     [text](./other/index.html) are resolved against the post's own
     docs/ directory and replaced with the target's full permalink so
     that the browser navigation from the rendered page lands on a real
@@ -1886,6 +1943,71 @@ def create_theme_pages():
         f.write(about_md)
 
 
+def _redirect_target_file(new_path):
+    """在 docs/ 里找出这个 permalink 路径对应的源文件。
+
+    `new_path` 有三种写法，重定向表里三种都有：
+
+    - 带扩展名的 docs 路径（`life/hometown/家中对联-html.html`）
+    - 不带扩展名的单文件（`db/foo` → `db/foo.md`）
+    - bundle 目录（`db/foo` → `db/foo/index.md`）
+
+    HTML 文章的 permalink 带 `-html` 后缀（编译时文件名被改成
+    `<basename>-html.html`，见 `process_html_post`），但**源文件**
+    不一定带 —— `sqlserver逻辑复制ddl.html` 的 permalink 是
+    `sqlserver逻辑复制ddl-html`。所以后缀要去掉再试一次。
+
+    找不到就返回 None。
+    """
+    base = os.path.join(DOCS, new_path)
+    cands = []
+    if new_path.endswith((".md", ".html", ".htm")):
+        cands.append(base)
+    else:
+        cands.append(base + ".md")
+        cands.append(os.path.join(base, "index.md"))
+        cands.append(base + ".html")
+        if new_path.endswith("-html"):
+            trimmed = base[: -len("-html")]
+            cands.append(trimmed + ".html")
+            cands.append(os.path.join(trimmed, "index.html"))
+    for cand in cands:
+        if os.path.isfile(cand):
+            return cand
+    return None
+
+
+def _site_encode_url(path):
+    """按站点真实发布的规则编码路径。
+
+    站点上的地址是 hexo-util 的 `encodeURL`（= `encodeURI`）的产物：
+    中文编成 `%E6%95%B0`，空格编成 `%20`，但 `&` `(` `)` `+` `,`
+    `=` 这些**原样保留**（见站点上 `.../WalReceiver&startup交互/`
+    这条地址）。`urllib.parse.quote` 默认会把它们也编码掉，
+    生成的地址跟站点上发布的不是一个字符串 —— 都能访问，但
+    canonical 指向的字面量跟目标页自己的 canonical 对不上。
+    """
+    return quote(path, safe=";,/?:@&=+$-_.!~*'()#")
+
+
+#: 文件名里不能有的字符。Windows 的 NTFS 不允许，GitHub 的
+#: upload-artifact / upload-pages-artifact 也直接拒绝含这些字符的路径 ——
+#: 整个产物传不上去，部署直接断在那里（2026-11-17 的 Deploy Hexo 就是
+#: 栽在「PostgreSQL 源码修炼之路:内核深度拆解专题」这个带冒号的目录上，
+#: 连着两个 push 没上成线）。
+INVALID_PATH_CHARS = ':*?"<>|'
+
+#: 重定向表的键可以带一段日期（``2022/10/25/cluster/raft/…``）。
+#:
+#: 重定向页的日期段历来取自**新文件**的日期（``git_date()``）——文章搬家时
+#: 日期不变，这正是 ``data/date-overrides.json`` 存在的意义。但合并两篇
+#: **逐字节相同**的重复文章时情况不一样：合并后的那篇只有一个日期，
+#: 另一个旧 URL 的日期段就对不上了（键里不带日期就落在错的地址上，
+#: 真正的旧地址 404）。键里带上日期即可 —— 那是这条旧 URL 当初发布时的
+#: 日期段，一字不差。
+DATED_REDIRECT_RE = re.compile(r"^(?P<stamp>\d{4}/\d{2}/\d{2})/(?P<path>.+)$")
+
+
 def write_redirects():
     """Generate redirect pages for permalinks that changed.
 
@@ -1896,36 +2018,60 @@ def write_redirects():
     source/ (not source/_posts/), so Hexo copies them verbatim into
     public/ and they survive as plain files.
 
+    **键里可以带一段日期**（``2022/10/25/cluster/raft/…``）：重定向页落在
+    旧 URL 当初发布时的日期段上。默认取新文件的日期 —— 文章搬家时日期不变；
+    合并两篇逐字节相同的重复文章时，合并后的那篇只有一个日期，另一个旧
+    URL 的日期段就对不上了，这时键里带上日期才落得准（见
+    :data:`DATED_REDIRECT_RE`）。
+
+    **目录名用原始路径，不做百分号编码。** nginx 拿到的 `$uri` 是
+    解码过的：浏览器请求 `/2023/05/17/pgsql/replication/PostgreSQL%E6%95%B0.../`，
+    nginx 落盘查找的是解码后的 `PostgreSQL数据...` —— 磁盘上就得是
+    这个名字，编码过的目录名它找不到（实测：`public/2026/08/06/hometown/`
+    下只有一个 `%E5%AE%B6%E4%B8%AD%E5%AF%B9%E8%81%94` 目录）。而且
+    百分号编码把中文放大 3 倍，一个目录名就能顶破 255 字节的
+    NAME_MAX 上限（`pgsql/replication/PostgreSQL数据库复制——…`
+    编码后 323 字节，`os.makedirs` 直接报 File name too long）。
+    Hexo 发布这页时自己会用 `encodeURL` 把目录名编码成地址，
+    所以地址形态跟原来一模一样。
+
     Returns the number of redirect pages written.
     """
     written = 0
     for old_path, new_path in REDIRECTS.items():
-        if new_path.endswith(".md") or new_path.endswith(".html"):
-            new_file = os.path.join(DOCS, new_path)
-        else:
-            new_file = os.path.join(DOCS, new_path, "index.md")
-            if not os.path.isfile(new_file):
-                # Single-file post (foo.md) rather than a page bundle.
-                new_file = os.path.join(DOCS, new_path + ".md")
-        if not os.path.isfile(new_file):
+        bad = [c for c in INVALID_PATH_CHARS if c in old_path]
+        if bad:
+            print(f"  ! 跳过文章重定向 {old_path!r}：旧路径含文件名非法字符 {bad}"
+                  f"（写出来的目录过不了 GitHub artifact 上传）",
+                  file=sys.stderr)
+            continue
+        new_file = _redirect_target_file(new_path)
+        if new_file is None:
             print(f"WARNING redirect target missing: {new_path}", file=sys.stderr)
             continue
         date = git_date(new_file)
-        stamp = f"{date[:4]}/{date[5:7]}/{date[8:10]}"
+        target_stamp = f"{date[:4]}/{date[5:7]}/{date[8:10]}"
         # The permalink slug drops the source extension (.md / .html).
         new_slug = new_path
-        for ext in (".md", ".html"):
+        for ext in (".md", ".html", ".htm"):
             if new_slug.endswith(ext):
                 new_slug = new_slug[: -len(ext)]
                 break
-        old_url = f"/{stamp}/{quote(old_path)}/"
-        new_url = f"/{stamp}/{quote(new_slug)}/"
-        out_dir = os.path.join(SRC, old_url.strip("/"))
+        new_url = f"{SITE_ROOT}/{target_stamp}/{_site_encode_url(new_slug)}/"
+        # 重定向页落在**旧 URL** 的日期段上。默认取新文件的日期（文章搬家时
+        # 日期不变）；键里带了日期就照它写 —— 合并重复文章时旧 URL 的日期
+        # 跟新文件对不上，只有照旧写才落得在真正的旧地址上。
+        page_stamp = target_stamp
+        dated = DATED_REDIRECT_RE.match(old_path)
+        if dated:
+            page_stamp = dated.group("stamp")
+            old_path = dated.group("path")
+        out_dir = os.path.join(SRC, page_stamp, old_path)
         os.makedirs(out_dir, exist_ok=True)
         with open(os.path.join(out_dir, "index.md"), "w", encoding="utf-8") as f:
             f.write(
                 REDIRECT_PAGE.format(
-                    new_url=f"{SITE_ROOT}{new_url}",
+                    new_url=new_url,
                     title=new_path.rsplit("/", 1)[-1],
                 )
             )
@@ -1941,10 +2087,20 @@ def write_category_redirects():
     category (its path gains a prefix), the old URL 404s.  We emit a
     static redirect page there so old links keep working.
 
+    旧分类名里带文件名非法字符的**跳过并喊一声**：那个目录在 Linux 上
+    建得出来，可它会让整个产物传不上 GitHub（见 INVALID_PATH_CHARS）。
+    宁可不发这一页（那个 URL 就没有内链指向它），也不能让部署断掉。
+
     Returns the number of redirect pages written.
     """
     written = 0
     for old_path, new_path in CATEGORY_REDIRECTS.items():
+        bad = [c for c in INVALID_PATH_CHARS if c in old_path]
+        if bad:
+            print(f"  ! 跳过分类重定向 {old_path!r}：旧分类名含文件名非法字符 {bad}"
+                  f"（写出来的目录过不了 GitHub artifact 上传）",
+                  file=sys.stderr)
+            continue
         new_url = f"{SITE_ROOT}/categories/{quote(new_path)}/"
         old_url = f"{SITE_ROOT}/categories/{quote(old_path)}/"
         out_dir = os.path.join(SRC, "categories", old_path)
@@ -2450,7 +2606,7 @@ def create_database_landing_page(database_data):
         path_part = (
             unquote(p["url"].rstrip("/").split("/", 4)[-1]) if "/" in p["url"] else ""
         )
-        # Compare against FEATURED_POSTS keys (e.g. 'db/logical_decode/逻辑解码DDL-Replay框架设计/index.md')
+        # Compare against FEATURED_POSTS keys (e.g. 'source-tracks/postgresql/logical-replication/逻辑解码DDL-Replay框架设计/index.md')
         for fp in featured_paths:
             slug = fp.replace("/", os.sep).replace(".md", "")
             if path_part.endswith(slug) or slug.endswith(path_part):

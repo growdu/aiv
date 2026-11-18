@@ -38,12 +38,12 @@ SPEC_LONG_VIDEO = REPO / "publish" / "spec" / "09-长视频三档.md"
 #
 # 主母稿 = 该期篇幅最大、承载本期机制的那一篇。
 EPISODE_DRAFTS = {
-    "pg-parallel-decode": "docs/database/postgresql-logical-replication-end-to-end-flow/index.md",
-    "csn-total-ordering": "docs/db/opengauss-csn-total-ordering/index.md",
-    "wal-interleave": "docs/database/postgresql-logical-replication-worker-model/index.md",
-    "parallel-apply": "docs/database/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
-    "structured-ddl": "docs/database/postgresql-logical-replication-ddl-dml-ordering/index.md",
-    "row-lock": "docs/database/postgresql-row-lock-deep-dive/index.md",
+    "pg-parallel-decode": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md",
+    "csn-total-ordering": "docs/source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/index.md",
+    "wal-interleave": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
+    "parallel-apply": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
+    "structured-ddl": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering/index.md",
+    "row-lock": "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
 }
 
 # 期号标签的固定顺序。规格 §2.1 的表里期号与 slug 同行，
@@ -78,7 +78,7 @@ EV_SOURCE_PATH_MIN = 6
 EV_FUNCTION_REF_MIN = 1
 EV_DIAGRAM_MIN = 1
 EV_SPEECH_RATE = 7.19
-EV_DRAFT_P90 = 22_609
+EV_DRAFT_P90 = 22_304
 
 # --- 长视频三档的阈值（契约八 §3.1）--------------------------------------
 #
@@ -789,7 +789,7 @@ def test_draft_p90_constant_matches_the_docs_distribution():
 
     rows = _markdown_table(_spec_text(), "指标")
     row = _row_with(rows, 0, "EV-06")
-    assert "22,609" in row[3], f"EV-06 的依据栏必须写出 22,609，实为：{row[3]!r}"
+    assert "22,304" in row[3], f"EV-06 的依据栏必须写出 22,304，实为：{row[3]!r}"
 
 
 # --- 平台矩阵 -------------------------------------------------------------

@@ -28,4 +28,5 @@ tags:
 ## 相关
 
 - [一个仓库，三条产线](../platform-overview/one-repo-three-pipelines.md) — 内容契约在整体架构里的位置
-- 多平台分发（本系列尚未成稿）—— 拿到内容单元之后，接下来发生什么
+- [一份声明顶掉五套 if-else](../multiplatform/capability-model-and-publishing-pipeline.md) —
+  拿到内容单元之后，接下来发生什么
