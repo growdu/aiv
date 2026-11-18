@@ -95,7 +95,7 @@
 
 | 层 | 位置 | 职责 | 允许依赖 |
 | --- | --- | --- | --- |
-| **草稿层** | `drafts/` | 主题 → 手动编写 / 自动生成 → 底稿；两条流水线的共同入口 | 只读 `docs/`、`video/` |
+| **草稿层** | `drafts/` | 主题 → 手动编写 / 自动生成 → 底稿；两条流水线的共同入口。另有一份 `source-tracks/` 素材副本，供视频线只读 | 只读 `docs/`、`video/` |
 | **内容层** | `docs/` | 母稿、图片、分类元数据 | 无（纯内容） |
 | **内容编译层** | `tools/`（平台无关）+ `platforms/blog/site/tools/`（站点这一平台的实现） | `docs/` → 内容单元、主题补丁、校验 | 只读 `docs/`，只写 `content/units/` 与站点源目录 |
 | **展示层** | `platforms/blog/site/themes/matery/` | EJS 模板、CSS/JS、静态资源 | Hexo 运行时 |
