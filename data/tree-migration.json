@@ -34,7 +34,9 @@
     "编程语言": "工程与语言/计算机基础与语言入门",
     "编辑工具": "工程与语言/编译、测试与调试",
     "网络": "源码主线/Linux/网络协议与抓包",
+    "股票与金融": "人生/社会",
     "视频与自媒体": "手记/站务手记",
+    "视频作品": "手记/视频作品",
     "计算机基础": "工程与语言/计算机基础与语言入门",
     "计算机通信": "工程与语言/计算机基础与语言入门",
     "集群": "分布式与架构",
@@ -141,7 +143,13 @@
     "environment/_index.md",
     "blog/_index.md",
     "blog/mermaid/_index.md",
-    "life/blog-to-wechat/_index.md"
+    "life/blog-to-wechat/_index.md",
+    "mail/_index.md",
+    "pcap/_index.md",
+    "src/_index.md",
+    "stock/_index.md",
+    "video_work/_index.md",
+    "wiki/_index.md"
   ],
   "file_map": {
     "ai/01-ai常用工具和开发框架.md": "engineering/ai-tooling/ai-toolbox/01-ai常用工具和开发框架.md",
@@ -389,6 +397,7 @@
     "pgsql/storage/xlog.md": "source-tracks/postgresql/wal-and-recovery/xlog.md",
     "pgsql/wal机制浅析.md": "source-tracks/postgresql/wal-and-recovery/wal机制浅析.md",
     "pgsql/数据库崩溃恢复.md": "source-tracks/postgresql/wal-and-recovery/数据库崩溃恢复.md",
+    "stock/A股股票筛选规则.md": "life/shehui/A股股票筛选规则.md",
     "tools/15 个提高 Google 搜索效率的小技巧 - 少数派.md": "engineering/web-and-frontend/15 个提高 Google 搜索效率的小技巧 - 少数派.md",
     "tools/Jellyfin+Kodi打造个人媒体中心.md": "engineering/containers/Jellyfin+Kodi打造个人媒体中心.md",
     "tools/clash-meta-mihomo-install-guide.md": "engineering/web-and-frontend/clash-meta-mihomo-install-guide.md",
@@ -398,6 +407,7 @@
     "tools/leanote使用教程.md": "engineering/web-and-frontend/leanote使用教程.md",
     "tools/一文教你选择局域网文件服务器.md": "engineering/web-and-frontend/一文教你选择局域网文件服务器.md",
     "tools/那些你不得不会的提高工作效率的软件神器.md": "engineering/containers/那些你不得不会的提高工作效率的软件神器.md",
+    "video_work/video.md": "notes/video-work/video.md",
     "vpp/cdu_nxp2160_ptp1588v2实现方案.md": "source-tracks/dpdk/plugins-and-apps/cdu_nxp2160_ptp1588v2实现方案.md",
     "vpp/fastgtpu配置及cli说明文档.md": "source-tracks/dpdk/plugins-and-apps/fastgtpu配置及cli说明文档.md",
     "vpp/fastup-kni设计实现说明文档/index.md": "source-tracks/dpdk/plugins-and-apps/fastup-kni设计实现说明文档/index.md",
@@ -415,7 +425,7 @@
     "vpp/vpp日志系统.md": "source-tracks/dpdk/getting-started/vpp日志系统.md",
     "vpp/vpp调试指北.md": "source-tracks/dpdk/getting-started/vpp调试指北.md"
   },
-  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。 「AI 工具与实践」这一块（ai/ 29 篇 + chatgpt/ 2 篇，共 31 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix，阶段归属搬完一个字都不变（L1 19、L2 5、L3 2、L4 5）。落点是 `engineering/ai-tooling/` —— 挂在「工程与语言」下面的**嵌套项目**，所以分类链是三级：工程与语言 → AI工具与实践 → 系列。§4.3 那个「移出 docs/」的桶里 ai_video 那 5 篇**这一块还没执行**：搬走它会让 ai-tools 赛道的 L4 阶段一篇不剩，而阶段结构不许改（`tests/test_learning_path.py` 钉死每个阶段非空）—— 跟 code/ 的 11 篇、self.jpg 一起留到那个桶统一执行。 「Linux 与网络」这一块剩下的 18 篇（protocol/ 11 + storage/ 5 + computer_communication/ 1 + programmer_self_cultivation/ 1）按**系列 = 一个阶段**搬：protocol/ 里的 tcp/ip 分片/fib/抓包 进「网络协议与抓包」，storage/ 里的 nfs/samba/sshfs 进「存储与文件系统」，nginx 与 otel 三篇是工程化的活 —— nginx 进「Web、前端与搜索」，otel 三篇单开一个三级系列「可观测性」，coredump 进「编译、测试与调试」，那篇文件名跟正文对不上的（正文是 vfox 使用指南）改名后进「计算机基础与语言入门」。计算机通信、程序员自我修养这两个旧分类页连同 `docs/environment/` 下的 0 字节空文件一起清掉。 「手记副线」这一块把 `docs/blog/` 整个拆开：留站给读者看的 4 篇（ECS 选购、博客搭建、视频嵌入、mermaid 渲染诊断）加上 `life/blog-to-wechat/`那一篇（它是全站唯一一篇「视频与自媒体」分类的文章，内容是分发链路，归到站务比归到「人生与思考」准）一起收进 `notes/site-ops/`；§4.3 那个「不发布」的桶里 blog/ 的 5 篇（架构、重构方案、部署到服务器、同步到公众号方案、同名文章版本管理）移出 `docs/` 进 `internal/blog/`。架构与重构方案**对外发过**，所以它们的旧地址不 404 —— 落点是对外改写版（`unpublish_redirects`）。三个旧分类（博客搭建 / Mermaid / 视频与自媒体）都指向「手记/站务手记」。",
+  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。 「AI 工具与实践」这一块（ai/ 29 篇 + chatgpt/ 2 篇，共 31 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix，阶段归属搬完一个字都不变（L1 19、L2 5、L3 2、L4 5）。落点是 `engineering/ai-tooling/` —— 挂在「工程与语言」下面的**嵌套项目**，所以分类链是三级：工程与语言 → AI工具与实践 → 系列。§4.3 那个「移出 docs/」的桶里 ai_video 那 5 篇**这一块还没执行**：搬走它会让 ai-tools 赛道的 L4 阶段一篇不剩，而阶段结构不许改（`tests/test_learning_path.py` 钉死每个阶段非空）—— 跟 code/ 的 11 篇、self.jpg 一起留到那个桶统一执行。 「Linux 与网络」这一块剩下的 18 篇（protocol/ 11 + storage/ 5 + computer_communication/ 1 + programmer_self_cultivation/ 1）按**系列 = 一个阶段**搬：protocol/ 里的 tcp/ip 分片/fib/抓包 进「网络协议与抓包」，storage/ 里的 nfs/samba/sshfs 进「存储与文件系统」，nginx 与 otel 三篇是工程化的活 —— nginx 进「Web、前端与搜索」，otel 三篇单开一个三级系列「可观测性」，coredump 进「编译、测试与调试」，那篇文件名跟正文对不上的（正文是 vfox 使用指南）改名后进「计算机基础与语言入门」。计算机通信、程序员自我修养这两个旧分类页连同 `docs/environment/` 下的 0 字节空文件一起清掉。 「手记副线」这一块把 `docs/blog/` 整个拆开：留站给读者看的 4 篇（ECS 选购、博客搭建、视频嵌入、mermaid 渲染诊断）加上 `life/blog-to-wechat/`那一篇（它是全站唯一一篇「视频与自媒体」分类的文章，内容是分发链路，归到站务比归到「人生与思考」准）一起收进 `notes/site-ops/`；§4.3 那个「不发布」的桶里 blog/ 的 5 篇（架构、重构方案、部署到服务器、同步到公众号方案、同名文章版本管理）移出 `docs/` 进 `internal/blog/`。架构与重构方案**对外发过**，所以它们的旧地址不 404 —— 落点是对外改写版（`unpublish_redirects`）。三个旧分类（博客搭建 / Mermaid / 视频与自媒体）都指向「手记/站务手记」。 2026-11-18 收尾信息架构：docs/ 只剩六条线（distributed / engineering / life / notes / platform-meta / source-tracks）。两个空壳分类页归位 —— `stock/` 整目录搬进 `life/shehui/`（分类「股票与金融」→ 「人生/社会」），`video_work/` 整目录搬进 `notes/video-work/`（分类「视频作品」→ 「手记/视频作品」）；`mail/`、`wiki/`、`pcap/`、`src/` 四个空分类页直接删掉，不留重定向 —— 站上从来没有它们的文章。「抓包分析」那五个 pcap 与 `src/test/` 那五个 C 文件不是文章、也不发布，按 §4.3「不发布但要留」的口径移出 docs/ 进 internal/。另外开了一条空的主线目录 `source-tracks/ceph/`（筹备中，尚无系列与文章），它是**新增内容**，不参与搬家，所以不在这张表里。",
   "out_map": {
     "blog/同名文章-html-与-md-版本管理.md": "internal/blog/同名文章-html-与-md-版本管理.md",
     "blog/同步到公众号方案.md": "internal/blog/同步到公众号方案.md",
@@ -430,6 +440,16 @@
     "dpdk/fastup测试优化完成情况.md": "internal/dpdk/fastup测试优化完成情况.md",
     "dpdk/nxp测试报告/": "internal/dpdk/nxp测试报告/",
     "environment/vfox使用指南": "internal/environment/vfox使用指南",
+    "pcap/ip_frag.pcap": "internal/pcap/ip_frag.pcap",
+    "pcap/ping_big.pcap": "internal/pcap/ping_big.pcap",
+    "pcap/ping_big_ori.pcap": "internal/pcap/ping_big_ori.pcap",
+    "pcap/tcp.pcap": "internal/pcap/tcp.pcap",
+    "pcap/vppTest.pcap": "internal/pcap/vppTest.pcap",
+    "src/test/test_misc/Makefile": "internal/src/test/test_misc/Makefile",
+    "src/test/test_misc/test.c": "internal/src/test/test_misc/test.c",
+    "src/test/test_misc/test_misc.c": "internal/src/test/test_misc/test_misc.c",
+    "src/test/test_module/Makefile": "internal/src/test/test_module/Makefile",
+    "src/test/test_module/hello.c": "internal/src/test/test_module/hello.c",
     "vpp/fastup适配ptp方案.md": "internal/vpp/fastup适配ptp方案.md",
     "vpp/fatsup-cpu间转发测试报告/": "internal/vpp/fatsup-cpu间转发测试报告/"
   },
@@ -609,10 +629,12 @@
     {
       "display_name": "手记",
       "series": {
-        "site-ops": "站务手记"
+        "site-ops": "站务手记",
+        "video-work": "视频作品"
       },
       "series_meta": {
-        "site-ops": "站务手记：ECS 怎么选、博客怎么搭、视频怎么嵌、mermaid 画坏了怎么查，以及一份文档怎么自动发到公众号和视频号。"
+        "site-ops": "站务手记：ECS 怎么选、博客怎么搭、视频怎么嵌、mermaid 画坏了怎么查，以及一份文档怎么自动发到公众号和视频号。",
+        "video-work": "视频作品：视频线的口播稿与成片文案 —— 按「计算机黑科技」这类选题攒下来的解说词。"
       },
       "target_root": "notes"
     }

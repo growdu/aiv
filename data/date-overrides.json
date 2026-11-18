@@ -238,6 +238,7 @@
   "life/road/01-how_to_learn_program.md": "2025-04-16 09:20:54",
   "life/road/02-elevate_thinking.md": "2026-09-28 14:48:28",
   "life/road/左耳朵耗子的话——关于技术的一些思考.md": "2025-04-16 09:20:54",
+  "life/shehui/A股股票筛选规则.md": "2026-07-29 11:54:38",
   "life/shehui/area.md": "2026-10-21 16:38:27",
   "life/shehui/economic-downturn-deep-dive/index.md": "2026-10-28 16:30:00",
   "life/shehui/economic-downturn-strategy/index.md": "2026-10-28 14:09:55",
@@ -249,6 +250,7 @@
   "notes/site-ops/博客搭建指南.md": "2026-07-28 16:51:17",
   "notes/site-ops/视频嵌入指南.md": "2026-08-11 15:08:42",
   "notes/site-ops/阿里云ECS选购指南.md": "2026-09-02 18:07:19",
+  "notes/video-work/video.md": "2023-09-16 16:06:54",
   "platform-meta/build-pipeline/docs-to-public-pipeline.md": "2026-11-17 04:08:49",
   "platform-meta/content-model/content-unit-and-contract.md": "2026-11-17 04:08:49",
   "platform-meta/info-architecture/category-restructure-and-learning-path.md": "2026-11-17 07:04:12",
@@ -559,7 +561,5 @@
   "source-tracks/postgresql/wal-and-recovery/postgresql-wal-record-types/index.md": "2026-10-12 10:05:14",
   "source-tracks/postgresql/wal-and-recovery/wal机制浅析.md": "2023-05-17 17:42:05",
   "source-tracks/postgresql/wal-and-recovery/xlog.md": "2022-05-16 15:40:29",
-  "source-tracks/postgresql/wal-and-recovery/数据库崩溃恢复.md": "2023-05-17 17:42:05",
-  "stock/A股股票筛选规则.md": "2026-07-29 11:54:38",
-  "video_work/video.md": "2023-09-16 16:06:54"
+  "source-tracks/postgresql/wal-and-recovery/数据库崩溃恢复.md": "2023-05-17 17:42:05"
 }

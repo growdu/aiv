@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-11-17",
-  "note": "学习路径的分类规则表。**这里是人工策展的部分**，tools/build-learning-path.py 按它把每篇文章落到「赛道 + 阶段」。改这个文件就能改路径，不用改代码。\n\n规则从上往下第一条命中即生效；track_match 决定文章属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**每篇文章都该有一条自己的规则**：fallback_stage 只是防崩溃的兜底（没有专属规则的文章会落进去），守卫测试 tests/test_learning_path.py 钉住它是空的 —— 加了新文章，就得给它写规则。\n\n`platform-meta/`（平台元数据赛道：讲这个站本身怎么造）目前**临时挂在「博客与自媒体」这条赛道下** —— 按语义它属于「把内容变成作品：建站、排版、传播、视频生产线」，等赛道树整体重排时再决定要不要单独立一条赛道。\n\n可用的匹配键：path_prefix（前缀）、path_regex（正则）、path_exact（全等）、category（分类）、tag（标签）、title_contains（标题含）、any / all（组合）、catch_all（无条件，只能写在最后一个阶段）。 「工程与语言」这一块按**系列 = 一个教学阶段**重排：foundations + cheatsheets → L1，engineering-practice → L2，containers → L3，web-and-frontend → L4，规则全部写成 path_prefix。「速查与清单」这个系列原来散在 L2/L4，收进 L1（语言与基础那一层）。 「AI 与工具」这一块（ai/ + chatgpt/，31 篇）搬进 `engineering/ai-tooling/`，四个系列按阶段一一对应（ai-foundations → L1、ai-toolbox → L2、ai-leverage → L3、ai-video-platform → L4），规则全部写成 path_prefix —— **阶段归属一个字都没变**。注意：`ai-tools` 这条赛道必须排在 `engineering` 前面 —— 工程与语言那条赛道的 `track_match` 是 `engineering/`，会把 `engineering/ai-tooling/` 下的文章一起吞掉；赛道按顺序遍历、第一条命中即生效，所以靠的是**顺序**，不是更长的前缀。 「Linux 与网络」剩下的 18 篇这一块：linux-network 赛道的 `path_prefix` 收到 `source-tracks/linux/`（protocol/ storage/ computer_communication/ programmer_self_cultivation/ 四个旧前缀全搬走了），阶段标题与目标一个字没动；新系列 `engineering/observability/`（OTel 三篇）登记到「工程与语言」赛道的 L2 —— 可观测性就是给跑起来的系统装眼睛、用来定位问题的那一套手段，落在「编译、测试与调试」这一层。",
+  "updated": "2026-11-18",
+  "note": "学习路径的分类规则表。**这里是人工策展的部分**，tools/build-learning-path.py 按它把每篇文章落到「赛道 + 阶段」。改这个文件就能改路径，不用改代码。\n\n规则从上往下第一条命中即生效；track_match 决定文章属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**每篇文章都该有一条自己的规则**：fallback_stage 只是防崩溃的兜底（没有专属规则的文章会落进去），守卫测试 platforms/blog/site/tests/test_learning_path.py 钉住它是空的 —— 加了新文章，就得给它写规则。\n\n`platform-meta/`（平台元数据赛道：讲这个站本身怎么造）目前**临时挂在「博客与自媒体」这条赛道下** —— 按语义它属于「把内容变成作品：建站、排版、传播、视频生产线」，等赛道树整体重排时再决定要不要单独立一条赛道。\n\n可用的匹配键：path_prefix（前缀）、path_regex（正则）、path_exact（全等）、category（分类）、tag（标签）、title_contains（标题含）、any / all（组合）、catch_all（无条件，只能写在最后一个阶段）。 「工程与语言」这一块按**系列 = 一个教学阶段**重排：foundations + cheatsheets → L1，engineering-practice → L2，containers → L3，web-and-frontend → L4，规则全部写成 path_prefix。「速查与清单」这个系列原来散在 L2/L4，收进 L1（语言与基础那一层）。 「AI 与工具」这一块（ai/ + chatgpt/，31 篇）搬进 `engineering/ai-tooling/`，四个系列按阶段一一对应（ai-foundations → L1、ai-toolbox → L2、ai-leverage → L3、ai-video-platform → L4），规则全部写成 path_prefix —— **阶段归属一个字都没变**。注意：`ai-tools` 这条赛道必须排在 `engineering` 前面 —— 工程与语言那条赛道的 `track_match` 是 `engineering/`，会把 `engineering/ai-tooling/` 下的文章一起吞掉；赛道按顺序遍历、第一条命中即生效，所以靠的是**顺序**，不是更长的前缀。 「Linux 与网络」剩下的 18 篇这一块：linux-network 赛道的 `path_prefix` 收到 `source-tracks/linux/`（protocol/ storage/ computer_communication/ programmer_self_cultivation/ 四个旧前缀全搬走了），阶段标题与目标一个字没动；新系列 `engineering/observability/`（OTel 三篇）登记到「工程与语言」赛道的 L2 —— 可观测性就是给跑起来的系统装眼睛、用来定位问题的那一套手段，落在「编译、测试与调试」这一层。 2026-11-18 收尾信息架构：`stock/` 与 `video_work/` 两个空壳分类页各自只有一篇，整目录搬走 —— `stock/A股股票筛选规则.md` 进 `life/shehui/`（分类链「人生/社会」），`video_work/video.md` 进 `notes/video-work/`（分类链「手记/视频作品」）。所以 `life` 赛道与 L3 不再认 `stock/` 前缀（`^life/(?!aiv($|/))` 与 `life/shehui/` 就够），`blogging` 赛道与 L4 的前缀改成 `notes/video-work/`。两篇文章的**阶段归属一个字没变**：还是 L3 与 L4。",
   "tracks": [
     {
       "id": "db-internals",
@@ -435,9 +435,6 @@
       "track_match": [
         {
           "path_regex": "^life/(?!aiv($|/))"
-        },
-        {
-          "path_prefix": "stock/"
         }
       ],
       "fallback_stage": "L4",
@@ -475,9 +472,6 @@
           "match": [
             {
               "path_prefix": "life/shehui/"
-            },
-            {
-              "path_prefix": "stock/"
             }
           ]
         },
@@ -505,7 +499,7 @@
           "path_prefix": "notes/site-ops/"
         },
         {
-          "path_prefix": "video_work/"
+          "path_prefix": "notes/video-work/"
         },
         {
           "path_regex": "^life/aiv($|/)"
@@ -567,7 +561,7 @@
           "goal": "母稿 → 口播稿 → 音频 → 画面，一期视频的九个环节。",
           "match": [
             {
-              "path_prefix": "video_work/"
+              "path_prefix": "notes/video-work/"
             },
             {
               "path_regex": "^life/aiv($|/)"

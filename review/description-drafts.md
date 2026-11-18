@@ -529,7 +529,7 @@
 | `source-tracks/linux/networking/tcp socket必知必会.md` | TCP socket 必知必会：阻塞与非阻塞、串行与并行、select/poll/epoll，以及 SO_REUSEADDR 和 SO_LINGER。 | （没抽出来） | ☐ |
 | `source-tracks/linux/networking/tcp重建链.md` | 在tcp链路中，当网络异常时，缩短tcp超时时间一般有如下方法： | 在tcp链路中，当网络异常时，缩短tcp超时时间一般有如下方法： | ☐ |
 | `source-tracks/linux/networking/tcp的user_timeout与keepalive的关系与生效机制/index.md` | 当tcp流中有数据交互时，tcp流不会进入keepalive，此时的超时主要受tcp_user_timeout影响。数据包被发送后未接收到ACK确认的达到tcp_user_timeout时会断开连接。tcp_user_timeout以毫秒为单位，例如设置为10000时，代表如果发送出去的数据包在十… | 当tcp流中有数据交互时，tcp流不会进入keepalive，此时的超时主要受tcp_user_timeout影响。数据包被发送后未接收到ACK确认的达到tcp_user_timeout时会断开连接。tcp_user_timeout以毫秒为单位，例如设置为10000时，代表如果发送出去的数据包在十… | ☐ |
-| `stock/A股股票筛选规则.md` | 选股不是单条规则，而是由粗到细的漏斗，建议按以下顺序逐层过滤： | 选股不是单条规则，而是由粗到细的漏斗，建议按以下顺序逐层过滤： | ☐ |
+| `life/shehui/A股股票筛选规则.md` | 选股不是单条规则，而是由粗到细的漏斗，建议按以下顺序逐层过滤： | 选股不是单条规则，而是由粗到细的漏斗，建议按以下顺序逐层过滤： | ☐ |
 | `source-tracks/linux/filesystem/nfs详解.md` | NFS是Network File System的缩写，即网络文件系统，是一种使用于分散式文件系统的协定。功能是通过网络让不同的机器、不同的操作系统能够彼此分享个别的数据，让应用程序在客户端通过网络访问位于服务器磁盘中的数据，是在类Unix系统间实现磁盘文件共享的一种方法。 | NFS是Network File System的缩写，即网络文件系统，是一种使用于分散式文件系统的协定。功能是通过网络让不同的机器、不同的操作系统能够彼此分享个别的数据，让应用程序在客户端通过网络访问位于服务器磁盘中的数据，是在类Unix系统间实现磁盘文件共享的一种方法。 | ☐ |
 | `source-tracks/linux/filesystem/samba服务深度定制.md` | 在 Windows 7 中，您可以通过修改注册表来指定 Samba 服务器的端口。 | 在 Windows 7 中，您可以通过修改注册表来指定 Samba 服务器的端口。 | ☐ |
 | `source-tracks/linux/filesystem/sshfs-win精讲.md` | sshfs-win 精讲笔记（内容还在整理）。 | （没抽出来） | ☐ |
@@ -555,7 +555,7 @@
 | `engineering/engineering-practice/你一定要知道的黑客小技巧.md` | 几个常用排查手段：用 nmap 扫端口、用 nc 测试 tcp/udp 端口是否在监听，以及常见服务端口与连接方式。 | （没抽出来） | ☐ |
 | `engineering/engineering-practice/如何调试bash脚本.md` | 你可以让bash打印出你脚本执行的过程中的所有语句。这很简单，只需要使用bash的-x选项就可以做到，下面让我们来看一下。 | 你可以让bash打印出你脚本执行的过程中的所有语句。这很简单，只需要使用bash的-x选项就可以做到，下面让我们来看一下。 | ☐ |
 | `engineering/containers/那些你不得不会的提高工作效率的软件神器.md` | vscode服务器版本，可以在浏览器中开发调试代码，尤其适用于windows端开发linux服务器程序。 | vscode服务器版本，可以在浏览器中开发调试代码，尤其适用于windows端开发linux服务器程序。 | ☐ |
-| `video_work/video.md` | 程序员，码农，数据库内核开发，分布式存储开发，用户态协议栈开发。 | 程序员，码农，数据库内核开发，分布式存储开发，用户态协议栈开发。 | ☐ |
+| `notes/video-work/video.md` | 程序员，码农，数据库内核开发，分布式存储开发，用户态协议栈开发。 | 程序员，码农，数据库内核开发，分布式存储开发，用户态协议栈开发。 | ☐ |
 | `source-tracks/dpdk/plugins-and-apps/cdu_nxp2160_ptp1588v2实现方案.md` | ptp1588v2是一套软件协议标准，借助于软硬件时间戳来进行时间同步。因而其需要两方面的支持： | ptp1588v2是一套软件协议标准，借助于软硬件时间戳来进行时间同步。因而其需要两方面的支持： | ☐ |
 | `source-tracks/dpdk/plugins-and-apps/fastgtpu配置及cli说明文档.md` | vpp加载时会读取startup.conf的配置，fastgtpu的配置如下： | vpp加载时会读取startup.conf的配置，fastgtpu的配置如下： | ☐ |
 | `source-tracks/dpdk/testing-and-perf/fastup发包测试说明文档.md` | fastgtpu作为vpp的一个插件，只能被动收包，无法主动发包，需对其进行发包适配。 | fastgtpu作为vpp的一个插件，只能被动收包，无法主动发包，需对其进行发包适配。 | ☐ |

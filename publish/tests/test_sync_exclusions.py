@@ -76,9 +76,10 @@ def excluded_hits(docs_dir, module):
 
     按**目录名**匹配，不按文件名——所以 ``video/voice/README.md`` 不会被算进来。
 
-    只算会被发布的文件（md / html）：``docs/src/test/`` 底下确实有几个
-    ``.c`` 与 ``Makefile``，但它们从来不会变成文章，落在排除目录里也不改变
-    任何产物。规格 §4.3 记的「规则命中 0 个文件」说的就是这个意思。
+    只算会被发布的文件（md / html）：像 ``internal/src/test/`` 底下那几个
+    ``.c`` 与 ``Makefile``，它们从来不会变成文章，落在排除目录里也不改变
+    任何产物。规格 §4.3 记的「规则命中 0 个文件」说的就是这个意思
+    （那棵树 2026-11-18 收尾时已经搬出 ``docs/``，规则现在纯是防回归守卫）。
     """
     hits = []
     for path in sorted(docs_dir.rglob("*")):
@@ -141,9 +142,9 @@ def test_the_exclusion_rule_matches_nothing_in_the_real_docs_tree():
     §4.3 记的是「当前状态：规则命中 0 个文件」。命中集非空就意味着这条规则
     正在悄悄改变某些现有产物的去留——那是要有人拍板的事，不该默默发生。
 
-    注意 ``docs/src/test/`` 目录**已经存在**（底下是几个 ``.c`` 与
-    ``Makefile``，没有可发布文件）：守卫要防的位置已经选好了，只是今天还没
-    往里放文章。
+    注意这棵树**已经搬出 ``docs/``**（2026-11-18 收尾信息架构时搬去了
+    ``internal/src/test/``）：守卫要防的位置仍然选好了，只是今天 ``docs/``
+    底下还没有别的东西落进排除名单。
     """
     module = load_sync_module()
 
