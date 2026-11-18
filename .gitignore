@@ -13,6 +13,14 @@ public/
 !/source/all/
 !/source/recommended/
 
+# patch-theme.py 从站点的 theme-assets/ 拷进主题的自制素材（logo、头像、收款码）。
+# 真身在 platforms/blog/site/theme-assets/（入库），主题里这几张是**拷贝**——
+# 构建产物，不入库，否则一次 `git add -A` 就把四张图扫进仓库。
+/platforms/blog/site/themes/matery/source/medias/1.jpg
+/platforms/blog/site/themes/matery/source/medias/gzh.jpg
+/platforms/blog/site/themes/matery/source/medias/weixin.jpg
+/platforms/blog/site/themes/matery/source/medias/zhifubao.jpg
+
 # 内容单元仓库：母稿编译出来的产物（规格 §4.2）。
 # 它是**所有平台共用的那一半**——契约层与各平台 adapter 真正读的东西，
 # 但它是 build product，所以不入库；CI 里现编。
