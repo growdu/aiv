@@ -1,7 +1,7 @@
 # 全树范围分类：哪些不是面向读者的技术文章
 
 - 日期：2026-11-14
-- 依据：`tools/review-check.py` 对 `docs/` 全树（627 篇）跑出的信号，加逐篇读原文的判断
+- 依据：`tools/review-check.py` 对 `docs/` 全树（621 篇）跑出的信号，加逐篇读原文的判断
 - 目的：把审校范围从「四支柱 282 篇」扩到全树之前，先把**不面向读者的技术文章**筛掉，
   免得把站点目录页、内部工作文档、命令速查表也按技术深度五要素去审。
 
@@ -9,13 +9,13 @@
 
 | 桶 | 含义 | 篇数 | 技术深度五要素 |
 | --- | --- | --- | --- |
-| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 106 | 不审 |
+| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 105 | 不审 |
 | 2 速查/清单/操作类 | 面向读者，但形态是命令表、步骤、清单，没有成篇解释 | 48 | 不适用 |
 | 3 非技术内容 | 面向读者，但写的是生活、备考、内部规范 | 38 | 不适用 |
 | 4 转载内容 | 标了来源、署名他人的转载稿 | 17 | 不按原创稿审改 |
-| 5 技术文章 | 面向读者的技术解释 | 418 | **审** |
+| 5 技术文章 | 面向读者的技术解释 | 413 | **审** |
 
-**审校工作面 = 418 篇**（桶 5）。桶 2、3 面向读者但不是技术文章，
+**审校工作面 = 413 篇**（桶 5）。桶 2、3 面向读者但不是技术文章，
 可选做表达与结构审，不套五要素；桶 1 不审；桶 4 是转载稿，
 怎么处理（保留标注 / 删除 / 重写）是站长的决定。
 
@@ -50,27 +50,25 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 | source-tracks | 323 | 35 | 23 | 0 | 0 | 265 | 244 | 78 |
 | engineering | 158 | 30 | 24 | 6 | 17 | 81 | 138 | 76 |
 | distributed | 71 | 14 | 1 | 0 | 0 | 56 | 58 | 33 |
-| life | 42 | 11 | 0 | 31 | 0 | 0 | 29 | 6 |
+| life | 40 | 10 | 0 | 30 | 0 | 0 | 28 | 6 |
 | platform-meta | 14 | 7 | 0 | 0 | 0 | 7 | 7 | 6 |
-| blog | 11 | 2 | 0 | 0 | 0 | 9 | 5 | 2 |
 | stock | 2 | 1 | 0 | 1 | 0 | 0 | 2 | 1 |
 | video_work | 2 | 2 | 0 | 0 | 0 | 0 | 2 | 2 |
 | mail | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | pcap | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | src | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | wiki | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| **合计** | **627** | **106** | **48** | **38** | **17** | **418** | **489** | **208** |
+| notes | 7 | 2 | 0 | 1 | 0 | 4 | 4 | 2 |
+| **合计** | **621** | **105** | **48** | **38** | **17** | **413** | **487** | **208** |
 
 ## 排除清单
 
 下面三桶逐篇列出。**桶 4 = `docs/` 全集减去这份清单**，不单独列。
 契约测试守着两件事：清单里的路径不许悬空；审校记录的原文不许落在清单里。
 
-### 桶 1 非内容（106 篇）
+### 桶 1 非内容（105 篇）
 
-#### 站点目录页（62 篇）
-- `docs/blog/_index.md`
-- `docs/blog/mermaid/_index.md`
+#### 站点目录页（61 篇）
 - `docs/distributed/_index.md`
 - `docs/distributed/consensus/_index.md`
 - `docs/distributed/distributed-storage/_index.md`
@@ -91,13 +89,14 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/engineering/observability/_index.md`
 - `docs/engineering/web-and-frontend/_index.md`
 - `docs/life/_index.md`
-- `docs/life/blog-to-wechat/_index.md`
 - `docs/life/daxue/_index.md`
 - `docs/life/gaokao/_index.md`
 - `docs/life/hometown/_index.md`
 - `docs/life/road/_index.md`
 - `docs/life/shehui/_index.md`
 - `docs/mail/_index.md`
+- `docs/notes/_index.md`
+- `docs/notes/site-ops/_index.md`
 - `docs/pcap/_index.md`
 - `docs/platform-meta/_index.md`
 - `docs/platform-meta/build-pipeline/_index.md`

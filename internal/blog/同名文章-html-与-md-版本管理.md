@@ -49,7 +49,7 @@ URL 不再冲突，两个版本都可以正常访问。
 ```
 ERROR docs/source-tracks/postgresql/logical-replication/ddl同步架构.html: shares basename with docs/source-tracks/postgresql/logical-replication/ddl同步架构.md
 but is not suffixed with -html. Rename the .html file to
-docs/source-tracks/postgresql/logical-replication/ddl同步架构-html.html (see docs/blog/同名文章-html-与-md-版本管理.md).
+docs/source-tracks/postgresql/logical-replication/ddl同步架构-html.html (see internal/blog/同名文章-html-与-md-版本管理.md).
 ```
 
 宁可构建失败、让维护者收到 GitHub Actions 红色 ❌，也不要静默生成两条相同 URL 的文章。
