@@ -18,12 +18,10 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import DOCS, REPO_ROOT, SITE
 SYNC_TOOL = SITE / "tools" / "sync-hexo.py"
 
 #: 文件名里不能有的字符（Windows NTFS 与 GitHub artifact 的共同限制）
@@ -80,7 +78,7 @@ def test_no_illegal_char_ever_reaches_a_directory_name(sync, out_dir, bad):
 
 def test_article_redirect_with_an_illegal_filename_char_is_skipped(sync, out_dir, monkeypatch):
     """文章重定向的旧路径也一样 —— 拦在同一个地方。"""
-    monkeypatch.setattr(sync, "_redirect_target_file", lambda p: "docs/somewhere/index.md")
+    monkeypatch.setattr(sync, "_redirect_target_file", lambda p: str(DOCS / "somewhere/index.md"))
     monkeypatch.setattr(sync, "git_date", lambda p: "2026-01-02")
     sync.REDIRECTS["旧路径:带冒号"] = "新路径"
     assert sync.write_redirects() == 0
@@ -94,7 +92,7 @@ def test_redirect_with_a_dated_key_lands_on_the_old_date(sync, out_dir, monkeypa
     另一个旧 URL 的日期段跟它对不上。不带日期的键会落在错的地址上，
     真正的旧地址就 404 了；键里带上日期才落得准。
     """
-    monkeypatch.setattr(sync, "_redirect_target_file", lambda p: "docs/merged/index.md")
+    monkeypatch.setattr(sync, "_redirect_target_file", lambda p: str(DOCS / "merged/index.md"))
     monkeypatch.setattr(sync, "git_date", lambda p: "2022-06-13 16:14:13")
     sync.REDIRECTS["2022/10/25/cluster/raft/旧文章"] = "merged/新文章"
     assert sync.write_redirects() == 1
@@ -106,7 +104,7 @@ def test_redirect_with_a_dated_key_lands_on_the_old_date(sync, out_dir, monkeypa
 
 def test_redirect_without_a_date_still_uses_the_new_files_date(sync, out_dir, monkeypatch):
     """普通键不受影响 —— 页面照旧落在新文件的日期段上。"""
-    monkeypatch.setattr(sync, "_redirect_target_file", lambda p: "docs/merged/index.md")
+    monkeypatch.setattr(sync, "_redirect_target_file", lambda p: str(DOCS / "merged/index.md"))
     monkeypatch.setattr(sync, "git_date", lambda p: "2022-06-13 16:14:13")
     sync.REDIRECTS["cluster/raft/旧文章"] = "merged/新文章"
     assert sync.write_redirects() == 1

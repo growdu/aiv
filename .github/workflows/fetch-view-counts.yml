@@ -53,7 +53,8 @@ jobs:
           python3 tools/fetch-view-counts.py
 
       - name: 跑契约测试
-        run: python3 -m pip install pytest && python3 -m pytest tests/ -q
+        # 阅读量的守卫跟着站点模块归位了（platforms/blog/site/tests/）。
+        run: python3 -m pip install pytest && cd platforms/blog/site && python3 -m pytest tests/test_view_counts.py -q
 
       - name: 提交快照
         run: |

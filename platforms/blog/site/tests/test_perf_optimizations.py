@@ -30,8 +30,7 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parent.parent
-SITE = REPO / "platforms" / "blog" / "site"
+from paths import DOCS, REPO_ROOT as REPO, SITE
 THEME_LAYOUT = SITE / "themes" / "matery" / "layout"
 HEAD_EJS = THEME_LAYOUT / "_partial" / "head.ejs"
 LAYOUT_EJS = THEME_LAYOUT / "layout.ejs"
@@ -39,8 +38,8 @@ COVER_EJS = THEME_LAYOUT / "_partial" / "bg-cover-content.ejs"
 PATCH_THEME = SITE / "tools" / "patch-theme.py"
 IMG_FILTER = SITE / "scripts" / "img-dimensions.js"
 
-SAMPLE_PNG = REPO / "docs" / "source-tracks" / "postgresql" / "logical-replication" / "pa_decode" / "image.png"
-SAMPLE_JPG = REPO / "docs" / "source-tracks" / "linux" / "networking" / "ipv6_img" / "07-55785c722b16.jpg"
+SAMPLE_PNG = DOCS / "source-tracks" / "postgresql" / "logical-replication" / "pa_decode" / "image.png"
+SAMPLE_JPG = DOCS / "source-tracks" / "linux" / "networking" / "ipv6_img" / "07-55785c722b16.jpg"
 
 
 def _read(path: Path) -> str:
@@ -260,7 +259,7 @@ def test_image_size_is_sniffed_from_the_content_not_the_extension():
     if node is None:
         pytest.skip("没有 node，跳过 JS 侧校验")
 
-    sample = REPO / "docs" / "distributed" / "ha-and-dr" / "ha元信息常见存储方式" / "img" / "oceanbase_arch.png"
+    sample = DOCS / "distributed" / "ha-and-dr" / "ha元信息常见存储方式" / "img" / "oceanbase_arch.png"
     assert sample.is_file(), f"样本图片不见了：{sample}"
     assert sample.read_bytes()[:3] == b"\xff\xd8\xff", "样本不再是 JPEG 内容的 .png"
 

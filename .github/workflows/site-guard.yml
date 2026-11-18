@@ -1,7 +1,8 @@
 name: Site guard
 
-# 根级 `tests/` 是**站点契约测试**：部署工作流的形状、文档里的死链与页内锚点、
-# 站点根路径前缀（主站挂 `/`、镜像挂 `/blog/`，交叉链接必须带对前缀）。
+# 站点模块的测试住在 `platforms/blog/site/tests/`：部署工作流的形状、
+# 文档里的死链与页内锚点、站点根路径前缀（主站挂 `/`、镜像挂 `/blog/`，
+# 交叉链接必须带对前缀）。
 #
 # 这些测试以前只在本机跑——CI 里没有任何地方执行它们。于是
 # 「测试全绿」和「CI 绿」是两件事：一份提交可以带着红着的契约测试
@@ -10,7 +11,8 @@ name: Site guard
 # 这条工作流补上那一格。它**不阻塞部署**（独立工作流、独立并发组），
 # 挂了只报注解（不登录也能从 API 看到是哪条挂了），不挡别人的推送。
 #
-# 只跑根级 tests/：AIV 流水线那套测试由 video-pipeline.yml 负责，
+# 只跑站点模块：母稿 / review 层那套由 contracts.yml 负责，
+# AIV 流水线那套测试由 video-pipeline.yml 负责，
 # 两边各管各的，失败时才知道该看哪边的注解。
 
 on:
@@ -50,6 +52,9 @@ jobs:
       - name: 跑测试
         run: |
           set -o pipefail
+          # 站点模块的测试跟着站点住在 platforms/blog/site/ 下——
+          # 「在模块目录里跑自己的测试」是归位之后才成立的事。
+          cd platforms/blog/site
           python3 -m pytest tests/ -q -rf 2>&1 | tee /tmp/pytest.log || true
           # 失败条目用 ::error:: 报成注解：**不登录也能从 API 看到是哪条挂了**。
           # 工作流日志要仓库管理员权限才能下，注解不要——CI 挂了却看不到原因，

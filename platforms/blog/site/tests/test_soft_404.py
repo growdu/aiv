@@ -30,10 +30,10 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parent.parent
+from paths import REPO_ROOT as REPO, ROOT_TOOLS
 DOC = REPO / "internal" / "blog" / "部署到服务器.md"
-PATCHER_PATH = REPO / "tools" / "nginx_soft404.py"
-WRAPPER = REPO / "tools" / "fix-soft-404.sh"
+PATCHER_PATH = ROOT_TOOLS / "nginx_soft404.py"
+WRAPPER = ROOT_TOOLS / "fix-soft-404.sh"
 
 
 def _load_module():

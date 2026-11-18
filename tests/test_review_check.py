@@ -19,8 +19,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-TOOL = REPO_ROOT / "tools" / "review-check.py"
+from paths import DOCS, REPO_ROOT, ROOT_TOOLS
+TOOL = ROOT_TOOLS / "review-check.py"
 
 
 def run_tool(*args):
@@ -132,7 +132,7 @@ def test_load_doc_reads_first_h1_as_title(tmp_path):
 
 def test_cli_json_output_has_expected_shape():
     """集成：真跑一次 CLI，检查 JSON 结构。"""
-    target = (REPO_ROOT / "docs" / "source-tracks" / "postgresql" /
+    target = (DOCS / "source-tracks" / "postgresql" /
               "transaction-mvcc" / "postgresql-mvcc" / "index.md")
     assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
     result = run_tool(str(target), "--json")
@@ -148,7 +148,7 @@ def test_cli_json_output_has_expected_shape():
 
 def test_cli_runs_over_a_whole_pillar():
     """集成：整目录跑一遍，不许崩。"""
-    pillar = REPO_ROOT / "docs" / "source-tracks" / "postgresql"
+    pillar = DOCS / "source-tracks" / "postgresql"
     result = run_tool(str(pillar), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
@@ -156,7 +156,7 @@ def test_cli_runs_over_a_whole_pillar():
 
 
 def test_cli_reports_missing_path():
-    result = run_tool("docs/does-not-exist")
+    result = run_tool(str(DOCS / "does-not-exist"))
     assert result.returncode == 1
     assert "路径不存在" in result.stderr
 
@@ -164,23 +164,23 @@ def test_cli_reports_missing_path():
 # 审校过的正文合入后，段落不该又长回去——AIF-03 盯的就是「单段 > 200 字」。
 # 改文章时把两段并回一段，这条测试会报出来：审校完的稿子不能带新债。
 REVIEWED_ARTICLES = (
-    "docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md",
-    "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
-    "docs/source-tracks/postgresql/transaction-mvcc/learning-path/06-heap-and-mvcc.md",
-    "docs/source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
-    "docs/distributed/foundations/分布式一致性协议.md",
-    "docs/engineering/foundations/file.md",
-    "docs/distributed/field-notes/corosync-down网卡仍处于多数派/index.md",
-    "docs/distributed/ha-and-dr/tptc.md",
-    "docs/source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
-    "docs/source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
+    "source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md",
+    "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
+    "source-tracks/postgresql/transaction-mvcc/learning-path/06-heap-and-mvcc.md",
+    "source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
+    "distributed/foundations/分布式一致性协议.md",
+    "engineering/foundations/file.md",
+    "distributed/field-notes/corosync-down网卡仍处于多数派/index.md",
+    "distributed/ha-and-dr/tptc.md",
+    "source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
+    "source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
 )
 
 
 def test_reviewed_articles_have_no_long_paragraph_signal():
     """集成：已合入审校的文章不该再被 AIF-03 命中。"""
     for rel in REVIEWED_ARTICLES:
-        result = run_tool(str(REPO_ROOT / rel), "--json")
+        result = run_tool(str(DOCS / rel), "--json")
         assert result.returncode == 0, result.stderr
         payload = json.loads(result.stdout)
         hits = [s for s in payload["docs"][0]["signals"]
@@ -682,7 +682,7 @@ def test_fig_02_finds_a_reference_in_the_middle_of_a_paragraph(tmp_path):
 
 def test_the_checker_reports_fig_signals_for_a_real_article():
     """集成：真实文章上跑一遍，FIG-01/FIG-02 真的会报出来。"""
-    target = REPO_ROOT / "docs" / "distributed" / "consensus" / "一文读懂openguass dcf网络模块.md"
+    target = DOCS / "distributed" / "consensus" / "一文读懂openguass dcf网络模块.md"
     assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
     result = run_tool(str(target), "--json")
     assert result.returncode == 0, result.stderr

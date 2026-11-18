@@ -40,15 +40,12 @@ import importlib.util
 import json
 import re
 import sys
-from pathlib import Path
 from urllib.parse import quote
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, ROOT_TOOLS, SITE
 # 生成器搬进了 platforms/blog/site/tools/；site_root.py 留在根 tools/。
-ROOT_TOOLS = REPO_ROOT / "tools"
 SITE_TOOLS = SITE / "tools"
 RULES_FILE = REPO_ROOT / "data" / "learning-path.json"
 TOOL = SITE_TOOLS / "build-learning-path.py"

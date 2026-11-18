@@ -30,9 +30,8 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from paths import DOCS, REPO_ROOT, ROOT_TOOLS
 REVIEW_ROOT = REPO_ROOT / "review"
-DOCS_ROOT = REPO_ROOT / "docs"
 
 STATES = ("待审", "审校中", "建议中", "已确认", "已合入")
 
@@ -313,7 +312,7 @@ def test_records_live_under_the_articles_own_pillar():
     for path in record_files():
         rel = path.relative_to(REVIEW_ROOT)
         pillar = rel.parts[0]
-        assert (DOCS_ROOT / pillar).is_dir(), f"{rel} 的支柱目录在 docs/ 下不存在"
+        assert (DOCS / pillar).is_dir(), f"{rel} 的支柱目录在 docs/ 下不存在"
         source = parse_record(path)["source"]
         assert source.startswith(f"docs/{pillar}/"), (
             f"{rel} 的原文 {source} 不在自己的支柱目录下")
@@ -395,10 +394,10 @@ def test_merged_record_has_no_open_facts():
 
 def test_docs_tree_has_no_review_leakage():
     """docs/ 会被发布成站点文章，审校记录绝不能漏进去。"""
-    offenders = [p for p in DOCS_ROOT.rglob("*")
+    offenders = [p for p in DOCS.rglob("*")
                  if p.is_dir() and p.name in ("review", "reviews")]
     assert not offenders, f"docs/ 下出现了审校目录: {offenders}"
-    records = [p for p in DOCS_ROOT.rglob("*.md")
+    records = [p for p in DOCS.rglob("*.md")
                if p.name.startswith("审校") or "审校记录" in p.name]
     assert not records, f"docs/ 下出现了审校记录: {records}"
 
@@ -537,7 +536,7 @@ def count_warn_signals(report: dict) -> int:
 def run_checker(source: str) -> dict:
     """对单个文件跑一遍检查器，返回它那一篇的报告。"""
     result = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "tools" / "review-check.py"), source, "--json"],
+        [sys.executable, str(ROOT_TOOLS / "review-check.py"), source, "--json"],
         cwd=REPO_ROOT, capture_output=True, encoding="utf-8", errors="replace")
     assert result.returncode == 0, result.stdout + result.stderr
     docs = json.loads(result.stdout)["docs"]
@@ -659,7 +658,7 @@ def test_scope_bucket_counts_are_self_consistent():
     # 全树总数从文件系统数出来，不写死：docs/ 下增删一篇文章（合并两篇
     # 同标题的、删掉一篇重复的），范围文档就得跟着更新——写死 621 的话，
     # 真相会漂在测试里，下次有人照着旧数字改文档就对不上了。
-    actual_total = sum(1 for _ in DOCS_ROOT.rglob("*.md"))
+    actual_total = sum(1 for _ in DOCS.rglob("*.md"))
     assert excluded_total + technical == actual_total, (
         f"五桶 {excluded_total} + 技术文章 {technical} = "
         f"{excluded_total + technical}，不是全树 {actual_total} 篇")
@@ -692,7 +691,7 @@ def test_mechanical_non_articles_are_all_excluded():
     """
     excluded = excluded_paths()
     missing = [p.relative_to(REPO_ROOT).as_posix()
-               for p in sorted(DOCS_ROOT.rglob("*.md"))
+               for p in sorted(DOCS.rglob("*.md"))
                if mechanically_non_article(p)
                and p.relative_to(REPO_ROOT).as_posix() not in excluded]
     assert not missing, f"机械判据认出的非内容没进排除清单: {missing}"
@@ -733,7 +732,7 @@ def test_contract_file_passes_in_a_ci_like_git_environment():
 def load_checker():
     """Import tools/review-check.py as a module (it is a script, not a package)."""
     spec = importlib.util.spec_from_file_location(
-        "review_check", REPO_ROOT / "tools" / "review-check.py")
+        "review_check", ROOT_TOOLS / "review-check.py")
     module = importlib.util.module_from_spec(spec)
     sys.modules["review_check"] = module
     spec.loader.exec_module(module)

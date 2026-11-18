@@ -15,10 +15,8 @@ hexo-generator-index 就会按 10 篇一页把文章切开，生成
 """
 
 import re
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, SITE
 CONFIG = SITE / "_config.yml"
 HOME_CONTENT = (
     SITE / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"

@@ -455,7 +455,7 @@
       "form": "repo"
     },
     {
-      "file": "tests/test_soft_404.py",
+      "file": "platforms/blog/site/tests/test_soft_404.py",
       "form": "repo"
     },
     {
@@ -639,19 +639,19 @@
       "form": "permalink"
     },
     {
-      "file": "tests/test_episode_block.py",
+      "file": "platforms/blog/site/tests/test_episode_block.py",
       "form": "docs"
     },
     {
-      "file": "tests/test_episode_block.py",
+      "file": "platforms/blog/site/tests/test_episode_block.py",
       "form": "permalink"
     },
     {
-      "file": "tests/test_episode_block.py",
+      "file": "platforms/blog/site/tests/test_episode_block.py",
       "form": "cid"
     },
     {
-      "file": "tests/test_podcast_spec.py",
+      "file": "platforms/blog/site/tests/test_podcast_spec.py",
       "form": "docs"
     },
     {
@@ -659,11 +659,11 @@
       "form": "docs"
     },
     {
-      "file": "tests/test_home_first_screen.py",
+      "file": "platforms/blog/site/tests/test_home_first_screen.py",
       "form": "postid"
     },
     {
-      "file": "tests/test_podcast_feed.py",
+      "file": "platforms/blog/site/tests/test_podcast_feed.py",
       "form": "permalink"
     },
     {

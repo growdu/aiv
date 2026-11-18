@@ -28,8 +28,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-TOOL = REPO / "tools" / "draft-descriptions.py"
+from paths import REPO_ROOT as REPO, ROOT_TOOLS
+TOOL = ROOT_TOOLS / "draft-descriptions.py"
 
 
 def _load():

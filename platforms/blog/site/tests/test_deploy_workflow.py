@@ -38,9 +38,8 @@ from __future__ import annotations
 
 import re
 import subprocess
-from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+from paths import REPO_ROOT as REPO
 WORKFLOW = REPO / ".github/workflows/hexo.yml"
 
 # A job key sits at two-space indentation under ``jobs:``.

@@ -32,8 +32,8 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SECTION = REPO_ROOT / "docs" / "life" / "gaokao"
+from paths import DOCS, REPO_ROOT
+SECTION = DOCS / "life" / "gaokao"
 
 # Sections that are not part of a table of contents.
 _TOC_EXCLUDED_HEADINGS = {"目录", "相关阅读"}

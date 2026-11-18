@@ -21,12 +21,9 @@ import importlib.util
 import json
 import re
 import warnings
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, ROOT_TOOLS, SITE
 # 站点这一平台的脚本搬进了 platforms/blog/site/tools/；平台无关的还留在根 tools/。
-ROOT_TOOLS = REPO_ROOT / "tools"
 SITE_TOOLS = SITE / "tools"
 THEME_PARTIALS = SITE / "themes" / "matery" / "layout" / "_partial"
 

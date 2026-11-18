@@ -17,8 +17,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, SITE
 HOME_CONTENT = SITE / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
 
 NODE = shutil.which("node")

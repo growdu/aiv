@@ -55,9 +55,7 @@ import importlib.util
 import re
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-SITE = REPO / "platforms" / "blog" / "site"
-DOCS = REPO / "docs"
+from paths import DOCS, REPO_ROOT as REPO, SITE
 TOOL = SITE / "tools" / "check-mermaid.py"
 
 MERMAID_BLOCK = re.compile(r"```mermaid\n(.*?)```", re.S)

@@ -15,10 +15,8 @@
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, ROOT_TOOLS, SITE
 THEME = SITE / "themes" / "matery"
 PATCH_THEME = SITE / "tools" / "patch-theme.py"
 LAYOUT_EJS = THEME / "layout" / "layout.ejs"
@@ -44,7 +42,7 @@ def _sandboxed_site(tmp_path):
     (root / "docs").mkdir(parents=True, exist_ok=True)
     (root / "tools").mkdir(parents=True, exist_ok=True)
     for name in ("paths.py", "site_root.py"):
-        shutil.copy2(REPO_ROOT / "tools" / name, root / "tools" / name)
+        shutil.copy2(ROOT_TOOLS / name, root / "tools" / name)
 
     site = root / "platforms" / "blog" / "site"
     (site / "tools").mkdir(parents=True, exist_ok=True)

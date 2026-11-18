@@ -28,10 +28,8 @@ from __future__ import annotations
 
 import importlib.util
 import re
-from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-SITE = REPO / "platforms" / "blog" / "site"
+from paths import REPO_ROOT as REPO, SITE
 THEME = SITE / "themes" / "matery"
 HOME_CONTENT = THEME / "layout" / "_partial" / "home-content.ejs"
 MATERY_JS = THEME / "source" / "js" / "matery.js"

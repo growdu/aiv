@@ -20,12 +20,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, ROOT_TOOLS, SITE
 # build-video-pages.py 留在根 tools/；build-publish-index.py 搬进了站点那边。
-ROOT_TOOLS = REPO_ROOT / "tools"
 SITE_TOOLS = SITE / "tools"
 
 

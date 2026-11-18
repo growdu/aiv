@@ -22,12 +22,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DOCS_ROOT = REPO_ROOT / "docs"
+from paths import DOCS, REPO_ROOT, ROOT_TOOLS
 REVIEW_ROOT = REPO_ROOT / "review"
-TOOL = REPO_ROOT / "tools" / "review-check.py"
+TOOL = ROOT_TOOLS / "review-check.py"
 
-COROSYNC = DOCS_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派/index.md"
+COROSYNC = DOCS / "distributed/field-notes/corosync-down网卡仍处于多数派/index.md"
 
 # 已知的「裸 URL 吞中文」文章清单：这些还没修，是后续批次的待办。
 # 清单里的文章修好了，这条守卫照样绿（子集判断）；清单外的文章中招，这条会红。
@@ -188,7 +187,7 @@ def test_the_merged_article_is_the_only_one_with_this_title():
     """
     title = "corosync down网卡仍处于多数派问题分析"
     same = []
-    for path in sorted(DOCS_ROOT.rglob("*.md")):
+    for path in sorted(DOCS.rglob("*.md")):
         match = re.search(r"^#\s+(.*\S)\s*$",
                           path.read_text(encoding="utf-8", errors="replace"), re.M)
         if match and match.group(1).strip() == title:
@@ -197,7 +196,7 @@ def test_the_merged_article_is_the_only_one_with_this_title():
         f"全树有多篇同名文章：{same}")
 
     # -1 的目录、审校记录与索引行都不能回来
-    assert not (DOCS_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派-1").exists(), (
+    assert not (DOCS / "distributed/field-notes/corosync-down网卡仍处于多数派-1").exists(), (
         "-1 的 docs 目录又被建回来了")
     assert not (REVIEW_ROOT / "distributed/field-notes/corosync-down网卡仍处于多数派-1.md").exists(), (
         "-1 的审校记录又被建回来了")
@@ -215,7 +214,7 @@ def test_no_new_article_swallows_chinese_into_a_url():
     ``KNOWN_BARE_URL_ARTICLES`` 里——那是待办清单，不是白名单。
     """
     offenders = {}
-    for path in sorted(DOCS_ROOT.rglob("*.md")):
+    for path in sorted(DOCS.rglob("*.md")):
         hits = bare_url_offenders(path.read_text(encoding="utf-8", errors="replace"))
         if hits:
             offenders[path.relative_to(REPO_ROOT).as_posix()] = hits
@@ -226,7 +225,7 @@ def test_no_new_article_swallows_chinese_into_a_url():
 
 # --- 两地三中心（tptc.md 与 tptc_improve.md 合并后） ------------------------
 
-TPTC = DOCS_ROOT / "distributed/ha-and-dr/tptc.md"
+TPTC = DOCS / "distributed/ha-and-dr/tptc.md"
 
 
 def test_the_disaster_recovery_levels_match_the_standard():
@@ -321,14 +320,14 @@ def test_the_two_tptc_articles_are_merged_into_one():
     """集成：站点上不能重新出现同标题的第二篇「两地三中心」。"""
     title = "两地三中心"
     same = []
-    for path in sorted(DOCS_ROOT.rglob("*.md")):
+    for path in sorted(DOCS.rglob("*.md")):
         match = re.search(r"^#\s+(.*\S)\s*$",
                           path.read_text(encoding="utf-8", errors="replace"), re.M)
         if match and match.group(1).strip() == title:
             same.append(path.relative_to(REPO_ROOT).as_posix())
     assert same == ["docs/distributed/ha-and-dr/tptc.md"], f"全树有多篇同名文章：{same}"
 
-    assert not (DOCS_ROOT / "distributed/ha-and-dr/tptc_improve.md").exists(), (
+    assert not (DOCS / "distributed/ha-and-dr/tptc_improve.md").exists(), (
         "tptc_improve.md 又被建回来了")
     assert not (REVIEW_ROOT / "distributed/ha-and-dr/tptc_improve.md").exists(), (
         "tptc_improve 的审校记录又被建回来了")
@@ -341,7 +340,7 @@ def test_the_two_tptc_articles_are_merged_into_one():
 
 # --- IPv6 上网不稳定 ------------------------------------------------------
 
-IPV6 = DOCS_ROOT / "source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"
+IPV6 = DOCS / "source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md"
 
 
 def test_the_ipv6_article_has_a_title_and_an_info_table():
@@ -521,7 +520,7 @@ def test_only_one_ipv6_article_with_this_title():
     """集成：站点上不能出现同标题的第二篇。"""
     title = "从原理到实践，彻底告别 IPv6 上网不稳定的问题"
     same = []
-    for path in sorted(DOCS_ROOT.rglob("*.md")):
+    for path in sorted(DOCS.rglob("*.md")):
         match = re.search(r"^#\s+(.*\S)\s*$",
                           path.read_text(encoding="utf-8", errors="replace"), re.M)
         if match and match.group(1).strip() == title:
@@ -532,7 +531,7 @@ def test_only_one_ipv6_article_with_this_title():
 
 # --- PostgreSQL 存储、索引及系统优化、主备切换 -----------------------------
 
-PG_SWITCH = DOCS_ROOT / "source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md"
+PG_SWITCH = DOCS / "source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md"
 
 
 def test_the_pg_article_has_a_clean_title_and_a_visible_version_baseline():
@@ -720,7 +719,7 @@ def test_only_one_pg_article_with_this_title():
     """集成：站点上不能出现同标题的第二篇。"""
     title = "PostgreSQL存储、索引及系统优化、主备切换"
     same = []
-    for path in sorted(DOCS_ROOT.rglob("*.md")):
+    for path in sorted(DOCS.rglob("*.md")):
         match = re.search(r"^#\s+(.*\S)\s*$",
                           path.read_text(encoding="utf-8", errors="replace"), re.M)
         if match and match.group(1).strip() == title:

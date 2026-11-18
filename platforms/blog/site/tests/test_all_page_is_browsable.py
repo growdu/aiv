@@ -22,8 +22,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-SITE = REPO / "platforms" / "blog" / "site"
+from paths import REPO_ROOT as REPO, SITE
 THEME = SITE / "themes" / "matery"
 PARTIAL = THEME / "layout" / "_partial"
 ALL_EJS = THEME / "layout" / "all.ejs"

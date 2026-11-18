@@ -900,7 +900,7 @@ if os.path.isfile(css_path):
 #
 # 定位方式：旧那一段以 `/* RESPONSIVE-<X>-FIX */` 这样的标记注释起头，后面
 # 紧跟下一段标记注释。匹配时**不写死**标记的字面量 —— 写死了
-# tests/test_home_first_screen.py 会误判「patcher 还在拥有 hero 的 CSS」。
+# platforms/blog/site/tests/test_home_first_screen.py 会误判「patcher 还在拥有 hero 的 CSS」。
 responsive_fix_marker = "RESPONSIVE-FIX"
 responsive_fix_css = r"""/* RESPONSIVE-FIX */
 /* 这一段原本混在首页 hero 的响应式补丁里 —— 2026-11-16 首屏换版

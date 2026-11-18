@@ -27,7 +27,7 @@
 **分类不出来的怎么办**
 ----------------------
 一条都匹配不上的文章会进 ``unclassified`` 清单，脚本以非零退出码结束，
-``tests/test_learning_path.py`` 也会因此失败——**漏归类必须补规则，不许悄悄
+``platforms/blog/site/tests/test_learning_path.py`` 也会因此失败——**漏归类必须补规则，不许悄悄
 塞进兜底阶段**。
 
 落进 ``fallback_stage`` 的文章（也就是「没有专属规则」的那些）同样被记在
@@ -412,7 +412,7 @@ def classify(posts: list[dict], rules: dict) -> tuple[list[dict], list[dict]]:
         # 兜底阶段：这条赛道里一条阶段规则都没命中的文章 → 落这儿。
         #
         # **兜底只是防崩溃，不是防偷懒**：文章落进兜底，意味着它没有专属
-        # 规则。``tests/test_learning_path.py`` 因此钉住「兜底吸收 0 篇」
+        # 规则。``platforms/blog/site/tests/test_learning_path.py`` 因此钉住「兜底吸收 0 篇」
         # —— 加了新文章就得给它写规则，不许靠兜底蒙混过关。
         fallback_id = spec.get("fallback_stage") or stages[-1]["id"]
         for stage in stages:

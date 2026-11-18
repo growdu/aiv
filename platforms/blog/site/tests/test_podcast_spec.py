@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parent.parent
+from paths import DOCS, REPO_ROOT as REPO
 SPEC = REPO / "publish" / "spec" / "08-站点IP骨架.md"
 # 长视频三档的规格（契约八）。它与 SPEC 各自独立，但共享下面两条纪律：
 # 契约编号不冲突、引用的仓库路径必须真实存在。
@@ -38,12 +38,12 @@ SPEC_LONG_VIDEO = REPO / "publish" / "spec" / "09-长视频三档.md"
 #
 # 主母稿 = 该期篇幅最大、承载本期机制的那一篇。
 EPISODE_DRAFTS = {
-    "pg-parallel-decode": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md",
-    "csn-total-ordering": "docs/source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/index.md",
-    "wal-interleave": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
-    "parallel-apply": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
-    "structured-ddl": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering/index.md",
-    "row-lock": "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
+    "pg-parallel-decode": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md",
+    "csn-total-ordering": "source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/index.md",
+    "wal-interleave": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
+    "parallel-apply": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
+    "structured-ddl": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering/index.md",
+    "row-lock": "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
 }
 
 # 期号标签的固定顺序。规格 §2.1 的表里期号与 slug 同行，
@@ -396,7 +396,7 @@ def test_mother_draft_stats_in_the_spec_match_the_recomputed_values():
     rows = _markdown_table(SPEC_LONG_VIDEO.read_text(encoding="utf-8"), "视觉段")
     for label, slug in _episode_map().items():
         row = _row_with(rows, 0, label)
-        path = REPO / EPISODE_DRAFTS[slug]
+        path = DOCS / EPISODE_DRAFTS[slug]
         draft_chars = _dense_chars(_body_of(path))
         prose_chars = _prose_chars(path)
 
@@ -421,7 +421,7 @@ def test_the_existing_six_episodes_meet_the_short_tier():
     for label, slug in _episode_map().items():
         spoken = EPISODE_SPOKEN_CHARS[slug]
         duration = EPISODE_DURATION_S[slug]
-        ratio = _prose_chars(REPO / EPISODE_DRAFTS[slug]) / spoken
+        ratio = _prose_chars(DOCS / EPISODE_DRAFTS[slug]) / spoken
         assert spoken <= TIER_SHORT_MAX_CHARS, (
             f"{label} 口播 {spoken} 字，超过精简版上限 {TIER_SHORT_MAX_CHARS}"
         )
@@ -591,7 +591,7 @@ def test_depth_baseline_table_matches_reality():
             continue  # 合计行由 test_total_compression_ratio_matches_reality 管
         label = row[0].split()[0]
         slug = mapping[label]
-        draft = REPO / EPISODE_DRAFTS[slug]
+        draft = DOCS / EPISODE_DRAFTS[slug]
         assert draft.exists(), f"{slug} 的母稿不存在：{draft}"
 
         body = _body_of(draft)
@@ -617,7 +617,7 @@ def test_total_compression_ratio_matches_reality():
     total_row = _row_with(rows, 0, "合计")
 
     total_chars = sum(
-        _dense_chars(_body_of(REPO / path)) for path in EPISODE_DRAFTS.values()
+        _dense_chars(_body_of(DOCS / path)) for path in EPISODE_DRAFTS.values()
     )
     total_spoken = sum(EPISODE_SPOKEN_CHARS.values())
 
@@ -639,7 +639,7 @@ def test_evidence_thresholds_are_met_by_the_existing_drafts():
     取值来自六期现状的最小值，所以上线时不会把已有资产判红。
     """
     for slug, draft_path in EPISODE_DRAFTS.items():
-        body = _body_of(REPO / draft_path)
+        body = _body_of(DOCS / draft_path)
         sources = len(set(SRC_PATH_RE.findall(body)))
         functions = len(set(FUNC_REF_RE.findall(body)))
         diagrams = len(re.findall(r"```mermaid", body))
@@ -741,7 +741,7 @@ def _episode_fields(path: Path) -> dict:
 def test_the_six_episode_drafts_declare_their_episode_fields():
     """六篇母稿都要写齐 9 个期号字段，且值与事实一致。"""
     for index, slug in enumerate(EPISODE_DRAFTS, start=1):
-        fields = _episode_fields(REPO / EPISODE_DRAFTS[slug])
+        fields = _episode_fields(DOCS / EPISODE_DRAFTS[slug])
 
         assert fields.get("episode") == slug, f"{slug} 的 episode 字段写错了"
         assert fields.get("episode_no") == str(index), (
@@ -760,7 +760,7 @@ def test_the_six_episode_numbers_match_the_spec_label_order():
     for index, (slug, label) in enumerate(
         zip(EPISODE_DRAFTS, EP_LABEL_ORDER), start=1
     ):
-        fields = _episode_fields(REPO / EPISODE_DRAFTS[slug])
+        fields = _episode_fields(DOCS / EPISODE_DRAFTS[slug])
         assert fields.get("episode_no") == str(index)
         assert label == "EP{:02d}".format(index)
 
@@ -769,7 +769,7 @@ def test_the_six_episodes_share_one_series_with_consecutive_numbers():
     """一个系列，期号 1~6 连续——跳号会被观众当成「那期不见了」。"""
     numbers = []
     for slug in EPISODE_DRAFTS:
-        fields = _episode_fields(REPO / EPISODE_DRAFTS[slug])
+        fields = _episode_fields(DOCS / EPISODE_DRAFTS[slug])
         assert fields.get("series") == EPISODE_SERIES
         numbers.append(int(fields.get("episode_no", "0")))
     assert sorted(numbers) == [1, 2, 3, 4, 5, 6]
@@ -778,7 +778,7 @@ def test_the_six_episodes_share_one_series_with_consecutive_numbers():
 def test_the_six_episode_hooks_appear_in_their_subtitle_drafts():
     """钩子必须**出现在该期口播稿里**——防止钩子与片子对不上。"""
     for slug in EPISODE_DRAFTS:
-        fields = _episode_fields(REPO / EPISODE_DRAFTS[slug])
+        fields = _episode_fields(DOCS / EPISODE_DRAFTS[slug])
         hook = fields.get("episode_hook", "")
         subtitle = (REPO / fields.get("episode_subtitle", "")).read_text(
             encoding="utf-8"
@@ -791,7 +791,7 @@ def test_the_six_episode_hooks_appear_in_their_subtitle_drafts():
 def test_the_six_episode_hooks_fit_the_word_count_range():
     """钩子字数落在契约七 §4.3 的区间里。"""
     for slug in EPISODE_DRAFTS:
-        fields = _episode_fields(REPO / EPISODE_DRAFTS[slug])
+        fields = _episode_fields(DOCS / EPISODE_DRAFTS[slug])
         hook = fields.get("episode_hook", "")
         assert EPISODE_HOOK_MIN <= len(hook) <= EPISODE_HOOK_MAX, (
             f"{slug} 的钩子 {len(hook)} 字，超出 {EPISODE_HOOK_MIN}~{EPISODE_HOOK_MAX}"
@@ -804,9 +804,9 @@ def test_the_six_episode_source_lists_cover_every_path_in_the_draft():
     清单是从正文里挑出来的，**漏一条**就等于期号页少给读者一条线索。
     """
     for slug in EPISODE_DRAFTS:
-        fields = _episode_fields(REPO / EPISODE_DRAFTS[slug])
+        fields = _episode_fields(DOCS / EPISODE_DRAFTS[slug])
         listed = set(fields.get("episode_sources", []))
-        in_body = set(SRC_PATH_RE.findall(_body_of(REPO / EPISODE_DRAFTS[slug])))
+        in_body = set(SRC_PATH_RE.findall(_body_of(DOCS / EPISODE_DRAFTS[slug])))
         missing = in_body - listed
         assert not missing, f"{slug} 的源码清单漏了 {sorted(missing)}"
 
@@ -814,7 +814,7 @@ def test_the_six_episode_source_lists_cover_every_path_in_the_draft():
 def test_the_six_episode_source_lists_meet_the_ev01_floor():
     """EV-01 是**存量达标线**：六期母稿的源码清单全部满足。"""
     for slug in EPISODE_DRAFTS:
-        fields = _episode_fields(REPO / EPISODE_DRAFTS[slug])
+        fields = _episode_fields(DOCS / EPISODE_DRAFTS[slug])
         assert len(fields.get("episode_sources", [])) >= EV_SOURCE_PATH_MIN, (
             f"{slug} 的源码路径只有 {len(fields.get('episode_sources', []))} 条，"
             f"低于存量达标线 {EV_SOURCE_PATH_MIN}"
@@ -828,7 +828,7 @@ def test_the_six_episode_repro_lists_are_not_empty():
     期号页的「源码与复现」区块是空的——那不是深度，是空话。
     """
     for slug in EPISODE_DRAFTS:
-        fields = _episode_fields(REPO / EPISODE_DRAFTS[slug])
+        fields = _episode_fields(DOCS / EPISODE_DRAFTS[slug])
         commands = fields.get("episode_repro", [])
         assert len(commands) >= 1, f"{slug} 没有可复制的命令"
         for command in commands:
@@ -842,7 +842,7 @@ def test_draft_p90_constant_matches_the_docs_distribution():
     """EV-06 的 p90 必须等于 `docs/` 全树字数的实际 p90。"""
     lengths = sorted(
         _dense_chars(_body_of(path))
-        for path in (REPO / "docs").rglob("*.md")
+        for path in DOCS.rglob("*.md")
     )
     assert len(lengths) > 100, "docs/ 语料异常少，分布不可信"
     p90 = lengths[int(len(lengths) * 0.9)]
@@ -899,7 +899,7 @@ def test_spec_marks_youtube_as_not_yet_supported():
 
 def test_the_life_aiv_url_namespace_is_untouched():
     """`docs/life/aiv/` 是 URL 命名空间，搬家不许碰它。"""
-    namespace = REPO / "docs" / "life" / "aiv"
+    namespace = DOCS / "life" / "aiv"
     assert namespace.is_dir(), "docs/life/aiv/ 不见了——URL 命名空间被搬家弄坏了"
     files = [p for p in namespace.rglob("*") if p.is_file()]
     expected = [
@@ -927,18 +927,18 @@ def test_the_life_aiv_url_namespace_is_untouched():
 def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
     """专题页还在 life/aiv/ 下，指向它的站点链接一个都不能改成 video/。"""
     links = {
-        "docs/life/_index.md": "./aiv/index.html",
-        "docs/notes/site-ops/blog-to-wechat/index.md": "../../../life/aiv/index.html",
-        "docs/life/shehui/media-account/index.md": "../../aiv/index.html",
-        "docs/source-tracks/postgresql/_index.md": "../../life/aiv/index.html",
+        "life/_index.md": "./aiv/index.html",
+        "notes/site-ops/blog-to-wechat/index.md": "../../../life/aiv/index.html",
+        "life/shehui/media-account/index.md": "../../aiv/index.html",
+        "source-tracks/postgresql/_index.md": "../../life/aiv/index.html",
     }
     for path, link in links.items():
-        text = (REPO / path).read_text(encoding="utf-8")
+        text = (DOCS / path).read_text(encoding="utf-8")
         assert link in text, f"{path} 里的 {link} 链接不见了"
 
     # 全仓点数：docs/ 里指向 life/aiv 专题页的链接一共 8 处（分处 4 个文件）
     count = 0
-    for path in sorted((REPO / "docs").rglob("*.md")):
+    for path in sorted(DOCS.rglob("*.md")):
         count += path.read_text(encoding="utf-8").count("aiv/index.html")
     assert count == 8, f"docs/ 里指向 life/aiv 专题页的链接变成 {count} 处（应为 8）"
 

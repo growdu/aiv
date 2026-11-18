@@ -18,12 +18,9 @@ import json
 import re
 import sys
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, ROOT_TOOLS, SITE
 # 生成器搬进了 platforms/blog/site/tools/；site_root.py 留在根 tools/。
-ROOT_TOOLS = REPO_ROOT / "tools"
 SITE_TOOLS = SITE / "tools"
 
 sys.path.insert(0, str(ROOT_TOOLS))

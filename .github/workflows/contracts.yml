@@ -11,9 +11,17 @@ name: Contracts
 #   - 内容契约（publish/spec/00 §4）：母稿的 front matter 必须满足字段表
 #   - 契约层（publish/publishkit）：内容契约、能力模型、发布清单、调度
 #   - 头条号 / 公众号 adapter：切片、出包、草稿箱的规则
+#   - 母稿 / review 层：审校信号、审校记录、摘要起草
 #
-# 视频线（video）不在这里：它需要 cairo / ffmpeg / 字体这套系统依赖，
-# 容器里装起来比重，且它的失败模式是「渲染不出片」而不是「契约被破」。
+# **每个模块一条 step**——测试跟着模块归位之后（见 acceptance/README.md
+# 的模块矩阵），验收也按模块拆开：一个模块红，不该挡住别的模块的验收。
+# 所以每条测试 step 都带 `if: ${{ !cancelled() }}`——前一条红了，后面的
+# 照样跑完，各自报各自的账。
+#
+# 站点模块由 site-guard.yml 负责（那边还带 `::error::` 注解）；
+# 视频线（video）由 video-pipeline.yml 负责——它需要 cairo / ffmpeg / 字体
+# 这套系统依赖，容器里装起来比重，且它的失败模式是「渲染不出片」
+# 而不是「契约被破」。
 
 on:
   push:
@@ -71,11 +79,20 @@ jobs:
         # 这些以前只有跑发布层才响，现在在流水线上就响。
         run: python3 tools/check-content-contract.py
 
-      - name: Contract layer tests
-        run: python3 -m pytest publish/tests -q
+      - name: 母稿 / review 层测试
+        # 根 `tests/`：审校信号、审校记录、摘要起草——母稿层自己的规矩。
+        if: ${{ !cancelled() }}
+        run: python3 -m pytest tests/ -q
 
-      - name: Toutiao adapter tests
-        run: python3 -m pytest platforms/toutiao/tests -q
+      - name: 契约层测试
+        # publish/：读得懂内容单元。
+        if: ${{ !cancelled() }}
+        run: cd publish && python3 -m pytest tests/ -q
 
-      - name: Weixin adapter tests
-        run: python3 -m pytest platforms/wechat/tests -q
+      - name: 头条 adapter 测试
+        if: ${{ !cancelled() }}
+        run: cd platforms/toutiao && python3 -m pytest tests/ -q
+
+      - name: 微信 adapter 测试
+        if: ${{ !cancelled() }}
+        run: cd platforms/wechat && python3 -m pytest tests/ -q

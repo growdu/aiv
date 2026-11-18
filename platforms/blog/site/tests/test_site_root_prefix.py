@@ -29,15 +29,12 @@ from __future__ import annotations
 import importlib.util
 import re
 import sys
-from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, ROOT_TOOLS, SITE
 # 站点的构建脚本搬进了 platforms/blog/site/tools/；site_root.py 留在根 tools/
 # （契约层不许 import 站点层，publish/tests/test_episode.py 要从那儿 import 它）。
-ROOT_TOOLS = REPO_ROOT / "tools"
 SITE_TOOLS = SITE / "tools"
 SYNC_TOOL = SITE_TOOLS / "sync-hexo.py"
 PATCH_TOOL = SITE_TOOLS / "patch-theme.py"

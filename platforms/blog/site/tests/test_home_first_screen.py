@@ -35,8 +35,7 @@ import json
 import re
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-SITE = REPO / "platforms" / "blog" / "site"
+from paths import DOCS, REPO_ROOT as REPO, SITE
 THEME = SITE / "themes" / "matery"
 LAYOUT = THEME / "layout"
 PARTIAL = LAYOUT / "_partial"
@@ -291,7 +290,7 @@ def test_the_featured_entries_point_at_real_posts():
     这条测试就成了「本地绿、CI 红」。
     """
     data = json.loads(FEATURED_JSON.read_text(encoding="utf-8"))
-    docs_root = REPO / "docs"
+    docs_root = DOCS
 
     for group in ("hero", "featured"):
         for slug in data.get(group, []):

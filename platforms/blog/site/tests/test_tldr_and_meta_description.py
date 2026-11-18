@@ -38,10 +38,8 @@ import json
 import re
 import shutil
 import subprocess
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, SITE
 TLDR_PARTIAL = SITE / "themes" / "matery" / "layout" / "_partial" / "post-tldr.ejs"
 HEAD_PARTIAL = SITE / "themes" / "matery" / "layout" / "_partial" / "head.ejs"
 PATCH_THEME = SITE / "tools" / "patch-theme.py"

@@ -36,11 +36,10 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, ROOT_TOOLS, SITE
 THEME_LAYOUT = SITE / "themes" / "matery" / "layout" / "layout.ejs"
 HOME_CONTENT = SITE / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
-FETCHER = REPO_ROOT / "tools" / "fetch-view-counts.py"
+FETCHER = ROOT_TOOLS / "fetch-view-counts.py"
 SNAPSHOT = REPO_ROOT / "data" / "view-counts.json"
 NODE = shutil.which("node")
 
@@ -56,7 +55,7 @@ def _theme_sidebar() -> str:
     侧栏模板现在**只有这一份**。``patch-theme.py`` 里原来还有一份抄本
     （注入用的生成器），可它跟这份早就对不上了——抄本少了折叠开关
     （``onclick="toggleSidebar('cat')"``）和定义 ``window.toggleSidebar``
-    的那段脚本。抄本已经删掉，见 tests/test_patch_theme_sidebar.py。
+    的那段脚本。抄本已经删掉，见 platforms/blog/site/tests/test_patch_theme_sidebar.py。
     """
     text = THEME_LAYOUT.read_text(encoding="utf-8")
     start = text.find("<% if (site.categories && site.categories.length) { %>")

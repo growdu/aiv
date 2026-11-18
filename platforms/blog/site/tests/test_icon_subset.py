@@ -32,8 +32,7 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parent.parent
-SITE = REPO / "platforms" / "blog" / "site"
+from paths import REPO_ROOT as REPO, SITE
 TOOL = SITE / "tools" / "subset-icons.py"
 THEME = SITE / "themes" / "matery"
 FA_CSS = THEME / "source" / "libs" / "awesome" / "css" / "all.min.css"

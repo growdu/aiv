@@ -23,12 +23,10 @@
 import json
 import shutil
 import subprocess
-from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import REPO_ROOT, SITE
 SEARCH_EJS = SITE / "themes" / "matery" / "layout" / "_partial" / "search.ejs"
 MINISEARCH_JS = (
     SITE / "themes" / "matery" / "source" / "libs" / "minisearch" / "minisearch.min.js"

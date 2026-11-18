@@ -22,20 +22,19 @@ import json
 import re
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE = REPO_ROOT / "platforms" / "blog" / "site"
+from paths import DOCS, REPO_ROOT, SITE
 TOOLS = SITE / "tools"
 THEME_PARTIALS = SITE / "themes" / "matery" / "layout" / "_partial"
 
 #: 六期母稿：期号 slug → 母稿路径（docs/ 下）。
 #: 母稿是唯一真相（不变量一），期号线由它们认领。
 SIX_DRAFTS = {
-    "pg-parallel-decode": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md",
-    "csn-total-ordering": "docs/source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/index.md",
-    "wal-interleave": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
-    "parallel-apply": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
-    "structured-ddl": "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering/index.md",
-    "row-lock": "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
+    "pg-parallel-decode": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md",
+    "csn-total-ordering": "source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/index.md",
+    "wal-interleave": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
+    "parallel-apply": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
+    "structured-ddl": "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering/index.md",
+    "row-lock": "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
 }
 
 
@@ -77,7 +76,7 @@ def _content_unit_text(draft_path, date_text):
     日期用测试给的固定值：真实构建里日期来自 git 提交历史（最早一次
     提交日），那不是本仓库的事实，不该由测试来断言。
     """
-    text = (REPO_ROOT / draft_path).read_text(encoding="utf-8")
+    text = (DOCS / draft_path).read_text(encoding="utf-8")
     front, body = _split_front_matter(text)
     lines = [
         line for line in front.split("\n") if not line.startswith("date:")
@@ -97,7 +96,7 @@ def _write_posts_tree(root, date_text="2026-10-15 09:00:00"):
     """
     posts_dir = Path(root) / "source" / "_posts"
     for slug, draft_path in SIX_DRAFTS.items():
-        content_id = Path(draft_path).relative_to("docs").with_suffix("").as_posix()
+        content_id = Path(draft_path).with_suffix("").as_posix()
         content_id = content_id[: -len("/index")] if content_id.endswith("/index") else content_id
         target = posts_dir / (content_id + ".md")
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +113,7 @@ def _write_posts_tree(root, date_text="2026-10-15 09:00:00"):
     # 口播稿（``video/字幕-*.md``）的 front matter——母稿里的
     # ``episode_subtitle`` 指明了是哪一份。
     for slug, draft_path in SIX_DRAFTS.items():
-        draft_text = (REPO_ROOT / draft_path).read_text(encoding="utf-8")
+        draft_text = (DOCS / draft_path).read_text(encoding="utf-8")
         subtitle_rel = ""
         for line in draft_text.split("\n"):
             if line.startswith("episode_subtitle:"):
@@ -157,7 +156,7 @@ def _default_videos():
     """
     videos = {}
     for slug, draft_path in SIX_DRAFTS.items():
-        draft_text = (REPO_ROOT / draft_path).read_text(encoding="utf-8")
+        draft_text = (DOCS / draft_path).read_text(encoding="utf-8")
         subtitle_rel = ""
         for line in draft_text.split("\n"):
             if line.startswith("episode_subtitle:"):
