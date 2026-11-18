@@ -864,7 +864,7 @@ def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
     """专题页还在 life/aiv/ 下，指向它的站点链接一个都不能改成 video/。"""
     links = {
         "docs/life/_index.md": "./aiv/index.html",
-        "docs/notes/site-ops/blog-to-wechat/index.md": "../aiv/index.html",
+        "docs/notes/site-ops/blog-to-wechat/index.md": "../../../life/aiv/index.html",
         "docs/life/shehui/media-account/index.md": "../../aiv/index.html",
         "docs/source-tracks/postgresql/_index.md": "../../life/aiv/index.html",
     }

@@ -2117,7 +2117,12 @@ def write_category_redirects():
 
 
 #: 不算文章的目录：站点自己的元文档（攻略、工具说明、页面集合）。
-META_CATS = ("blog", "tools", "page")
+#:
+#: 这三个目录（``blog/`` / ``tools/`` / ``page/``）都已经搬走了：
+#: ``blog/`` 的留站部分进了 ``notes/``（**不在这个元组里** —— 手记是给读者看的，
+#: 排除掉等于让读者搜不到），``page/`` 与 ``tools/`` 早先就并进了
+#: ``engineering/``。留着它们只是习惯，目录都不在了。
+META_CATS = ()
 
 
 def collect_index_posts(posts_root, meta_cats=META_CATS):
@@ -2131,7 +2136,7 @@ def collect_index_posts(posts_root, meta_cats=META_CATS):
     由 ``site_root.permalink`` 一处拼出来。404 页的「最近发布」与它的
     搜索索引都从这里出，两个地方不许各拼各的。
 
-    跳过 ``_index`` 与元文档目录（``blog/`` / ``tools/`` / ``page/``）——
+    跳过 ``_index`` 与元文档目录（``META_CATS`` 里的那些）——
     它们不是文章。
     """
     records = []
@@ -2480,7 +2485,7 @@ footer a:hover{color:var(--c1)}
 
     # Recent posts JSON: consumed by the 404 page.
     # Source: source/_posts/**/*.md, sorted by `top` desc then `date` desc.
-    # Skips `blog/` meta-docs and any path starting with `_index`.
+    # Skips the `META_CATS` meta-docs and any path starting with `_index`.
     posts_root = os.path.join(SRC, "_posts")
     records = collect_index_posts(posts_root)
 

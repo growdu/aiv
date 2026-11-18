@@ -465,6 +465,22 @@
     {
       "file": "platforms/wechat/docs/01-转换规则.md",
       "form": "cid"
+    },
+    {
+      "file": "internal/blog/重构方案.md",
+      "form": "repo"
+    },
+    {
+      "file": "internal/blog/同名文章-html-与-md-版本管理.md",
+      "form": "repo"
+    },
+    {
+      "file": "review/plans/2026-11-16-phase-0-止血.md",
+      "form": "repo"
+    },
+    {
+      "file": "review/plans/2026-11-16-展示审计与优化方向.md",
+      "form": "repo"
     }
   ],
   "projects": [
@@ -684,6 +700,14 @@
     },
     {
       "file": "publish/spec/00-架构设计.md",
+      "form": "docs"
+    },
+    {
+      "file": "internal/blog/重构方案.md",
+      "form": "docs"
+    },
+    {
+      "file": "platforms/wechat/docs/10-设计.md",
       "form": "docs"
     }
   ],

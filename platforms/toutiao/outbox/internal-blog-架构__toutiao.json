@@ -1,12 +1,12 @@
 {
   "automation": "manual",
-  "content_id": "blog/重构方案",
-  "draft_id": "7708374094856602175",
-  "package_dir": "toutiao/out/blog-重构方案",
+  "content_id": "internal/blog/架构",
+  "draft_id": "7708375373855080979",
+  "package_dir": "toutiao/out/internal-blog-架构",
   "platform": "toutiao",
   "published_url": null,
   "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
   "status": "drafted",
-  "title": "growdu.cn 重构方案：知识库 + 二次创作中台",
+  "title": "仓库架构",
   "updated_at": "2026-11-15T20:43:36+08:00"
 }

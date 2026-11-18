@@ -1,8 +1,8 @@
 {
   "automation": "manual",
-  "content_id": "blog/mermaid/mermaid图渲染问题诊断与修复",
+  "content_id": "notes/site-ops/mermaid图渲染问题诊断与修复",
   "draft_id": "7708374254772830762",
-  "package_dir": "toutiao/out/blog-mermaid-mermaid图渲染问题诊断与修复",
+  "package_dir": "toutiao/out/notes-site-ops-mermaid图渲染问题诊断与修复",
   "platform": "toutiao",
   "published_url": null,
   "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",

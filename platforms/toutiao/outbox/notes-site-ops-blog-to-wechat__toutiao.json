@@ -1,8 +1,8 @@
 {
   "automation": "manual",
-  "content_id": "life/blog-to-wechat",
+  "content_id": "notes/site-ops/blog-to-wechat",
   "draft_id": "7708374781669933587",
-  "package_dir": "toutiao/out/life-blog-to-wechat",
+  "package_dir": "toutiao/out/notes-site-ops-blog-to-wechat",
   "platform": "toutiao",
   "published_url": null,
   "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",

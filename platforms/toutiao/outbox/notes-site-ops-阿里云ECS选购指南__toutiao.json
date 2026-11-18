@@ -1,12 +1,12 @@
 {
   "automation": "manual",
-  "content_id": "blog/架构",
-  "draft_id": "7708375373855080979",
-  "package_dir": "toutiao/out/blog-架构",
+  "content_id": "notes/site-ops/阿里云ECS选购指南",
+  "draft_id": "7708375167449236031",
+  "package_dir": "toutiao/out/notes-site-ops-阿里云ECS选购指南",
   "platform": "toutiao",
   "published_url": null,
   "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
   "status": "drafted",
-  "title": "仓库架构",
+  "title": "阿里云 ECS 选购指南",
   "updated_at": "2026-11-15T20:43:36+08:00"
 }
