@@ -1,3 +1,4 @@
+---
 title: "PostgreSQL"
 description: "PostgreSQL 源码主线：8 个系列，由浅入深。"
 cascade:
@@ -5,6 +6,7 @@ cascade:
     - PostgreSQL
 tags:
   - PostgreSQL
+---
 
 # PostgreSQL
 

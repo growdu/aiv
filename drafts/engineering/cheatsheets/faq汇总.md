@@ -1,0 +1,33 @@
+---
+description: "开发中遇到的零碎问题与解法汇总，比如 git status 里中文文件名乱码怎么解决。"
+---
+# faq汇总
+
+- vscode git status 中文乱码
+
+```shell
+git config --global core.quotepath false
+```
+```shell
+PS D:\codeblog> git status .
+On branch master
+Your branch is ahead of 'gitee/master' by 16 commits.
+  (use "git push" to publish your local commits)
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        "vue/css346225231347250213.md"
+
+nothing added to commit but untracked files present (use "git add" to track)
+PS D:\codeblog> git config --global core.quotepath false
+PS D:\codeblog> git status .
+On branch master
+Your branch is ahead of 'gitee/master' by 16 commits.
+  (use "git push" to publish your local commits)
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        vue/css教程.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+```

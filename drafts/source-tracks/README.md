@@ -13,8 +13,7 @@ DPDK 与 VPP / Ceph）的文章，**后续的视频生成要按它来**。
 | 谁改 | review 通过后由工作副本覆盖 | **改动在这里做** |
 | 干什么 | 站点发布 | 视频生成读素材；改动稿 |
 
-两边现在**内容一致**（`diff -rq` 只差 `postgresql/.claude/`——
-那是工具的本地配置，不是内容，不跟过来）。
+两边现在**内容一致**（`diff -rq` 只差这份自己的 `README.md`）。
 改哪篇就在这份里改哪篇。
 
 ## 为什么要副本
@@ -45,23 +44,19 @@ docs/source-tracks/…                  video/字幕-<期号>.md
 **① review 通过之后，把工作副本推回 `docs/`**（常规方向）：
 
 ```bash
-rsync -a --delete \
-  --exclude '/README.md' \
-  --exclude '/postgresql/.claude/' \
+rsync -a --delete --exclude '/README.md' \
   drafts/source-tracks/ docs/source-tracks/
 ```
 
 **② `docs/` 那边有别的改动（存量维护）时，把 `docs/` 拉回工作副本**：
 
 ```bash
-rsync -a --delete \
-  --exclude '/README.md' \
-  --exclude '/postgresql/.claude/' \
+rsync -a --delete --exclude '/README.md' \
   docs/source-tracks/ drafts/source-tracks/
 ```
 
 两条命令的排除项相同，是为了让两个目录**保持同构**：
-`README.md` 只在这份里，`.claude/` 只在 `docs/` 里。
+`README.md` 只在这份里。
 
 **链接不用改。** 文章里那些 `../../getting-started/…` 是站内相对链接，
 在副本里同样解析得到；指向 `/categories/…` 的是站点地址，指向的是站上，
