@@ -1,7 +1,7 @@
 # 全树范围分类：哪些不是面向读者的技术文章
 
 - 日期：2026-11-14
-- 依据：`tools/review-check.py` 对 `docs/` 全树（631 篇）跑出的信号，加逐篇读原文的判断
+- 依据：`tools/review-check.py` 对 `docs/` 全树（627 篇）跑出的信号，加逐篇读原文的判断
 - 目的：把审校范围从「四支柱 282 篇」扩到全树之前，先把**不面向读者的技术文章**筛掉，
   免得把站点目录页、内部工作文档、命令速查表也按技术深度五要素去审。
 
@@ -9,7 +9,7 @@
 
 | 桶 | 含义 | 篇数 | 技术深度五要素 |
 | --- | --- | --- | --- |
-| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 110 | 不审 |
+| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 106 | 不审 |
 | 2 速查/清单/操作类 | 面向读者，但形态是命令表、步骤、清单，没有成篇解释 | 48 | 不适用 |
 | 3 非技术内容 | 面向读者，但写的是生活、备考、内部规范 | 38 | 不适用 |
 | 4 转载内容 | 标了来源、署名他人的转载稿 | 17 | 不按原创稿审改 |
@@ -47,36 +47,30 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 
 | 支柱 | 总数 | 非内容 | 速查操作 | 非技术 | 转载 | 技术文章 | warn | DEP-00 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| source-tracks | 311 | 33 | 23 | 0 | 0 | 255 | 236 | 74 |
-| engineering | 151 | 29 | 24 | 6 | 17 | 75 | 134 | 72 |
+| source-tracks | 323 | 35 | 23 | 0 | 0 | 265 | 244 | 78 |
+| engineering | 158 | 30 | 24 | 6 | 17 | 81 | 138 | 76 |
 | distributed | 71 | 14 | 1 | 0 | 0 | 56 | 58 | 33 |
 | life | 42 | 11 | 0 | 31 | 0 | 0 | 29 | 6 |
 | platform-meta | 14 | 7 | 0 | 0 | 0 | 7 | 7 | 6 |
-| protocol | 12 | 2 | 0 | 0 | 0 | 10 | 9 | 7 |
 | blog | 11 | 2 | 0 | 0 | 0 | 9 | 5 | 2 |
-| storage | 6 | 2 | 0 | 0 | 0 | 4 | 4 | 2 |
-| computer_communication | 2 | 1 | 0 | 0 | 0 | 1 | 2 | 2 |
-| programmer_self_cultivation | 2 | 1 | 0 | 0 | 0 | 1 | 1 | 1 |
 | stock | 2 | 1 | 0 | 1 | 0 | 0 | 2 | 1 |
 | video_work | 2 | 2 | 0 | 0 | 0 | 0 | 2 | 2 |
-| environment | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | mail | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | pcap | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | src | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
 | wiki | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| **合计** | **631** | **110** | **48** | **38** | **17** | **418** | **494** | **213** |
+| **合计** | **627** | **106** | **48** | **38** | **17** | **418** | **489** | **208** |
 
 ## 排除清单
 
 下面三桶逐篇列出。**桶 4 = `docs/` 全集减去这份清单**，不单独列。
 契约测试守着两件事：清单里的路径不许悬空；审校记录的原文不许落在清单里。
 
-### 桶 1 非内容（110 篇）
+### 桶 1 非内容（106 篇）
 
-#### 站点目录页（66 篇）
+#### 站点目录页（62 篇）
 - `docs/blog/_index.md`
 - `docs/blog/mermaid/_index.md`
-- `docs/computer_communication/_index.md`
 - `docs/distributed/_index.md`
 - `docs/distributed/consensus/_index.md`
 - `docs/distributed/distributed-storage/_index.md`
@@ -94,8 +88,8 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/engineering/containers/_index.md`
 - `docs/engineering/engineering-practice/_index.md`
 - `docs/engineering/foundations/_index.md`
+- `docs/engineering/observability/_index.md`
 - `docs/engineering/web-and-frontend/_index.md`
-- `docs/environment/_index.md`
 - `docs/life/_index.md`
 - `docs/life/blog-to-wechat/_index.md`
 - `docs/life/daxue/_index.md`
@@ -112,8 +106,6 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/platform-meta/multiplatform/_index.md`
 - `docs/platform-meta/platform-overview/_index.md`
 - `docs/platform-meta/video-line/_index.md`
-- `docs/programmer_self_cultivation/_index.md`
-- `docs/protocol/_index.md`
 - `docs/source-tracks/_index.md`
 - `docs/source-tracks/dpdk/_index.md`
 - `docs/source-tracks/dpdk/architecture/_index.md`
@@ -137,7 +129,6 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/source-tracks/postgresql/wal-and-recovery/_index.md`
 - `docs/src/_index.md`
 - `docs/stock/_index.md`
-- `docs/storage/_index.md`
 - `docs/video_work/_index.md`
 - `docs/wiki/_index.md`
 #### 只有标题的未成稿（24 篇）
@@ -164,8 +155,8 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/source-tracks/postgresql/replication-ha/pg_logic_decode.md`
 - `docs/source-tracks/postgresql/replication-ha/pg_slot.md`
 - `docs/source-tracks/postgresql/storage-engine/mm/pg_page.md`
-- `docs/protocol/tcp/tcp socket必知必会.md`
-- `docs/storage/sshfs-win精讲.md`
+- `docs/source-tracks/linux/networking/tcp socket必知必会.md`
+- `docs/source-tracks/linux/filesystem/sshfs-win精讲.md`
 
 #### 代码仓库说明（11 篇）
 

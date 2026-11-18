@@ -28,6 +28,7 @@ tags:
 - [google extension](./use-tools/google.md)
 - [other](./use-tools/other.md)
 - [基本操作](./use-tools/vim.md)
+- [vfox使用指南](./use-tools/vfox使用指南.md)
 - [C语言内存血与泪教训——内存使用重要原则](./C语言内存使用血与泪教训.md)
 - [autoconf使用](./autoconf使用.md)
 - [cmake使用指南](./cmake使用指南.md)

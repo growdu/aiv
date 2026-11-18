@@ -1,12 +1,12 @@
 {
   "automation": "manual",
-  "content_id": "protocol/抓包进阶",
-  "draft_id": "7708376769489125929",
-  "package_dir": "toutiao/out/protocol-抓包进阶",
+  "content_id": "engineering/web-and-frontend/nginx基本原理",
+  "draft_id": "7708375856700031507",
+  "package_dir": "toutiao/out/engineering-web-and-frontend-nginx基本原理",
   "platform": "toutiao",
   "published_url": null,
   "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",
   "status": "drafted",
-  "title": "抓包进阶",
+  "title": "nginx 基本原理",
   "updated_at": "2026-11-15T20:43:58+08:00"
 }

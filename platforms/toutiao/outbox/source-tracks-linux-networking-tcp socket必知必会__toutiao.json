@@ -1,8 +1,8 @@
 {
   "automation": "manual",
-  "content_id": "protocol/tcp/tcp socket必知必会",
+  "content_id": "source-tracks/linux/networking/tcp socket必知必会",
   "draft_id": "7708376437778055743",
-  "package_dir": "toutiao/out/protocol-tcp-tcp socket必知必会",
+  "package_dir": "toutiao/out/source-tracks-linux-networking-tcp socket必知必会",
   "platform": "toutiao",
   "published_url": null,
   "reason": "草稿已在头条号后台的草稿箱里，等人工补图并发表",

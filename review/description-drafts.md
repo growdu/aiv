@@ -184,7 +184,7 @@
 | `engineering/engineering-practice/code/JavaScript-work/readme.md` | This is about JavaScript. | This is about JavaScript. | ☐ |
 | `engineering/engineering-practice/code/shell-work/readme.md` | This directory include some code using shell. | This directory include some code using shell. | ☐ |
 | `engineering/engineering-practice/code/shell-work/vim/readme.md` | vim 配置使用vimplus. | vim 配置使用vimplus. | ☐ |
-| `computer_communication/现代信息查询与检索技巧.md` | vfox是一个版本管理工具，可以方便的管理各种开发环境的版本，比如go、python、nodejs。 | vfox是一个版本管理工具，可以方便的管理各种开发环境的版本，比如go、python、nodejs。 | ☐ |
+| `engineering/foundations/use-tools/vfox使用指南.md` | vfox是一个版本管理工具，可以方便的管理各种开发环境的版本，比如go、python、nodejs。 | vfox是一个版本管理工具，可以方便的管理各种开发环境的版本，比如go、python、nodejs。 | ☐ |
 | `source-tracks/postgresql/extensions-perf/polardb竞争力分析.md` | 云原生数据库 PolarDB 是阿里云自研产品，在存储计算分离架构下，利用了软硬件结合的优势，100%兼容 MySQL 和 PostgreSQL 生态，为用户提供秒级弹性、高性能、海量存储、安全可靠的数据库服务。PolarDB 分布式版历经十余年淬炼，始终保持对阿里集团“双十一购物狂欢节”所有相关… | 云原生数据库 PolarDB 是阿里云自研产品，在存储计算分离架构下，利用了软硬件结合的优势，100%兼容 MySQL 和 PostgreSQL 生态，为用户提供秒级弹性、高性能、海量存储、安全可靠的数据库服务。PolarDB 分布式版历经十余年淬炼，始终保持对阿里集团“双十一购物狂欢节”所有相关… | ☐ |
 | `source-tracks/postgresql/extensions-perf/citus-columnar-deep-dive/index.md` | 本文回答 4 个问题： | 本文回答 4 个问题： | ☐ |
 | `source-tracks/postgresql/extensions-perf/citus-deep-dive/index.md` | 把 PG 变成\"分布式 OLTP\"是 14 年来业界最大野心之一。Citus 用 PG 扩展的方式实现了分布式——不 fork 内核、不重写 parser、不破坏 SQL 兼容性，只是把 SQL 通过 plan / execute 路由到 worker 节点。 | 把 PG 变成"分布式 OLTP"是 14 年来业界最大野心之一。Citus 用 PG 扩展的方式实现了分布式——不 fork 内核、不重写 parser、不破坏 SQL 兼容性，只是把 SQL 通过 plan / execute 路由到 worker 节点。 | ☐ |
@@ -517,24 +517,24 @@
 | `source-tracks/postgresql/wal-and-recovery/full_page_writes/index.md` | 数据库保证数据库完整性（解决块折断问题）当前主要有如下三种方式： | 数据库保证数据库完整性（解决块折断问题）当前主要有如下三种方式： | ☐ |
 | `source-tracks/postgresql/storage-engine/mm/pg_page.md` | pg_page 笔记：数据页的结构（内容还在整理）。 | （没抽出来） | ☐ |
 | `source-tracks/postgresql/storage-engine/mm/pgsql内存管理.md` | page是一段内存的指针，pageheaderData是page内存最前面的数据,pageheader是指向pageheaderData的指针。 | page是一段内存的指针，pageheaderData是page内存最前面的数据,pageheader是指向pageheaderData的指针。 | ☐ |
-| `programmer_self_cultivation/linux生成coredump.md` | 可以看到本机未开启core dump。执行如下命令开启，并且不限制core文件大小。 | 可以看到本机未开启core dump。执行如下命令开启，并且不限制core文件大小。 | ☐ |
-| `protocol/fib表.md` | fib（forward info base）转发表。 | fib（forward info base）转发表。 | ☐ |
-| `protocol/ip分片.md` | IP 分片：IPv4 报文结构里标识、标志、片偏移这三个字段怎么协同完成分片与重组。 | （没抽出来） | ☐ |
-| `protocol/protobuf实现rpc.md` | Protocol Buffers (protobuf) 是Google开发的一种高效的数据序列化格式，常被用于RPC（远程过程调用）系统中。 | Protocol Buffers (protobuf) 是Google开发的一种高效的数据序列化格式，常被用于RPC（远程过程调用）系统中。 | ☐ |
-| `protocol/抓包进阶.md` | 当单个文件报文个数过多时，打开和查询报文缓慢。可以使用wireshark相关工具对其进行拆分。 | 当单个文件报文个数过多时，打开和查询报文缓慢。可以使用wireshark相关工具对其进行拆分。 | ☐ |
-| `protocol/nginx/nginx基本原理.md` | nginx由内核和模块组成，nginx接收到请求时，通过查找配置文件将此次请求映射到一个location block。 | nginx由内核和模块组成，nginx接收到请求时，通过查找配置文件将此次请求映射到一个location block。 | ☐ |
-| `protocol/otel/opentelemetry详解.md` | OpenTelemetry（简称 OTel） 是一个开源的可观测性（Observability）标准与工具集，用于统一采集、传输和导出应用的 Trace（链路追踪）、Metric（指标）、Log（日志） 数据。 | OpenTelemetry（简称 OTel） 是一个开源的可观测性（Observability）标准与工具集，用于统一采集、传输和导出应用的 Trace（链路追踪）、Metric（指标）、Log（日志） 数据。 | ☐ |
-| `protocol/otel/postgresql可视化观测平台.md` | 使用 OpenTelemetry 实现 Trace + Metrics + Logs → Tempo + Prometheus + Loki → Grafana的全链路可观测平台。 | 使用 OpenTelemetry 实现 Trace + Metrics + Logs → Tempo + Prometheus + Loki → Grafana的全链路可观测平台。 | ☐ |
-| `protocol/otel/rust使用opel将trace数据导入tempo.md` | 修改Cargo.toml,将其内容修改如下： | 修改Cargo.toml,将其内容修改如下： | ☐ |
-| `protocol/tcp/tcp socket必知必会.md` | TCP socket 必知必会：阻塞与非阻塞、串行与并行、select/poll/epoll，以及 SO_REUSEADDR 和 SO_LINGER。 | （没抽出来） | ☐ |
-| `protocol/tcp/tcp重建链.md` | 在tcp链路中，当网络异常时，缩短tcp超时时间一般有如下方法： | 在tcp链路中，当网络异常时，缩短tcp超时时间一般有如下方法： | ☐ |
-| `protocol/tcp/tcp的user_timeout与keepalive的关系与生效机制/index.md` | 当tcp流中有数据交互时，tcp流不会进入keepalive，此时的超时主要受tcp_user_timeout影响。数据包被发送后未接收到ACK确认的达到tcp_user_timeout时会断开连接。tcp_user_timeout以毫秒为单位，例如设置为10000时，代表如果发送出去的数据包在十… | 当tcp流中有数据交互时，tcp流不会进入keepalive，此时的超时主要受tcp_user_timeout影响。数据包被发送后未接收到ACK确认的达到tcp_user_timeout时会断开连接。tcp_user_timeout以毫秒为单位，例如设置为10000时，代表如果发送出去的数据包在十… | ☐ |
+| `engineering/engineering-practice/linux生成coredump.md` | 可以看到本机未开启core dump。执行如下命令开启，并且不限制core文件大小。 | 可以看到本机未开启core dump。执行如下命令开启，并且不限制core文件大小。 | ☐ |
+| `source-tracks/linux/networking/fib表.md` | fib（forward info base）转发表。 | fib（forward info base）转发表。 | ☐ |
+| `source-tracks/linux/networking/ip分片.md` | IP 分片：IPv4 报文结构里标识、标志、片偏移这三个字段怎么协同完成分片与重组。 | （没抽出来） | ☐ |
+| `source-tracks/linux/networking/protobuf实现rpc.md` | Protocol Buffers (protobuf) 是Google开发的一种高效的数据序列化格式，常被用于RPC（远程过程调用）系统中。 | Protocol Buffers (protobuf) 是Google开发的一种高效的数据序列化格式，常被用于RPC（远程过程调用）系统中。 | ☐ |
+| `source-tracks/linux/networking/抓包进阶.md` | 当单个文件报文个数过多时，打开和查询报文缓慢。可以使用wireshark相关工具对其进行拆分。 | 当单个文件报文个数过多时，打开和查询报文缓慢。可以使用wireshark相关工具对其进行拆分。 | ☐ |
+| `engineering/web-and-frontend/nginx基本原理.md` | nginx由内核和模块组成，nginx接收到请求时，通过查找配置文件将此次请求映射到一个location block。 | nginx由内核和模块组成，nginx接收到请求时，通过查找配置文件将此次请求映射到一个location block。 | ☐ |
+| `engineering/observability/opentelemetry详解.md` | OpenTelemetry（简称 OTel） 是一个开源的可观测性（Observability）标准与工具集，用于统一采集、传输和导出应用的 Trace（链路追踪）、Metric（指标）、Log（日志） 数据。 | OpenTelemetry（简称 OTel） 是一个开源的可观测性（Observability）标准与工具集，用于统一采集、传输和导出应用的 Trace（链路追踪）、Metric（指标）、Log（日志） 数据。 | ☐ |
+| `engineering/observability/postgresql可视化观测平台.md` | 使用 OpenTelemetry 实现 Trace + Metrics + Logs → Tempo + Prometheus + Loki → Grafana的全链路可观测平台。 | 使用 OpenTelemetry 实现 Trace + Metrics + Logs → Tempo + Prometheus + Loki → Grafana的全链路可观测平台。 | ☐ |
+| `engineering/observability/rust使用opel将trace数据导入tempo.md` | 修改Cargo.toml,将其内容修改如下： | 修改Cargo.toml,将其内容修改如下： | ☐ |
+| `source-tracks/linux/networking/tcp socket必知必会.md` | TCP socket 必知必会：阻塞与非阻塞、串行与并行、select/poll/epoll，以及 SO_REUSEADDR 和 SO_LINGER。 | （没抽出来） | ☐ |
+| `source-tracks/linux/networking/tcp重建链.md` | 在tcp链路中，当网络异常时，缩短tcp超时时间一般有如下方法： | 在tcp链路中，当网络异常时，缩短tcp超时时间一般有如下方法： | ☐ |
+| `source-tracks/linux/networking/tcp的user_timeout与keepalive的关系与生效机制/index.md` | 当tcp流中有数据交互时，tcp流不会进入keepalive，此时的超时主要受tcp_user_timeout影响。数据包被发送后未接收到ACK确认的达到tcp_user_timeout时会断开连接。tcp_user_timeout以毫秒为单位，例如设置为10000时，代表如果发送出去的数据包在十… | 当tcp流中有数据交互时，tcp流不会进入keepalive，此时的超时主要受tcp_user_timeout影响。数据包被发送后未接收到ACK确认的达到tcp_user_timeout时会断开连接。tcp_user_timeout以毫秒为单位，例如设置为10000时，代表如果发送出去的数据包在十… | ☐ |
 | `stock/A股股票筛选规则.md` | 选股不是单条规则，而是由粗到细的漏斗，建议按以下顺序逐层过滤： | 选股不是单条规则，而是由粗到细的漏斗，建议按以下顺序逐层过滤： | ☐ |
-| `storage/nfs详解.md` | NFS是Network File System的缩写，即网络文件系统，是一种使用于分散式文件系统的协定。功能是通过网络让不同的机器、不同的操作系统能够彼此分享个别的数据，让应用程序在客户端通过网络访问位于服务器磁盘中的数据，是在类Unix系统间实现磁盘文件共享的一种方法。 | NFS是Network File System的缩写，即网络文件系统，是一种使用于分散式文件系统的协定。功能是通过网络让不同的机器、不同的操作系统能够彼此分享个别的数据，让应用程序在客户端通过网络访问位于服务器磁盘中的数据，是在类Unix系统间实现磁盘文件共享的一种方法。 | ☐ |
-| `storage/samba服务深度定制.md` | 在 Windows 7 中，您可以通过修改注册表来指定 Samba 服务器的端口。 | 在 Windows 7 中，您可以通过修改注册表来指定 Samba 服务器的端口。 | ☐ |
-| `storage/sshfs-win精讲.md` | sshfs-win 精讲笔记（内容还在整理）。 | （没抽出来） | ☐ |
-| `storage/win10实现非标（非445）端口访问samba服务_smb服务能使用其他端口吗-CSDN博客.md` | 在 Windows 10 上访问使用非标准端口的 Samba 服务：为什么默认的 445 端口用不了，以及该怎么配置。 | 糖果墙 于 2023-11-14 01:58:11 发布 | ☐ |
-| `storage/windows的139、445端口到底在做什么.md` | NBT 协议（NetBIOS over TCP/IP）是一种用于在 TCP/IP 网络上实现 NetBIOS 服务的协议。 NBT使用137（UDP）、138（UDP）和139（TCP）来实现基于TCP/IP的NETBIOS网际互联。 而139端口的作用就是获得NETBIOS/SMB服务（即Net… | NBT 协议（NetBIOS over TCP/IP）是一种用于在 TCP/IP 网络上实现 NetBIOS 服务的协议。 NBT使用137（UDP）、138（UDP）和139（TCP）来实现基于TCP/IP的NETBIOS网际互联。 而139端口的作用就是获得NETBIOS/SMB服务（即Net… | ☐ |
+| `source-tracks/linux/filesystem/nfs详解.md` | NFS是Network File System的缩写，即网络文件系统，是一种使用于分散式文件系统的协定。功能是通过网络让不同的机器、不同的操作系统能够彼此分享个别的数据，让应用程序在客户端通过网络访问位于服务器磁盘中的数据，是在类Unix系统间实现磁盘文件共享的一种方法。 | NFS是Network File System的缩写，即网络文件系统，是一种使用于分散式文件系统的协定。功能是通过网络让不同的机器、不同的操作系统能够彼此分享个别的数据，让应用程序在客户端通过网络访问位于服务器磁盘中的数据，是在类Unix系统间实现磁盘文件共享的一种方法。 | ☐ |
+| `source-tracks/linux/filesystem/samba服务深度定制.md` | 在 Windows 7 中，您可以通过修改注册表来指定 Samba 服务器的端口。 | 在 Windows 7 中，您可以通过修改注册表来指定 Samba 服务器的端口。 | ☐ |
+| `source-tracks/linux/filesystem/sshfs-win精讲.md` | sshfs-win 精讲笔记（内容还在整理）。 | （没抽出来） | ☐ |
+| `source-tracks/linux/filesystem/win10实现非标（非445）端口访问samba服务_smb服务能使用其他端口吗-CSDN博客.md` | 在 Windows 10 上访问使用非标准端口的 Samba 服务：为什么默认的 445 端口用不了，以及该怎么配置。 | 糖果墙 于 2023-11-14 01:58:11 发布 | ☐ |
+| `source-tracks/linux/filesystem/windows的139、445端口到底在做什么.md` | NBT 协议（NetBIOS over TCP/IP）是一种用于在 TCP/IP 网络上实现 NetBIOS 服务的协议。 NBT使用137（UDP）、138（UDP）和139（TCP）来实现基于TCP/IP的NETBIOS网际互联。 而139端口的作用就是获得NETBIOS/SMB服务（即Net… | NBT 协议（NetBIOS over TCP/IP）是一种用于在 TCP/IP 网络上实现 NetBIOS 服务的协议。 NBT使用137（UDP）、138（UDP）和139（TCP）来实现基于TCP/IP的NETBIOS网际互联。 而139端口的作用就是获得NETBIOS/SMB服务（即Net… | ☐ |
 | `engineering/web-and-frontend/15 个提高 Google 搜索效率的小技巧 - 少数派.md` | 为了得到更加「多元化」的搜索结果，虽然 Google 目前访问起来并不是那么方便，但是仍然有很多人把它作为常用搜索引擎在使用。 | 为了得到更加「多元化」的搜索结果，虽然 Google 目前访问起来并不是那么方便，但是仍然有很多人把它作为常用搜索引擎在使用。 | ☐ |
 | `engineering/containers/Jellyfin+Kodi打造个人媒体中心.md` | 「一台7×24小时运行的电脑可以用来做什么？」系列第二篇。作为一个数字收集癖和整理癖患者，从十几年前在VeryCD上用迅雷慢慢下载TLF组的奥斯卡全集，几KB的速度下几周，到现在对比不同的压制组作品的质量，千兆的网络压得磁盘跟不上下载速度，硬盘容量存不下想要收藏的电影。回望过去，观看的速度永远跟不… | 「一台7×24小时运行的电脑可以用来做什么？」系列第二篇。作为一个数字收集癖和整理癖患者，从十几年前在VeryCD上用迅雷慢慢下载TLF组的奥斯卡全集，几KB的速度下几周，到现在对比不同的压制组作品的质量，千兆的网络压得磁盘跟不上下载速度，硬盘容量存不下想要收藏的电影。回望过去，观看的速度永远跟不… | ☐ |
 | `engineering/engineering-practice/Shell脚本的简单排错法及调试程序bashdb.md` | 与众多脚本语言一样，Shell 脚本在执行时出错是很常见的，最简单的原因无外乎脚本在编写的过程中出现了语法错误或者不小心输错了命令等。找出脚本中的错误是很重要的能力。比如，我经常不小心会把 echo 命令写成了 ehco，那么执行就会出现下面这种情况： | 与众多脚本语言一样，Shell 脚本在执行时出错是很常见的，最简单的原因无外乎脚本在编写的过程中出现了语法错误或者不小心输错了命令等。找出脚本中的错误是很重要的能力。比如，我经常不小心会把 echo 命令写成了 ehco，那么执行就会出现下面这种情况： | ☐ |

@@ -19,6 +19,7 @@ Web、前端与搜索：Vue、React、Elasticsearch 搜索界面与桌面打包�
 - [oh-my-search](./oh-my-search.md)
 - [安装- npm install# 运行- npm1.2.3.4.](./手把手教你通过ElasticSearch、FSCrawler及%20SearchUI搭建文件搜索引擎.md)
 - [rest api](./go_web.md)
+- [nginx 基本原理](./nginx基本原理.md)
 - [15 个提高 Google 搜索效率的小技巧 - 少数派](./15%20个提高%20Google%20搜索效率的小技巧%20-%20少数派.md)
 - [Clash Meta(mihomo)客户端全平台安装与订阅配置教程](./clash-meta-mihomo-install-guide.md)
 - [Clash 客户端配置小白教程：3 步学会用代理上网](./clash-meta-user-guide.md)

@@ -30,6 +30,7 @@ tags:
 - [pandoc自定义过滤器](./pandoc自定义过滤器/index.md)
 - [texlive安装](./texlive安装.md)
 - [opc](./opc.md)
+- [linux生成coredump](./linux生成coredump.md)
 - [Shell脚本的简单排错法及调试程序bashdb](./Shell脚本的简单排错法及调试程序bashdb.md)
 - [bashdb 安装调试](./bashdb安装及调试shell脚本.md)
 - [cunit单元测试使用](./cunit单元测试使用.md)
