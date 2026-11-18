@@ -17,6 +17,7 @@ DEPLOY_DIR = PUBLISH_DIR / "deploy"
 LAUNCHD = DEPLOY_DIR / "launchd.plist.template"
 CRONTAB = DEPLOY_DIR / "crontab.template"
 GITHUB_ACTION = DEPLOY_DIR / "github-action.yml.template"
+README = DEPLOY_DIR / "README.md"
 
 
 def _load_launchd() -> dict:
@@ -146,3 +147,68 @@ def test_the_github_action_template_still_points_at_the_same_entry():
     """它是参照物，所以命令要跟另外两个模板一致。"""
     text = GITHUB_ACTION.read_text(encoding="utf-8")
     assert "publishkit.cli schedule weekly" in text
+
+
+# --- 安装说明（README）------------------------------------------------
+
+
+def test_the_install_readme_is_committed():
+    """装到机器上的是 plist，不是模板——装法得有个地方写着。"""
+    assert README.is_file(), "缺少安装说明：publish/deploy/README.md"
+
+
+def test_the_readme_names_every_trigger():
+    """README 要把四个触发器都点到名，漏一个就有一个没人重装。"""
+    text = README.read_text(encoding="utf-8")
+    for label in (
+        "com.growdu.publish.schedule",
+        "com.growdu.weixin.auto-draft",
+        "com.growdu.weixin.refresh-drafts",
+    ):
+        assert label in text, "安装说明里没提 {}".format(label)
+
+
+def test_the_readme_says_the_same_commands_the_templates_run():
+    """README 里的命令要跟模板一致。
+
+    它是照着当时的模板写的，模板一改它就错——而看它的正是要迁移的那台机器，
+    照着错的说明搬，触发器就静默失效。
+    """
+    text = README.read_text(encoding="utf-8")
+    for command in (
+        "publishkit.cli schedule weekly",
+        "wechat.cli auto-draft --new-only",
+        "wechat.cli batch --limit 100",
+    ):
+        assert command in text, "安装说明里的命令跟模板对不上：{}".format(command)
+
+
+def test_the_readme_names_the_paths_the_templates_inject():
+    """路径是这次重构改掉的东西，README 必须同时写清新旧两个。"""
+    text = README.read_text(encoding="utf-8")
+    # 新路径：凭据、合集配置与包根
+    assert "platforms/wechat/secrets.json" in text
+    assert "platforms/wechat/collections.json" in text
+    assert "__REPO__/platforms" in text
+    # 旧路径：要迁移就得让人知道原来长什么样
+    assert "weixin/secrets.json" in text
+    assert "weixin/collections.json" in text
+    assert "__REPO__/weixin" in text
+
+
+def test_the_readme_covers_every_platform_that_lost_its_top_level_dir():
+    """五个平台目录原来都在顶层，各有 gitignore 的凭据文件。
+
+    漏掉一个，迁移就漏一份凭据——而凭据缺失的表现是「接口调用被拒」，
+    不是一个显眼的报错。README 必须把五个都列全。
+    """
+    text = README.read_text(encoding="utf-8")
+    for old, new in (
+        ("weixin/", "platforms/wechat/"),
+        ("toutiao/", "platforms/toutiao/"),
+        ("douyin/", "platforms/douyin/"),
+        ("bilibili/", "platforms/bilibili/"),
+        ("channels/", "platforms/channels/"),
+    ):
+        assert old in text, "迁移清单里少了旧目录 {}".format(old)
+        assert new in text, "迁移清单里少了新目录 {}".format(new)
