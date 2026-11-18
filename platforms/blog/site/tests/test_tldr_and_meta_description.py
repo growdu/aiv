@@ -199,7 +199,7 @@ def test_the_tldr_box_falls_back_to_the_description_only_after_the_authors_own()
     作者显式写的东西。
 
     行为本身（哪个值真的落到了框里）在
-    ``tests/test_card_excerpt_uses_description.py`` 里用 node 跑一遍。
+    ``platforms/blog/site/tests/test_card_excerpt_uses_description.py`` 里用 node 跑一遍。
     """
     tldr = TLDR_PARTIAL.read_text(encoding="utf-8")
     # 只看代码：注释里正好在讲这条契约——注释不是行为。
