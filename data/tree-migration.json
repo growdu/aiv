@@ -20,15 +20,20 @@
     "Web": "工程与语言/Web、前端与搜索",
     "openGauss": "分布式与架构/一致性协议",
     "代码示例": "工程与语言/编译、测试与调试",
+    "协议": "源码主线/Linux/网络协议与抓包",
+    "存储": "源码主线/Linux/存储与文件系统",
     "工具": "工程与语言",
     "数据库": "源码主线/PostgreSQL",
     "数据库深入": "源码主线/PostgreSQL",
     "数据库深入/数据库": "源码主线/PostgreSQL",
+    "环境配置": "工程与语言/计算机基础与语言入门",
+    "程序员自我修养": "工程与语言/编译、测试与调试",
     "算法": "工程与语言/计算机基础与语言入门",
     "编程语言": "工程与语言/计算机基础与语言入门",
     "编辑工具": "工程与语言/编译、测试与调试",
     "网络": "源码主线/Linux/网络协议与抓包",
     "计算机基础": "工程与语言/计算机基础与语言入门",
+    "计算机通信": "工程与语言/计算机基础与语言入门",
     "集群": "分布式与架构",
     "页面": "工程与语言/速查与清单"
   },
@@ -47,6 +52,7 @@
     "cluster/raft/": "distributed/consensus/",
     "cluster/zookeeper/": "distributed/consensus/",
     "code/": "engineering/engineering-practice/code/",
+    "computer_communication/": "engineering/foundations/use-tools/",
     "db/benchmarksql/": "source-tracks/postgresql/extensions-perf/",
     "db/linux-shared-memory/": "source-tracks/postgresql/storage-engine/",
     "db/logical_decode/": "source-tracks/postgresql/logical-replication/",
@@ -82,6 +88,12 @@
     "pgsql/stats/": "source-tracks/postgresql/index-and-query/",
     "pgsql/storage/": "source-tracks/postgresql/storage-engine/",
     "pgsql/storage/full_page_writes/": "source-tracks/postgresql/wal-and-recovery/full_page_writes/",
+    "programmer_self_cultivation/": "engineering/engineering-practice/",
+    "protocol/": "source-tracks/linux/networking/",
+    "protocol/nginx/": "engineering/web-and-frontend/",
+    "protocol/otel/": "engineering/observability/",
+    "protocol/tcp/": "source-tracks/linux/networking/",
+    "storage/": "source-tracks/linux/filesystem/",
     "tools/": "engineering/engineering-practice/",
     "vpp/": "source-tracks/dpdk/getting-started/",
     "vue/": "engineering/web-and-frontend/",
@@ -118,7 +130,12 @@
     "dpdk/_index.md",
     "vpp/_index.md",
     "ai/_index.md",
-    "chatgpt/_index.md"
+    "chatgpt/_index.md",
+    "protocol/_index.md",
+    "storage/_index.md",
+    "computer_communication/_index.md",
+    "programmer_self_cultivation/_index.md",
+    "environment/_index.md"
   ],
   "file_map": {
     "ai/01-ai常用工具和开发框架.md": "engineering/ai-tooling/ai-toolbox/01-ai常用工具和开发框架.md",
@@ -178,6 +195,7 @@
     "cluster/基于corosync的分布式应用程序开发方案分析.md": "distributed/selection/基于corosync的分布式应用程序开发方案分析.md",
     "cluster/常用分布式实现架构.md": "distributed/foundations/常用分布式实现架构.md",
     "cluster/常用分布式解决方案.md": "distributed/foundations/常用分布式解决方案.md",
+    "computer_communication/现代信息查询与检索技巧.md": "engineering/foundations/use-tools/vfox使用指南.md",
     "database/citus-columnar-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/citus-columnar-deep-dive/index.md",
     "database/citus-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/citus-deep-dive/index.md",
     "database/cstore-fdw-deep-dive/index.md": "source-tracks/postgresql/extensions-perf/cstore-fdw-deep-dive/index.md",
@@ -386,7 +404,7 @@
     "vpp/vpp日志系统.md": "source-tracks/dpdk/getting-started/vpp日志系统.md",
     "vpp/vpp调试指北.md": "source-tracks/dpdk/getting-started/vpp调试指北.md"
   },
-  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。 「AI 工具与实践」这一块（ai/ 29 篇 + chatgpt/ 2 篇，共 31 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix，阶段归属搬完一个字都不变（L1 19、L2 5、L3 2、L4 5）。落点是 `engineering/ai-tooling/` —— 挂在「工程与语言」下面的**嵌套项目**，所以分类链是三级：工程与语言 → AI工具与实践 → 系列。§4.3 那个「移出 docs/」的桶里 ai_video 那 5 篇**这一块还没执行**：搬走它会让 ai-tools 赛道的 L4 阶段一篇不剩，而阶段结构不许改（`tests/test_learning_path.py` 钉死每个阶段非空）—— 跟 code/ 的 11 篇、self.jpg 一起留到那个桶统一执行。",
+  "note": "源码主线迁移表。dir_map = 整目录搬（后者覆盖前者）；file_map = 逐篇例外（优先于 dir_map）；out_map = 内部工作文档移出 docs/ 到 internal/。路径均为 docs/ 相对路径。projects = 每条主线项目一块：target_root 是落点，series 是系列 slug → 中文名，series_meta 是系列目录页的描述。 「分布式」这一块（cluster/ + openguass/，65 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，学习路径的规则就能全部写成 path_prefix，阶段归属搬完一个字都不变。corosync 一目录劈两半 —— 协议与源码进「一致性协议」，用法与现场进「实战与故障现场」，逐篇例外写在 file_map 里。 cluster/multi_cluster.tar.gz 这个压缩包按「与文章同目录」的通用规则会跟着 cluster/ 根目录那篇（分布式一致性协议.md）去「分布式基础」—— 但它装的是 multi_cluster 的原始素材，跟 multi_cluster/ 那一组文章是一回事，所以单独 记到「实战与故障现场」。 「工程与语言」这一块（language/、base/、code/、docker/、edit/、es/、vue/、tools/、page/、faq/ 等，122 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。tools/ 一目录劈三半（编译调试 / 容器 / Web），page/ 与 faq/ 收成「速查与清单」。 「数据面」这一块（dpdk/ 26 篇 + vpp/ 18 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix。§4.3 那个「移出 docs/」的桶在这一块第一次真的执行了 —— 7 条（4 篇 fastup 测试/规划 + nxp测试报告/ + fatsup-cpu间转发测试报告/ + fastup适配ptp方案），其中两个是**整目录**移出（连图片一起，图片留在 docs/ 里会继续发布）。 「AI 工具与实践」这一块（ai/ 29 篇 + chatgpt/ 2 篇，共 31 篇）按**学习路径的阶段**分系列：一个系列只装一个阶段，规则就都能写成 path_prefix，阶段归属搬完一个字都不变（L1 19、L2 5、L3 2、L4 5）。落点是 `engineering/ai-tooling/` —— 挂在「工程与语言」下面的**嵌套项目**，所以分类链是三级：工程与语言 → AI工具与实践 → 系列。§4.3 那个「移出 docs/」的桶里 ai_video 那 5 篇**这一块还没执行**：搬走它会让 ai-tools 赛道的 L4 阶段一篇不剩，而阶段结构不许改（`tests/test_learning_path.py` 钉死每个阶段非空）—— 跟 code/ 的 11 篇、self.jpg 一起留到那个桶统一执行。 「Linux 与网络」这一块剩下的 18 篇（protocol/ 11 + storage/ 5 + computer_communication/ 1 + programmer_self_cultivation/ 1）按**系列 = 一个阶段**搬：protocol/ 里的 tcp/ip 分片/fib/抓包 进「网络协议与抓包」，storage/ 里的 nfs/samba/sshfs 进「存储与文件系统」，nginx 与 otel 三篇是工程化的活 —— nginx 进「Web、前端与搜索」，otel 三篇单开一个三级系列「可观测性」，coredump 进「编译、测试与调试」，那篇文件名跟正文对不上的（正文是 vfox 使用指南）改名后进「计算机基础与语言入门」。计算机通信、程序员自我修养这两个旧分类页连同 `docs/environment/` 下的 0 字节空文件一起清掉。",
   "out_map": {
     "db/logical_decode/逻辑复制支持DDL开发交付计划.md": "internal/db/logical_decode/逻辑复制支持DDL开发交付计划.md",
     "db/logical_decode/逻辑复制验证步骤.md": "internal/db/logical_decode/逻辑复制验证步骤.md",
@@ -395,6 +413,7 @@
     "dpdk/fastup模拟UE测试.md": "internal/dpdk/fastup模拟UE测试.md",
     "dpdk/fastup测试优化完成情况.md": "internal/dpdk/fastup测试优化完成情况.md",
     "dpdk/nxp测试报告/": "internal/dpdk/nxp测试报告/",
+    "environment/vfox使用指南": "internal/environment/vfox使用指南",
     "vpp/fastup适配ptp方案.md": "internal/vpp/fastup适配ptp方案.md",
     "vpp/fatsup-cpu间转发测试报告/": "internal/vpp/fatsup-cpu间转发测试报告/"
   },
@@ -468,6 +487,7 @@
         "containers": "容器与环境",
         "engineering-practice": "编译、测试与调试",
         "foundations": "计算机基础与语言入门",
+        "observability": "可观测性",
         "web-and-frontend": "Web、前端与搜索"
       },
       "series_meta": {
@@ -475,6 +495,7 @@
         "containers": "容器与环境：Docker 与容器化环境 —— 从基础指北到镜像仓库与权限。",
         "engineering-practice": "编译、测试与调试：构建系统、单元测试、调试器、注释与文档工具链。",
         "foundations": "计算机基础与语言入门：数据结构、算法、C/Rust/Python、正则与那些绕不开的基础。",
+        "observability": "可观测性：给跑起来的系统装上眼睛 —— trace、metric、log 怎么采、怎么存、怎么查。",
         "web-and-frontend": "Web、前端与搜索：Vue、React、Elasticsearch 搜索界面与桌面打包。"
       },
       "target_root": "engineering"
