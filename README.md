@@ -2,8 +2,9 @@
 
 > 一个仓库，**两条流水线、六个第三方平台**：
 > **文档流**（growdu.cn / 公众号 / 头条号）、**视频流**（抖音 / 视频号 / B 站）。
-> 共同的底座是 `docs/` —— 那里是所有内容的唯一真相。
-> 共同的**入口**是 `drafts/` —— 稿子先落草稿箱，审完才往下走。
+> 共同的**入口**是 `drafts/` —— 稿子先落草稿箱，**审过**才往下走；
+> 共同的**出口**是 `platforms/` —— 六个第三方平台，站点也在其中。
+> 母稿在 `docs/`（文档流）与 `video/`（视频流），那里是内容的唯一真相。
 
 本文件是**仓库级总览**：讲清楚整体架构与模块划分。
 想改文章、改样式，看 [`internal/blog/架构.md`](internal/blog/架构.md)（站点构建链路，更细）。
@@ -33,27 +34,21 @@
           ┌────────────────────────┴────────────────────────┐
           ▼                                                 ▼
      ┌─────────┐                                       ┌─────────┐
-     │  docs/  │  文档流                               │ video/  │  视频流
+     │  docs/  │  文档流母稿                           │ video/  │  视频流母稿
      └────┬────┘                                       └────┬────┘
-          │                                                │
-          │ tools/sync-hexo.py（内容编译层，纯标准库）        │ pyv 渲染引擎
-          │  · 剥首个 H1、重写图片与相对链接                 │ (cairo + ffmpeg)
-          │  · 重建 front matter（推导字段 + 透传白名单）     │       │
-          │  · 路径排除：什么不是文章                         │       ▼
-          ▼                                                │ out/<EP>.mp4
- source/_posts/**                                          │ （成片，不入库）
- （内容单元 content_id）                                    │       │
-          │                                                │       │
-          ▼ hexo generate + themes/matery                   │       │
-        public/  ──CI──▶  growdu.cn / GH Pages             │       │
-          │                                                │       │
-          └────────────────────┬───────────────────────────┘       │
-                               ▼                                   │
-          publish/publishkit（契约层，平台无关）                   │
-          读 platforms/<plat>/capability.toml（平台能力 = 数据）   │
-          写 platforms/<plat>/outbox/*.json（发布快照 = 幂等键）   │
-                               ▼                                   │
-                          platforms/                               │
+          │                                                 │
+          │                                                 │ pyv 渲染引擎
+          │                                                 │ (cairo + ffmpeg)
+          │                                                 ▼
+          │                                        out/<EP>.mp4（成片，不入库）
+          │                                                 │
+          └──────────────────────┬──────────────────────────┘
+                                 ▼
+                     publish/publishkit（契约层，平台无关）
+                     读 platforms/<plat>/capability.toml（平台能力 = 数据）
+                     写 platforms/<plat>/outbox/*.json（发布快照 = 幂等键）
+                                 ▼
+                          platforms/（六个平台）
             ┌──────────┬──────────┬──────────┬──────────┬────────┼───────┐
             ▼          ▼          ▼          ▼          ▼        ▼       ▼
          wechat/   toutiao/     blog/     douyin/  channels/ bilibili/
@@ -61,7 +56,17 @@
             └──────────┴──────────┴──────────┴──────────┴────────┴───────┘
                    目录名即包名，各自一套 adapter：
                    适配 → 生成 → review → output → upload
+
+  站点这个平台（blog/）的实现是 hexo 那一套：
+     docs/ ──sync-hexo.py──▶ source/_posts/ ──hexo generate──▶ public/ ──CI──▶ growdu.cn
+  （构建链的目标位置是 platforms/blog/site/，
+    见 review/specs/2026-11-18-顶层设计与目录调整.md §4.2）
 ```
+
+> **存量说明**：`docs/` 里现有的 560 篇、`video/` 里现有的 6 期成片是**存量**——
+> 它们在草稿箱这一层存在之前就写完、审过、验证过，停在 `review` 的**下游**，
+> **不倒回去**走 `draft → review`。草稿箱约束的是**新内容**。
+> 所以「那 560 篇的草稿在哪」是个没有答案、也**不需要有答案**的问题。
 
 ### 三条产线的分工
 
@@ -92,8 +97,8 @@
 | --- | --- | --- | --- |
 | **草稿层** | `drafts/` | 主题 → 手动编写 / 自动生成 → 底稿；两条流水线的共同入口 | 只读 `docs/`、`video/` |
 | **内容层** | `docs/` | 母稿、图片、分类元数据 | 无（纯内容） |
-| **内容编译层** | `tools/` + `scripts/` | `docs/` → Hexo 源、主题补丁、校验 | 只读 `docs/`，只写 `source/` |
-| **展示层** | `themes/matery/` | EJS 模板、CSS/JS、静态资源 | Hexo 运行时 |
+| **内容编译层** | `tools/` + `scripts/`（**站点这一平台的实现**，目标是 `platforms/blog/site/`） | `docs/` → Hexo 源、主题补丁、校验 | 只读 `docs/`，只写 `source/` |
+| **展示层** | `themes/matery/`（同上，目标是 `platforms/blog/site/themes/`） | EJS 模板、CSS/JS、静态资源 | Hexo 运行时 |
 | **视频生产层** | `video/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
 | **审核层** | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | 只读 `docs/`、`video/` 的契约与产物 |
 | **发布契约层** | `publish/publishkit/` | 内容契约 / 能力模型 / manifest / 调度 | **不认识任何平台** |
@@ -119,6 +124,12 @@
 
 配置分工：`_config.yml` 是 Hexo 自身的；`_config.matery.yml` 是对主题的覆盖。
 `source/` 与 `public/` 都在 `.gitignore` 里，CI 现生成。
+
+> **这一整套在目标结构里属于 `platforms/blog/site/`。**
+> 站点是六个平台之一，它的实现就该住在自己的目录里——
+> 否则「加平台只动 `platforms/`」这句话对站点仍然不成立。
+> 搬移分两批（先搬配置与产物，再搬脚本），见
+> [`review/specs/2026-11-18-顶层设计与目录调整.md`](review/specs/2026-11-18-顶层设计与目录调整.md) §4.2。
 
 ### 2.3 AIV 视频生产线
 
@@ -225,6 +236,10 @@
    `docs/` 或 `video/`；底稿留在原地**不再参与任何派生**。
    **主题**（用户产生 idea 时输入的一段话）也一样——它是流水线的**输入**，
    落进草稿的 front matter `topic:` 字段，不建目录、不单独成层。
+9. **存量不回炉**：`docs/` 里现有的 560 篇、`video/` 里现有的 6 期成片是**存量**，
+   在草稿箱这一层存在之前就写完、审过、验证过，停在 `review` 的**下游**。
+   **不补草稿、不倒回去走 `draft → review`**——补出来的 560 份是假记录。
+   草稿箱只管**新内容**。
 
 ---
 
@@ -248,16 +263,17 @@
 | 路径 | 内容 | 是否入库 |
 | --- | --- | --- |
 | `docs/` | 内容母稿（唯一真相） | ✅ |
-| `source/` | Hexo 源（CI 生成） | ❌ 仅 `all/`、`recommended/` |
-| `public/` | 构建产物 | ❌ |
-| `themes/matery/` | 主题 | ✅ |
-| `tools/`、`scripts/` | 构建与校验脚本 | ✅ |
+| `source/` | Hexo 源（CI 生成；站点平台的产物） | ❌ 仅 `all/`、`recommended/` |
+| `public/` | 构建产物（站点平台的产物） | ❌ |
+| `themes/matery/` | 主题（站点平台的实现） | ✅ |
+| `tools/`、`scripts/` | 构建与校验脚本（**站点那一平台的那部分**，目标 `platforms/blog/site/`） | ✅ |
 | `video/` | 视频生产线（规范 + 契约 + 代码） | ✅ 产物除外 |
 | `video/build/`、`video/out/` | 片段与成片 | ❌ |
 | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | ✅ 帧除外 |
 | `drafts/` | 草稿箱（主题 → 手动编写/自动生成 → 底稿；两条流水线的共同入口，底稿不参与派生） | ✅ |
 | `publish/` | 契约层与调度（发布契约规格、能力模型加载、manifest、周键） | ✅ |
 | `platforms/<plat>/` | 平台 adapter（**六个**平台各一个目录，含能力声明 `capability.toml` 与发布快照 `outbox/`；目录名即平台 id） | ✅ |
+| `platforms/blog/site/` | 站点这一平台的构建链（**目标位置**，尚未搬移） | — |
 | `requirements/` | 依赖清单（按模块分文件） | ✅ |
 | `.github/workflows/` | `hexo.yml`（构建部署）、`contracts.yml`（契约闸门） | ✅ |
 
