@@ -1892,3 +1892,48 @@ Expected: 无异常，索引里 567 条。
    `video.txt`（视频号/B 站）→ `video-platforms.txt`、`weixin.txt` → `wechat.txt`。
 3. **历史计划与试点记录不改路径引用**——它们是当时的快照；唯一例外是
    `review/plans/2026-11-17-内容分类与结构重构.md` 里指向真实文件的那 2 行。
+
+---
+
+## 集成结果（2026-11-17）
+
+功能分支 `refactor/directory-architecture`（b9af6f0a）已合入 `master`
+（合并提交 4e9704cb，父提交 fe9347ad = 上游 master）。
+合并时上游同期搬走了 `docs/db/` 与 `docs/database/`、新增了三个
+`docs/platform-meta/` 文档与抖音发布能力，所以合并里除了路径改写，
+还有一批**数量**需要重新校准。逐条裁决如下。
+
+### 冲突解决的规则
+
+**我们分支改的是路径，上游改的是内容。** 每处冲突取上游的内容，
+再把路径改写贴回去。只有「两边改了同一行」的地方需要逐条裁决。
+
+### 需要重新校准的数字
+
+| 项目 | 数字 | 为什么 |
+| --- | --- | --- |
+| 发布快照 | **566**（不是我们分支的 567） | 上游合并了两篇同标题的 raft 文章并删掉那一份快照。合并后的快照集合与上游**逐字节相同**，只是搬到 `platforms/<plat>/outbox/`。文件名仍是 `<content_id>__<platform>.json` |
+| 内容单元 | **578**（不是上游 README 的 568） | 在合并后的树上跑完整条 CI 流水线实测：572 篇文章 + 6 期视频，`check-content-contract.py` 报 578 个内容单元、0 违规。上游的 568 是它自己树上的旧数（上游实测 577） |
+| `docs/` 全树 | **632** 篇（上游 631 + 我们 1） | 我们分支新增了 `docs/platform-meta/platform-overview/two-pipelines-one-draft-box.md`。它不是 `_index.md`，不进桶 1，落在桶 5 → 桶 5 由 422 变 423、审校工作面 422 → 423、`platform-meta` 支柱 13 → 14（技术文章 6 → 7）。`tools/review-check.py` 实测新文件 warn 0 条、DEP-00 0 条，故 warn 509 与 DEP-00 210 不动 |
+| 视频平台快照的落地页 | **14 null / 4 有链接** | 上游新增了抖音 EP02 的回填链接。有链接的是 B 站与视频号的 EP06、抖音的 EP01 与 EP02 |
+
+### 修掉的两处合并事故
+
+- **`publish/spec/08` 的 EV 表**：解冲突时 EV-06 行一度被我们分支 §二 的
+  D1/D2 行顶掉（两张表头相同的表让 3-way 合并认错了行）。以**上游**的
+  EV-06 行为准（它是内容行，我们分支只改过路径），篇数按 632 写，
+  p90 = 22,304 与实测一致。
+- **`tests/test_podcast_spec.py` 的 URL 命名空间守卫**：上游把
+  `docs/database/` 整棵树搬走了，守卫里那一条指向不存在文件。改指
+  `docs/source-tracks/postgresql/_index.md`（指向 `life/aiv/` 专题页的
+  第 4 个文件变成了 PostgreSQL 分类页）。全仓 `aiv/index.html` 链接总数
+  仍是 8 处、仍分处 4 个文件，断言数值不用改。
+
+### 故意不改的
+
+- `review/INDEX.md` 里「`publish/outbox/` 46 / 60 / 104 份快照按新路径改名」
+  这三行历史日志——那是上游自己当时做的事的记录，改写它等于伪造历史。
+- `docs/source-tracks/linux/kernel-internals/linux内核模块指北.md` 里
+  两段 `<<<<<<< HEAD` / `>>>>>>> 805efff9` —— 那是上游 `fe9347ad` 里就带的
+  （我们分支没有）。它属于上游的既成事实，在一次目录重构的合并里夹带
+  内容修改不合适；那篇文章得单独开一次改动修。
