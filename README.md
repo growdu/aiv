@@ -1,11 +1,14 @@
 # growdu · 博客与内容生产线
 
-> 一个仓库，三条产线：**技术站点**（growdu.cn）、**品牌视频**（AIV）、**多平台分发**（公众号 / 头条号 / 抖音 / 视频号 / B 站）。
+> 一个仓库，**两条流水线、六个第三方平台**：
+> **文档流**（growdu.cn / 公众号 / 头条号）、**视频流**（抖音 / 视频号 / B 站）。
 > 共同的底座是 `docs/` —— 那里是所有内容的唯一真相。
+> 共同的**入口**是 `drafts/` —— 稿子先落草稿箱，审完才往下走。
 
 本文件是**仓库级总览**：讲清楚整体架构与模块划分。
 想改文章、改样式，看 [`internal/blog/架构.md`](internal/blog/架构.md)（站点构建链路，更细）。
 想改视频、看契约，看 [`video/README.md`](video/README.md)。
+想改平台适配，看 [`platforms/README.md`](platforms/README.md)（六个平台的共同规矩与核心流程）。
 想改发布逻辑，看 [`publish/spec/00-架构设计.md`](publish/spec/00-架构设计.md) 与
 [`publish/spec/06-发布计划与调度.md`](publish/spec/06-发布计划与调度.md)、
 [`publish/spec/07-视频发布契约.md`](publish/spec/07-视频发布契约.md)。
@@ -15,51 +18,69 @@
 ## 一、整体架构
 
 ```text
-                        ┌───────────────────────────────────────────┐
-                        │              docs/  (唯一真相)           │
-                        │   技术文章 · 专题页 · 图片 · 分类 _index.md │
-                        └───────────────────┬───────────────────────┘
-                                            │
-                    ┌───────────────────────┴────────────────────────┐
-                    │ tools/sync-hexo.py（内容编译层，纯标准库）        │
-                    │  · 剥首个 H1、重写图片与相对链接                │
-                    │  · 重建 front matter（推导字段 + 透传白名单）    │
-                    │  · 路径排除：什么不是文章                        │
-                    └───────────┬───────────────────────┬────────────┘
-                                │                       │
-                     source/_posts/**          video/contracts/*.json
-                     （内容单元 content_id）    （视觉分镜契约）
-                                │                       │
-              ┌─────────────────┴────────┐              │ pyv 渲染引擎
-              │ hexo generate            │              │ (cairo + ffmpeg)
-              │ + themes/matery          │              ▼
-              ▼                          │        storyboard_<EP>.json（产物，不入库）
-        public/  →  CI 部署              │              │
-        growdu.cn / GH Pages             │        build/<EP>/*.mp4（片段，不入库）
-                                         │              │
-                                         │              ▼
-                                         │        out/<EP>.mp4（成片，不入库）
-                                         │              │
-                                         └──────┬───────┘
-                                                │ publish/publishkit（契约层，平台无关）
-                                                │ 读 platforms/<plat>/capability.toml（平台能力 = 数据）
-                                                │ 写 platforms/<plat>/outbox/*.json（发布结果快照 = 幂等键）
-                                                ▼
-                                           platforms/
-                             ┌─────────────┬───────────┬───────────┬────────────┬─────┐
-                             ▼             ▼           ▼           ▼            ▼
-                          wechat/      toutiao/     douyin/    channels/    bilibili/
-                          （公众号）   （头条号）   （抖音）   （视频号）   （B 站）
-                          目录名即包名，各自一套 adapter：切片 → 清单 → 出包/API → 人工/自动发布
+                              主题（一段话）
+                                   │
+                       ┌───────────┴───────────┐
+                       ▼                       ▼
+                    手动编写                 自动生成
+                       └───────────┬───────────┘
+                                   ▼
+                          drafts/  草稿箱
+                          （两条流水线的共同入口）
+                                   │
+                              总审核 review/
+                                   │
+          ┌────────────────────────┴────────────────────────┐
+          ▼                                                 ▼
+     ┌─────────┐                                       ┌─────────┐
+     │  docs/  │  文档流                               │ video/  │  视频流
+     └────┬────┘                                       └────┬────┘
+          │                                                │
+          │ tools/sync-hexo.py（内容编译层，纯标准库）        │ pyv 渲染引擎
+          │  · 剥首个 H1、重写图片与相对链接                 │ (cairo + ffmpeg)
+          │  · 重建 front matter（推导字段 + 透传白名单）     │       │
+          │  · 路径排除：什么不是文章                         │       ▼
+          ▼                                                │ out/<EP>.mp4
+ source/_posts/**                                          │ （成片，不入库）
+ （内容单元 content_id）                                    │       │
+          │                                                │       │
+          ▼ hexo generate + themes/matery                   │       │
+        public/  ──CI──▶  growdu.cn / GH Pages             │       │
+          │                                                │       │
+          └────────────────────┬───────────────────────────┘       │
+                               ▼                                   │
+          publish/publishkit（契约层，平台无关）                   │
+          读 platforms/<plat>/capability.toml（平台能力 = 数据）   │
+          写 platforms/<plat>/outbox/*.json（发布快照 = 幂等键）   │
+                               ▼                                   │
+                          platforms/                               │
+            ┌──────────┬──────────┬──────────┬──────────┬────────┼───────┐
+            ▼          ▼          ▼          ▼          ▼        ▼       ▼
+         wechat/   toutiao/     blog/     douyin/  channels/ bilibili/
+        （公众号） （头条号）  （站点）   （抖音）  （视频号）  （B 站）
+            └──────────┴──────────┴──────────┴──────────┴────────┴───────┘
+                   目录名即包名，各自一套 adapter：
+                   适配 → 生成 → review → output → upload
 ```
 
 ### 三条产线的分工
+
+按**产出形态**切，三条产线：
 
 | 产线 | 输入 | 产物 | 事实来源 |
 | --- | --- | --- | --- |
 | 技术站点 | `docs/` | 静态站 `public/` | `docs/` |
 | 品牌视频 AIV | `video/contracts/*.json` + 口播稿 + 旁白 | 1920×1080 成片 | 契约 + 规范文档 |
 | 多平台分发 | `source/_posts/` 内容单元 + 能力声明 | 草稿 / 出包 / 已发链接 | `docs/`（内容）+ `platforms/<plat>/outbox/`（状态） |
+
+按**内容类型**切，是**两条流水线**（文档流 / 视频流）——见上面的图。
+两种切法**正交**：文档流的下游既有站点（`docs/`）也有文本平台（公众号、头条），
+视频流的下游是视频平台；一个内容单元可以既是站点文章，又是某一期视频的母稿。
+
+> **站点也是第三方平台**（2026-11-18 起）。`platforms/blog/` 与另外五个平级，
+> 目录名即平台 id、同样有 `capability.toml` 与 `outbox/`。
+> 唯一的差别是**出包粒度**：那五个逐篇出包、发一篇，站点是整站重建一次。
+> 见 [`platforms/blog/docs/01-站点即第三方平台.md`](platforms/blog/docs/01-站点即第三方平台.md)。
 
 ---
 
@@ -69,13 +90,14 @@
 
 | 层 | 位置 | 职责 | 允许依赖 |
 | --- | --- | --- | --- |
+| **草稿层** | `drafts/` | 主题 → 手动编写 / 自动生成 → 底稿；两条流水线的共同入口 | 只读 `docs/`、`video/` |
 | **内容层** | `docs/` | 母稿、图片、分类元数据 | 无（纯内容） |
 | **内容编译层** | `tools/` + `scripts/` | `docs/` → Hexo 源、主题补丁、校验 | 只读 `docs/`，只写 `source/` |
 | **展示层** | `themes/matery/` | EJS 模板、CSS/JS、静态资源 | Hexo 运行时 |
 | **视频生产层** | `video/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
 | **审核层** | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | 只读 `docs/`、`video/` 的契约与产物 |
 | **发布契约层** | `publish/publishkit/` | 内容契约 / 能力模型 / manifest / 调度 | **不认识任何平台** |
-| **平台适配层** | `platforms/<plat>/`（每个平台一个目录：wechat / toutiao / douyin / channels / bilibili） | 平台切片、渲染、出包、发布、状态 | 只认 TOML 与 manifest JSON |
+| **平台适配层** | `platforms/<plat>/`（每个平台一个目录：wechat / toutiao / **blog** / douyin / channels / bilibili） | 平台切片、渲染、出包、发布、状态 | 只认 TOML 与 manifest JSON |
 
 **依赖方向是单向的**：平台层不 import 契约层，契约层不 import 平台层。
 两边唯一的接缝是**同一份 `platforms/<plat>/capability.toml`** 与**同一份 manifest JSON**。
@@ -160,12 +182,13 @@
 
 ### 2.5 平台适配层
 
-五个 adapter **同构布局**，彼此独立：
+六个 adapter **同构布局**，彼此独立：
 
 | 平台 | 目录 | 形态 | 自动化档位 |
 | --- | --- | --- | --- |
-| 微信公众号 | `platforms/wechat/` | 图文 → 草稿箱（`draft/add`） | 自动生成 + 自动进草稿箱，**发表由人点**（账号无发表接口权限） |
+| 微信公众号 | `platforms/wechat/` | 图文 → 草稿箱（`draft/add`） | `api_draft`：自动生成 + 自动进草稿箱，**发表由人点**（账号无发表接口权限） |
 | 今日头条 | `platforms/toutiao/` | 图文 → 头条版排版包 / 半自动出包 | `manual`（能力声明）：出包 + 人工发（账号未认证，API 权限开不了） |
+| **个人站点** | `platforms/blog/` | markdown → 整站静态站 → CI 部署 | **`api_publish`**：六个里唯一——推上去就部署（`review = "precheck"`，靠本地闸门） |
 | 抖音 | `platforms/douyin/` | 视频 → 竖版切片 + 出包 + 浏览器上传（后台可暂存 `drafted`，待你点发表） | `manual`：个人主体拿不到 API 凭据，走浏览器自动化 |
 | 微信视频号 | `platforms/channels/` | 视频 → 切片 + 人工发布清单 | `manual`：视频号无普通创作者发布接口 |
 | 哔哩哔哩 | `platforms/bilibili/` | 视频 → 投稿包 + 字幕 | `manual`（`ARC_BASE` 权限开通后可转 `api_publish`） |
@@ -177,6 +200,14 @@
 
 公众号线最成熟：`platforms/wechat/` 20 个模块，覆盖 Markdown 解析、封面、标题裁剪、
 超长文章拆分、SVG/代码高亮、mermaid、合集与分类、品牌图文，已跑到草稿箱。
+
+**站点是唯一的例外，例外只有一处：出包粒度。**
+那五个是「一篇一个包、发一篇」，站点是「一次 push 重建全站 2400 个页面」——
+所以 `platforms/blog/` **没有 `publish` 子命令**，只有 `status` 与 `check`。
+详见 [`platforms/blog/docs/01-站点即第三方平台.md`](platforms/blog/docs/01-站点即第三方平台.md)。
+
+六个平台的共同规矩、核心流程（五步）、以及「加一个平台要做什么」，
+写在 [`platforms/README.md`](platforms/README.md)。
 
 ---
 
@@ -190,6 +221,10 @@
 5. **只有一处接缝**：契约层与 adapter 互不 import，认的是同一份 TOML 与同一份 manifest JSON。
 6. **入库的是事实，产物不入库**：音视频、时间轴、成片留在本机；入库的是规范、契约、台账、代码。
 7. **规范公开，工程内部产物下线**：面向读者的规范在 `docs/` 发一份，工程内部留在仓库里。
+8. **草稿是底稿，不是第二个产地**：稿子先进 `drafts/`，审过**复制**一份进
+   `docs/` 或 `video/`；底稿留在原地**不再参与任何派生**。
+   **主题**（用户产生 idea 时输入的一段话）也一样——它是流水线的**输入**，
+   落进草稿的 front matter `topic:` 字段，不建目录、不单独成层。
 
 ---
 
@@ -220,9 +255,9 @@
 | `video/` | 视频生产线（规范 + 契约 + 代码） | ✅ 产物除外 |
 | `video/build/`、`video/out/` | 片段与成片 | ❌ |
 | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | ✅ 帧除外 |
-| `drafts/` | 草稿箱（新稿先落这里，审完留底稿；底稿不参与派生） | ✅ |
+| `drafts/` | 草稿箱（主题 → 手动编写/自动生成 → 底稿；两条流水线的共同入口，底稿不参与派生） | ✅ |
 | `publish/` | 契约层与调度（发布契约规格、能力模型加载、manifest、周键） | ✅ |
-| `platforms/<plat>/` | 平台 adapter（每个平台一个目录，含能力声明 `capability.toml` 与发布快照 `outbox/`） | ✅ |
+| `platforms/<plat>/` | 平台 adapter（**六个**平台各一个目录，含能力声明 `capability.toml` 与发布快照 `outbox/`；目录名即平台 id） | ✅ |
 | `requirements/` | 依赖清单（按模块分文件） | ✅ |
 | `.github/workflows/` | `hexo.yml`（构建部署）、`contracts.yml`（契约闸门） | ✅ |
 
@@ -250,6 +285,10 @@ make EP=<期号> review-frames  # 抽帧 + 清单（帧不入库，清单入库�
 cd publish && python3 -m publishkit.cli schedule candidates
 cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 cd publish && python3 -m publishkit.cli schedule status
+
+# 站点这个平台（cd platforms）
+python3 -m blog.cli status                # 这个平台是什么、有什么限额、账本上多少条
+python3 -m blog.cli check <content_id>    # 这一篇能不能进站（标题 / 构建排除 / 分类链）
 
 # 契约闸门
 python3 tools/sync-hexo.py                 # 先产出内容单元
@@ -326,13 +365,15 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | AIV | 六期已出片（EP01~EP06）；契约化流程稳定；抖音那两档（无品牌 / 竖版）已就位 |
 | 审校 | 文档侧（`review/`）与视频侧（`video/review/`）两套机制都落地了；视频侧六期文本层跑完，成片层只有本机有成片的 EP06 跑过 |
 | 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；候选集由母稿 `platforms` 决定 |
+| 顶层设计 | 2026-11-18 定了主题 → 草稿箱 → 两条流水线 → 六个平台；站点已登记进平台层（`platforms/blog/`） |
 
-**平台与契约层的关系**（五个平台，两个档位）：
+**平台与契约层的关系**（六个平台，三个档位）：
 
 | 平台 | 能力声明 | 幂等键写在哪 | 自动化停在哪 |
 | --- | --- | --- | --- |
 | 公众号 | `platforms/wechat/capability.toml` | `platforms/wechat/outbox/`（入库） | 草稿箱（人工发表） |
 | 头条号 | `platforms/toutiao/capability.toml` | `platforms/toutiao/outbox/`（入库） | 出包（人工上传） |
+| **个人站点** | `platforms/blog/capability.toml` | `platforms/blog/outbox/`（**现在空着**，账本待回填） | **整站部署**（`api_publish`：推上去就部署；出包是全量重建，不是逐篇） |
 | 抖音 | `platforms/douyin/capability.toml` | `platforms/douyin/outbox/`（入库） | 出包 + 浏览器上传 + 人工确认发表（个人主体拿不到 API 凭据） |
 | 视频号 | `platforms/channels/capability.toml` | `platforms/channels/outbox/`（入库） | 出包 + 人工发布清单 |
 | B 站 | `platforms/bilibili/capability.toml` | `platforms/bilibili/outbox/`（入库） | 投稿包（`ARC_BASE` 未开通） |
@@ -360,4 +401,6 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | [`video/review/README.md`](video/review/README.md) | 视频审校：文本层 `VT-*` 与成片层 `VV-*`、抽帧方法、一期一条记录 |
 | [`review/README.md`](review/README.md) | 博客内容审校：文档侧的同构机制（`tools/review-check.py`） |
 | [`video/人格规范.md`](video/%E4%BA%BA%E6%A0%BC%E8%A7%84%E8%8C%83.md) | 小象是谁、怎么想、怎么讲（9 条可机检规则） |
-| `platforms/<plat>/docs/` | 各平台 adapter 的设计与实施计划（wechat / toutiao / douyin / channels / bilibili） |
+| `platforms/README.md` | 第三方平台层总览：六个平台、五条共同规矩、核心流程五步、加一个平台要做什么 |
+| `platforms/<plat>/docs/` | 各平台 adapter 的设计与实施计划（wechat / toutiao / blog / douyin / channels / bilibili） |
+| [`review/specs/2026-11-18-顶层设计与目录调整.md`](review/specs/2026-11-18-顶层设计与目录调整.md) | 顶层设计：主题、草稿箱、两条流水线、六个第三方平台 |
