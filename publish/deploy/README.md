@@ -47,11 +47,15 @@
 
 已经装过旧版触发器的机器，要做四件事：
 
-1. **凭据搬家**。`secrets.json` 被 gitignore，git 不会帮你搬：
-   `weixin/secrets.json` → `platforms/wechat/secrets.json`。
+1. **被 gitignore 的本地文件搬家**。git 不会帮你搬这些，忘了搬就是功能悄悄少一块：
+   - `weixin/secrets.json` → `platforms/wechat/secrets.json`（凭据，丢了就得重新配）
+   - `weixin/collections.json` → `platforms/wechat/collections.json`（合集配置，
+     代码会读它；仓库里那份是 `collections.example.json`）
+   - `weixin/.env`、`weixin/*.secret` → 同样搬过去（代码不读 `.env`，但里面可能有你自己写的配置）
 2. **本机工作目录搬家**（可选但建议）。`weixin/out/` 里的 `state.json` 是本机发布状态
    （不入库），搬到 `platforms/wechat/out/` 能保住「这篇发过没有」的连续性；
    丢了也能靠 `platforms/wechat/outbox/` 里的入库快照重建。
+   `__pycache__/`、`*.pyc` 不用搬。
 3. **卸载三个旧 LaunchAgent**，用新模板重新渲染后 `launchctl load -w`。
    变化的是：`PUBLISH_SECRETS` 指向新路径；两个微信任务的 `WorkingDirectory`
    与 `PYTHONPATH` 从 `__REPO__/weixin` 改成 `__REPO__/platforms`

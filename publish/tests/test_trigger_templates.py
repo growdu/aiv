@@ -186,9 +186,11 @@ def test_the_readme_says_the_same_commands_the_templates_run():
 def test_the_readme_names_the_paths_the_templates_inject():
     """路径是这次重构改掉的东西，README 必须同时写清新旧两个。"""
     text = README.read_text(encoding="utf-8")
-    # 新路径：凭据与包根
+    # 新路径：凭据、合集配置与包根
     assert "platforms/wechat/secrets.json" in text
+    assert "platforms/wechat/collections.json" in text
     assert "__REPO__/platforms" in text
     # 旧路径：要迁移就得让人知道原来长什么样
     assert "weixin/secrets.json" in text
+    assert "weixin/collections.json" in text
     assert "__REPO__/weixin" in text
