@@ -3,7 +3,7 @@ episode: wal-interleave
 episode_no: 3
 series: 数据库内核机制
 episode_hook: "WAL 是操作级记录，几个事务交错着写；订阅端要的是「一个事务一整组」"
-episode_subtitle: aiv/字幕-WAL顺序.md
+episode_subtitle: video/字幕-WAL顺序.md
 episode_duration_s: "34.596"
 episode_license: "PostgreSQL BSD"
 episode_sources:

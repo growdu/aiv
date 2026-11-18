@@ -17,4 +17,4 @@
 # cron 的环境变量极少：PATH、PYTHONPATH、PUBLISH_REPO、PUBLISH_SECRETS 都要自己给。
 # 凭据本身不进这个文件——PUBLISH_SECRETS 指向的 secrets.json 由 .gitignore 挡着。
 
-0 9 * * 5 cd __REPO__/publish && PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin PYTHONPATH=__REPO__/publish PUBLISH_REPO=__REPO__ PUBLISH_SECRETS=__REPO__/weixin/secrets.json __PYTHON__ -m publishkit.cli schedule weekly >> __LOG__ 2>&1
+0 9 * * 5 cd __REPO__/publish && PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin PYTHONPATH=__REPO__/publish PUBLISH_REPO=__REPO__ PUBLISH_SECRETS=__REPO__/platforms/wechat/secrets.json __PYTHON__ -m publishkit.cli schedule weekly >> __LOG__ 2>&1

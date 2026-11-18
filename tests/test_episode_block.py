@@ -110,7 +110,7 @@ def _write_posts_tree(root, date_text="2026-10-15 09:00:00"):
     )
 
     # 视频内容单元（``tools/build-video-pages.py`` 的产物）：它的日期来自
-    # 口播稿（``aiv/字幕-*.md``）的 front matter——母稿里的
+    # 口播稿（``video/字幕-*.md``）的 front matter——母稿里的
     # ``episode_subtitle`` 指明了是哪一份。
     for slug, draft_path in SIX_DRAFTS.items():
         draft_text = (REPO_ROOT / draft_path).read_text(encoding="utf-8")
@@ -250,7 +250,7 @@ def test_the_index_carries_the_drafts_own_episode_facts(tmp_path, monkeypatch):
     assert row["license"] == "PostgreSQL BSD"
     assert "src/backend/access/heap/heapam.c" in row["sources"]
     assert row["repro"]
-    assert row["subtitle"] == "aiv/字幕-行锁.md"
+    assert row["subtitle"] == "video/字幕-行锁.md"
 
 
 def test_the_episode_label_is_padded_once_and_for_all(tmp_path, monkeypatch):

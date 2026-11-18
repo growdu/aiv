@@ -21,7 +21,7 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "toutiao-api.html"
 def make_package(tmp_path: Path) -> Path:
     """一个假的头条号发布包。
 
-    照着 toutiao 出的包的结构（``toutiao/toutiao/publish.py``）：
+    照着 toutiao 出的包的结构（``platforms/toutiao/publish.py``）：
     title.txt 两行、article.html、images/NN.webp、cover.webp、meta.json。
     """
     root = tmp_path / "ai-demo"

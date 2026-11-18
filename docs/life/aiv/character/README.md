@@ -27,7 +27,7 @@ description: "后续视频统一使用的讲解者形象。规范见 ../形象�
 
 ## 形象原型
 
-唯一来源：`aiv/growdu2.jpeg`。**不要**引用仓库其它目录下的任何形象图。
+唯一来源：`video/growdu2.jpeg`。**不要**引用仓库其它目录下的任何形象图。
 
 ## 形象设定速记
 
@@ -40,7 +40,7 @@ description: "后续视频统一使用的讲解者形象。规范见 ../形象�
 ## 重新生成
 
 ```bash
-cd aiv/character
+cd video/character
 python3 scripts/generate_character.py   # 生成 → 抠透明底 → 姿态表 → 铭牌盖章
 ```
 
@@ -50,7 +50,7 @@ python3 scripts/generate_character.py   # 生成 → 抠透明底 → 姿态表 
 会连着参考图的**背景**一起学——参考图是白底，生成出来的小象才是白底。
 
 ```bash
-cd aiv/character
+cd video/character
 python3 scripts/make_white.py           # 从 growdu_character_2k_nobg.png 合成白底版
 ```
 
@@ -64,7 +64,7 @@ python3 scripts/make_white.py           # 从 growdu_character_2k_nobg.png 合�
 只能以素材为参考图做图生图：
 
 ```bash
-cd aiv/character
+cd video/character
 python3 scripts/add_glasses.py                        # 批次：4 个素材 → _staging/
 python3 scripts/add_glasses.py --resume              # 断点续跑（跳过已生成的）
 python3 scripts/add_glasses.py --promote              # 目视验收后覆盖正式素材
@@ -90,7 +90,7 @@ python3 scripts/stamp_badge.py <png> ...  # 处理指定文件
 无铭牌那份：
 
 ```bash
-cd aiv/character
+cd video/character
 python3 scripts/clear_badge.py            # 产出 growdu_character_2k_nobg_nobadge.png
 cd ../pipeline
 make EP=row-lock nobrand NOBADGE=1        # 用无铭牌素材重出片

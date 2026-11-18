@@ -29,9 +29,9 @@ from publishkit.schedule import resolve_config, snapshot_name
 
 #: 假的 adapter：按 PLAN 里写的模式决定退出码与要不要写快照。
 #:
-#: 它住在 ``<仓库>/fakeadapter/fakeadapter/``，跟真的 adapter 一样是
-#: 「顶层目录不是包、同名子目录才是包」——调度器把 cwd 设成
-#: ``<仓库>/fakeadapter``，靠它让 ``python3 -m fakeadapter.cli`` 找得到。
+#: 它住在 ``<仓库>/platforms/fakeadapter/``，跟真的 adapter 一样是
+#: 「压平之后目录名就是包名」——调度器把 cwd 设成 ``<仓库>/platforms``，
+#: 靠它让 ``python3 -m fakeadapter.cli`` 找得到。
 FAKE_ADAPTER = '''\
 """假的 adapter：按 PLAN 里的模式退出。"""
 import json
@@ -152,12 +152,17 @@ def workspace(tmp_path):
         encoding="utf-8",
     )
 
-    caps = root / "publish" / "capabilities"
+    caps = root / "platforms"
     caps.mkdir(parents=True)
-    (caps / "fake.toml").write_text(CAPABILITY_TOML, encoding="utf-8")
-    (caps / "fakevideo.toml").write_text(VIDEO_CAPABILITY_TOML, encoding="utf-8")
+    fake = caps / "fake"
+    fake.mkdir()
+    (fake / "capability.toml").write_text(CAPABILITY_TOML, encoding="utf-8")
+    fakevideo = caps / "fakevideo"
+    fakevideo.mkdir()
+    (fakevideo / "capability.toml").write_text(
+        VIDEO_CAPABILITY_TOML, encoding="utf-8")
 
-    package = root / "fakeadapter" / "fakeadapter"
+    package = root / "platforms" / "fakeadapter"
     package.mkdir(parents=True)
     (package / "__init__.py").write_text("", encoding="utf-8")
     (package / "cli.py").write_text(FAKE_ADAPTER, encoding="utf-8")
@@ -180,8 +185,8 @@ def workspace(tmp_path):
             return [
                 "--repo-root",
                 str(self.root),
-                "--capabilities-dir",
-                str(self.root / "publish" / "capabilities"),
+                "--platforms-dir",
+                str(self.root / "platforms"),
                 *args,
             ]
 
@@ -200,7 +205,8 @@ def workspace(tmp_path):
             ]
 
         def outbox(self):
-            return self.root / "publish" / "outbox"
+            # 快照按平台住：``<平台根>/<平台>/outbox/``。
+            return self.root / "platforms" / "fake" / "outbox"
 
         def schedule_file(self):
             return self.root / "publish" / "schedule.json"
@@ -252,13 +258,13 @@ def test_the_weekly_run_publishes_and_writes_the_week_key(workspace):
 
 
 def test_the_adapter_is_called_with_the_documented_contract(workspace):
-    """命令是 ``<command> publish <content_id>``，cwd 是 adapter 的包目录。"""
+    """命令是 ``<command> publish <content_id>``，cwd 是 ``platforms/``。"""
     main(workspace.argv("schedule", "weekly"))
 
     call = workspace.calls()[0]
     assert call["argv"][0] == "publish"
     assert call["argv"][1] == call["content_id"]
-    assert call["cwd"] == str(workspace.root / "fakeadapter")
+    assert call["cwd"] == str(workspace.root / "platforms")
 
 
 def test_a_success_without_a_snapshot_is_not_reported_as_a_success(workspace, capsys):
@@ -529,7 +535,12 @@ def test_the_command_line_overrides_the_environment(workspace, monkeypatch):
     assert not (workspace.root / "elsewhere").exists()
 
 
-def test_the_outbox_directory_follows_the_state_directory(workspace, monkeypatch):
+def test_the_outbox_directory_does_not_follow_the_state_directory(workspace, monkeypatch):
+    """状态目录改了，outbox **不跟着走**——它住在平台目录里。
+
+    outbox 是入库的发布记录（幂等键），它跟平台待在一起；
+    状态目录只是调度层自己的那层幂等键，两者分开。
+    """
     state_dir = workspace.root / "elsewhere"
     monkeypatch.setenv("PUBLISH_REPO", str(workspace.root))
     monkeypatch.setenv("PUBLISH_STATE_DIR", str(state_dir))
@@ -537,7 +548,8 @@ def test_the_outbox_directory_follows_the_state_directory(workspace, monkeypatch
     main(["schedule", "weekly"])
 
     assert (state_dir / "schedule.json").is_file()
-    assert (state_dir / "outbox").is_dir()
+    assert not (state_dir / "outbox").exists()
+    assert (workspace.root / "platforms" / "fake" / "outbox").is_dir()
 
 
 def test_the_module_entry_point_works(workspace):
@@ -564,8 +576,8 @@ def test_the_module_entry_point_works(workspace):
             "--dry-run",
             "--repo-root",
             str(workspace.root),
-            "--capabilities-dir",
-            str(workspace.root / "publish" / "capabilities"),
+            "--platforms-dir",
+            str(workspace.root / "platforms"),
         ],
         cwd=str(repo_root / "publish"),
         env=environment,

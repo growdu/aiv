@@ -10,7 +10,7 @@
 - 规格（`publish/spec/08-站点IP骨架.md`）写「现状是什么、目标是多少」；
 - 本文件写「怎么从仓库现状把这些数字重新算出来」。
 
-阈值**不从被测代码 import**（`aiv/pipeline/pyv/` 里没有这些常量，
+阈值**不从被测代码 import**（`video/pipeline/pyv/` 里没有这些常量，
 也不该有）——那样守卫就变成自证，永远是绿的。
 
 放在根级 `tests/`，随 `site-guard.yml` 进 CI。
@@ -34,7 +34,7 @@ SPEC_LONG_VIDEO = REPO / "publish" / "spec" / "09-长视频三档.md"
 # --- 期 → 主母稿的映射 ---------------------------------------------------
 #
 # 这张表是**手写的事实源**：哪一期的底稿是哪一篇，是选题时定下的事实，
-# 不是代码算出来的。出处见 `aiv/选题库.md` 各 EP 段的「选题依据」。
+# 不是代码算出来的。出处见 `video/选题库.md` 各 EP 段的「选题依据」。
 #
 # 主母稿 = 该期篇幅最大、承载本期机制的那一篇。
 EPISODE_DRAFTS = {
@@ -50,7 +50,7 @@ EPISODE_DRAFTS = {
 # 测试从那里读映射，这里只固定「哪一行是第几期」。
 EP_LABEL_ORDER = ["EP01", "EP02", "EP03", "EP04", "EP05", "EP06"]
 
-# 六期的实测成片时长（秒），来自 `aiv/storyboard_<EP>__nobrand.json`。
+# 六期的实测成片时长（秒），来自 `video/storyboard_<EP>__nobrand.json`。
 # 这里写成字面值而不是从 JSON 读——JSON 是**产物**，规格要对齐的是
 # 「已确认的实测值」，产物随时可能被重跑覆盖。
 EPISODE_DURATION_S = {
@@ -62,7 +62,7 @@ EPISODE_DURATION_S = {
     "row-lock": 35.172,
 }
 
-# 口播稿的**非空白正文字数**。实测值，与各 `aiv/字幕-*.md` 的元数据一致。
+# 口播稿的**非空白正文字数**。实测值，与各 `video/字幕-*.md` 的元数据一致。
 EPISODE_SPOKEN_CHARS = {
     "pg-parallel-decode": 241,
     "csn-total-ordering": 254,
@@ -109,25 +109,24 @@ PLANNED_PATHS = {
     "publish/tests/test_evidence.py",
     "publish/tests/test_episode_page.py",
     "source/feed.xml",
-    "aiv/pipeline/scripts/episode-baseline.py",
+    "video/pipeline/scripts/episode-baseline.py",
     # 契约八（长视频三档）计划新增的路径：
     # 讲稿骨架与三档裁剪、母稿解析、四个通用渲染器。
-    "aiv/pipeline/pyv/skeleton.py",
-    "aiv/pipeline/pyv/motherdoc.py",
-    "aiv/pipeline/pyv/derive.py",
-    "aiv/pipeline/pyv/scenes/gen_mermaid.py",
-    "aiv/pipeline/pyv/scenes/gen_code.py",
-    "aiv/pipeline/pyv/scenes/gen_table.py",
-    "aiv/pipeline/pyv/scenes/gen_card.py",
+    "video/pipeline/pyv/skeleton.py",
+    "video/pipeline/pyv/motherdoc.py",
+    "video/pipeline/pyv/derive.py",
+    "video/pipeline/pyv/scenes/gen_mermaid.py",
+    "video/pipeline/pyv/scenes/gen_code.py",
+    "video/pipeline/pyv/scenes/gen_table.py",
+    "video/pipeline/pyv/scenes/gen_card.py",
 }
 
 # 仓库的顶层目录。只有**顶层目录开头**的 token 才可能被当成仓库路径——
 # 否则 `publishkit/episode.py`（模块记法）、`/feed.xml`（站点 URL）、
 # `:year/:month/:day/:title/`（permalink 模板）都会被误判。
 REPO_TOP_DIRS = {
-    "aiv", "bilibili", "browser", "channels", "docs", "douyin",
-    "public", "publish", "review", "scripts", "source", "tests",
-    "themes", "tools", "toutiao", "weixin",
+    "browser", "drafts", "platforms", "public", "publish", "review",
+    "scripts", "source", "tests", "themes", "tools", "video",
 }
 
 # **生成目录**：`.gitignore` 里的 `/source/`（只放行 `source/all/` 与
@@ -475,13 +474,13 @@ def test_planned_paths_are_actually_missing():
 
 
 def test_episode_table_covers_exactly_the_six_contracts():
-    """规格 §2.1 的期号表与 `aiv/contracts/` 的集合完全相等。
+    """规格 §2.1 的期号表与 `video/contracts/` 的集合完全相等。
 
     不多不少：少一期 = 规格漏了；多一期 = 规格写错了 slug。
     """
     contract_slugs = {
         json.loads(p.read_text(encoding="utf-8"))["episode"]
-        for p in sorted((REPO / "aiv/contracts").glob("*.json"))
+        for p in sorted((REPO / "video/contracts").glob("*.json"))
     }
     assert contract_slugs == set(EPISODE_DRAFTS), "契约集合与期→母稿映射不一致"
 
@@ -496,7 +495,7 @@ def test_episode_table_covers_exactly_the_six_contracts():
 
 
 def test_manifest_urls_quoted_in_the_spec_match_reality():
-    """规格 §2.1 表里抄的 `url` 必须与 `aiv/publish/<EP>.json` 一致。
+    """规格 §2.1 表里抄的 `url` 必须与 `video/publish/<EP>.json` 一致。
 
     这张表记录的是**现状**（链接是死的），所以它必须跟着 manifest 变；
     改动 manifest 而不改规格，就是规格漂移了。
@@ -505,7 +504,7 @@ def test_manifest_urls_quoted_in_the_spec_match_reality():
     for row in rows[1:]:
         slug = _slug_of(row[0])
         manifest = json.loads(
-            (REPO / "aiv/publish" / f"{slug}.json").read_text(encoding="utf-8")
+            (REPO / "video/publish" / f"{slug}.json").read_text(encoding="utf-8")
         )
         assert manifest["url"] in row[1], (
             f"{slug} 的 manifest url 与规格表不一致："
@@ -623,7 +622,7 @@ def test_speech_rate_constant_matches_the_six_episodes():
 
 # 六期属于**同一个系列**，期号是全局编号 EP01~EP06。
 #
-# 为什么不是按季编号：`aiv/选题库.md` 把 EP01~EP05 归第一季「机制族」、
+# 为什么不是按季编号：`video/选题库.md` 把 EP01~EP05 归第一季「机制族」、
 # EP06 起第二季「内核机制」，但**期号头显示的是 EP0X**——它必须与
 # 观众在 B站 / 视频号看到的口径一致，而那里用的是全局编号。
 # 按季编号会让 EP06 在站上显示成「EP01」，与已发出的内容对不上。
@@ -633,12 +632,12 @@ EPISODE_SERIES = "数据库内核机制"
 
 # 六期母稿 front matter 里写的字幕稿路径。手写字面值。
 EPISODE_SUBTITLE = {
-    "pg-parallel-decode": "aiv/字幕-并行解码.md",
-    "csn-total-ordering": "aiv/字幕-CSN全序.md",
-    "wal-interleave": "aiv/字幕-WAL顺序.md",
-    "parallel-apply": "aiv/字幕-并行apply.md",
-    "structured-ddl": "aiv/字幕-结构化DDL.md",
-    "row-lock": "aiv/字幕-行锁.md",
+    "pg-parallel-decode": "video/字幕-并行解码.md",
+    "csn-total-ordering": "video/字幕-CSN全序.md",
+    "wal-interleave": "video/字幕-WAL顺序.md",
+    "parallel-apply": "video/字幕-并行apply.md",
+    "structured-ddl": "video/字幕-结构化DDL.md",
+    "row-lock": "video/字幕-行锁.md",
 }
 
 # 钩子字数的区间（契约七 §4.3）。上界 65 = 实测最长 61 字 + 4 字余量。
@@ -812,15 +811,93 @@ def test_platform_capabilities_referenced_in_the_matrix_exist():
     )
 
     for capability in ("bilibili", "channels", "douyin", "toutiao"):
-        assert (REPO / "publish/capabilities" / f"{capability}.toml").exists(), (
-            f"能力声明缺失：{capability}.toml"
+        assert (REPO / "platforms" / capability / "capability.toml").exists(), (
+            f"能力声明缺失：{capability}/capability.toml"
         )
 
 
 def test_spec_marks_youtube_as_not_yet_supported():
     """YouTube 没有能力声明，规格里必须把它标成未接入，不能当成已有渠道。"""
-    assert not (REPO / "publish/capabilities/youtube.toml").exists(), (
+    assert not (REPO / "platforms/youtube/capability.toml").exists(), (
         "若已接入 YouTube，请先更新本守卫与规格的矩阵"
     )
     text = _spec_text()
     assert "YouTube 接入" in text, "非目标里应当列出「YouTube 接入」"
+
+
+
+
+# --- URL 命名空间守卫 -----------------------------------------------------
+#
+# `docs/life/aiv/` 是**站点 URL 命名空间**，不是工程目录。工程目录改名
+# （`aiv/` → `video/`）不许牵连它——线上链接指的是 `life/aiv/…`。
+
+
+def test_the_life_aiv_url_namespace_is_untouched():
+    """`docs/life/aiv/` 是 URL 命名空间，搬家不许碰它。"""
+    namespace = REPO / "docs" / "life" / "aiv"
+    assert namespace.is_dir(), "docs/life/aiv/ 不见了——URL 命名空间被搬家弄坏了"
+    files = [p for p in namespace.rglob("*") if p.is_file()]
+    expected = [
+        "背景音乐规范.md",
+        "人格规范.md",
+        "形象与音色规范.md",
+        "brand/README.md",
+        "brand/scripts/README.md",
+        "character/README.md",
+        "index.md",
+        "music/README.md",
+        "voice/README.md",
+    ]
+    actual = sorted(p.relative_to(namespace).as_posix() for p in files)
+    # `expected` 按仓库里的文件名写着，比较前两边都排序一次——比的是文件名集合，
+    # 顺序不是这条守卫要钉的东西。
+    assert actual == sorted(expected), (
+        "docs/life/aiv/ 的文件名清单变了：多出 {}".format(
+            sorted(set(actual) - set(expected))
+        )
+        + "，少了 {}".format(sorted(set(expected) - set(actual)))
+    )
+
+
+def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
+    """专题页还在 life/aiv/ 下，指向它的站点链接一个都不能改成 video/。"""
+    links = {
+        "docs/life/_index.md": "./aiv/index.html",
+        "docs/life/blog-to-wechat/index.md": "../aiv/index.html",
+        "docs/life/shehui/media-account/index.md": "../../aiv/index.html",
+        "docs/source-tracks/postgresql/_index.md": "../../life/aiv/index.html",
+    }
+    for path, link in links.items():
+        text = (REPO / path).read_text(encoding="utf-8")
+        assert link in text, f"{path} 里的 {link} 链接不见了"
+
+    # 全仓点数：docs/ 里指向 life/aiv 专题页的链接一共 8 处（分处 4 个文件）
+    count = 0
+    for path in sorted((REPO / "docs").rglob("*.md")):
+        count += path.read_text(encoding="utf-8").count("aiv/index.html")
+    assert count == 8, f"docs/ 里指向 life/aiv 专题页的链接变成 {count} 处（应为 8）"
+
+    # README 里讲解相对链接机制的那两处例子也是 URL 命名空间（搬前叫 aiv/README.md）
+    readme = REPO / "video" / "README.md"
+    assert readme.is_file(), "video/README.md 不见了"
+    text = readme.read_text(encoding="utf-8")
+    assert "../aiv/背景音乐规范.md" in text, "video/README.md 里的链接例子不见了"
+    assert "../aiv/index.html" in text, "video/README.md 里的链接例子不见了"
+    # 工程目录改名了（aiv/ → video/），工程目录不许留残留
+    assert not (REPO / "aiv" / "README.md").exists(), (
+        "aiv/README.md 还在——工程目录改名有残留"
+    )
+
+
+# --- 草稿箱守卫 ------------------------------------------------------------
+
+
+def test_the_draft_box_exists_and_says_how_it_works():
+    """草稿箱是两条流水线的共同入口，它的约定必须写在仓库里。"""
+    readme = REPO / "drafts" / "README.md"
+    assert readme.is_file(), "drafts/README.md 不见了"
+    text = readme.read_text(encoding="utf-8")
+    for keyword in ("drafts/", "review/", "docs/", "video/", "platforms/",
+                    "不再参与任何派生", "真相只在"):
+        assert keyword in text, f"草稿箱的约定里没提到 {keyword}"

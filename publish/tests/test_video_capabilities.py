@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CAPABILITIES = REPO_ROOT / "publish" / "capabilities"
+CAPABILITIES = REPO_ROOT / "platforms"
 
 PLATFORMS = ("channels", "bilibili", "douyin")
 
@@ -74,7 +74,7 @@ MEDIA_PINNED = {
     # 抖音：**只放有出处的闸**。平台没文档化尺寸与帧率上限，所以那两项不设
     # （设了就是拿编辑偏好冒充平台规则）。时长 15 分钟（错误码 2114006）、
     # 体积 4GB（官方「视频总大小 4GB 以内」）是平台写明的；音频两条平台
-    # 未文档化，取我们出片的规格——标注在 douyin.toml 的注释里。
+    # 未文档化，取我们出片的规格——标注在 platforms/douyin/capability.toml 的注释里。
     "douyin": {
         "require_video_codec": "h264", "require_pix_fmt": "yuv420p",
         "max_duration_s": 900, "max_bytes": 4294967296,
@@ -87,7 +87,7 @@ MEDIA_KEYS = {platform: tuple(pinned) for platform, pinned in MEDIA_PINNED.items
 
 
 def _load(platform: str) -> dict:
-    path = CAPABILITIES / f"{platform}.toml"
+    path = CAPABILITIES / platform / "capability.toml"
     assert path.is_file(), f"缺少能力声明：{path}"
     return tomllib.loads(path.read_text(encoding="utf-8"))
 
@@ -190,12 +190,12 @@ def test_douyin_has_no_size_or_fps_gate():
     """抖音**没有文档化**尺寸与帧率上限，所以不设闸。
 
     加上去就是拿编辑偏好冒充平台规则——规格 §6.6 把这条写清楚了。
-    真要加之前，先把官方文档的依据写进 `douyin.toml` 的注释里。
+    真要加之前，先把官方文档的依据写进 `platforms/douyin/capability.toml` 的注释里。
     """
     media = _load("douyin")["media"]
     for key in ("max_width", "max_height", "max_fps"):
         assert key not in media, (
-            f"douyin.toml 的 media 多了 {key}——平台没文档化这一项，"
+            f"platforms/douyin/capability.toml 的 media 多了 {key}——平台没文档化这一项，"
             f"这是我们自己的偏好，不是平台门槛"
         )
 

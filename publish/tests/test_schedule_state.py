@@ -43,11 +43,13 @@ def make_config(tmp_path, *, capabilities=None):
     """一份指向临时目录的配置（语料、状态、outbox 全在 tmp_path 里）。"""
     root = tmp_path / "blog"
     root.mkdir(parents=True, exist_ok=True)
-    caps = tmp_path / "capabilities"
+    caps = tmp_path / "platforms"
     caps.mkdir(parents=True, exist_ok=True)
     for name, text in (capabilities or {"toutiao": DOCUMENT_TOML}).items():
-        (caps / "{}.toml".format(name)).write_text(text, encoding="utf-8")
-    return resolve_config(repo_root=root, capabilities_dir=caps)
+        platform = caps / name
+        platform.mkdir(parents=True, exist_ok=True)
+        (platform / "capability.toml").write_text(text, encoding="utf-8")
+    return resolve_config(repo_root=root, platforms_dir=caps)
 
 
 class RecordingPublisher:
@@ -306,7 +308,8 @@ def test_an_already_published_platform_is_skipped(tmp_path):
     """发布层的幂等键：重跑不会重发已成功的部分。"""
     config = make_config(tmp_path)
     _corpus(tmp_path)
-    write_snapshot(config.outbox_dir, "db/demo", "toutiao", status="packaged")
+    write_snapshot(config.outbox_dir_for("toutiao"), "db/demo", "toutiao",
+                  status="packaged")
     publisher = RecordingPublisher()
 
     result = run_weekly(config, publisher=publisher, now=FRIDAY)
@@ -319,7 +322,8 @@ def test_nothing_to_publish_is_stated_out_loud(tmp_path):
     """§3.3 规则 5：本周没有可发的 → 明确说，不静默成功。"""
     config = make_config(tmp_path)
     _corpus(tmp_path)
-    write_snapshot(config.outbox_dir, "db/demo", "toutiao", status="packaged")
+    write_snapshot(config.outbox_dir_for("toutiao"), "db/demo", "toutiao",
+                  status="packaged")
     publisher = RecordingPublisher()
 
     result = run_weekly(config, publisher=publisher, now=FRIDAY)
@@ -357,7 +361,7 @@ def test_a_dry_run_writes_nothing(tmp_path):
     assert result.action == "published"
     assert publisher.calls == []          # 没调 adapter
     assert not config.schedule_file.exists()   # 没写周键
-    assert not config.outbox_dir.exists()      # 没写 outbox
+    assert not config.outbox_dir_for("toutiao").exists()   # 没写 outbox
     assert any("演练" in message for message in result.messages)
 
 

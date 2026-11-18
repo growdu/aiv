@@ -16,7 +16,7 @@ episode: row-lock
 episode_no: 6
 series: 数据库内核机制
 episode_hook: "MVCC 让读不挡写，但两个写会互相覆盖——行锁在它上面加了一层协调"
-episode_subtitle: aiv/字幕-行锁.md
+episode_subtitle: video/字幕-行锁.md
 episode_duration_s: "35.172"
 episode_license: "PostgreSQL BSD"
 episode_sources:

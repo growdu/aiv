@@ -41,11 +41,11 @@ ToutiaoError = toutiao_flow.ToutiaoError
 DouyinError = douyin_flow.DouyinError
 BROWSER_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BROWSER_ROOT.parent
-DEFAULT_PACKAGES = REPO_ROOT / "channels" / "out"
-DEFAULT_BILIBILI_PACKAGES = REPO_ROOT / "bilibili" / "out"
-DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "toutiao" / "out"
-DEFAULT_DOUYIN_PACKAGES = REPO_ROOT / "douyin" / "out"
-DEFAULT_OUTBOX = REPO_ROOT / "publish" / "outbox"
+DEFAULT_PACKAGES = REPO_ROOT / "platforms" / "channels" / "out"
+DEFAULT_BILIBILI_PACKAGES = REPO_ROOT / "platforms" / "bilibili" / "out"
+DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "platforms" / "toutiao" / "out"
+DEFAULT_DOUYIN_PACKAGES = REPO_ROOT / "platforms" / "douyin" / "out"
+DEFAULT_OUTBOX = REPO_ROOT / "platforms" / "toutiao" / "outbox"
 DEFAULT_OUT = BROWSER_ROOT / "out"
 DEFAULT_SELECTORS = BROWSER_ROOT / "selectors" / "channels.json"
 DEFAULT_BILIBILI_SELECTORS = BROWSER_ROOT / "selectors" / "bilibili.json"
@@ -55,7 +55,7 @@ DEFAULT_DOUYIN_SELECTORS = BROWSER_ROOT / "selectors" / "douyin.json"
 # 这样浏览器执行器可以给任意平台用，平台不会��进代码里。
 DEFAULT_MARK_TEMPLATE = "{python} -m channels.cli mark published {episode} --url {url}"
 
-#: 抖音这一档的回填命令（adapter 在 douyin/ 下，与 channels 平级）。
+#: 抖音这一档的回填命令（adapter 在 platforms/douyin/ 下，与 platforms/channels 平级）。
 DEFAULT_DOUYIN_MARK_TEMPLATE = (
     "{python} -m douyin.cli mark published {episode} --url {url}")
 
@@ -292,7 +292,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
     if not url:
         print("WARN 没能自动取到发布链接。")
         print(f"     请手动复制链接，然后跑：")
-        print(f"     cd channels && {sys.executable} -m channels.cli mark published "
+        print(f"     cd platforms && {sys.executable} -m channels.cli mark published "
               f"{episode} --url \"<链接>\"")
         return 2
 
@@ -308,7 +308,7 @@ def _mark_published(episode: str, url: str, args: argparse.Namespace) -> None:
     """
     template = args.mark_cmd or DEFAULT_MARK_TEMPLATE
     command = template.format(python=sys.executable, episode=episode, url=url)
-    cwd = Path(args.mark_cwd).resolve() if args.mark_cwd else REPO_ROOT / "channels"
+    cwd = Path(args.mark_cwd).resolve() if args.mark_cwd else REPO_ROOT / "platforms"
     print(f"回填状态：{command}（cwd={cwd}）")
     result = subprocess.run(shlex.split(command), cwd=str(cwd))
     if result.returncode != 0:
@@ -408,7 +408,7 @@ def cmd_bilibili_draft(args: argparse.Namespace) -> int:
 def _toutiao_draft_id(outbox_dir: Path, content_id: str) -> str:
     """从状态快照里读出平台侧的草稿 id。
 
-    快照（``publish/outbox/<slug>__toutiao.json``）是**公开的契约文件**：
+    快照（``platforms/toutiao/outbox/<slug>__toutiao.json``）是**公开的契约文件**：
     里面记着这篇在平台上是什么状态、平台侧 id 是多少。执行器读它就行，
     不 import 那个 adapter（adapter 也不该知道执行器的事）。
     """
@@ -599,7 +599,7 @@ def _mark_douyin_published(episode: str, url: str, args: argparse.Namespace) -> 
     """回填抖音的发布状态（走外部命令，执行器不 import adapter）。"""
     template = getattr(args, "mark_cmd", None) or DEFAULT_DOUYIN_MARK_TEMPLATE
     command = template.format(python=sys.executable, episode=episode, url=url)
-    cwd = Path(getattr(args, "mark_cwd", None) or (REPO_ROOT / "douyin")).resolve()
+    cwd = Path(getattr(args, "mark_cwd", None) or (REPO_ROOT / "platforms")).resolve()
     print(f"回填状态：{command}（cwd={cwd}）")
     result = subprocess.run(shlex.split(command), cwd=str(cwd))
     if result.returncode != 0:
@@ -672,7 +672,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p_bili, DEFAULT_BILIBILI_SELECTORS)
     p_bili.add_argument("episode")
     p_bili.add_argument("--package", default=None,
-                        help="B站 发布包目录，默认 bilibili/out/<期号>")
+                        help="B站 发布包目录，默认 platforms/bilibili/out/<期号>")
     p_bili.add_argument("--out", default=None, help="产物目录")
     p_bili.add_argument("--cdp", default=None,
                         help="挂到已经在跑的浏览器上，"
@@ -687,9 +687,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_tt.add_argument("--all", dest="all_posts", action="store_true",
                        help="把账本里所有 drafted 的文章都过一遍")
     p_tt.add_argument("--packages-dir", default=None,
-                       help="头条号发布包目录，默认 toutiao/out")
+                       help="头条号发布包目录，默认 platforms/toutiao/out")
     p_tt.add_argument("--outbox-dir", default=None,
-                       help="状态快照目录，默认 publish/outbox")
+                       help="状态快照目录，默认 platforms/toutiao/outbox")
     p_tt.add_argument("--out", default=None, help="产物目录，默认 browser/out/toutiao")
     p_tt.add_argument("--cdp", default=None,
                        help="挂到已经在跑的浏览器上，"
@@ -704,7 +704,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p_dy, DEFAULT_DOUYIN_SELECTORS)
     p_dy.add_argument("episode", help="期号，例如 csn-total-ordering")
     p_dy.add_argument("--packages-dir", default=None,
-                      help="抖音发布包目录，默认 douyin/out")
+                      help="抖音发布包目录，默认 platforms/douyin/out")
     p_dy.add_argument("--out", default=None,
                       help="产物目录，默认 browser/out/douyin/<期号>")
     p_dy.add_argument("--cdp", default=None,

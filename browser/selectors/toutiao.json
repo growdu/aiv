@@ -16,7 +16,7 @@
     "publish_query": "source=mp&type=article&aid=1231&mp_publish_ab_val=0"
   },
 
-  "_selectors_note": "目前只用得上一个：草稿箱里每条草稿的 id 在列表接口里（draft_list），账本 publish/outbox/<slug>__toutiao.json 的 draft_id 就是它。留这一节是为了以后要读草稿箱页面时不用改代码结构。",
+  "_selectors_note": "目前只用得上一个：草稿箱里每条草稿的 id 在列表接口里（draft_list），账本 platforms/toutiao/outbox/<slug>__toutiao.json 的 draft_id 就是它。留这一节是为了以后要读草稿箱页面时不用改代码结构。",
   "selectors": {
     "draft_row": [".article-draft-item"],
     "draft_title": [".article-draft-item .title"]

@@ -17,7 +17,7 @@
     cd publish && python3 -m publishkit.cli schedule weekly
     PYTHONPATH=publish python3 -m publishkit.cli schedule weekly
 
-**退出码沿用 adapter 的约定**（``toutiao/toutiao/cli.py`` 那一套）：
+**退出码沿用 adapter 的约定**（``platforms/toutiao/cli.py`` 那一套）：
 
 ===  ==========================================
 0    成功
@@ -27,8 +27,9 @@
 ===  ==========================================
 
 **调度器只做调度**：选内容、写周键、记失败。它**不 import 任何平台
-adapter 的模块**（§11.1）——平台怎么发，由 ``publish/capabilities/*.toml``
-的 ``[adapter].command`` 决定，调度器只把那条命令调起来。
+adapter 的模块**（§11.1）——平台怎么发，由
+``platforms/<platform>/capability.toml`` 的 ``[adapter].command`` 决定，
+调度器只把那条命令调起来。
 
 这一期只驱动文档类平台（能力模型里 ``kind == "document"``）。
 """
@@ -72,7 +73,7 @@ __all__ = [
     "main",
 ]
 
-#: 退出码是与调用方的约定（与 ``toutiao/toutiao/cli.py`` 同一套）。
+#: 退出码是与调用方的约定（与 ``platforms/toutiao/cli.py`` 同一套）。
 EXIT_OK = 0
 EXIT_USAGE = 1
 EXIT_INELIGIBLE = 2
@@ -153,10 +154,10 @@ def _common_options() -> _Parser:
         help="内容单元目录（默认：<仓库>/source/_posts）",
     )
     parser.add_argument(
-        "--outbox-dir",
+        "--outbox-root",
         metavar="路径",
         default=argparse.SUPPRESS,
-        help="outbox 目录（默认：<状态目录>/outbox）",
+        help="平台根目录（默认：<仓库>/platforms）",
     )
     parser.add_argument(
         "--schedule-file",
@@ -165,16 +166,16 @@ def _common_options() -> _Parser:
         help="调度状态文件（默认：<状态目录>/schedule.json）",
     )
     parser.add_argument(
-        "--capabilities-dir",
+        "--platforms-dir",
         metavar="路径",
         default=argparse.SUPPRESS,
-        help="能力声明目录（默认：<仓库>/publish/capabilities）",
+        help="平台目录（默认：<仓库>/platforms）",
     )
     parser.add_argument(
         "--secrets",
         metavar="路径",
         default=argparse.SUPPRESS,
-        help="凭据文件（默认：环境变量 PUBLISH_SECRETS，或 <仓库>/weixin/secrets.json）",
+        help="凭据文件（默认：环境变量 PUBLISH_SECRETS，或 <仓库>/platforms/wechat/secrets.json）",
     )
     parser.add_argument(
         "--adapter-timeout",
@@ -283,8 +284,8 @@ def _config_from_args(args) -> ScheduleConfig:
         repo_root=getattr(args, "repo_root", None),
         state_dir=getattr(args, "state_dir", None),
         posts_dir=getattr(args, "posts_dir", None),
-        outbox_dir=getattr(args, "outbox_dir", None),
-        capabilities_dir=getattr(args, "capabilities_dir", None),
+        outbox_root=getattr(args, "outbox_root", None),
+        platforms_dir=getattr(args, "platforms_dir", None),
         schedule_file=getattr(args, "schedule_file", None),
         secrets=getattr(args, "secrets", None),
     )
@@ -302,8 +303,9 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
     """调平台 adapter 的 CLI。
 
     命令是 ``<adapter_command...> publish <content_id>``，**cwd 必须是
-    ``<仓库>/<adapter 包名>``**：adapter 的包目录是 ``repo/toutiao/toutiao/``，
-    ``python3 -m toutiao.cli`` 要靠 cwd 在 ``sys.path`` 里找到它。
+    ``config.platforms_dir``（默认就是 ``<仓库>/platforms``）——``python3 -m <包名>.cli``
+    靠 cwd 在 ``sys.path`` 里找到它**（adapter 的包目录是 ``repo/platforms/toutiao/``）。
+    **能力声明从哪儿读，cwd 就得是哪儿**——两处必须是同一个目录。
 
     adapter 自己按它自己的 ``automation`` 分支，调度器不替它分支。
     """
@@ -319,11 +321,11 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
             "能力声明 {} 没有 [adapter].package，不知道它住在哪".format(capability.id)
         )
 
-    working_dir = config.repo_root / package
-    if not working_dir.is_dir():
+    working_dir = config.platforms_dir
+    if not (working_dir / package).is_dir():
         raise ScheduleConfigError(
             "adapter 的包目录不存在：{}（能力声明 {} 写的 package 是 {!r}）".format(
-                working_dir, capability.id, package
+                working_dir / package, capability.id, package
             )
         )
 
@@ -332,7 +334,7 @@ def invoke_adapter(config: ScheduleConfig, capability, content_id: str, timeout:
     environment["PUBLISH_REPO"] = str(config.repo_root)
     # 状态目录可以被指到别处，adapter 写快照时得知道写到哪去。
     # CLI 契约是固定的 ``publish <content_id>``，位置只能从 argv 之外传。
-    environment["PUBLISH_OUTBOX_DIR"] = str(config.outbox_dir)
+    environment["PUBLISH_OUTBOX_DIR"] = str(config.outbox_dir_for(capability.id))
 
     try:
         completed = subprocess.run(
@@ -372,7 +374,7 @@ def write_snapshot(
     快照是**公开信息**：没有 token、没有 secret、没有本机的绝对路径。
     文件名按约定：``<压平后的 content_id>__<platform>.json``。
     """
-    outbox = config.outbox_dir
+    outbox = config.outbox_dir_for(platform)
     outbox.mkdir(parents=True, exist_ok=True)
     path = outbox / snapshot_name(content_id, platform)
 
@@ -435,7 +437,7 @@ def publish_one(
     失败要**记进 outbox**（§7.1），不吞异常；某个平台失败不阻塞其他平台
     （§3.4）——所以这里返回退出码，由调用方决定要不要继续。
     """
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
     if index.is_published(content_id, platform):
         return EXIT_OK, ["{} 已经发到过 {}，跳过。".format(content_id, platform)]
 
@@ -467,7 +469,7 @@ def publish_one(
         # 「成功」必须**确认过**，不能假设。快照是发布层的幂等键：
         # 它没落到调度器看的那份 outbox 里，这一篇下周会被再发一遍，
         # 而调度器刚才还报「成功」——发重了比发慢了糟糕得多。
-        landed = load_outbox_index(config.outbox_dir).get(content_id, platform)
+        landed = load_outbox_index(config.outbox_root).get(content_id, platform)
         wrote = landed is not None and (
             before is None or landed.mtime_ns != before.mtime_ns
         )
@@ -482,7 +484,9 @@ def publish_one(
                 status="unknown",
                 reason=(
                     "adapter 报成功，但快照没落到 {}：幂等键没落盘，"
-                    "结果未知，不自动重发，待人工核对".format(config.outbox_dir)
+                    "结果未知，不自动重发，待人工核对".format(
+                        config.outbox_dir_for(platform)
+                    )
                 ),
                 title=title,
                 automation=capability.automation,
@@ -491,14 +495,17 @@ def publish_one(
             return EXIT_ERROR, [
                 "{} → {}：adapter 报成功但快照没落到 {} —— 幂等键没落盘，"
                 "结果未知（已记进 {}），待人工核对。".format(
-                    content_id, platform, config.outbox_dir, path.name
+                    content_id,
+                    platform,
+                    config.outbox_dir_for(platform),
+                    path.name,
                 )
             ]
         return EXIT_OK, ["{} → {}：成功。".format(content_id, platform)]
 
     # adapter 自己写没写快照：它写了就以它的为准（它是平台那一侧的事实），
     # 调度器不覆盖别人的记录。
-    after = load_outbox_index(config.outbox_dir).get(content_id, platform)
+    after = load_outbox_index(config.outbox_root).get(content_id, platform)
     adapter_wrote = after is not None and (
         before is None or after.mtime_ns != before.mtime_ns
     )
@@ -570,7 +577,7 @@ def publish_one(
 
 def _capability_for(config: ScheduleConfig, platform: str):
     """读一个平台的能力声明，并确认它是文档类平台。"""
-    capability = load_capability(platform, capabilities_dir=config.capabilities_dir)
+    capability = load_capability(platform, platforms_dir=config.platforms_dir)
     if capability.kind != "document":
         raise ScheduleConfigError(
             "{} 是视频平台，这一期调度器只驱动文档类平台".format(platform)
@@ -690,7 +697,7 @@ def cmd_schedule_status(args) -> int:
             )
         )
 
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
     for error in index.errors:
         print("  outbox 有读不动的快照：{}".format(error))
 
@@ -747,7 +754,7 @@ def cmd_schedule_candidates(args) -> int:
     capabilities = target_platforms(config, platform_filter)
 
     units, errors = discover_units(config.posts_dir)
-    index = load_outbox_index(config.outbox_dir)
+    index = load_outbox_index(config.outbox_root)
 
     for error in errors:
         print("语料有问题：{}".format(error))

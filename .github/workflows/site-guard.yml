@@ -10,7 +10,7 @@ name: Site guard
 # 这条工作流补上那一格。它**不阻塞部署**（独立工作流、独立并发组），
 # 挂了只报注解（不登录也能从 API 看到是哪条挂了），不挡别人的推送。
 #
-# 只跑根级 tests/：AIV 流水线那套测试由 aiv-pipeline.yml 负责，
+# 只跑根级 tests/：AIV 流水线那套测试由 video-pipeline.yml 负责，
 # 两边各管各的，失败时才知道该看哪边的注解。
 
 on:

@@ -46,7 +46,7 @@ from browser.plan import BilibiliPlan
 # parents[0]=flows、parents[1]=browser 包、parents[2]=browser/ 顶层目录。
 DEFAULT_SELECTORS_PATH = Path(__file__).resolve().parents[2] / "selectors" / "bilibili.json"
 
-# B站 的字数限制（数字来自 publish/capabilities/bilibili.toml 的 [limits]，
+# B站 的字数限制（数字来自 platforms/bilibili/capability.toml 的 [limits]，
 # 口径是「小于 N 字」，所以上限取 N-1）。
 LIMITS = {
     "title_chars": 79,

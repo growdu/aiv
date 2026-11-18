@@ -1,7 +1,7 @@
 """头条号：把发布包里的图灌进平台草稿箱。
 
 **这个 flow 解决什么。** 2026-11-15 那批 547 篇草稿是「只灌正文、不带图」灌进去的
-（见 ``toutiao/docs/02-试点记录.md`` §R4.D）：草稿里留着切片器的 ``【图N】``
+（见 ``platforms/toutiao/docs/02-试点记录.md`` §R4.D）：草稿里留着切片器的 ``【图N】``
 占位符，图得人工补。这一步现在做成脚本：上传图 → 把占位符换成平台自己的
 图片节点 → **更新**那一条草稿。
 
@@ -17,7 +17,7 @@
 但内容不对」。
 
 **它不动账本。** 草稿 id 没变，账本里那条记录也就没变；
-``publish/outbox/`` 里的快照仍然是「drafted + 同一个 draft_id」。
+``platforms/toutiao/outbox/`` 里的快照仍然是「drafted + 同一个 draft_id」。
 """
 
 from __future__ import annotations
@@ -206,7 +206,7 @@ def build_publish_payload(
 
     ``word_count`` 是**平台自己的字数口径**（非 ASCII 逐字 + ASCII 每两个折一个），
     由出包时算好放在 ``meta.json`` 里——执行器不重算口径，见
-    ``toutiao/toutiao/wordcount.py``。
+    ``platforms/toutiao/wordcount.py``。
 
     ``draft_id`` 带上去就是**更新**那一条草稿；不带就是新建一条。
     """

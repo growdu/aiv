@@ -6,7 +6,7 @@
 封面框是横的。
 
 所以这里钉的不是「某个数」，而是「实测那天测到的数」。每一条的出处见
-``toutiao/docs/02-试点记录.md`` §R2。改数字要同时改那份记录——
+``platforms/toutiao/docs/02-试点记录.md`` §R2。改数字要同时改那份记录——
 两边对不上，说明其中一个不是实测来的。
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 from publishkit.capability import load_capability_file
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DECLARATION = REPO_ROOT / "publish" / "capabilities" / "toutiao.toml"
+DECLARATION = REPO_ROOT / "platforms" / "toutiao" / "capability.toml"
 
 #: 2026-11-13 实测出来的限额。原样抄在这里，而不是从文件里读出来再断言
 #: 自己——那只是把文件内容抄了一遍，测不出「被改回去了」。

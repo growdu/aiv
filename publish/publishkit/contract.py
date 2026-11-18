@@ -5,7 +5,7 @@
 
 格式规则（§4.2）：只允许扁平的 ``key: value`` 与单层的 ``key:`` +
 ``  - item`` 列表，嵌套仅 ``cascade:`` 允许，多行值不支持。
-这一套格式不是新发明——``weixin/wechat/posts.py`` 的 ``parse_front_matter()``
+这一套格式不是新发明——``platforms/wechat/posts.py`` 的 ``parse_front_matter()``
 实现的正是同一套（``key: value`` 标量 + ``  - item`` 列表），规格 §4.2 明确要求
 「契约与它逐条对齐，不是各写各的」。
 
@@ -128,7 +128,7 @@ REPRINT_POLICIES = (
 #:
 #: 这 7 个字段只回答「**这一期是什么**」——身份、内容事实。
 #: 「**在哪看**」（平台链接）是发布动作的产物，记在
-#: ``publish/outbox/<EP>__<平台>.json`` 的 ``published_url`` 里，
+#: ``platforms/<平台>/outbox/<EP>__<平台>.json`` 的 ``published_url`` 里，
 #: **不进 front matter**：发布产物抄进母稿就是新造一类手写常量，
 #: 而手写常量正是 §5.1 刚消灭掉的东西。
 EPISODE_SCALAR_FIELDS = (
@@ -209,7 +209,7 @@ def parse_front_matter(text: str) -> tuple:
     Returns ``(fields, body)``.  A list field maps to a list of strings;
     a single-item list is kept as a one-element list so callers do not have
     to guess the shape.  A ``key:`` with no items below it is an empty list
-    (``cover:`` → ``[]``)——this matches ``weixin/wechat/posts.py`` field for
+    (``cover:`` → ``[]``)——this matches ``platforms/wechat/posts.py`` field for
     field, so the two never disagree about what a draft said（LF 输入下；
     两处有意分歧见模块 docstring）。
 
@@ -217,7 +217,7 @@ def parse_front_matter(text: str) -> tuple:
     真实语义读成**标量** ``"wechat"``。这一形态不是 sync 产出的形状（sync
     把它折叠成单行 ``key: value``），只在直接读作者原稿时才会遇到。
 
-    在 **LF 输入下**与 ``weixin/wechat/posts.py:82`` 的 ``parse_front_matter()``
+    在 **LF 输入下**与 ``platforms/wechat/posts.py:82`` 的 ``parse_front_matter()``
     逐条对齐（缩进标量除外）；CRLF 输入下本层认 ``\r\n`` 而 weixin 那份不认
     ——这两处差异都是有意为之，见模块 docstring。代码独立：契约层不 import
     平台 adapter 的任何模块。

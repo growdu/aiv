@@ -30,7 +30,7 @@ ITEM_ID = "7709123013601463579"
 
 
 def make_package(tmp_path: Path) -> Path:
-    """一个假的抖音发布包（结构照 douyin/out/<期号>/ 来）。"""
+    """一个假的抖音发布包（结构照 platforms/douyin/out/<期号>/ 来）。"""
     root = tmp_path / "csn-total-ordering"
     root.mkdir()
     (root / "title.txt").write_text("一个单调递增的号，决定事务的提交顺序", encoding="utf-8")

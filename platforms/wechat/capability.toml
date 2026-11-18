@@ -1,0 +1,59 @@
+# 微信公众号平台能力声明。
+#
+# 这是契约层与公众号 adapter 之间的接缝：限额与自动化档位都是**数据**，
+# 平台规则变了改这里，不改 Python。
+#
+# 数值来源：公众号官方接口文档 + 本号实测（2026-11-11，见
+# platforms/wechat/docs/03-试点记录.md）。这三个数字与 platforms/wechat/posts.py、
+# titles.py、digest.py 里的常量是同一批——
+# publish/tests/test_capability_compat.py 盯着两边不漂。
+#
+# ⚠️ title_chars = 64：公众号编辑器的真实上限。规格 §5 的示例里写的是
+# 32，那份示例照抄进来这条兼容性测试会立刻变红（见测试文件开头的说明）。
+#
+# ⚠️ body_chars = 60000：**不是平台的硬限制**，是工具选的一档。
+# 官方字段表写「少于 2 万字符」，2026-11-14 实测推翻了这个说法——
+# draft/add 收下 20001 / 25000 / 40000 / 65535 / 100000 字符全部成功，
+# draft/get 读回来长度与提交一致，一字未少（见 platforms/wechat/README.md 与
+# platforms/wechat/docs/06-超长文章拆分.md）。工具默认取 60000：渲染后的 HTML
+# 里只有约四分之一是读者看得见的字，60000 字符约合读者那儿的 1.5 万字。
+# 想换档用 --max-length / WX_MAX_LENGTH（实测天花板 100000）。
+
+id = "wechat"
+name = "微信公众号"
+kind = "document"
+
+# 凭据：AppID + AppSecret，access_token 走 stable_token 换取。
+# 注意 stable_token 的凭据字段名必须是 secret（只发 appsecret 会被回 41004）。
+auth = "appid_secret"
+
+# 公众号接口要求调用方的出口 IP 在后台白名单里——这是它与其他平台最大的
+# 不同，也决定了发布动作必须留在固定 IP 的机器上（见 publish/deploy/）。
+ip_allowlist = true
+
+# api_draft = 自动生成 + 自动进草稿箱，最后点一下发表由人完成。
+#
+# 为什么不是 api_publish：本号是订阅号·个人主体，freepublish/submit 实测
+# 被回 48001 api unauthorized——账号没有发表接口权限。草稿箱天然是审批闸门，
+# 这不是失败，是答案。
+automation = "api_draft"
+
+# review = platform：平台侧仍会对草稿做机审（标题党、诱导分享等）。
+review = "platform"
+
+requires_certification = true
+requires_min_followers = 0
+
+# verified = 这些数值最后对着平台文档与实测复核过的日期（ISO 日期）。
+verified = "2026-11-14"
+
+[limits]
+title_chars = 64
+body_chars = 60000
+digest_chars = 120
+
+[adapter]
+# 包目录是 <仓库>/platforms/wechat/，命令在 <仓库>/platforms/ 下跑：
+# `python3 -m wechat.cli publish <content_id>`。
+package = "wechat"
+command = ["python3", "-m", "wechat.cli"]

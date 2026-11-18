@@ -65,7 +65,7 @@
         <key>PUBLISH_REPO</key>
         <string>__REPO__</string>
         <key>PUBLISH_SECRETS</key>
-        <string>__REPO__/weixin/secrets.json</string>
+        <string>__REPO__/platforms/wechat/secrets.json</string>
     </dict>
 
     <!-- 每周五 09:00 一次。Weekday 里 0 和 7 是周日，5 是周五。 -->

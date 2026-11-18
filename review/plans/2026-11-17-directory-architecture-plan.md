@@ -15,7 +15,7 @@
 这几条对每个 task 都成立，实施时不得放宽：
 
 - **快照文件名 `<content_id>__<platform>.json` 一个字都不改**——它是幂等键，改名等于让已发过的内容被当成没发过。
-- **`docs/life/aiv/` 目录名、`life/aiv/…` 形式的 content id、指向 `life/aiv/` 专题页的站点链接（7 处 `aiv/index.html`）一个都不改**——URL 稳定性是硬约束（`publish/spec/00-架构设计.md` §7.4）。
+- **`docs/life/aiv/` 目录名、`life/aiv/…` 形式的 content id、指向 `life/aiv/` 专题页的站点链接（8 处 `aiv/index.html`，分布在 4 个文件里）一个都不改**——URL 稳定性是硬约束（`publish/spec/00-架构设计.md` §7.4）。
 - **567 个快照的正文不改**——`package_dir` 字段里的旧路径搬迁后会失效，但站点构建不读它，不重写历史发布记录。
 - **目录名 = 平台 id = Python 包名**：`wechat` `toutiao` `douyin` `bilibili` `channels`。五个能力声明文件统一叫 `capability.toml`。
 - **目录改名，标识符里的 AIV 保留**——`AIV_ROOT` 这类常量不改名（AIV 是品牌，还在用）；只有它指向的**目录路径**变。
@@ -31,7 +31,7 @@
 1. **读侧漏改 → 重复发布。** outbox 分平台之后，任何还在扫单一目录的读者都会把 567 条已发布记录看成「一篇都没发过」，调度器于是重发。→ Task 4 的守卫：真实仓库的 outbox 索引必须含 567 条；Task 0/Task 7 前后对比 `publishkit schedule status` 的「已发过（567）」。
 2. **adapter 子进程找不到包。** 压平之后内层包没了，`python3 -m toutiao.cli` 靠 cwd 在 `sys.path` 里找包；cwd 不跟着改，调度器一调 adapter 就失败。→ Task 2 的守卫：子进程 cwd 必须是 `<repo>/platforms`，且五个平台各自 `python3 -c "import <plat>.cli"` 要成功。
 3. **能力声明按 id 找不到目录。** 目录名与 toml 里的 `id` 不一致时，按 id 查目录就查不到。→ Task 3 的守卫：每个平台的目录名必须等于其 toml 里的 `id`。
-4. **URL 命名空间被误改 → 老链接全断。** 批量替换 `aiv/` 时误伤 `docs/life/aiv/` 目录、`life/aiv/…` content id，或 `docs/life/_index.md` 里指向 `life/aiv/` 专题页的 `./aiv/index.html` 链接。→ Task 1 的守卫 + Task 1 Step 4 的**两遍替换法**。
+4. **URL 命名空间被误改 → 老链接全断。** 批量替换 `aiv/` 时误伤 `docs/life/aiv/` 目录、`life/aiv/…` content id，或 `docs/life/_index.md` 里指向 `life/aiv/` 专题页的 `./aiv/index.html` 链接（**全仓 8 处，4 个文件**）。→ Task 1 的守卫 + Task 1 Step 4 的**占位符保护法**。
 5. **静默失败。** `tools/build-publish-index.py` 与 `tools/build-video-pages.py` 的测试把 outbox 路径 monkeypatch 成临时目录，路径写错时**测试照样全绿**，只有真跑构建才炸。→ Task 4 的守卫：直接对**真实仓库**调一次 `read_outbox()`，断言条数。
 
 ---
@@ -106,12 +106,12 @@ ls source/_posts/ 2>/dev/null | grep -c 'episode\|视频' || true
 
 - [ ] **Step 1: 写下两条守卫（此时应绿）**
 
-在 `tests/test_podcast_spec.py` 末尾加（`REPO_ROOT` 该文件里已有；若没有用 `Path(__file__).resolve().parents[1]`）：
+在 `tests/test_podcast_spec.py` 末尾加（这个文件里的仓库根常量叫 **`REPO`**，不是 `REPO_ROOT`——见 `tests/test_podcast_spec.py:28`；写错会 `NameError`）：
 
 ```python
 def test_the_life_aiv_url_namespace_is_untouched():
     """`docs/life/aiv/` 是 URL 命名空间，搬家不许碰它。"""
-    namespace = REPO_ROOT / "docs" / "life" / "aiv"
+    namespace = REPO / "docs" / "life" / "aiv"
     assert namespace.is_dir(), "docs/life/aiv/ 不见了——URL 命名空间被搬家弄坏了"
     files = [p for p in namespace.rglob("*") if p.is_file()]
     assert len(files) == 9, f"docs/life/aiv/ 的文件数变了：{len(files)}（应为 9）"
@@ -123,10 +123,28 @@ def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
         "docs/life/_index.md": "./aiv/index.html",
         "docs/life/blog-to-wechat/index.md": "../aiv/index.html",
         "docs/life/shehui/media-account/index.md": "../../aiv/index.html",
+        "docs/database/_index.md": "../life/aiv/index.html",
     }
     for path, link in links.items():
-        text = (REPO_ROOT / path).read_text(encoding="utf-8")
+        text = (REPO / path).read_text(encoding="utf-8")
         assert link in text, f"{path} 里的 {link} 链接不见了"
+
+    # 全仓点数：docs/ 里指向 life/aiv 专题页的链接一共 8 处（分处 4 个文件）
+    count = 0
+    for path in sorted((REPO / "docs").rglob("*.md")):
+        count += path.read_text(encoding="utf-8").count("aiv/index.html")
+    assert count == 8, f"docs/ 里指向 life/aiv 专题页的链接变成 {count} 处（应为 8）"
+
+    # README 里讲解相对链接机制的那两处例子也是 URL 命名空间（搬前叫 aiv/README.md）
+    for name in ("video", "aiv"):
+        readme = REPO / name / "README.md"
+        if readme.is_file():
+            text = readme.read_text(encoding="utf-8")
+            assert "../aiv/背景音乐规范.md" in text, f"{name}/README.md 里的链接例子不见了"
+            assert "../aiv/index.html" in text, f"{name}/README.md 里的链接例子不见了"
+            break
+    else:
+        raise AssertionError("既没有 video/README.md 也没有 aiv/README.md")
 ```
 
 - [ ] **Step 2: 跑测试确认它们现在会绿**
@@ -140,15 +158,20 @@ Expected: PASS（2 passed）。
 git mv aiv video
 ```
 
-- [ ] **Step 4: 替换路径引用（两遍法）**
+- [ ] **Step 4: 替换路径引用（占位符保护法）**
 
 **先看哪些形式必须保留：**
 
 | 形式 | 例子 | 处置 |
 | --- | --- | --- |
 | `life/aiv/…` | `docs/life/aiv/`、`life/aiv/voice/README`、`/growdu.cn/2026/11/12/life/aiv/` | **不动**（URL 命名空间与 content id） |
-| `docs/` 里的 `./aiv/` `../aiv/` `../../aiv/` | `[AIV 视频生产线](../aiv/index.html)` | **不动**（指向 life/aiv/ 专题页的站点链接） |
-| 其余 `aiv/…` | `aiv/pipeline/pyv/`、`aiv/字幕-行锁.md`、`aiv/contracts/` | **改成 `video/…`** |
+| 指向 `life/aiv/` 专题页的站内相对链接（**8 处**） | `[AIV 视频生产线](../aiv/index.html)`、`../aiv/背景音乐规范.md` | **不动**（站点链接，指向 `life/aiv/`） |
+| 其余 `aiv/…` | `aiv/pipeline/pyv/`、`aiv/字幕-行锁.md`、`aiv/contracts/`、`../../aiv/index.md`（在 `publish/spec/` 里指的是**仓库目录**） | **改成 `video/…`** |
+
+> 站内相对链接与仓库路径的区别**不能靠词形判断**——`publish/spec/00-架构设计.md` 里的
+> `../../aiv/` 指的是仓库根的 `aiv/` 目录（该换），`docs/life/` 里的 `../aiv/` 指的是
+> 站点上的 `life/aiv/` 专题页（不该换）。所以下面按**文件**逐个列出要保护的字面量，
+> 先占位保护、替换完再还原。
 
 用这个脚本跑一遍（放在仓库根执行）：
 
@@ -167,29 +190,39 @@ EXCLUDE = (
     "video/pipeline/plans/",
     "docs/blog/重构方案.md",          # 已发布的旧文章
 )
-# 这些文件里的 ./aiv/ 与 ../aiv/ 是站点链接（指向 life/aiv/ 专题页），要额外保护
-SITE_LINKS = (
-    "docs/life/_index.md",
-    "docs/life/blog-to-wechat/index.md",
-    "docs/life/shehui/media-account/index.md",
-)
+# 这些字面量是「站内相对链接」，指向 life/aiv/ 专题页——替换前先占位，替换完还原。
+# aiv/README.md 与 video/README.md 是同一个文件（搬前/搬后），两个名字都列上。
+PROTECTED = {
+    "docs/life/_index.md": ("./aiv/index.html",),
+    "docs/life/blog-to-wechat/index.md": ("../aiv/index.html",),
+    "docs/life/shehui/media-account/index.md": ("../../aiv/index.html",),
+    "docs/database/_index.md": ("../life/aiv/index.html",),
+    "aiv/README.md": ("../aiv/背景音乐规范.md", "../aiv/index.html"),
+    "video/README.md": ("../aiv/背景音乐规范.md", "../aiv/index.html"),
+}
+MARK = "\x00SL{}\x00"
 
 changed = []
-for path in ROOT.rglob("*"):
-    if not path.is_file() or ".git/" in str(path):
+for path in sorted(ROOT.rglob("*")):
+    if not path.is_file() or "/.git/" in f"/{path}":
         continue
     rel = path.as_posix()
     if rel.startswith(EXCLUDE):
         continue
     try:
-        text = path.read_text(encoding="utf-8")
+        original = path.read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError):
         continue
+    text = original
+    saved = []
+    for i, literal in enumerate(PROTECTED.get(rel, ())):
+        if literal in text:
+            text = text.replace(literal, MARK.format(i))
+            saved.append((i, literal))
     new = re.sub(r"(?<!life/)aiv/", "video/", text)
-    if rel in SITE_LINKS:
-        new = re.sub(r"(?<!\.\./)\./video/", "./aiv/", new)
-        new = re.sub(r"(?<!\.\./)\.\./video/", "../aiv/", new)
-    if new != text:
+    for i, literal in saved:
+        new = new.replace(MARK.format(i), literal)
+    if new != original:
         path.write_text(new, encoding="utf-8")
         changed.append(rel)
 print(f"改了 {len(changed)} 个文件")
@@ -197,7 +230,7 @@ PY
 ```
 
 > **`aiv/` 前面是 `life/` 的绝不换**——那是 URL 命名空间与 content id。
-> **`docs/` 里那 7 处 `aiv/index.html` 站点链接绝不换**——它们指向 `life/aiv/` 专题页。
+> **那 8 处站内相对链接绝不换**——它们指向 `life/aiv/` 专题页，脚本里逐个占位保护。
 
 - [ ] **Step 5: 替换独立出现的 `aiv` 词（不带斜杠的路径）**
 
@@ -304,6 +337,11 @@ git commit -m "refactor(video): 视频生产线改名 aiv/ → video/，路径�
 - Modify: `publish/publishkit/cli.py::invoke_adapter`（cwd）
 - Modify: `publish/capabilities/*.toml` 的 `[adapter]` 段（5 个文件）
 - Modify: `platforms/<plat>/tests/conftest.py`（5 个：sys.path 与 `parents[2]` → `parents[3]`）
+- Modify: 深度变了的其余文件（Step 3 的表：`platforms/{bilibili,channels,douyin}/cli.py`、`platforms/wechat/{cli,assets}.py`、`platforms/<plat>/tests/*.py` 里另外 5 个、`platforms/wechat/tools/*.py` 里 3 个、`platforms/wechat/tests/test_portability.py`）
+- Modify: `platforms/channels/tests/test_package.py`（钉死路径字符串的那条断言）
+- Modify: `publish/tests/test_contract.py`、`publish/tests/test_capability_compat.py`、`publish/tests/test_reader_agreement.py`（三个对照测试的 `sys.path`——Step 3d）
+- Modify: `publish/tests/test_scheduler_cli.py`（假 adapter 的目录与 cwd 断言——Step 3d）
+- Modify: `platforms/toutiao/tests/test_layout.py`（四条守旧形状的断言——Step 3d）
 - Modify: `platforms/wechat/deploy/launchd.plist.template` + `platforms/wechat/tests/test_launchd.py`
 - Modify: `browser/browser/cli.py`（三个默认路径）
 - Modify: `ruff.toml`、`pyrightconfig.json`
@@ -367,9 +405,38 @@ done
 `__init__.py cli.py capability.py …`——**包名仍是 `wechat`，测试里的 `from wechat import …`
 不用改**。这正是设计稿 D7 选 `wechat` 而不是 `weixin` 的原因。
 
-- [ ] **Step 3: 五个平台的 conftest 改 sys.path 与深度**
+- [ ] **Step 3: 改 sys.path 与目录深度**
 
-每个 `platforms/<plat>/tests/conftest.py`：
+**搬家改了两处深度，两处方向相反：**
+
+| 变化 | 哪些文件 | 后果 |
+| --- | --- | --- |
+| **内层包压平**（`weixin/wechat/x.py` → `platforms/wechat/x.py`） | 五个平台的内层包 | 层级数不变（`<plat>/<plat>/x.py` → `platforms/<plat>/x.py`），但 `parents[1]` 从「包目录」变成了「`platforms/`」 |
+| **`tests/` `tools/` 下沉一层**（`weixin/tests/x.py` → `platforms/wechat/tests/x.py`） | 五个平台的 `tests/` 与 `tools/` | `parents[2]` 从「仓库根」变成了「`platforms/`」 |
+
+**要改的（逐个文件核对，不要批量 sed）：**
+
+| 文件（搬完后的路径） | 现状 | 改成 |
+| --- | --- | --- |
+| `platforms/{bilibili,channels,douyin}/cli.py` | `DEFAULT_OUT = Path(__file__).resolve().parents[1] / "out"` | `parents[0] / "out"` |
+| `platforms/wechat/assets.py` | `SVG_CACHE_DIR = Path(__file__).resolve().parents[1] / "out" / "svg"` | `parents[0] / "out" / "svg"` |
+| `platforms/wechat/cli.py` | `DEFAULT_OUT_DIR` `DEFAULT_SECRETS_FILE` `DEFAULT_COLLECTIONS_FILE` `DEFAULT_STAMP_FILE` `DEFAULT_COVER` 全是 `parents[1]` | 全部 `parents[0]` |
+| `platforms/{wechat,toutiao,douyin,bilibili,channels}/tests/conftest.py` | `REPO_ROOT = Path(__file__).resolve().parents[2]` | `parents[3]` |
+| `platforms/bilibili/tests/test_package.py` | `Path(__file__).resolve().parents[2] / "publish" / "capabilities" / "bilibili.toml"` | `parents[3]` |
+| `platforms/toutiao/tests/test_measured_limits.py`、`test_render.py` | `parents[2]` | `parents[3]` |
+| `platforms/wechat/tests/test_audit.py` | `parents[2]` | `parents[3]` |
+| `platforms/douyin/tests/test_end_to_end.py` | `AIV_ROOT = Path(__file__).resolve().parents[2] / "aiv"` | `parents[3] / "video"`（Task 1 已把 `aiv` 换成 `video`） |
+| `platforms/wechat/tools/measure-brand.py`、`measure-length.py`、`prune-empty-drafts.py` | `ROOT = Path(__file__).resolve().parents[2]` | `parents[3]` |
+| `platforms/wechat/tests/test_portability.py` | `PACKAGE = Path(__file__).resolve().parents[1] / "wechat"` | `parents[1]`（内层包没了） |
+
+**不要改的（深度没变）：**
+
+- 五个平台内层包里所有 `parents[2]`——`weixin/wechat/x.py` 与 `platforms/wechat/x.py` 层级数一样，仓库根还在 `parents[2]`。
+- `platforms/<plat>/tests/test_cli.py` 的 `parents[1]`（仍是平台目录）。
+- `platforms/wechat/tests/test_launchd.py` 的 `parents[1] / "deploy" / ...`。
+- `platforms/wechat/tools/check-drafts.py` 的 `parents[1]`。
+
+**conftest 的 sys.path 也要改**（五个都一样）：
 
 ```python
 REPO_ROOT = Path(__file__).resolve().parents[3]      # 原来 parents[2]（仓库根）→ 现在 parents[3]
@@ -382,6 +449,187 @@ if str(REPO_ROOT / "platforms") not in sys.path:      # 原来 REPO_ROOT / "<pla
 
 **同时把 Task 1 Step 6 留的半条断言补上**：`video/pipeline/tests/test_character.py` 里
 `assert (repo_root / "platforms").is_dir()` 现在可以加回去了。
+
+- [ ] **Step 3b: 改那些钉死了路径的断言**
+
+**① `platforms/channels/tests/test_package.py` 里写死了仓库相对路径的那条：**
+
+```python
+    target = package.REPO_ROOT / "channels" / "out" / "ep01"
+    assert package.repo_relative(target) == "channels/out/ep01"
+```
+
+`repo_relative` 算的是**相对仓库根的真路径**，目录一挪它就变：
+
+```python
+    target = package.REPO_ROOT / "platforms" / "channels" / "out" / "ep01"
+    assert package.repo_relative(target) == "platforms/channels/out/ep01"
+```
+
+同文件里 `package_dir="channels/out/ep01"` 那个入参（写进快照的测试数据）也一并改成
+`"platforms/channels/out/ep01"`——它是**测试数据**不是历史快照，改了才对。
+`platforms/bilibili/tests/test_package.py` 里 `package_dir="bilibili/out/ep02"` 同理。
+
+**② `publish/tests/test_real_declarations.py` 里那两条找 adapter 目录的：**
+
+压平前 adapter 的包目录是 `REPO_ROOT / <plat>`（`weixin/wechat/`、`toutiao/toutiao/`…），
+压平后是 `REPO_ROOT / "platforms" / <plat>`。所以：
+
+```python
+def test_every_declaration_points_at_an_adapter_that_exists():
+    for capability in CAPABILITIES:
+        package = capability.adapter_package
+        assert package, f"{capability.id} 的能力声明没有 [adapter].package"
+
+        directory = REPO_ROOT / "platforms" / package
+        assert directory.is_dir(), (
+            f"{capability.id} 指向的 adapter 目录不存在：{directory}"
+        )
+
+
+def test_every_adapter_command_names_a_module_that_exists():
+    """命令是 ``python3 -m <模块>``，模块要真的在那个目录里。"""
+    for capability in CAPABILITIES:
+        command = capability.adapter_command
+        assert command, f"{capability.id} 的能力声明没有 [adapter].command"
+
+        module = command[-1].split(".")[0]
+        directory = REPO_ROOT / "platforms" / capability.adapter_package
+        candidates = [
+            directory / "__init__.py",        # 压平后包目录就是 platforms/<plat>/
+            directory / (module + ".py"),
+        ]
+        assert any(path.is_file() for path in candidates), (
+            f"{capability.id} 的命令 {' '.join(command)} 指向的模块不在 {directory} 里"
+        )
+```
+
+> **注意区别**：测试里的**期望值**要跟着改（它算的是真路径），
+> 而 `publish/outbox/` 里 567 个快照的 `package_dir` 是**历史记录，一个字都不改**
+> （全局约束）。
+
+- [ ] **Step 3c: 加一条深度守卫**
+
+在 `publish/tests/test_real_declarations.py` 里（Step 1 那条守卫旁边）加：
+
+```python
+def test_the_platform_dirs_keep_the_repo_root_at_the_right_depth():
+    """搬家改了两处深度：内层包压平（−1 层）、tests/tools 下沉（+1 层）。
+
+    「仓库根在哪一层」是这些目录里所有相对路径的地基——钉住它，
+    免得以后再被悄悄挪走一层，而症状要等到出包时才炸。
+    """
+    repo_root = REPO_ROOT.resolve()
+    for plat in ("wechat", "toutiao", "douyin", "bilibili", "channels"):
+        package = (REPO_ROOT / "platforms" / plat).resolve()
+        assert package.parents[1] == repo_root, f"platforms/{plat}/ 的仓库根深度变了"
+        for sub in ("tests", "tools"):
+            directory = package / sub
+            if directory.is_dir():
+                assert directory.parents[2] == repo_root, (
+                    f"platforms/{plat}/{sub}/ 的仓库根深度变了")
+```
+
+- [ ] **Step 3d: 修那些「搬完会静默跳过 / 静默失效」的地方**
+
+有几处**不会报错，只会安静地不干活**——路径指空了，于是测试 `skip`，
+或者「两个实现给同一个答案」的对照断言悄悄不对照了。
+症状要等到出问题才显现，所以在这里一次钉死。
+
+**① 三个对照测试的 `sys.path`**
+
+压平后 `wechat` 包住在 `<仓库>/platforms/wechat/`，
+`import wechat.posts` 靠的是 **`platforms/` 在 sys.path 上**，
+不是 `platforms/wechat/` 自己。脚本会把 `"weixin"` 换成 `"platforms/wechat"`，
+但 `sys.path.insert(0, str(WEIXIN_DIR))` 插的是**包目录**——
+于是 `import wechat.posts` 失败，`except Exception: return None`，
+对照测试**全部 skip**（`publish/tests/test_contract.py` 3 处、
+`publish/tests/test_capability_compat.py` 1 处、
+`publish/tests/test_reader_agreement.py` 2 处）。
+
+| 文件 | 现状 | 改成 |
+| --- | --- | --- |
+| `publish/tests/test_contract.py` | `WEIXIN_DIR = Path(__file__).resolve().parents[2] / "weixin"` | `WEIXIN_DIR = Path(__file__).resolve().parents[2] / "platforms" / "wechat"` |
+| `publish/tests/test_capability_compat.py` | `WEIXIN_DIR = REPO_ROOT / "weixin"` | `WEIXIN_DIR = REPO_ROOT / "platforms" / "wechat"` |
+| `publish/tests/test_reader_agreement.py` | `TOUTIAO_DIR = REPO_ROOT / "toutiao"` | `TOUTIAO_DIR = REPO_ROOT / "platforms" / "toutiao"` |
+
+三处都要把 `sys.path.insert(0, str(<那个目录>))` 改成
+`sys.path.insert(0, str(<那个目录>.parent))`——插进去的是 **`platforms/`**。
+
+**② `publish/tests/test_scheduler_cli.py` 里的假 adapter**
+
+`invoke_adapter` 的 cwd 改成了 `<仓库>/platforms`（Step 5），假 adapter 也得住在那里：
+
+```python
+    package = root / "platforms" / "fakeadapter"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "cli.py").write_text(FAKE_ADAPTER, encoding="utf-8")
+```
+
+（原来是 `root / "fakeadapter" / "fakeadapter"`——顶层不是包、同名子目录才是包。
+压平之后没有两层了，`platforms/fakeadapter/` 自己就是包。）
+
+断言 `call["cwd"] == str(workspace.root / "fakeadapter")` 改成
+`assert call["cwd"] == str(workspace.root / "platforms")`。
+文件头部那段注释（「它住在 `<仓库>/fakeadapter/fakeadapter/`…」）一并改写。
+
+**③ `toutiao/tests/test_layout.py` 的四条断言**
+
+这个文件守的是「顶层目录不是包、包在同名子目录里」——
+**压平之后这条不变量本身没了**，断言要按新形状重写：
+
+```python
+def test_package_importable():
+    """`import toutiao` 必须解析到 platforms/toutiao/，不是仓库根的同名目录。"""
+    assert toutiao.__version__
+    package_dir = Path(toutiao.__file__).resolve().parent
+    assert package_dir.name == "toutiao"
+    assert package_dir.parent.name == "platforms"
+    assert (package_dir / "__init__.py").is_file()
+
+
+def test_top_level_dir_is_not_a_package():
+    """仓库根没有 toutiao/ 目录了——五个平台都收在 platforms/ 下面。"""
+    repo_root = Path(toutiao.__file__).resolve().parents[2]
+    assert not (repo_root / "toutiao").exists()
+    assert (repo_root / "platforms" / "toutiao" / "__init__.py").is_file()
+
+
+@pytest.mark.parametrize("path", ["platforms/toutiao/secrets.json",
+                                  "platforms/toutiao/out/package/x.html"])
+def test_ignored_paths_are_git_ignored(repo_root: Path, path: str):
+    """凭据与本地产物必须真的被 git 挡住 —— 用 git 自己判定，不靠肉眼读 .gitignore。"""
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", path],
+        cwd=repo_root,
+        capture_output=True,
+    )
+    assert result.returncode == 0, f"{path} 没有被 .gitignore 挡住"
+
+
+def test_credentials_example_is_not_ignored(repo_root: Path):
+    """反向断言：示例文件必须可入库，否则模板改不动。"""
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", "platforms/toutiao/secrets.example.json"],
+        cwd=repo_root,
+        capture_output=True,
+    )
+    assert result.returncode != 0
+```
+
+（`platforms/toutiao/.gitignore` 里的 `out/` 与 `secrets.json` 是**不带斜杠**的模式，
+搬目录不用改内容，`git check-ignore` 照样命中。）
+
+**④ 跑完确认「没有新的 skip」**
+
+```bash
+python3 -m pytest publish/tests -q -rs -k "weixin or toutiao or reader or agreement or compat"
+```
+
+Expected: **全部 PASS，没有一个 skip**。
+这些是「两个实现给同一个答案」的对照测试——
+它们变成 skip 不是「环境不支持」，是 §① 那种静默失效。
 
 - [ ] **Step 4: 能力声明的 `[adapter]` 段**
 
@@ -432,10 +680,14 @@ def test_the_adapter_runs_inside_the_platforms_directory(monkeypatch):
     config = resolve_config(repo_root=REPO_ROOT)
     capability = load_capability("toutiao",
                                   capabilities_dir=REPO_ROOT / "publish" / "capabilities")
-    cli.invoke_adapter(config, capability, ["publish", "some-content-id"])
+    cli.invoke_adapter(config, capability, "some-content-id", 300)
     assert captured["cwd"] == str(REPO_ROOT / "platforms")
     assert captured["argv"][:3] == ["python3", "-m", "toutiao.cli"]
 ```
+
+> `invoke_adapter` 的真实签名是 `invoke_adapter(config, capability, content_id: str, timeout: float)`——
+> `content_id` 是**单独一个字符串参数**，不是列表；`publish` 这个词是函数自己拼进 argv 的
+> （`argv = command + ["publish", content_id]`）。
 
 `REPO_ROOT`、`cli`、`resolve_config`、`load_capability`、`subprocess` 的 import 按该文件现有写法补
 （Task 3 会把 `capabilities_dir` 改名成 `platforms_dir`，那时一并改这个测试）。
@@ -471,17 +723,25 @@ DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "platforms" / "toutiao" / "out"
 
 `DEFAULT_OUTBOX` 留到 Task 4（那时才知道 outbox 放哪）。
 
-- [ ] **Step 9: 替换 `weixin/` 的路径引用**
+- [ ] **Step 9: 替换五个平台目录的路径引用**
 
-用与 Task 1 Step 4 同一形状的脚本，但规则换成：
+**五个目录都搬了家**——`weixin/` `toutiao/` `douyin/` `bilibili/` `channels/` 全部收进
+`platforms/`，所以要改的不只是 `weixin/`。用与 Task 1 Step 4 同一形状的脚本，规则换成：
 
 | 形式 | 处置 |
 | --- | --- |
 | `weixin/wechat/…` | → `platforms/wechat/…`（内层包压平了） |
 | 其余 `weixin/…`（`weixin/docs/`、`weixin/tests/`、`weixin/tools/`、`weixin/secrets.json`…） | → `platforms/wechat/…` |
+| `toutiao/toutiao/…` `douyin/douyin/…` `bilibili/bilibili/…` `channels/channels/…` | → `platforms/<plat>/…`（内层包压平了） |
+| 其余 `toutiao/…` `douyin/…` `bilibili/…` `channels/…` | → `platforms/<plat>/…` |
 | `weixin.qq.com` / `weixin.jpg` / `weixin_39033058` | **不动**（官方域名、图片、外部链接） |
 
-排除清单与 Task 1 相同（历史计划 + `docs/blog/重构方案.md` + 本设计稿与计划稿）。
+**两条排除，比 Task 1 多一条：**
+
+1. 历史计划 + `docs/blog/重构方案.md` + 本设计稿与本计划稿——与 Task 1 相同。
+2. **`publish/outbox/` 整个目录——567 个快照的正文一个字都不改**（全局约束）。
+   快照里的 `"package_dir": "toutiao/out/…"` 是**当时的发布记录**，目录搬走了它就过时，
+   但历史不改写。
 
 ```bash
 python3 - <<'PY'
@@ -496,28 +756,105 @@ EXCLUDE = (
     "video/review/plans/",
     "video/pipeline/plans/",
     "docs/blog/重构方案.md",
+    "publish/outbox/",               # 567 个快照的正文不改（全局约束）
+    ".superpowers/",                 # 本次执行的 SDD 工作区（brief/ledger/评审包）
+    ".remember/",                    # 会话记忆笔记
+    "source/",                       # docs/ 的生成副本（sync-hexo.py 会重生成）
+    "docs/life/blog-to-wechat/",     # 已发布文章：正文不改（设计稿 §4.8）
+    "video/pipeline/2026-11-09-pg-parallel-decode-explainer-design.md",  # 写了「路径按当时的位置保留」
+)
+
+# **保护清单**：这些字面量里也带平台名，但它们不是仓库里的平台目录。
+# 先换成占位符，替换完再还原——与 Task 1 Step 4 同一形状。
+PROTECTED = (
+    ".publish/channels/",                       # 视频流水线的发布产物目录，不是 视频号 adapter
+    "/channels/ec/",                           # 腾讯云 API 路径
+    "openapi/video-management/douyin/",        # 抖音开放平台 API 路径
+    "profile-bilibili/",                       # browser 的浏览器 profile 目录名
+    "browser/out/toutiao/",                    # browser 的本地产物目录
+)
+
+# 目录名 = 平台 id；微信的老目录名是 weixin，包名却是 wechat
+PLATFORMS = (
+    ("weixin", "wechat"),
+    ("toutiao", "toutiao"),
+    ("douyin", "douyin"),
+    ("bilibili", "bilibili"),
+    ("channels", "channels"),
 )
 
 changed = []
-for path in ROOT.rglob("*"):
-    if not path.is_file() or ".git/" in str(path):
+# **只遍历 git 跟踪的文件**——`pathlib.rglob` 会走进 `.gitignore` 忽略掉的目录
+# （`.superpowers/` 里的 brief/ledger/评审包、`.remember/` 的会话笔记、`.pytest_cache/`）。
+# Task 1 实测踩过：脚本把 SDD 工作区里的任务说明书改了，等于评审读到的是被改过的需求。
+# `git ls-files` 只列被跟踪的文件，那几类天然不在列表里。
+import subprocess
+tracked = subprocess.run(
+    ["git", "ls-files", "-z"], capture_output=True, check=True
+).stdout.decode("utf-8").split("\0")
+for rel in sorted(p for p in tracked if p.strip()):
+    path = ROOT / rel
+    if not path.is_file():
         continue
-    rel = path.as_posix()
     if rel.startswith(EXCLUDE):
         continue
     try:
-        text = path.read_text(encoding="utf-8")
+        original = path.read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError):
         continue
-    # 先长后短：weixin/wechat/ → platforms/wechat/，再 weixin/ → platforms/wechat/
-    new = re.sub(r"weixin/wechat/", "platforms/wechat/", text)
-    new = re.sub(r"weixin/", "platforms/wechat/", new)
-    if new != text:
+    # 保护：换成不含平台词的占位符
+    marks = {}
+    text = original
+    for index, literal in enumerate(PROTECTED):
+        mark = "\x00PL{}\x00".format(index)
+        if literal in text:
+            text = text.replace(literal, mark)
+            marks[mark] = literal
+    new = text
+    for old, plat in PLATFORMS:
+        # 一遍吃掉两种形式：<old>/<plat>/ 与 <old>/。
+        # **必须单遍**——分成两条正则的话，第一遍产出的 platforms/<plat>/
+        # 会被第二遍再套一层，变成 platforms/platforms/<plat>/。
+        new = re.sub(rf"(?<!platforms/){re.escape(old)}/(?:{re.escape(plat)}/)?",
+                     f"platforms/{plat}/", new)
+    # 还原保护项
+    for mark, literal in marks.items():
+        new = new.replace(mark, literal)
+    if new != original:
         path.write_text(new, encoding="utf-8")
         changed.append(rel)
 print(f"改了 {len(changed)} 个文件")
 PY
 ```
+
+> **遍历方式改成 `git ls-files`**（Task 1 实测踩过的坑）：
+> `pathlib.rglob("*")` 会走进 `.gitignore` 忽略掉的目录——
+> `.superpowers/`（**本次执行的 SDD 工作区**：brief、ledger、评审包）、
+> `.remember/`（会话记忆笔记）、`.pytest_cache/`。
+> Task 1 的替换脚本把 SDD 工作区里的**任务说明书**改了，
+> 等于评审读到的需求跟实现者看到的不是一份。
+> `git ls-files` 只列被跟踪的文件，那几类天然不在列表里。
+> `EXCLUDE` 里那两行保留着——重复排除无害，但写在那儿是为了让人一眼看见「这两类不许动」。
+
+> **`publish/outbox/` 被排除**——脚本跑完必须核对：
+> `git diff --stat -- publish/outbox/` 必须是空的，567 个快照一个字节都没动。
+
+> **`EXCLUDE` 里新增的四类**（实测踩到的）：
+> - `.superpowers/`——本次执行的 SDD 工作区（brief、ledger、评审包）。
+>   改坏它，reviewer 读到的就是被改过的需求。
+> - `.remember/`——会话记忆笔记。
+> - `source/`——`docs/` 的生成副本，`sync-hexo.py` 会重生成，改它是白改。
+> - `docs/life/blog-to-wechat/`——已发布文章的正文（设计稿 §4.8）。
+>   它同时是**唯一一处**含 `channels/` 碰撞的活文档
+>   （`.publish/channels/` 与腾讯云的 `/channels/ec/`）。
+
+> **`PROTECTED` 里那五条**是平台名撞车的字面量——它们不是仓库里的平台目录：
+> `.publish/channels/`（视频流水线的产物目录）、`/channels/ec/`（腾讯云 API）、
+> `openapi/video-management/douyin/`（抖音开放平台 API）、
+> `profile-bilibili/`（browser 的浏览器 profile 目录名）、
+> `browser/out/toutiao/`（browser 的本地产物目录）。
+> **保护的办法是占位符**，不是加排除项——加排除项会把整个文件都放过，
+> 那些文件里还有**该改**的路径。
 
 **剩下的独立 `weixin` 词**逐条判断：
 
@@ -595,9 +932,17 @@ git commit -m "refactor(platforms): 五个平台收进 platforms/ 并压平，�
 - Modify: `video/pipeline/pyv/preflight.py`（`_load_media`、`check_video`）
 - Modify: `platforms/toutiao/capability.py::default_capability_path`
 - Modify: `platforms/bilibili/package.py::_bilibili_limits_loader`
+- Modify: `platforms/channels/package.py::_channels_limits_loader`（与 bilibili 同形）
+- Modify: `platforms/douyin/package.py::_douyin_limits_loader`（与 bilibili 同形）
+- Modify: `platforms/bilibili/snapshot.py::automation_of`（`REPO_ROOT/"publish"/"capabilities"`）
 - Modify: `platforms/douyin/contract.py`（docstring 里的路径）
 - Modify: `platforms/bilibili/tests/test_package.py`（真实 toml 的路径）
-- Modify: `publish/tests/test_schedule.py`（Task 2 Step 6 那个测试的 `capabilities_dir=` 关键字）
+- Modify: `publish/tests/test_schedule.py`（Task 2 Step 6 那个测试的 `capabilities_dir=` 关键字；`_capability_dir` 助手）
+- Modify: `publish/tests/test_capability.py`（`capabilities_dir=` 关键字 + `write_toml` 助手 + 一条断言）
+- Modify: `publish/tests/test_capability_compat.py`（`CAPABILITIES_DIR` / `WECHAT_CAPABILITY`）
+- Modify: `publish/tests/test_reader_agreement.py`（`REAL_DECLARATION`）
+- Modify: `publish/tests/test_toutiao_limits.py`（`DECLARATION`）
+- Modify: `publish/tests/test_scheduler_cli.py`（`--capabilities-dir` 与假平台目录）
 - Test: `publish/tests/`、`video/pipeline/tests/`、`platforms/*/tests/`
 
 **Interfaces:**
@@ -660,6 +1005,9 @@ def list_capabilities(*, platforms_dir=None) -> list:
 `default_capabilities_dir` **删掉**（不留旧名——留着就会有人继续用旧路径）。
 模块头 docstring 里的「读 `publish/capabilities/<platform>.toml`」也要改。
 
+**`__all__` 里那一项也要换**——`capability.py:87` 写着 `"default_capabilities_dir"`，
+改成 `"default_platforms_dir"`（留着旧名，`from publishkit import *` 照样能拿到旧函数）。
+
 - [ ] **Step 3: 改配置与命令行**
 
 `publish/publishkit/schedule.py`：
@@ -668,12 +1016,66 @@ def list_capabilities(*, platforms_dir=None) -> list:
 - `resolve_config(..., platforms_dir=None, ...)`；默认值 `root / "platforms"`。
 - `discover_repo_root()` 的锚点从「含 `publish/capabilities` 的那一层」改成
   「含 `publish/publishkit` 的那一层」——能力声明散了，原锚点失效了。
+- **`schedule.py:466` 那条报错信息里的路径拼法也要改**：
+  `config.capabilities_dir / "{}.toml".format(platform_filter)` 指的是
+  「一个目录下的一个 toml 文件」，现在文件在平台目录里，得改成
+  `config.platforms_dir / platform_filter / "capability.toml"`。
 
 `publish/publishkit/cli.py`：
 
 - `--capabilities-dir` 改名 `--platforms-dir`，help 改成「平台目录（默认：`<仓库>/platforms`）」。
 - `resolve_config(..., platforms_dir=getattr(args, "platforms_dir", None), ...)`。
 - 内部所有 `capabilities_dir=` 关键字改 `platforms_dir=`（含 Task 2 Step 6 那个测试）。
+
+- [ ] **Step 3b: `capabilities_dir` 这个词全仓换成 `platforms_dir`**
+
+`capabilities_dir` 是一路传下去的关键字参数，改一处不够——
+**漏掉的那一处不会报错，它会继续读旧目录**（读到空目录，然后「什么都没找到」）。
+
+```bash
+grep -rn "capabilities_dir" -- '*.py'
+```
+
+逐条过完下面这些：
+
+| 位置 | 改成什么 |
+| --- | --- |
+| `publish/publishkit/capability.py` | `load_capability` / `list_capabilities` / `available_platforms` 的关键字参数 |
+| `publish/publishkit/schedule.py` | `ScheduleConfig.capabilities_dir` → `platforms_dir`；`resolve_config(..., capabilities_dir=)` → `platforms_dir=` |
+| `publish/publishkit/cli.py` | `--capabilities-dir` → `--platforms-dir`；`resolve_config(..., capabilities_dir=)` → `platforms_dir=` |
+| `platforms/bilibili/package.py` | `_bilibili_limits_loader(capabilities_dir)` → `(platforms_dir)`；`build_package(..., capabilities_dir=)` → `platforms_dir=`；`preflight_findings(..., capabilities_dir)` → `platforms_dir` |
+| `platforms/channels/package.py` | 同上（`_channels_limits_loader`） |
+| `platforms/douyin/package.py` | 同上（`_douyin_limits_loader`） |
+| `platforms/bilibili/snapshot.py` | `automation_of(capabilities_dir)` → `(platforms_dir)` |
+| `video/pipeline/pyv/epmeta.py` | `load_limits(platform, capabilities_dir=None)` → `platforms_dir=None` |
+| `video/pipeline/pyv/preflight.py` | `check_video(..., capabilities_dir=None)` → `platforms_dir=None`；`_load_media` 同 |
+| 各平台 `tests/*.py` | 传 `capabilities_dir=` 的地方 |
+
+**默认值也一起换**：凡是 `Path(...) / "publish" / "capabilities"` 这样的拼法，
+改成 `Path(...) / "platforms" / <id> / "capability.toml"`。
+
+- [ ] **Step 3c: 测试里现造的「假能力声明」要按新形状摆**
+
+能力声明从「一个目录下一个 `<id>.toml`」变成「每个平台一个目录、
+里面一个 `capability.toml`」。测试里现造的那几份也得跟着摆——
+**摆错了不会报错，只会「一个平台都没找到」**。
+
+| 位置 | 现状 | 改成 |
+| --- | --- | --- |
+| `publish/tests/test_capability.py` 的 `write_toml(tmp_path, name, text)` | 写 `tmp_path/name` | 写 `tmp_path/<name 去后缀>/"capability.toml"`，返回那个路径 |
+| `publish/tests/test_capability.py::test_repository_capabilities_all_parse` | `assert cap.id == cap.path.stem` | 删掉这一行——文件名统一叫 `capability.toml`，`path.stem` 永远是 `"capability"` |
+| `publish/tests/test_capability.py` 的 skip 文案 | 「publish/capabilities/ 目前为空」 | 「platforms/ 目前还没有平台声明」 |
+| `publish/tests/test_capability.py` 的 import | `from publishkit import (..., default_capabilities_dir, ...)` | 换成 `default_platforms_dir`（旧函数删了，import 会直接 ImportError） |
+| `publish/tests/test_schedule.py` 的 `_capability_dir(tmp_path, **tomls)` | 写 `tmp_path/"capabilities"/"<name>.toml"` | 写 `tmp_path/"platforms"/"<name>"/"capability.toml"` |
+| `publish/tests/test_scheduler_cli.py` 的假平台 | `caps/"fake.toml"`、`caps/"fakevideo.toml"` | `platforms/"fake"/"capability.toml"`、`platforms/"fakevideo"/"capability.toml"`；`--capabilities-dir` 改 `--platforms-dir`，参数值 `str(self.root / "platforms")` |
+| `publish/tests/test_reader_agreement.py` | `REAL_DECLARATION = REPO_ROOT/"publish"/"capabilities"/"toutiao.toml"` | `REPO_ROOT/"platforms"/"toutiao"/"capability.toml"` |
+| `publish/tests/test_toutiao_limits.py` | `DECLARATION = REPO_ROOT/"publish"/"capabilities"/"toutiao.toml"` | `REPO_ROOT/"platforms"/"toutiao"/"capability.toml"` |
+| `publish/tests/test_capability_compat.py` | `CAPABILITIES_DIR = REPO_ROOT/"publish"/"capabilities"`、`WECHAT_CAPABILITY = CAPABILITIES_DIR/"wechat.toml"` | `WECHAT_CAPABILITY = REPO_ROOT/"platforms"/"wechat"/"capability.toml"` |
+
+> `write_toml` 是**一个助手带一整个文件**——
+> 改它一个函数，`test_load_capability_by_platform_id`、
+> `test_list_capabilities_reads_every_file`、以及所有「坏输入当场报错」的用例
+> 一起就对了。`load_capability_file(path)` 读的是传进来的路径，不受布局影响 ✓。
 
 - [ ] **Step 4: 搬能力声明文件**
 
@@ -712,6 +1114,8 @@ def load_limits(platform: str, platforms_dir: Path | None = None) -> dict:
 
 `video/pipeline/pyv/preflight.py` 的 `_load_media` 同样改（`base / platform / "capability.toml"`），
 `check_video(info, platform, capabilities_dir=None)` 的参数改名 `platforms_dir`。
+**`preflight.py:20` 的 import 也要跟着改**：
+`from pyv.epmeta import CAPABILITIES_DIR, Finding, MetaError` → `PLATFORMS_DIR`。
 
 **`REPO_ROOT` 在这两个文件里怎么推的，要保持深度不变**——`aiv/` → `video/` 是同深度，
 `Path(__file__).resolve().parents[N]` 的层数不用动。
@@ -797,6 +1201,9 @@ def test_the_real_outbox_index_finds_every_snapshot():
 
 `REPO_ROOT` 与 `load_outbox_index` 按该文件现有 import 补。
 
+> `OutboxIndex.records` 是 **`(content_id, platform)` 二元组为键**的字典——
+> 实测 567 个快照文件对应 567 个不同的二元组，所以 `len(index.records) == 567` 成立。
+
 Run: `python3 -m pytest publish/tests/test_schedule.py::test_the_real_outbox_index_finds_every_snapshot -v`
 Expected: FAIL（`load_outbox_index` 现在只扫一个目录，索引到 0 条）。
 
@@ -861,6 +1268,27 @@ def load_outbox_index(outbox_root) -> OutboxIndex:
 `root / "platforms" / "wechat" / "secrets.json"`；
 那张环境变量表的 `secrets_file` 一行同步改。
 
+**还有一句 docstring 会因为本任务变成假话——必须在这里改，不许留给 Task 6。**
+`schedule.py:137-138` 现在写的是：
+
+```
+    状态目录一改，``schedule.json`` 与 ``outbox/`` **都跟着走**——
+    outbox 不是钉死在 ``$PUBLISH_REPO/publish/outbox`` 的。
+```
+
+本任务之后 outbox **不再跟状态目录走**，这句话就是**假话**。
+Task 6 的兜底 grep 只认 `publish/outbox` 这个**字面量**——
+它能把路径改掉，**改不掉这句行为描述**。所以：
+
+```python
+    状态目录一改，``schedule.json`` **跟着走**，``outbox/`` 不跟——
+    outbox 住在平台目录里（``<仓库>/platforms/<平台>/outbox/``），是入库的发布记录。
+```
+
+**顺带确认一下**：那张环境变量表里**没有** outbox 那一行
+（`resolve_config` 只读 `PUBLISH_REPO` / `PUBLISH_SECRETS` / `PUBLISH_STATE_DIR`）——
+**不要给表加行**。
+
 - [ ] **Step 4: 改契约层的命令与写盘**
 
 `publish/publishkit/cli.py`：
@@ -902,26 +1330,95 @@ def read_outbox():
 `PLATFORMS_DIR = REPO_ROOT / "platforms"`。
 
 **这两个工具的测试把 outbox 路径 monkeypatch 成临时目录**——所以路径写错时测试照样绿。
-必须补一条对**真实仓库**的断言（Review Focus 第 5 条）：
+必须补一条对**真实仓库**的断言（Review Focus 第 5 条）。**两个工具的返回形状不一样，断言写法也不一样**：
 
 ```python
+# tools/build-publish-index.py —— 返回 {content_id: [快照, …]}
 def test_read_outbox_finds_the_real_snapshots():
     records = read_outbox()
     assert sum(len(v) for v in records.values()) == 567
 ```
 
-放在各自已有的测试文件里（`tools/` 下的测试在哪就放哪；若没有，
+```python
+# tools/build-video-pages.py —— 返回 {(content_id, platform): 快照}
+def test_read_outbox_finds_the_real_snapshots():
+    records = read_outbox()
+    assert len(records) == 567
+```
+
+> **别把两条断言写成同一条**：`build-video-pages.py` 的 `records` 的值是**快照字典本身**，
+> `len(v)` 数的是快照里的字段数，不是快照条数——用 `sum(len(v) …)` 会得到几千，
+> 断言会假红。
+
+放在各自已有的测试文件里（`tools/` 下的测试在哪就放哪；`tools/` 目录下**没有**测试文件，
 放到 `tests/test_publish_visibility.py` 里——它已经在测发布相关的东西）。
 
 - [ ] **Step 6: 改 browser 与平台自己的快照模块**
 
 | 位置 | 改什么 |
 | --- | --- |
-| `browser/browser/cli.py` | `DEFAULT_OUTBOX = REPO_ROOT / "platforms"`（它是根，调用方按平台扫子目录） |
+| `browser/browser/cli.py` | `DEFAULT_OUTBOX = REPO_ROOT / "platforms" / "toutiao" / "outbox"` |
 | `platforms/wechat/snapshot.py` | `OUTBOX_DIR = Path(__file__).resolve().parents[2] / "platforms" / "wechat" / "outbox"` |
+| `platforms/bilibili/snapshot.py` | 同上，`"platforms" / "bilibili" / "outbox"` |
+| `platforms/channels/snapshot.py` | 同上，`"platforms" / "channels" / "outbox"` |
+| `platforms/douyin/snapshot.py` | 同上，`"platforms" / "douyin" / "outbox"` |
+| `platforms/toutiao/cli.py` | `DEFAULT_OUTBOX_DIR = _REPO_ROOT / "platforms" / "toutiao" / "outbox"` |
 | `platforms/toutiao/tests/conftest.py` | `OUTBOX_DIR = REPO_ROOT / "platforms" / "toutiao" / "outbox"` |
 | `platforms/douyin/tests/conftest.py` | `repo_outbox = REPO_ROOT / "platforms" / "douyin" / "outbox"` |
 | `platforms/wechat/tests/test_snapshot.py` | 断言 outbox 目录名的用例改成 `"wechat"` |
+
+> **`platforms/douyin/tests/conftest.py` 里还有两处路径串**，
+> 都在 `_the_repo_outbox_stays_untouched()` 那个 fixture 里——
+> 它们是 **git 的 pathspec**，不是 Python 路径，脚本不会改：
+> - `subprocess.run(["git", "ls-files", "-z", "publish/outbox"], …)` → `"platforms/douyin/outbox"`
+> - `if f"publish/outbox/{name}" not in tracked` → `f"platforms/douyin/outbox/{name}"`
+>
+> 漏改的后果**很隐蔽**：pathspec 指空 → `_tracked()` 返回空集 →
+> 「入库目录里只允许有 git 跟踪的文件」这条判据**永远通过**——
+> 守卫自己瞎了。
+
+> **`platforms/toutiao/tests/conftest.py` 的 pathspec 是「自动推」的——不要手改。**
+> 它的 `_tracked_files()` 用 `str(directory.relative_to(REPO_ROOT))` 推出 pathspec，
+> 所以**改 `OUTBOX_DIR` 常量就够了**。
+> 同一个概念在两个文件里是**两种写法**——别把 douyin 的做法套到 toutiao 上。
+>
+> **但 `platforms/toutiao/tests/conftest.py` 还有一个 `PACKAGES_DIR` 要确认**：
+> ```python
+> PACKAGES_DIR = REPO_ROOT / "toutiao" / "out"
+> WRITABLE_IN_THE_REPOSITORY = (OUTBOX_DIR, PACKAGES_DIR)
+> ```
+> Task 2 应该已经把它改成 `REPO_ROOT / "platforms" / "toutiao" / "out"`。
+> **Task 4 要确认**——`WRITABLE_IN_THE_REPOSITORY` 里的目录如果指空，
+> `the_repository_is_never_written_to` 这个 session 级 fixture 的
+> `snapshot()` 会走 `else: seen[directory] = set()` 分支——
+> **它盯的那个目录等于没盯**。
+
+> **记一笔：douyin 的守卫覆盖范围会变窄。**
+> 迁移前 douyin 的守卫盯的是**整个共享的** `publish/outbox/`——
+> douyin 的测试往 `publish/outbox/xxx__toutiao.json` 写东西**会被它抓到**。
+> 迁移后它只盯 `platforms/douyin/outbox/`，
+> douyin 的测试若往 `platforms/toutiao/outbox/` 写，**douyin 的守卫抓不到**
+> （toutiao 自己的 conftest 抓得到，但那是另一个测试进程）。
+> 这是**有意不修**——共享 outbox 本来就不是好设计——
+> 但**要在 Task 4 的报告里写一句**，让后来的人知道这是有意为之。
+
+> **browser 的 `DEFAULT_OUTBOX` 不是「平台根」——它是头条号那一个目录。**
+> `browser/browser/cli.py:435` 把它传给 `cmd_toutiao_images`，
+> 那条命令做的是 `outbox_dir.glob("*__toutiao.json")`——**单目录 glob**。
+> 改成 `<仓库>/platforms` 的话，glob 什么也找不到，
+> `toutiao images --all-posts` 会**静默地什么都不做**。
+> 所以默认必须是 `<仓库>/platforms/toutiao/outbox`。
+
+**还有 8 处 help 文本写着「默认 publish/outbox」**（`platforms/{bilibili,channels,douyin}/cli.py` 各 2 处，
+`platforms/toutiao/cli.py` 1 处，`browser/browser/cli.py` 1 处），顺手改掉：
+
+| 位置 | 改成 |
+| --- | --- |
+| `platforms/bilibili/cli.py` | 「状态快照目录，默认 `platforms/bilibili/outbox`」 |
+| `platforms/channels/cli.py` | 「状态快照目录，默认 `platforms/channels/outbox`」 |
+| `platforms/douyin/cli.py` | 「状态快照目录，默认 `platforms/douyin/outbox`」 |
+| `platforms/toutiao/cli.py` | 「状态快照目录（默认：`platforms/toutiao/outbox`）」 |
+| `browser/browser/cli.py` | 「状态快照目录，默认 `platforms/toutiao/outbox`」 |
 
 - [ ] **Step 7: 改 publish 测试里的真实仓库路径**
 
@@ -931,8 +1428,30 @@ def test_read_outbox_finds_the_real_snapshots():
 REPO_OUTBOX = REPO_ROOT / "platforms"
 ```
 
-并把该文件里断言 `config.outbox_dir == root / "publish" / "outbox"` 的两处改成
-`config.outbox_root == root / "platforms"`。
+**但这个文件里 `REPO_OUTBOX` 和 `config.outbox_dir` 一共出现了七处**——
+一句话的指令覆盖不了一个文件里的七处用法。逐处过：
+
+| 位置 | 现状 | 改成 |
+| --- | --- | --- |
+| `:43` `REPO_OUTBOX` | `REPO_ROOT / "publish" / "outbox"` | `REPO_ROOT / "platforms"` |
+| `:163` | `assert config.outbox_dir == root / "publish" / "outbox"` | `assert config.outbox_root == root / "platforms"` |
+| `:184` | `assert config.outbox_dir == tmp_path / "state" / "outbox"`（**语义变了**：outbox 不再跟状态目录走） | `assert config.outbox_root == tmp_path / "platforms"`，上面那句注释也要改 |
+| `:197` | `outbox_dir=tmp_path / "other-outbox"`（`resolve_config` 的关键字） | `outbox_root=` |
+| `:207` | `assert config.outbox_dir == tmp_path / "other-outbox"` | `assert config.outbox_root == ...` |
+| `:478` | `pytest.skip("仓库里没有 publish/outbox/")` | `pytest.skip("仓库里没有 platforms/")` |
+| `:481` | `for path in sorted(REPO_OUTBOX.glob("*.json")):` | `for path in sorted(REPO_OUTBOX.glob("*/outbox/*.json")):` |
+| `:617-618` | `outbox = root / "publish" / "outbox"` + `write_snapshot(outbox, ...)` | `outbox = root / "platforms" / "toutiao" / "outbox"` |
+| `:622` | `load_outbox_index(config.outbox_dir)` | `load_outbox_index(config.outbox_root)` |
+
+> **`:481` 那一处不改，测试会红**：快照搬进 `platforms/<plat>/outbox/` 之后，
+> 在 `platforms/` 顶层 glob `"*.json"` 一个都找不到 → `assert checked > 0` 失败。
+>
+> **`:617` 那一处不改，测试也会红，但症状更误导**：新扫描器扫的是
+> `root/platforms/*/outbox/*.json`，而快照被写在了 `root/publish/outbox/` →
+> 索引是空的 → 调度器认为这篇**没发过** → 选了错的平台。
+>
+> **`assert checked > 0` 不要改成 `assert checked == 567`**——这条用例的 docstring 明说
+> 「master 上多出快照时它自动多验几条，不用改测试」。数量由 Step 1 的新守卫钉住。
 
 - [ ] **Step 8: 跑测试**
 
@@ -952,7 +1471,9 @@ python3 tools/build-publish-index.py
 python3 tools/build-video-pages.py
 PYTHONPATH=publish python3 -m publishkit.cli schedule status > /tmp/after-status.txt
 PYTHONPATH=publish python3 -m publishkit.cli schedule candidates > /tmp/after-candidates.txt
-diff /tmp/baseline/status.txt /tmp/after-status.txt && echo "status 一致"
+# status.txt 的第 1 行是「本周：2026-W47」、第 2 行是「本周还没有记录。」
+# ——这两行随日历周变，比对时从第 3 行开始（基线也是这么采的）
+diff <(tail -n +3 /tmp/baseline/status.txt) <(tail -n +3 /tmp/after-status.txt) && echo "status 一致"
 diff /tmp/baseline/candidates.txt /tmp/after-candidates.txt && echo "candidates 一致"
 ```
 
@@ -986,12 +1507,16 @@ git commit -m "refactor(outbox): 发布快照按平台下沉到 platforms/<plat>
 ```python
 def test_the_draft_box_exists_and_says_how_it_works():
     """草稿箱是两条流水线的共同入口，它的约定必须写在仓库里。"""
-    readme = REPO_ROOT / "drafts" / "README.md"
+    readme = REPO / "drafts" / "README.md"
     assert readme.is_file(), "drafts/README.md 不见了"
     text = readme.read_text(encoding="utf-8")
     for keyword in ("drafts/", "review/", "docs/", "video/", "platforms/"):
         assert keyword in text, f"草稿箱的约定里没提到 {keyword}"
 ```
+
+> **注意常量名**：这个文件里的仓库根常量叫 **`REPO`**（`tests/test_podcast_spec.py:28`），
+> **不是 `REPO_ROOT`**——写成 `REPO_ROOT` 会 `NameError`，
+> 守卫不是「红」而是「炸」，看不出到底是哪一条约定不满足。
 
 Run: `python3 -m pytest tests/test_podcast_spec.py::test_the_draft_box_exists_and_says_how_it_works -v`
 Expected: FAIL（`drafts/` 不存在）。
@@ -1118,6 +1643,48 @@ Expected: **FAIL**——规格文档里还写着旧路径，守卫会把它们�
 | `review/README.md` | 路径引用 |
 | `review/specs/2026-11-13-content-review-design.md` | 若有路径引用则改；**本次的目录架构设计稿不改**（它描述的就是这次迁移） |
 
+- [ ] **Step 5b: 全仓扫 `publish/outbox` 与 `publish/capabilities` 的活引用**
+
+Task 3、Task 4 改的是**代码里算路径的地方**；这一条扫的是**注释、docstring、
+help 文本、规格与站点文章里还写着旧路径的地方**。改完这一条，
+Task 7 Step 3 的第一条 grep 才是干净的。
+
+```bash
+git grep -n 'publish/outbox\|publish/capabilities' -- . \
+  ':!review/plans' ':!review/specs' ':!publish/plans' ':!docs/blog' \
+  ':!video/pipeline/plans' ':!video/review/plans' ':!video/review/specs'
+```
+
+排除掉的是**计划类文档目录**（本设计稿、本计划稿、上游的历史计划、
+`publish/plans/` 里的旧实施计划、`video/pipeline/plans/` 与 `video/review/plans/`
+里的历史计划）——它们记录的就是搬迁前的仓库，刻意不改（设计稿 §4.8）。
+
+改法：
+
+| 现在写的 | 改成 |
+| --- | --- |
+| `publish/outbox/` | `platforms/<plat>/outbox/` |
+| `publish/capabilities/<plat>.toml` | `platforms/<plat>/capability.toml` |
+| `publish/capabilities/` | `platforms/` |
+
+**已知的落点**（Task 3、Task 4 之外还会漏掉的）：
+
+| 位置 | 说明 |
+| --- | --- |
+| `browser/browser/__init__.py`、`browser/browser/flows/toutiao.py`、`browser/browser/flows/bilibili.py`、`browser/browser/cli.py` 的 docstring | 旧路径写进了模块说明里 |
+| `browser/docs/00-设计.md` | 表格与正文里的旧路径 |
+| `browser/selectors/toutiao.json` | `_selectors_note` 里的旧路径 |
+| `tools/patch-theme.py` **与** `themes/matery/layout/_partial/post-publish.ejs` | **两处要改成一模一样的文字**——前者是模板源，后者是已落地的产物；只改一处，下次跑 `patch-theme.py` 会把旧注释写回去 |
+| `.github/workflows/hexo.yml` | 注释里的旧路径 |
+| `README.md` | 能力声明表、发布快照表、目录清单表、幂等键那几行（Task 3/4 只改代码，不碰 README） |
+| `platforms/wechat/docs/*.md`、`platforms/toutiao/docs/*.md` | 各平台自己的活文档（含试点记录——它们指的是会搬走的真文件，**要改**） |
+| `platforms/<plat>/*.py`（各平台包里的 `__init__.py`、`package.py`、`snapshot.py`、`state.py`、`capability.py`、`contract.py`） | docstring 里的旧路径 |
+| `platforms/<plat>/tests/*.py` | docstring 与注释里的旧路径 |
+| `publish/publishkit/*.py` | Task 3/4 改了代码；**docstring 里剩下的旧路径**在这里 |
+| `publish/spec/*.md` | Step 2 一起改 |
+
+**改完再跑一遍那条 grep，除排除项外必须为空。**
+
 - [ ] **Step 6: 上游计划里那一处指向真实文件的路径**
 
 `review/plans/2026-11-17-内容分类与结构重构.md` 第 305、470 行指向
@@ -1237,16 +1804,23 @@ Expected: 出现 `--platforms-dir 路径`（不再是 `--capabilities-dir`）。
 - [ ] **Step 3: 兜底 grep（应为空）**
 
 ```bash
-git grep -n 'publish/outbox\|publish/capabilities' -- . ; echo "退出码 $?（1 = 干净）"
-git grep -n '"weixin/"\|weixin/secrets\|/weixin$' -- . ; echo "退出码 $?（1 = 干净）"
-git grep -n -P '(?<!life/)aiv/' -- . | grep -v 'plans/\|directory-architecture-' ; echo "退出码 $?（1 = 干净）"
+EXCL=(':!review/plans' ':!review/specs' ':!publish/plans' ':!docs/blog' \
+      ':!video/pipeline/plans' ':!video/review/plans' ':!video/review/specs')
+
+git grep -n 'publish/outbox\|publish/capabilities' -- . "${EXCL[@]}"; echo "退出码 $?（1 = 干净）"
+git grep -n '"weixin/"\|weixin/secrets\|/weixin$' -- . "${EXCL[@]}"; echo "退出码 $?（1 = 干净）"
+git grep -n -P '(?<!life/)aiv/' -- . "${EXCL[@]}" \
+  | grep -v 'aiv/index.html\|aiv/背景音乐规范.md'; echo "退出码 $?（1 = 干净）"
 ```
 
-第三条的白名单：`plans/` 下的历史计划、本设计稿与本计划稿、以及
-`docs/` 里那 7 处指向 `life/aiv/` 专题页的站点链接（它们前面是 `./` 或 `../`，
-正则的 `(?<!life/)` 拦不住——所以这里用排除法核对）。
+**排除项是「计划类文档目录」**——本设计稿、本计划稿、`review/plans/` 与
+`publish/plans/` 里的历史计划、`video/pipeline/plans/` 与 `video/review/plans/`
+里的历史计划。它们记录的是搬迁前的仓库，刻意不改（设计稿 §4.8）。
 
-**逐条人工看第三条的输出**，确认剩下的每一处都是「有意保留」。
+第三条末尾那层 `grep -v` 是**站点链接**：8 处指向 `life/aiv/` 专题页的链接
+写的是 `aiv/index.html` 与 `aiv/背景音乐规范.md`，它们前面是 `./` 或 `../`，
+正则的 `(?<!life/)` 拦不住——但这些字面量**一个字都不能改**（全局约束）。
+除这两条字面量外，第三条实测**必须为空**。
 
 - [ ] **Step 4: 确认旧目录真的没了**
 
@@ -1260,15 +1834,26 @@ Expected: 全部报「No such file or directory」。
 
 ```bash
 find platforms/*/outbox -name '*.json' | wc -l   # 必须是 567
-git diff --stat HEAD~5 -- 'publish/outbox' | tail -3
 ```
 
-Expected: 567；diff 里只有删除行、没有新增行（说明是纯粹的重命名）。
+**名字没变**：快照文件名是幂等键，改名等于换键。逐个核对：
+
+```bash
+git log --oneline --diff-filter=R --name-status -- 'platforms/*/outbox/*.json' \
+  | grep -E '^R[0-9]+' | awk '{print $2, $3}' | awk '{print $2}' | sed 's|.*/||' | sort > /tmp/after-names.txt
+git show --stat --oneline <Task 4 那个提交> -- 'publish/outbox' | grep -E '^ publish/outbox/' \
+  | sed 's|.*/||' | sort > /tmp/before-names.txt
+diff /tmp/before-names.txt /tmp/after-names.txt && echo "567 个文件名一个都没变"
+```
+
+Expected: 567；两份文件名清单**完全一致**。
 
 - [ ] **Step 6: 与基线比对**
 
 ```bash
-diff /tmp/baseline/status.txt /tmp/after-status.txt && echo "发布历史一致"
+# status.txt 的前两行随日历周变（本周：2026-W47 / 本周还没有记录。），
+# 基线也是这么采的——比对时从第 3 行开始
+diff <(tail -n +3 /tmp/baseline/status.txt) <(tail -n +3 /tmp/after-status.txt) && echo "发布历史一致"
 diff /tmp/baseline/candidates.txt /tmp/after-candidates.txt && echo "候选集一致"
 python3 tools/build-publish-index.py
 python3 -c "

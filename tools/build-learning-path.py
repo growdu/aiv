@@ -264,17 +264,17 @@ def video_corpus() -> list[dict]:
     """AIV 的视频内容单元（``source/_posts/video/<期号>.md``）。
 
     这些不是 ``docs/`` 里的文章，是 ``tools/build-video-pages.py`` 从
-    ``aiv/字幕-*.md`` 生成的——但它们**同样会发布成文章**，同样该在学习路径里
+    ``video/字幕-*.md`` 生成的——但它们**同样会发布成文章**，同样该在学习路径里
     （6 期讲的是行锁、并行解码、WAL 顺序、CSN 全序、结构化 DDL、并行 apply，
     都在数据库内核这条线的中段）。
 
-    期号从 ``aiv/pipeline/Makefile`` 读——那是期号与母稿的唯一映射，
+    期号从 ``video/pipeline/Makefile`` 读——那是期号与母稿的唯一映射，
     直接复用 ``build-video-pages.py`` 的读法，不在这里另建一份。
     """
     try:
         video_pages = _load_video_pages()
     except Exception as exc:  # noqa: BLE001 —— 读不到就当没有视频单元
-        print("读不到 aiv 的期号登记（%s），视频内容单元没进语料" % exc,
+        print("读不到 video 的期号登记（%s），视频内容单元没进语料" % exc,
               file=sys.stderr)
         return []
     posts = []

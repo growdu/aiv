@@ -1,7 +1,7 @@
 """发布计划：把「发布包」读成一份结构化的「要往页面上填什么」。
 
-**为什么不在这里读元数据 JSON。** 元数据（`aiv/publish/<EP>.json`）是
-**文案的事实**，发布包（`channels/out/<EP>/`、`bilibili/out/<EP>/`）是
+**为什么不在这里读元数据 JSON。** 元数据（`video/publish/<EP>.json`）是
+**文案的事实**，发布包（`platforms/channels/out/<EP>/`、`platforms/bilibili/out/<EP>/`）是
 **已经按平台限额裁好的产物**。
 浏览器该填的是后者——标题多少字、简介带不带话题、封面选哪张，
 出包的时候都定过了。这里只负责把定好的东西读出来，不再做判断。
@@ -319,7 +319,7 @@ class DouyinPlan:
     | 成片 | `video.mp4` | `video.mp4` | `video.mp4`（**竖版 9:16 无品牌版**） |
 
     抖音这一档要用**竖版无导流版**成片：带品牌字标与 ``growdu.cn`` 胶囊的那版
-    会撞在抖音「过度营销 + 站外引流」两条规则上（见 ``douyin/douyin/cli.py``）。
+    会撞在抖音「过度营销 + 站外引流」两条规则上（见 ``platforms/douyin/cli.py``）。
     """
 
     episode: str

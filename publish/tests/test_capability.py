@@ -19,7 +19,7 @@ from publishkit import (
     CapabilityFileError,
     PublishKitError,
     available_platforms,
-    default_capabilities_dir,
+    default_platforms_dir,
     list_capabilities,
     load_capability,
     load_capability_file,
@@ -50,7 +50,17 @@ command = ["python3", "-m", "wechat.cli"]
 
 
 def write_toml(tmp_path: Path, name: str, text: str) -> Path:
-    path = tmp_path / name
+    """写一份能力声明，摆成新布局：``<tmp_path>/<平台名>/capability.toml``。
+
+    ``name`` 必须是 ``<平台 id>.toml``——**目录名是从它推出来的**，
+    而目录名必须与声明里的 ``id`` 一致（契约层按目录名核对）。
+    写成别的名字就会得到「目录叫 A、id 叫 B」，然后被那条核对拒掉，
+    报错还指向那个没写错的 id。
+    """
+    platform = name[: -len(".toml")] if name.endswith(".toml") else name
+    directory = tmp_path / platform
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "capability.toml"
     path.write_text(text, encoding="utf-8")
     return path
 
@@ -100,7 +110,7 @@ def test_load_capability_reads_adapter_seam(tmp_path):
 
 def test_load_capability_by_platform_id(tmp_path):
     write_full(tmp_path)
-    cap = load_capability("wechat", capabilities_dir=tmp_path)
+    cap = load_capability("wechat", platforms_dir=tmp_path)
 
     assert cap.id == "wechat"
 
@@ -281,7 +291,12 @@ def test_verified_accepts_an_unspecified_day(tmp_path):
     assert load_capability_file(path).verified == "2026-11-XX"
 
 
-def test_id_must_match_the_file_name(tmp_path):
+def test_id_must_match_the_directory_name(tmp_path):
+    """目录名是注册表的名字——id 必须与它一致。
+
+    声明现在住在平台自己的目录里（``<平台名>/capability.toml``），
+    文件名统一叫 ``capability.toml``，**「这个平台到底是哪个」由目录名回答**。
+    """
     path = write_toml(
         tmp_path,
         "toutiao.toml",
@@ -291,12 +306,12 @@ def test_id_must_match_the_file_name(tmp_path):
 
     with pytest.raises(CapabilityFileError) as excinfo:
         load_capability_file(path)
-    assert "文件名" in str(excinfo.value)
+    assert "目录名" in str(excinfo.value)
 
 
 def test_missing_file_is_a_file_error(tmp_path):
     with pytest.raises(CapabilityFileError):
-        load_capability("nosuch", capabilities_dir=tmp_path)
+        load_capability("nosuch", platforms_dir=tmp_path)
 
 
 def test_invalid_toml_is_a_file_error(tmp_path):
@@ -333,18 +348,18 @@ def test_list_capabilities_reads_every_file(tmp_path):
         'automation = "manual"\nreview = "platform"\n',
     )
 
-    caps = list_capabilities(capabilities_dir=tmp_path)
+    caps = list_capabilities(platforms_dir=tmp_path)
 
     assert [cap.id for cap in caps] == ["bilibili", "toutiao"]
-    assert available_platforms(capabilities_dir=tmp_path) == ["bilibili", "toutiao"]
+    assert available_platforms(platforms_dir=tmp_path) == ["bilibili", "toutiao"]
 
 
 def test_list_capabilities_on_a_missing_directory(tmp_path):
-    assert list_capabilities(capabilities_dir=tmp_path / "nope") == []
+    assert list_capabilities(platforms_dir=tmp_path / "nope") == []
 
 
 def test_repository_capabilities_all_parse():
-    """仓库里现有的 capabilities/*.toml 必须逐个读得动。
+    """仓库里现有的 platforms/*/capability.toml 必须逐个读得动。
 
     目录为空时 skip 而不是 fail——这一层的进度取决于别的分支什么时候
     把平台声明搬过来，测试不该替它们挡路。
@@ -352,13 +367,12 @@ def test_repository_capabilities_all_parse():
     caps = list_capabilities()
     if not caps:
         pytest.skip(
-            "publish/capabilities/ 目前为空，还没有平台声明（目录：{}）".format(
-                default_capabilities_dir()
+            "platforms/ 目前还没有平台声明（目录：{}）".format(
+                default_platforms_dir()
             )
         )
 
     for cap in caps:
-        assert cap.id == cap.path.stem
         assert cap.kind in KINDS
         assert cap.automation in AUTOMATIONS
         assert cap.review in REVIEWS

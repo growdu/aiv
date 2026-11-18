@@ -126,7 +126,7 @@ def complete_fields(**overrides) -> dict:
         "episode_no": "6",
         "series": "内核机制",
         "episode_hook": "MVCC 让读不挡写，但两个写会互相覆盖——行锁在它上面加了一层协调",
-        "episode_subtitle": "aiv/字幕-行锁.md",
+        "episode_subtitle": "video/字幕-行锁.md",
         "episode_duration_s": "35.172",
         "episode_license": "PostgreSQL BSD",
     }
@@ -481,7 +481,7 @@ def test_find_episode_rejects_two_drafts_claiming_the_same_slug(tmp_path):
         "episode_no: 6\n"
         "series: 内核机制\n"
         'episode_hook: "MVCC 让读不挡写，但两个写会互相覆盖——行锁在它上面加了一层协调"\n'
-        "episode_subtitle: aiv/字幕-行锁.md\n"
+        "episode_subtitle: video/字幕-行锁.md\n"
         "episode_duration_s: 35.172\n"
         "episode_license: PostgreSQL BSD\n"
         "---\n\n正文\n"
@@ -503,13 +503,13 @@ episode: row-lock
 episode_no: 6
 series: 内核机制
 episode_hook: "MVCC 让读不挡写，但两个写会互相覆盖——行锁在它上面加了一层协调"
-episode_subtitle: "aiv/字幕-行锁.md"
+episode_subtitle: "video/字幕-行锁.md"
 episode_duration_s: "35.172"
 episode_license: "PostgreSQL BSD"
 episode_sources:
   - "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md"
 episode_repro:
-  - "make -C aiv/pipeline out"
+  - "make -C video/pipeline out"
 ---
 
 # 带期号数据的一篇
@@ -585,13 +585,13 @@ def test_every_episode_field_reaches_the_compiled_product(tmp_path):
     assert fields["episode_hook"] == (
         "MVCC 让读不挡写，但两个写会互相覆盖——行锁在它上面加了一层协调"
     )
-    assert fields["episode_subtitle"] == "aiv/字幕-行锁.md"
+    assert fields["episode_subtitle"] == "video/字幕-行锁.md"
     assert fields["episode_duration_s"] == "35.172"
     assert fields["episode_license"] == "PostgreSQL BSD"
     assert fields["episode_sources"] == [
         "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md"
     ]
-    assert fields["episode_repro"] == ["make -C aiv/pipeline out"]
+    assert fields["episode_repro"] == ["make -C video/pipeline out"]
 
 
 def test_the_compiled_product_satisfies_the_episode_contract(tmp_path):

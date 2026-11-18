@@ -3,7 +3,7 @@ episode: pg-parallel-decode
 episode_no: 1
 series: 数据库内核机制
 episode_hook: "openGauss 把发布端拆成三层线程：reader 读 WAL，worker 池并行解码，walsender 收口输出"
-episode_subtitle: aiv/字幕-并行解码.md
+episode_subtitle: video/字幕-并行解码.md
 episode_duration_s: "32.436"
 episode_license: "PostgreSQL BSD · openGauss Mulan PSL v2"
 episode_sources:
