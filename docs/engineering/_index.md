@@ -14,6 +14,7 @@ tags:
 
 ## 系列
 
+- [AI工具与实践](./ai-tooling/_index.md)
 - [速查与清单](./cheatsheets/_index.md)
 - [容器与环境](./containers/_index.md)
 - [编译、测试与调试](./engineering-practice/_index.md)

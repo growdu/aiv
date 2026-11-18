@@ -1,5 +1,7 @@
 {
+  "AI": "工程与语言/AI工具与实践",
   "BenchmarkSQL 基准测试": "源码主线/PostgreSQL/扩展、性能与生态",
+  "ChatGPT": "工程与语言/AI工具与实践",
   "DPDK": "源码主线/DPDK与VPP",
   "Docker": "工程与语言/容器与环境",
   "Elasticsearch": "工程与语言/Web、前端与搜索",

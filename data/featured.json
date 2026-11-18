@@ -11,6 +11,6 @@
     "source-tracks/postgresql/index-and-query/postgresql-stream-execution-logic",
     "source-tracks/postgresql/logical-replication/postgresql-reorderbuffer-c-function-reference",
     "source-tracks/postgresql/index-and-query/learning-path/03-query-pipeline",
-    "ai/01_开场白目录"
+    "engineering/ai-tooling/ai-foundations/01_开场白目录"
   ]
 }

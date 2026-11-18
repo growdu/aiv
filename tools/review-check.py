@@ -31,6 +31,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import unquote
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = REPO_ROOT / "docs"
@@ -450,6 +451,9 @@ def rule_str_04(doc: Doc) -> list[Signal]:
         target = raw.split("#", 1)[0].split("?", 1)[0]
         if not target:
             continue
+        # 站上的链接里空格是 %20 编码的，磁盘上的文件名不是 —— 先解码再查。
+        # 与 `tools/check-internal-links.py` 的 `decode()` 同一套规矩。
+        target = unquote(target)
         # 先按写法解析，再回退兄弟目录——两步都不中才算断链。
         if _link_target_exists(target, post_dir):
             continue

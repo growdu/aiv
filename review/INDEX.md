@@ -163,7 +163,7 @@ mermaid 渲染失败 **109 张，与搬家前持平**（唯一源码 1,309 张�
 变的是同一篇文章落在哪个阶段 —— 旧规则的 `path_prefix` 粗到只管到
 `pgsql/`、`page/` 这种目录，搬家后细到系列，文章自然落进更贴切的那个阶段。
 篇数差也有账：577 − 9（移出 `docs/` 进 `internal/`）+ 7（`platform-meta/` 新成稿）
-− 1（`cluster/raft协议动态调整quorum.md` 与 `cluster/raft/raft协议动态调整quorum.md`
+− 1（`distributed/consensus/raft协议动态调整quorum.md` 与 `distributed/consensus/raft协议动态调整quorum.md`
 **逐字节相同**，搬家时合成一篇）= **574**，一篇没丢。
 
 **部署链路顺带修掉一处断点（2026-11-17）**：连续两个 push 的 Deploy Hexo

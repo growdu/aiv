@@ -86,12 +86,12 @@ FEATURED_POSTS = {
     "source-tracks/linux/kernel-internals/linux内核指北.md": 50,
     "source-tracks/dpdk/getting-started/dpdk常用接口指北.md": 45,
     "engineering/containers/docker基础指北.md": 40,
-    "ai/07_ChatGPT为什么能对话一篇引用17万次的论文.md": 35,
+    "engineering/ai-tooling/ai-foundations/07_ChatGPT为什么能对话一篇引用17万次的论文.md": 35,
     "source-tracks/postgresql/logical-replication/逻辑解码/index.md": 30,
     "engineering/foundations/rust/rust设计原则.md": 25,
     "engineering/containers/那些你不得不会的提高工作效率的软件神器.md": 20,
     "source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md": 15,
-    "ai/01_开场白目录.md": 10,
+    "engineering/ai-tooling/ai-foundations/01_开场白目录.md": 10,
 }
 
 

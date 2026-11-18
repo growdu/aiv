@@ -882,6 +882,12 @@ def _merge_article_section(old, body):
         if not old_span:
             old = old.rstrip("\n") + "\n\n" + new_sec.rstrip("\n") + "\n"
         else:
+            # 小节末尾的空行是旧文里「这一节」与「下一节」之间的间隔，
+            # 换新内容时把它原样保住 —— 否则每跑一次迁移，
+            # 别的目录页就会少一行空行（跟本次改动毫无关系的文件也被改到）。
+            old_sec = old[old_span[0]:old_span[1]]
+            tail = old_sec[len(old_sec.rstrip("\n")):]
+            new_sec = new_sec.rstrip("\n") + tail
             old = old[:old_span[0]] + new_sec + old[old_span[1]:]
     return old
 

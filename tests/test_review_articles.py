@@ -32,7 +32,7 @@ COROSYNC = DOCS_ROOT / "distributed/field-notes/corosync-down网卡仍处于多�
 # 已知的「裸 URL 吞中文」文章清单：这些还没修，是后续批次的待办。
 # 清单里的文章修好了，这条守卫照样绿（子集判断）；清单外的文章中招，这条会红。
 KNOWN_BARE_URL_ARTICLES = frozenset({
-    "docs/chatgpt/chatgpt使用.md",
+    "docs/engineering/ai-tooling/ai-foundations/chatgpt使用.md",
     "docs/distributed/consensus/一文读懂openguass dcf网络模块.md",
     "docs/source-tracks/postgresql/getting-started/database-specialization-taxonomy/index.md",
     "docs/source-tracks/postgresql/extensions-perf/postgresql-community-gems/index.md",

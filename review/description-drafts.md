@@ -55,34 +55,34 @@
 | `source-tracks/linux/memory-and-linking/ebpf/pg-ferret.md` | pg-ferret主要跟踪如下信息： | pg-ferret主要跟踪如下信息： | ☐ |
 | `source-tracks/linux/memory-and-linking/ebpf/rust-ebpf编程基础.md` | 用 Rust 写 eBPF 程序：aya 框架的下载依赖、编译与加载，一步步走通。 | rust中有一个ebpf编程框架aya，其地址为https://github.com/aya-rs/aya。 | ☐ |
 | `source-tracks/linux/kernel-internals/kernel/qemu-busybox调试linux.md` | 用 QEMU 和 BusyBox 搭建 Linux 内核的调试环境：下载源码、编译内核、启动调试。 | 执行如下命令进行编译： | ☐ |
-| `ai/01-ai常用工具和开发框架.md` | MCP的目标，就是让AI像访问网页一样，轻松访问各种数据和功能。 | MCP的目标，就是让AI像访问网页一样，轻松访问各种数据和功能。 | ☐ |
-| `ai/01_开场白目录.md` | 你让 ChatGPT 帮你写一封邮件。 | 你让 ChatGPT 帮你写一封邮件。 | ☐ |
-| `ai/02_AI到底聪明在哪从手机人脸识别说起.md` | 每天早上，你拿起手机，看一眼屏幕，解锁。 | 每天早上，你拿起手机，看一眼屏幕，解锁。 | ☐ |
-| `ai/03_AI怎么读懂文字国王减去男人等于什么.md` | 你对 ChatGPT 说”苹果”。 | 你对 ChatGPT 说”苹果”。 | ☐ |
-| `ai/04_AI是怎么突然变厉害的2012所有人以为他们作弊了.md` | 如果 AI 的历史是一部电影，2012 年 10 月就是高潮。 | 如果 AI 的历史是一部电影，2012 年 10 月就是高潮。 | ☐ |
-| `ai/05_神经网络到底是什么6000万个旋钮的真相.md` | “神经网络”可能是 AI 领域最吓人的一个词。 | “神经网络”可能是 AI 领域最吓人的一个词。 | ☐ |
-| `ai/06_AI是怎么学会的从做错一道题说起.md` | 想象你面前有 6000 万个旋钮。 | 想象你面前有 6000 万个旋钮。 | ☐ |
-| `ai/07_ChatGPT为什么能对话一篇引用17万次的论文.md` | 2017 年，Google 的一个团队发表了一篇论文。 | 2017 年，Google 的一个团队发表了一篇论文。 | ☐ |
-| `ai/08_AI为什么会撒谎一个律师被ChatGPT骗了.md` | 2023 年 5 月，纽约南区联邦法院。 | 2023 年 5 月，纽约南区联邦法院。 | ☐ |
-| `ai/09_ChatGPT回答你的三秒钟里发生了什么.md` | 如果你从第 1 篇读到这里，恭喜——你现在对 AI 的理解，已经超过了绝大多数人。 | 如果你从第 1 篇读到这里，恭喜——你现在对 AI 的理解，已经超过了绝大多数人。 | ☐ |
-| `ai/10_AI 到底有多聪明一份让 AI 研究者也困惑的成绩单.md` | 上一章我们拆开了 AI 的黑箱，得到了一个核心结论：AI 是超级模式匹配器。 但这个结论到底有多大的解释力？先做一个测试。 | 上一章我们拆开了 AI 的黑箱，得到了一个核心结论：AI 是超级模式匹配器。 但这个结论到底有多大的解释力？先做一个测试。 | ☐ |
-| `ai/11_AI 能创造吗从一团噪声到一幅画.md` | 上一篇结尾，我留了一个让我自己困惑了很久的问题： | 上一篇结尾，我留了一个让我自己困惑了很久的问题： | ☐ |
-| `ai/12_为什么 AI 能赢世界冠军却开不好车一条藏在所有 AI 背后的分界线.md` | 上一篇结尾，我留了一个矛盾： | 上一篇结尾，我留了一个矛盾： | ☐ |
-| `ai/13_这个框架会过时吗AI 的天花板和你的判断力.md` | 2025 年 12 月，GPT-5.2 发布。我打开新闻，看到标题——“数学竞赛满分”。 | 2025 年 12 月，GPT-5.2 发布。我打开新闻，看到标题——“数学竞赛满分”。 | ☐ |
-| `ai/14_怎么让AI听懂你的话同一个AI为什么他用得比你好10倍.md` | 同一个 ChatGPT，同一个问题： | 同一个 ChatGPT，同一个问题： | ☐ |
-| `ai/15_怎么跟AI协作不翻车AI说的话你该信几分.md` | 上一篇我们搞清楚了一件事：Prompt Engineering 不是玄学，而是给 AI 更精准的上下文，让它的模式匹配更精准。 | 上一篇我们搞清楚了一件事：Prompt Engineering 不是玄学，而是给 AI 更精准的上下文，让它的模式匹配更精准。 | ☐ |
-| `ai/16_AI 写代码有多厉害快了 55但错多了 75.md` | 上一篇，我们总结了四条和 AI 协作的原则——让 AI 做它擅长的事、验证大于信任、迭代而非一次到位、用 AI 放大你的优势而非替代你的思考。 | 上一篇，我们总结了四条和 AI 协作的原则——让 AI 做它擅长的事、验证大于信任、迭代而非一次到位、用 AI 放大你的优势而非替代你的思考。 | ☐ |
-| `ai/17_AI会取代我们吗它不懂孤独是什么意思.md` | 从第 1 篇”你的手机是怎么认出你的脸”到现在，我们一起走过了 16 篇。 | 从第 1 篇”你的手机是怎么认出你的脸”到现在，我们一起走过了 16 篇。 | ☐ |
-| `ai/18_AI是你的杠杆但前提是你自己得会.md` | 听起来像老生常谈。但写代码这件事，我越做越发现，很多人用 AI 的姿势是完全反的——把不会的交给 AI，把自己变成 AI 的附庸。 | 听起来像老生常谈。但写代码这件事，我越做越发现，很多人用 AI 的姿势是完全反的——把不会的交给 AI，把自己变成 AI 的附庸。 | ☐ |
-| `ai/19_AI是你的杠杆普通人也能用的AI实战教程.md` | 不是吓你 —— 是事实。这不是程序员才要面对的事,而是每一个会用电脑、会用手机、会用 Office 的人,都会被卷入的浪潮。 | 不是吓你 —— 是事实。这不是程序员才要面对的事,而是每一个会用电脑、会用手机、会用 Office 的人,都会被卷入的浪潮。 | ☐ |
-| `ai/20_外网与AI工具使用指南.md` | 在展开之前,先把七个工具的定位摆清楚,免得你装了一堆结果不知道该用哪个。 | 在展开之前,先把七个工具的定位摆清楚,免得你装了一堆结果不知道该用哪个。 | ☐ |
-| `ai/22_普通人谷歌与AI使用培训教程.md` | 这一讲的目的不是让大家懂技术,而是让学员理解\"为什么\",后面学 Clash 时才不会觉得是在做一件 mysteriously 的事。 | 这一讲的目的不是让大家懂技术,而是让学员理解"为什么",后面学 Clash 时才不会觉得是在做一件 mysteriously 的事。 | ☐ |
-| `ai/ai_video/AI Video Orchestrator 平台总体架构设计.md` | VideoFlow Studio 是面向个人创作者、MCN机构、短剧团队、影视公司的一站式 AI 影视协同创作平台。 | VideoFlow Studio 是面向个人创作者、MCN机构、短剧团队、影视公司的一站式 AI 影视协同创作平台。 | ☐ |
-| `ai/ai_video/AI Video Orchestrator 技术选型文档.md` | AI 视频编排平台的技术选型文档：跨平台优先、Agent 优先、插件化优先三条原则，以及每一层的具体技术选型。 | Client Layer | ☐ |
-| `ai/ai_video/AI Video Orchestrator 概要设计.md` | VideoFlow Studio 的概要设计：十一个微服务如何划分，数据模型、Provider 架构、Workflow DSL、协作与调度、权限和可观测性怎么设计。 | Writer Agent | ☐ |
-| `ai/ai_video/AI一镜到底视频平台竞品拆解与产品定位报告.md` | 打造全球领先的AI导演平台，让用户通过自然语言即可生成电影级一镜到底视频。 | 打造全球领先的AI导演平台，让用户通过自然语言即可生成电影级一镜到底视频。 | ☐ |
-| `ai/ai_video/AI一镜到底视频生成平台市场调研与可行性分析报告.md` | 随着生成式AI技术快速发展，视频生成已经成为继大语言模型之后增长最快的AI赛道之一。 | 随着生成式AI技术快速发展，视频生成已经成为继大语言模型之后增长最快的AI赛道之一。 | ☐ |
-| `ai/claude/claude配置.md` | Claude Code 的插件配置：怎么用 marketplace 添加插件源、怎么安装 superpowers，以及常用的插件命令。 | （没抽出来） | ☐ |
+| `engineering/ai-tooling/ai-toolbox/01-ai常用工具和开发框架.md` | MCP的目标，就是让AI像访问网页一样，轻松访问各种数据和功能。 | MCP的目标，就是让AI像访问网页一样，轻松访问各种数据和功能。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/01_开场白目录.md` | 你让 ChatGPT 帮你写一封邮件。 | 你让 ChatGPT 帮你写一封邮件。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/02_AI到底聪明在哪从手机人脸识别说起.md` | 每天早上，你拿起手机，看一眼屏幕，解锁。 | 每天早上，你拿起手机，看一眼屏幕，解锁。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/03_AI怎么读懂文字国王减去男人等于什么.md` | 你对 ChatGPT 说”苹果”。 | 你对 ChatGPT 说”苹果”。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/04_AI是怎么突然变厉害的2012所有人以为他们作弊了.md` | 如果 AI 的历史是一部电影，2012 年 10 月就是高潮。 | 如果 AI 的历史是一部电影，2012 年 10 月就是高潮。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/05_神经网络到底是什么6000万个旋钮的真相.md` | “神经网络”可能是 AI 领域最吓人的一个词。 | “神经网络”可能是 AI 领域最吓人的一个词。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/06_AI是怎么学会的从做错一道题说起.md` | 想象你面前有 6000 万个旋钮。 | 想象你面前有 6000 万个旋钮。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/07_ChatGPT为什么能对话一篇引用17万次的论文.md` | 2017 年，Google 的一个团队发表了一篇论文。 | 2017 年，Google 的一个团队发表了一篇论文。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/08_AI为什么会撒谎一个律师被ChatGPT骗了.md` | 2023 年 5 月，纽约南区联邦法院。 | 2023 年 5 月，纽约南区联邦法院。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/09_ChatGPT回答你的三秒钟里发生了什么.md` | 如果你从第 1 篇读到这里，恭喜——你现在对 AI 的理解，已经超过了绝大多数人。 | 如果你从第 1 篇读到这里，恭喜——你现在对 AI 的理解，已经超过了绝大多数人。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/10_AI 到底有多聪明一份让 AI 研究者也困惑的成绩单.md` | 上一章我们拆开了 AI 的黑箱，得到了一个核心结论：AI 是超级模式匹配器。 但这个结论到底有多大的解释力？先做一个测试。 | 上一章我们拆开了 AI 的黑箱，得到了一个核心结论：AI 是超级模式匹配器。 但这个结论到底有多大的解释力？先做一个测试。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/11_AI 能创造吗从一团噪声到一幅画.md` | 上一篇结尾，我留了一个让我自己困惑了很久的问题： | 上一篇结尾，我留了一个让我自己困惑了很久的问题： | ☐ |
+| `engineering/ai-tooling/ai-foundations/12_为什么 AI 能赢世界冠军却开不好车一条藏在所有 AI 背后的分界线.md` | 上一篇结尾，我留了一个矛盾： | 上一篇结尾，我留了一个矛盾： | ☐ |
+| `engineering/ai-tooling/ai-foundations/13_这个框架会过时吗AI 的天花板和你的判断力.md` | 2025 年 12 月，GPT-5.2 发布。我打开新闻，看到标题——“数学竞赛满分”。 | 2025 年 12 月，GPT-5.2 发布。我打开新闻，看到标题——“数学竞赛满分”。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/14_怎么让AI听懂你的话同一个AI为什么他用得比你好10倍.md` | 同一个 ChatGPT，同一个问题： | 同一个 ChatGPT，同一个问题： | ☐ |
+| `engineering/ai-tooling/ai-foundations/15_怎么跟AI协作不翻车AI说的话你该信几分.md` | 上一篇我们搞清楚了一件事：Prompt Engineering 不是玄学，而是给 AI 更精准的上下文，让它的模式匹配更精准。 | 上一篇我们搞清楚了一件事：Prompt Engineering 不是玄学，而是给 AI 更精准的上下文，让它的模式匹配更精准。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/16_AI 写代码有多厉害快了 55但错多了 75.md` | 上一篇，我们总结了四条和 AI 协作的原则——让 AI 做它擅长的事、验证大于信任、迭代而非一次到位、用 AI 放大你的优势而非替代你的思考。 | 上一篇，我们总结了四条和 AI 协作的原则——让 AI 做它擅长的事、验证大于信任、迭代而非一次到位、用 AI 放大你的优势而非替代你的思考。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/17_AI会取代我们吗它不懂孤独是什么意思.md` | 从第 1 篇”你的手机是怎么认出你的脸”到现在，我们一起走过了 16 篇。 | 从第 1 篇”你的手机是怎么认出你的脸”到现在，我们一起走过了 16 篇。 | ☐ |
+| `engineering/ai-tooling/ai-leverage/18_AI是你的杠杆但前提是你自己得会.md` | 听起来像老生常谈。但写代码这件事，我越做越发现，很多人用 AI 的姿势是完全反的——把不会的交给 AI，把自己变成 AI 的附庸。 | 听起来像老生常谈。但写代码这件事，我越做越发现，很多人用 AI 的姿势是完全反的——把不会的交给 AI，把自己变成 AI 的附庸。 | ☐ |
+| `engineering/ai-tooling/ai-leverage/19_AI是你的杠杆普通人也能用的AI实战教程.md` | 不是吓你 —— 是事实。这不是程序员才要面对的事,而是每一个会用电脑、会用手机、会用 Office 的人,都会被卷入的浪潮。 | 不是吓你 —— 是事实。这不是程序员才要面对的事,而是每一个会用电脑、会用手机、会用 Office 的人,都会被卷入的浪潮。 | ☐ |
+| `engineering/ai-tooling/ai-toolbox/20_外网与AI工具使用指南.md` | 在展开之前,先把七个工具的定位摆清楚,免得你装了一堆结果不知道该用哪个。 | 在展开之前,先把七个工具的定位摆清楚,免得你装了一堆结果不知道该用哪个。 | ☐ |
+| `engineering/ai-tooling/ai-toolbox/22_普通人谷歌与AI使用培训教程.md` | 这一讲的目的不是让大家懂技术,而是让学员理解\"为什么\",后面学 Clash 时才不会觉得是在做一件 mysteriously 的事。 | 这一讲的目的不是让大家懂技术,而是让学员理解"为什么",后面学 Clash 时才不会觉得是在做一件 mysteriously 的事。 | ☐ |
+| `engineering/ai-tooling/ai-video-platform/AI Video Orchestrator 平台总体架构设计.md` | VideoFlow Studio 是面向个人创作者、MCN机构、短剧团队、影视公司的一站式 AI 影视协同创作平台。 | VideoFlow Studio 是面向个人创作者、MCN机构、短剧团队、影视公司的一站式 AI 影视协同创作平台。 | ☐ |
+| `engineering/ai-tooling/ai-video-platform/AI Video Orchestrator 技术选型文档.md` | AI 视频编排平台的技术选型文档：跨平台优先、Agent 优先、插件化优先三条原则，以及每一层的具体技术选型。 | Client Layer | ☐ |
+| `engineering/ai-tooling/ai-video-platform/AI Video Orchestrator 概要设计.md` | VideoFlow Studio 的概要设计：十一个微服务如何划分，数据模型、Provider 架构、Workflow DSL、协作与调度、权限和可观测性怎么设计。 | Writer Agent | ☐ |
+| `engineering/ai-tooling/ai-video-platform/AI一镜到底视频平台竞品拆解与产品定位报告.md` | 打造全球领先的AI导演平台，让用户通过自然语言即可生成电影级一镜到底视频。 | 打造全球领先的AI导演平台，让用户通过自然语言即可生成电影级一镜到底视频。 | ☐ |
+| `engineering/ai-tooling/ai-video-platform/AI一镜到底视频生成平台市场调研与可行性分析报告.md` | 随着生成式AI技术快速发展，视频生成已经成为继大语言模型之后增长最快的AI赛道之一。 | 随着生成式AI技术快速发展，视频生成已经成为继大语言模型之后增长最快的AI赛道之一。 | ☐ |
+| `engineering/ai-tooling/ai-toolbox/claude配置.md` | Claude Code 的插件配置：怎么用 marketplace 添加插件源、怎么安装 superpowers，以及常用的插件命令。 | （没抽出来） | ☐ |
 | `ai/claude安装教程/index.md` | 当前openclaw（龙虾）比较火，但是配置比较复杂，可以先安装claude进行体验。 | 当前openclaw（龙虾）比较火，但是配置比较复杂，可以先安装claude进行体验。 | ☐ |
 | `alg/B-树如何使查询更快/index.md` | 本文翻译自How does B-tree make your queries fast?,部分内容翻译可能不准确，请以原文为准。 | 本文翻译自How does B-tree make your queries fast?,部分内容翻译可能不准确，请以原文为准。 | ☐ |
 | `engineering/foundations/data-struct.md` | 数据结构按照视点不同可分为：逻辑结构和物理结构 | 数据结构按照视点不同可分为：逻辑结构和物理结构 | ☐ |
@@ -107,7 +107,7 @@
 | `blog/重构方案.md` | 站点要同时服务两类消费： | 站点要同时服务两类消费： | ☐ |
 | `blog/阿里云ECS选购指南.md` | 云服务器（Elastic Compute Service，简称 ECS）是云厂商卖给你的虚拟服务器。和传统物理机相比，它的好处是： | 云服务器（Elastic Compute Service，简称 ECS）是云厂商卖给你的虚拟服务器。和传统物理机相比，它的好处是： | ☐ |
 | `blog/mermaid/mermaid图渲染问题诊断与修复.md` | 本文所有数字都来自真实渲染测量（headless Chrome + 生产环境 SVG 尺寸），不是估算。 | 本文所有数字都来自真实渲染测量（headless Chrome + 生产环境 SVG 尺寸），不是估算。 | ☐ |
-| `chatgpt/chatgpt使用.md` | ChatGPT 是什么、能用来干什么：代码相关的问题怎么问它，以及日常把它当助手用的几种典型场景。 | 可点击(高效率工具——chatgpt使用_growdu_real的博客-CSDN博客)在网络上访问本文。 | ☐ |
+| `engineering/ai-tooling/ai-foundations/chatgpt使用.md` | ChatGPT 是什么、能用来干什么：代码相关的问题怎么问它，以及日常把它当助手用的几种典型场景。 | 可点击(高效率工具——chatgpt使用_growdu_real的博客-CSDN博客)在网络上访问本文。 | ☐ |
 | `chatgpt/newbing使用教程/index.md` | New Bing 使用教程：下载 Edge Dev、修改默认搜索引擎，让新版 Bing 的 AI 搜索在国内也能用。 | 点击这里下载edge dev。 | ☐ |
 | `distributed/foundations/C语言实现分布式自增有序的唯一ID生成算法-snowflake算法.md` | 之前有人问我设计一个分布式的递增的唯一id生成。想了半天不知道，偶然一个同事说起snowflake算法，我百度了一下，很简单高效。 | 之前有人问我设计一个分布式的递增的唯一id生成。想了半天不知道，偶然一个同事说起snowflake算法，我百度了一下，很简单高效。 | ☐ |
 | `distributed/foundations/C语言雪花算法,记一次雪花算法的实现.md` | 作者最近在实现雪花算法生成主键，看了不少文章。个人觉得雪花算法的最大的优点是有序(减少数据库的页分裂页合并)。雪花算法本身很简单，但他依赖于时间，也就是机器或容器的时间一回拨就出现问题了。网上也出现了不少关于如何解决回拨的问题。我记录一下本次实现雪花主键的过程。 | 作者最近在实现雪花算法生成主键，看了不少文章。个人觉得雪花算法的最大的优点是有序(减少数据库的页分裂页合并)。雪花算法本身很简单，但他依赖于时间，也就是机器或容器的时间一回拨就出现问题了。网上也出现了不少关于如何解决回拨的问题。我记录一下本次实现雪花主键的过程。 | ☐ |
