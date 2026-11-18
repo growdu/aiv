@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""抓 GoatCounter 的真实阅读量（PV），写成快照 ``data/view-counts.json``。
+"""抓 GoatCounter 的真实阅读量（PV），写成快照 ``platforms/blog/site/data/view-counts.json``。
 
 **为什么要有这个工具**：侧栏那个🔥数字曾经是假的——``patch-theme.py``
 里写的是 ``Math.max(5, Math.floor(字数 / 50))``，十万字的文章显示
@@ -20,7 +20,7 @@
     GOATCOUNTER_API_KEY=xxx python3 tools/fetch-view-counts.py
 
 key 在 GoatCounter 账号设置里（Username → API），CI 侧放 secret
-``GOATCOUNTER_API_KEY``。抓完把 ``data/view-counts.json`` 提交上去，
+``GOATCOUNTER_API_KEY``。抓完把 ``platforms/blog/site/data/view-counts.json`` 提交上去，
 站点下次构建就会用上。
 
 **没有 key 也能用**：快照是空的，模板会退回按 ``top`` 排序，
@@ -53,9 +53,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "tools"))
-from paths import SITE_MATERY_CONFIG  # noqa: E402
+from paths import SITE_DATA, SITE_MATERY_CONFIG  # noqa: E402
 
-DEFAULT_OUT = REPO_ROOT / "data" / "view-counts.json"
+#: 快照落在**站点**的数据目录里——站点的东西归站点。
+DEFAULT_OUT = SITE_DATA / "view-counts.json"
 # 站点的主题覆盖配置跟着站点搬了家（platforms/blog/site/）。
 CONFIG_PATH = SITE_MATERY_CONFIG
 
@@ -246,7 +247,7 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--out",
         default=str(DEFAULT_OUT),
-        help="快照写到哪（默认 data/view-counts.json）",
+        help="快照写到哪（默认 platforms/blog/site/data/view-counts.json）",
     )
     args = parser.parse_args(argv)
 

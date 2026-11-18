@@ -5,7 +5,7 @@ jsDelivr:
   url:
 
 # Custom site logo (replaces the default fox).  The image is copied
-# from <repo-root>/1.jpg into themes/matery/source/medias/logo.jpg by
+# from theme-assets/1.jpg into themes/matery/source/medias/logo.jpg by
 # tools/patch-theme.py on every build, so this single path is enough.
 logo: /medias/logo.jpg
 
@@ -170,7 +170,7 @@ toc:
   enable: true
 
 # Reward / 打赏
-# WeChat and Alipay QR codes live at repo root (weixin.jpg, zhifubao.jpg)
+# WeChat and Alipay QR codes live in theme-assets/ (weixin.jpg, zhifubao.jpg)
 # and are published into themes/matery/source/medias/reward/ by
 # patch-theme.py section 1.7 on every build.
 reward:
@@ -207,7 +207,7 @@ subscribe:
 
 # ─── Personal profile (overrides theme defaults) ───────────────
 # Source: ~/Documents/jianli/段应寿的求职简历.pdf + 新增经历（海量数据 / 电科金仓）
-# 头像: /medias/avatar.jpg (1.jpg copied to themes/matery/source/medias/avatar.jpg by patch-theme.py)
+# 头像: /medias/avatar.jpg (theme-assets/1.jpg copied to themes/matery/source/medias/avatar.jpg by patch-theme.py)
 profile:
   avatar: /medias/avatar.jpg
   career: 数据库内核开发专家 / 架构师

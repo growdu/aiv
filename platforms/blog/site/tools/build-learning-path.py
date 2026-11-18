@@ -11,7 +11,7 @@
 
 **分类规则在哪**
 ----------------
-规则不在这个文件里，在仓库根的 ``data/learning-path.json``——那是人工策展的
+规则不在这个文件里，在站点的 ``data/learning-path.json``——那是人工策展的
 部分：8 条赛道，每条赛道几个阶段，每个阶段一条条匹配规则。
 改那个文件就能改路径，不用改代码。
 
@@ -61,7 +61,14 @@ from pathlib import Path
 # 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
-from paths import CONTENT_UNITS, DOCS, REPO_ROOT, SITE_SOURCE, SITE_TOOLS  # noqa: E402
+from paths import (  # noqa: E402
+    CONTENT_UNITS,
+    DOCS,
+    REPO_ROOT,
+    SITE_DATA,
+    SITE_SOURCE,
+    SITE_TOOLS,
+)
 from site_root import permalink as _permalink  # noqa: E402
 from site_root import rooted_path as _rooted_path  # noqa: E402
 
@@ -69,7 +76,7 @@ from site_root import rooted_path as _rooted_path  # noqa: E402
 # 它的输入是共享仓库，输出才是站点私有的。
 POSTS_DIR = CONTENT_UNITS
 DOCS_DIR = DOCS
-RULES_FILE = REPO_ROOT / "data" / "learning-path.json"
+RULES_FILE = SITE_DATA / "learning-path.json"
 OUT_DIR = SITE_SOURCE / "learning"
 DATA_OUT = SITE_SOURCE / "_data" / "learning.json"
 
@@ -528,7 +535,7 @@ def render_overview(tracks: list[dict], total: int) -> str:
     lines.append("---")
     lines.append("")
     lines.append("这份路径由 `platforms/blog/site/tools/build-learning-path.py` 生成，")
-    lines.append("分类规则在仓库根的 `data/learning-path.json`。")
+    lines.append("分类规则在站点的 `platforms/blog/site/data/learning-path.json`。")
     lines.append("加了新文章却没归类的话，CI 会红。")
     lines.append("")
     return "\n".join(lines)

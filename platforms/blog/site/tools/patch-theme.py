@@ -18,7 +18,7 @@ from pathlib import Path
 # 路径常量统一从根 tools/paths.py 取——**路径只有一处能改**。
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
-from paths import SITE, SITE_THEMES  # noqa: E402
+from paths import SITE, SITE_ASSETS, SITE_THEMES  # noqa: E402
 
 #: 主题目录（站点这一平台自己那份 matery）
 theme_dir = str(SITE_THEMES / "matery")
@@ -48,7 +48,7 @@ print("Removed default menu from theme config")
 # `/medias/logo.png`, the fox).  _config.matery.yml overrides it to
 # `/medias/logo.jpg`, so we just need to publish the new image under
 # that path inside the theme's source tree.
-src_logo = "1.jpg"
+src_logo = str(SITE_ASSETS / "1.jpg")
 dst_logo = os.path.join(theme_dir, "source", "medias", "logo.jpg")
 if os.path.isfile(src_logo):
     os.makedirs(os.path.dirname(dst_logo), exist_ok=True)
@@ -61,7 +61,7 @@ else:
 # about.ejs renders `theme.profile.avatar` (default `/medias/avatar.jpg`).
 # Reusing the same 1.jpg source keeps the top-nav logo and the about-page
 # avatar visually consistent and means the user only edits one file.
-src_avatar = "1.jpg"
+src_avatar = str(SITE_ASSETS / "1.jpg")
 dst_avatar = os.path.join(theme_dir, "source", "medias", "avatar.jpg")
 if os.path.isfile(src_avatar):
     os.makedirs(os.path.dirname(dst_avatar), exist_ok=True)
@@ -97,12 +97,17 @@ else:
         file=sys.stderr,
     )
 
-# --- 1.7. Publish reward QR codes from repo root ---
+# --- 1.7. Publish reward QR codes from the site's own assets ---
 # matery's default reward.ejs partial reads theme.reward.wechat /
 # theme.reward.alipay and renders the corresponding /medias/reward/*
 # images next to the article body.  Copy the user's weixin.jpg /
-# zhifubao.jpg from the repo root into platforms/blog/site/themes/matery/source/medias/reward/
+# zhifubao.jpg from the site's own theme-assets/ into
+# platforms/blog/site/themes/matery/source/medias/reward/
 # so that the configured paths resolve at build time.
+#
+# 这几个源文件住在 sites/theme-assets/，**不是仓库根**——站点的东西归站点。
+# （曾经写成 cwd 相对路径，于是「从哪个目录跑脚本」决定了图在不在：
+#  丢图不报错，只打一行 WARNING。）
 REWARD_DIR = os.path.join(theme_dir, "source", "medias", "reward")
 reward_pairs = [
     ("weixin.jpg", "weixin.jpg"),
@@ -111,7 +116,7 @@ reward_pairs = [
 ]
 reward_copied = []
 for src_name, dst_name in reward_pairs:
-    src = src_name
+    src = str(SITE_ASSETS / src_name)
     if not os.path.isfile(src):
         print(f"WARNING: {src} not found, skipping", file=sys.stderr)
         continue

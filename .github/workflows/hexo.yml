@@ -100,7 +100,7 @@ jobs:
         # 必须在 sync-hexo.py 之后（它读 platforms/blog/site/source/_posts/ 里的编译产物）、
         # 必须在 build-video-pages.py 之后（那 6 期视频内容单元也是文章，
         # 要一起归类）、必须在 hexo generate 之前（页面要进产物）。
-        # 规则在仓库根的 data/learning-path.json，文章一条都没归上的话
+        # 规则在站点的 data/learning-path.json，文章一条都没归上的话
         # 这一步非零退出——「漏归类」不许悄悄发生。
         run: python3 platforms/blog/site/tools/build-learning-path.py
       - name: Build publish index

@@ -627,7 +627,7 @@
       "form": "flat"
     },
     {
-      "file": "data/featured.json",
+      "file": "platforms/blog/site/data/featured.json",
       "form": "postid"
     },
     {

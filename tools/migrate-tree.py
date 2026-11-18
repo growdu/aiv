@@ -59,6 +59,9 @@ from urllib.parse import quote, unquote
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(REPO, "docs")
+#: 站点私有的数据表（重定向、首屏策展、阅读量快照……）
+#: ——站点的东西归站点，根 data/ 只留母稿侧与迁移台账。
+SITE_DATA = os.path.join(REPO, "platforms", "blog", "site", "data")
 MIGRATION_FILE = "data/tree-migration.json"
 DATE_FILE = "data/date-overrides.json"
 
@@ -89,13 +92,13 @@ def load_migration(path=None):
         return json.load(fh)
 
 
-def load_redirects(path="data/redirects.json"):
-    """现存的 ``data/redirects.json``（重写之前的那一份）。
+def load_redirects(path=None):
+    """现存的 ``redirects.json``（重写之前的那一份）。
 
     带日期的键是手工补的，重写时得留着 —— ``build_redirects`` 只从
     ``moves`` 推得出普通的键。
     """
-    full = os.path.join(REPO, path)
+    full = path or os.path.join(SITE_DATA, "redirects.json")
     if not os.path.exists(full):
         return {}
     with open(full, encoding="utf-8") as fh:
@@ -177,7 +180,8 @@ def load_sync_hexo():
 
     os.chdir(REPO)
     spec = importlib.util.spec_from_file_location(
-        "sync_hexo", os.path.join(REPO, "tools", "sync-hexo.py"))
+        "sync_hexo",
+        os.path.join(REPO, "platforms", "blog", "site", "tools", "sync-hexo.py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -946,7 +950,7 @@ def permalink_path(rel):
 def build_redirects(moves, existing=None, unpublish=None):
     """旧 permalink 路径 → 新 permalink 路径。
 
-    ``existing`` 是上一轮的 ``data/redirects.json``：**带日期的键**
+    ``existing`` 是上一轮的 ``redirects.json``：**带日期的键**
     （``2022/10/25/cluster/raft/…``）是手工补的 —— 合并两篇逐字节相同的
     重复文章时，旧 URL 的日期段跟新文件对不上，键里带上日期才落得准。
     ``moves`` 推不出这种条目，所以从旧表里留着；同一条路径的普通键
@@ -1278,11 +1282,11 @@ def main():
     date_overrides = build_date_overrides(moves, dates_before, out_paths)
     cat_redirects = build_category_redirects(table)
     for name, payload in (
-        (DATE_FILE, date_overrides),
-        ("data/redirects.json", redirects),
-        ("data/category-redirects.json", cat_redirects),
+        (os.path.join(REPO, DATE_FILE), date_overrides),
+        (os.path.join(SITE_DATA, "redirects.json"), redirects),
+        (os.path.join(SITE_DATA, "category-redirects.json"), cat_redirects),
     ):
-        with open(os.path.join(REPO, name), "w", encoding="utf-8") as fh:
+        with open(name, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, ensure_ascii=False, indent=2, sort_keys=True)
     report.append(f"常量补丁：REDIRECTS +{len(redirects)} 条，"
                   f"CATEGORY_REDIRECTS +{len(cat_redirects)} 条，"

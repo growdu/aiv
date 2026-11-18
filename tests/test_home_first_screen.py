@@ -50,7 +50,7 @@ LAYOUT_EJS = LAYOUT / "layout.ejs"
 MAIN_STYLE = PARTIAL / "main-style.ejs"
 PATCH_THEME = SITE / "tools" / "patch-theme.py"
 SYNC_HEXO = SITE / "tools" / "sync-hexo.py"
-FEATURED_JSON = REPO / "data" / "featured.json"
+FEATURED_JSON = REPO / "platforms" / "blog" / "site" / "data" / "featured.json"
 
 
 def _read(path: Path) -> str:

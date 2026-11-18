@@ -22,6 +22,7 @@ from paths import (  # noqa: E402
     CONTENT_UNITS as _CONTENT_UNITS,
     DOCS as _DOCS,
     SITE_CONFIG as _SITE_CONFIG,
+    SITE_DATA as _SITE_DATA,
     SITE_SOURCE as _SITE_SOURCE,
 )
 
@@ -215,9 +216,13 @@ CATEGORY_REDIRECTS = {
 #
 # 放进 `data/` 之后，迁移脚本（`tools/migrate-tree.py`）直接写，
 # 编译时读。表不存在就当没有（首次 clone、或还没跑过迁移）。
-def _load_data_table(name):
-    """读 `data/` 下的一张策展表。"""
-    path = os.path.join(str(_REPO_ROOT), name)
+#
+# **两张目录，两类表**：
+# - `platforms/blog/site/data/` —— 站点私有的（首屏策展、重定向、阅读量快照）
+# - 仓库根 `data/` —— 母稿侧的（日期覆盖、迁移台账），平台无关
+def _load_data_table(path):
+    """读一张策展表。``path`` 是绝对路径。"""
+    path = str(path)
     if not os.path.isfile(path):
         return {}
     with open(path, encoding="utf-8") as fh:
@@ -226,9 +231,9 @@ def _load_data_table(name):
 
 # 顺序：后读到的覆盖先读到的。`data/` 里的表是最新的，
 # 上面写死的字面量保留为「这段历史是怎么来的」的记录。
-DATE_OVERRIDES.update(_load_data_table("data/date-overrides.json"))
-REDIRECTS.update(_load_data_table("data/redirects.json"))
-CATEGORY_REDIRECTS.update(_load_data_table("data/category-redirects.json"))
+DATE_OVERRIDES.update(_load_data_table(_REPO_ROOT / "data" / "date-overrides.json"))
+REDIRECTS.update(_load_data_table(_SITE_DATA / "redirects.json"))
+CATEGORY_REDIRECTS.update(_load_data_table(_SITE_DATA / "category-redirects.json"))
 
 TOPIC_DEFS = [
     # (name, icon, color, blurb)
@@ -2196,7 +2201,7 @@ def collect_index_posts(posts_root, meta_cats=META_CATS):
 
 
 def copy_view_counts_snapshot(src_dir=None, repo_root=None):
-    """把仓库根的 data/view-counts.json 复制到 source/_data/。
+    """把站点的 data/view-counts.json 复制到 source/_data/。
 
     hexo 只把 ``source/_data/`` 里的 json 挂到 ``site.data`` 上（键名是
     文件名去掉后缀，即 ``view-counts``）。不复制的话，模板里的
@@ -2209,7 +2214,7 @@ def copy_view_counts_snapshot(src_dir=None, repo_root=None):
         src_dir = SRC
     if repo_root is None:
         repo_root = str(_REPO_ROOT)
-    src = os.path.join(repo_root, "data", "view-counts.json")
+    src = os.path.join(str(_SITE_DATA), "view-counts.json")
     if not os.path.isfile(src):
         return None
     dest_dir = os.path.join(src_dir, "_data")
@@ -2549,11 +2554,10 @@ footer a:hover{color:var(--c1)}
 
     # 首页首屏的策展清单（3 篇代表作 + 6 篇编辑推荐）。
     #
-    # 真相在仓库根的 data/featured.json —— 作者改那个文件就能换首屏，
+    # 真相在站点的 data/featured.json —— 作者改那个文件就能换首屏，
     # 不用去改模板。source/ 是 gitignore 的，所以必须复制到
     # source/_data/，hexo 才会把它挂到 site.data.featured 上。
-    _repo_root = str(_REPO_ROOT)
-    _featured_src = os.path.join(_repo_root, "data", "featured.json")
+    _featured_src = os.path.join(str(_SITE_DATA), "featured.json")
     if os.path.isfile(_featured_src):
         _featured_dir = os.path.join(SRC, "_data")
         os.makedirs(_featured_dir, exist_ok=True)
@@ -2564,7 +2568,7 @@ footer a:hover{color:var(--c1)}
 
     # 真实阅读量快照（GoatCounter 的 PV）。
     #
-    # 真相在仓库根的 data/view-counts.json —— tools/fetch-view-counts.py
+    # 真相在站点的 data/view-counts.json —— tools/fetch-view-counts.py
     # 抓的。跟 featured.json 同一个道理：source/ 是 gitignore 的，
     # 必须复制到 source/_data/，hexo 才会把它挂到 site.data 上
     # （键名是 'view-counts'，模板里读 site.data['view-counts']）。

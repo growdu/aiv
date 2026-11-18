@@ -41,7 +41,7 @@ SITE = REPO_ROOT / "platforms" / "blog" / "site"
 THEME_LAYOUT = SITE / "themes" / "matery" / "layout" / "layout.ejs"
 HOME_CONTENT = SITE / "themes" / "matery" / "layout" / "_partial" / "home-content.ejs"
 FETCHER = REPO_ROOT / "tools" / "fetch-view-counts.py"
-SNAPSHOT = REPO_ROOT / "data" / "view-counts.json"
+SNAPSHOT = REPO_ROOT / "platforms" / "blog" / "site" / "data" / "view-counts.json"
 NODE = shutil.which("node")
 
 needs_node = pytest.mark.skipif(NODE is None, reason="node 不在 PATH 上")
