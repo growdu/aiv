@@ -194,3 +194,21 @@ def test_the_readme_names_the_paths_the_templates_inject():
     assert "weixin/secrets.json" in text
     assert "weixin/collections.json" in text
     assert "__REPO__/weixin" in text
+
+
+def test_the_readme_covers_every_platform_that_lost_its_top_level_dir():
+    """五个平台目录原来都在顶层，各有 gitignore 的凭据文件。
+
+    漏掉一个，迁移就漏一份凭据——而凭据缺失的表现是「接口调用被拒」，
+    不是一个显眼的报错。README 必须把五个都列全。
+    """
+    text = README.read_text(encoding="utf-8")
+    for old, new in (
+        ("weixin/", "platforms/wechat/"),
+        ("toutiao/", "platforms/toutiao/"),
+        ("douyin/", "platforms/douyin/"),
+        ("bilibili/", "platforms/bilibili/"),
+        ("channels/", "platforms/channels/"),
+    ):
+        assert old in text, "迁移清单里少了旧目录 {}".format(old)
+        assert new in text, "迁移清单里少了新目录 {}".format(new)
