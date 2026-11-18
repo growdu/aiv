@@ -4,6 +4,15 @@
 !/platforms/blog/site/source/all/
 !/platforms/blog/site/source/recommended/
 
+# 搬走之前的位置。仓库里已经没有这两个目录了，但**别人的旧 checkout 里还有**
+# （站点搬进 platforms/ 之前构建出来的产物），留着这两行是为了不让它们
+# 在 `git status` 里冒出来——否则一次 `git add -A` 就把上千个 HTML 扫进仓库。
+# 等旧 checkout 都清干净了，这几行可以删。
+public/
+/source/
+!/source/all/
+!/source/recommended/
+
 # 内容单元仓库：母稿编译出来的产物（规格 §4.2）。
 # 它是**所有平台共用的那一半**——契约层与各平台 adapter 真正读的东西，
 # 但它是 build product，所以不入库；CI 里现编。
