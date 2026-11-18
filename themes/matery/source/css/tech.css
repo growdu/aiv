@@ -2,7 +2,7 @@
    本站自己的样式：首页首屏（.home-hero）和学习路径页（.learning-page）。
 
    为什么单独开一个文件：
-   internal/blog/重构方案.md §5.4 规定新样式只放这里，不再往 tools/patch-theme.py
+   docs/blog/重构方案.md §5.4 规定新样式只放这里，不再往 tools/patch-theme.py
    里塞 CSS —— patcher 注入的样式没法 review、没法单测，出错时也看不出是谁写的。
 
    硬约束（tests/test_home_first_screen.py 会检查）：

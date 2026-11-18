@@ -846,20 +846,21 @@ def _write_index(rel, title, parent_cn, description, articles, table, extra=None
         lines.extend(extra)
     body = "\n".join(lines)
     if os.path.exists(path):
-        with open(path, encoding="utf-8") as fh:
-            old = fh.read()
+        old = _read_text(path)
         if old == body:
             return rel
+        # 旧页是 CRLF 的话，新生成的那节也得是 CRLF —— 混在一个文件里
+        # 两个换行符，diff 就乱了。
+        if "\r\n" in old:
+            body = body.replace("\n", "\r\n")
         # 目录页可能被人手写过 —— 项目目录页后来并进了一整张几百行的
         # 「数据库总览」。整篇覆盖会把那些内容抹掉，所以**只刷新
         # 「本系列文章」那一节**，其余原样保留。
         merged = _merge_article_section(old, body)
         if merged != old:
-            with open(path, "w", encoding="utf-8") as fh:
-                fh.write(merged)
+            _write_text(path, merged)
         return rel
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(body)
+    _write_text(path, body)
     return rel
 
 
@@ -1024,6 +1025,24 @@ def path_forms(rel):
     }
 
 
+def _read_text(path):
+    """读一个文本文件，**保留它原来的换行符**。
+
+    Python 的通用换行模式会把 ``\\r\\n`` 读成 ``\\n``，写回去时又按平台默认
+    写 ``\\n`` —— 文件本来是 CRLF 的（主题里有一批），改写一行注释就把
+    **整个文件**的换行符换了，diff 看着像全文重写。
+    ``newline=""`` 让换行符原样进出。
+    """
+    with open(path, encoding="utf-8", newline="") as fh:
+        return fh.read()
+
+
+def _write_text(path, text):
+    """写一个文本文件，同样**保留它原来的换行符**。"""
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(text)
+
+
 def _replace_guarded(text, old_text, new_text):
     """把 `old_text` 换成 `new_text`，但**不碰已经改写过的路径**。
 
@@ -1063,8 +1082,7 @@ def rewrite_refs(targets, moves, report):
         if not os.path.exists(path):
             report.append(f"外部引用：{rel_file} 不存在，跳过")
             continue
-        with open(path, encoding="utf-8") as fh:
-            text = fh.read()
+        text = _read_text(path)
         original = text
         hits = 0
         for old_rel, new_rel in sorted(moves.items()):
@@ -1080,8 +1098,7 @@ def rewrite_refs(targets, moves, report):
                 text, n = _replace_guarded(text, old_text, new_text)
                 hits += n
         if text != original:
-            with open(path, "w", encoding="utf-8") as fh:
-                fh.write(text)
+            _write_text(path, text)
             report.append(f"外部引用：{rel_file} 改了 {hits} 处")
             total += hits
     return total
@@ -1113,8 +1130,7 @@ def rewrite_out_refs(targets, out_paths, report):
         if not os.path.exists(path):
             report.append(f"外部引用：{rel_file} 不存在，跳过")
             continue
-        with open(path, encoding="utf-8") as fh:
-            text = fh.read()
+        text = _read_text(path)
         original = text
         hits = 0
         for old_rel, new_rel in sorted(out_paths.items()):
@@ -1131,8 +1147,7 @@ def rewrite_out_refs(targets, out_paths, report):
                 text, n = _replace_guarded(text, old_text, new_text)
                 hits += n
         if text != original:
-            with open(path, "w", encoding="utf-8") as fh:
-                fh.write(text)
+            _write_text(path, text)
             report.append(f"外部引用：{rel_file} 改了 {hits} 处（移出 docs/ 的）")
             total += hits
     return total
