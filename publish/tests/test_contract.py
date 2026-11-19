@@ -574,6 +574,28 @@ def test_contract_reads_a_real_calendar_date():
 
 WEIXIN_DIR = Path(__file__).resolve().parents[2] / "platforms" / "wechat"
 
+#: 两份解析器**必须**给同一个答案的语料。
+#:
+#: 覆盖母稿 front matter 的各种形状：标量、单层列表、带引号的值、
+#: 空列表头、列表后跟新的顶层键、没有 front matter。
+#:
+#: **不含** CRLF 与缩进标量这两种形状——那两处是**有意为之的分歧**，
+#: 各由下面两条用例单独钉住，不在这里混进来。
+_PARSER_CORPUS = (
+    ("完整母稿", FULL_DRAFT),
+    ("没有 front matter", "# 标题\n\n正文。\n"),
+    ("只有 front matter 没有正文", "---\ntitle: x\n---\n"),
+    ("空列表头", "---\nplatforms:\n---\n\n正文\n"),
+    ("单个列表项", "---\nplatforms:\n  - wechat\n---\n\n正文\n"),
+    ("多个列表项", "---\nplatforms:\n  - wechat\n  - toutiao\n---\n\n正文\n"),
+    ("列表后跟新的顶层键", "---\nplatforms:\n  - wechat\ntitle: x\n---\n\n正文\n"),
+    ("双引号的值", '---\ntitle: "带引号的值"\n---\n\n正文\n'),
+    ("单引号的值", "---\ntitle: '单引号'\n---\n\n正文\n"),
+    ("值里带引号", '---\ntitle: "他说的"好"\n---\n\n正文\n'),
+    ("列表项带引号", '---\nplatforms:\n  - "wechat"\n---\n\n正文\n'),
+    ("空行穿插", "---\ntitle: x\n\nplatforms:\n  - wechat\n---\n\n正文\n"),
+)
+
 
 def _weixin_parser():
     if not WEIXIN_DIR.is_dir():
@@ -588,28 +610,25 @@ def _weixin_parser():
 
 
 def test_parser_matches_the_weixin_parser_on_the_real_corpus():
+    """两份解析器对同一段 front matter 给出同一个答案。
+
+    **语料自己造。** 这条测试原来扫 `docs/` 全树、拿真的母稿来对照——
+    `docs/` 清空之后它就永远 skip 了，而「永远 skip 的守卫」等于没有守卫。
+    这正是仓库里那条规矩的由来：**一条用例如果依赖「仓库里曾经有过的内容」，
+    它迟早会因为内容被清掉而变成假红。**
+    """
     weixin_parser = _weixin_parser()
     if weixin_parser is None:
         pytest.skip("platforms/wechat/ 不可用，跳过与 wechat.posts 的对照")
 
-    docs = Path(__file__).resolve().parents[2] / "docs"
-    drafts = [
-        path
-        for path in sorted(docs.rglob("*.md"))
-        if path.read_text(encoding="utf-8", errors="replace").startswith("---")
-    ]
-    if not drafts:
-        pytest.skip("docs/ 下没有带 front matter 的母稿")
-
-    mismatched = []
-    for path in drafts:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        mine_fields, _ = parse_front_matter(text)
-        their_fields, _ = weixin_parser(text)
-        if mine_fields != their_fields:
-            mismatched.append(str(path))
-
-    assert not mismatched, "解析结果与 wechat.posts 不一致：{}".format(mismatched)
+    for name, text in _PARSER_CORPUS:
+        mine_fields, mine_body = parse_front_matter(text)
+        their_fields, their_body = weixin_parser(text)
+        assert mine_fields == their_fields, (
+            "{}：解析结果与 wechat.posts 不一致\n  契约层：{}\n  weixin：{}".format(
+                name, mine_fields, their_fields)
+        )
+        assert mine_body == their_body, "{}：正文切分不一致".format(name)
 
 
 def test_crlf_is_the_one_deliberate_divergence_from_the_weixin_parser():

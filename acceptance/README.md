@@ -26,6 +26,8 @@
 | 头条 adapter | `platforms/toutiao/` | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 读得懂内容单元、出包不丢图 |
 | 微信 adapter | `platforms/wechat/` | `cd platforms/wechat && python3 -m pytest tests/ -q` | 同上 |
 | 抖音 adapter | `platforms/douyin/` | `cd platforms/douyin && python3 -m pytest tests/ -q` | 同上 |
+| B站 adapter | `platforms/bilibili/` | `cd platforms/bilibili && python3 -m pytest tests/ -q` | 同上 |
+| 视频号 adapter | `platforms/channels/` | `cd platforms/channels && python3 -m pytest tests/ -q` | 同上 |
 | 视频流水线 | `video/pipeline/` | `cd video/pipeline && python3 -m pytest tests/ -q` | 自己的套件 |
 | 发布执行器 | `browser/` | `cd browser && python3 -m pytest tests/ -q` | 浏览器流程的形状（真发不发） |
 
@@ -87,8 +89,10 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 394 passed / 2 skipped | 394 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 504 passed / 1 skipped | 504 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 115 passed | 115 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1052 passed / 60 skipped | 1052 passed / 60 skipped |
-| 8 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 99 passed / 64 skipped / 1 failed | 99 passed / 64 skipped / 1 failed |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1050 passed / 60 skipped | 1050 passed / 60 skipped |
+| 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | （待填） | （待填） |
+| 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 55 passed | 55 passed |
+| 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 99 passed / 64 skipped / 1 failed | 99 passed / 64 skipped / 1 failed |
 
 ### 数字为什么变过（别拿旧基线来对账）
 
@@ -96,6 +100,7 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-18（归位那轮） | 196 / 3 skip | 26 | 411 / 1 skip | 394 / 2 skip | 504 / 1 skip | 119 / 12 skip | 1269 / 23 skip / 3 red |
 | 2026-11-19（清库那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1052 / 60 skip |
+| 2026-11-19（视频线不发布那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip |
 
 变红的是**被测对象没了**，不是逻辑坏了：
 
@@ -115,6 +120,17 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 - wechat 505 → 505（原先 22 条红）：adapter 之前 import 一个已删的 hexo 脚本、
   又 shell out 调两个同样已删的脚本做 sync，读不到任何文章。改成接今天的两条
   （`tools/build-content-units.py` + `platforms/blog/site/tools/sync-content.py`）。
+
+**「视频线不发布」那轮（2026-11-19 晚）**：owner 拍板视频线的文档不进站点，
+`docs/` 归零。连带动到四套件——每一条变动的根因都是同一个：
+**用例依赖了「仓库里曾经有过的内容」**。
+
+| 套件 | 变动 | 为什么 |
+| --- | --- | --- |
+| video | 1052 → 1050 | 删了 `test_publish_copy.py` 那 3 条（被测的脚本没了）；「规范里的引用必须存在」那条拆成两条——一条查引用，一条查引用正则本身还认不认得出引用（原来它靠 `docs/` 里有稿子才不空转） |
+| publish | 338 → 338 | 那条「两份解析器在真语料上答案相同」原来扫 `docs/` 全树，`docs/` 归零后它永远 skip——**永远 skip 的守卫等于没有守卫**。改成自己造 12 段语料（各种 front matter 形状） |
+| 根 | 81 → 81 | 两条 review-check 集成用例原来指着 `docs/life/aiv/人格规范.md`；改成在 `tmp_path` 里造自己的语料树（工具多了一个 `--docs-root` 参数） |
+| 站点 | 51 → 51 | 「没有内容就没有目录树」从报错改成正面断言 |
 
 > **规律：一条用例如果依赖「仓库里曾经有过的内容」，它迟早会因为
 > 内容被清掉而变成假红。** 新的用例一律在自己造语料。

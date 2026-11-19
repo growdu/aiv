@@ -123,15 +123,41 @@ def test_every_cited_path_exists():
 
     这个规范的全部价值就是「每条结论都带出处」——出处要是假的，
     整份规范就退回成凭空写的角色设定。
+
+    **规范现在是模板，所以「没有出处」是合法状态。**
+    `docs/` 里没有稿子（框架先行，内容后做），规范的语料表就整张是
+    占位路径。占位路径**故意不加反引号**——加了就会被这条用例当成真引用，
+    然后因为文件不存在而红。规范里写明了这条约定。
+
+    所以这条用例断言两件事：
+    1. **凡是加了反引号的 `docs/…` 路径，必须真实存在**；
+    2. **规范里写明了这条约定**（作者填真路径时知道该加反引号）。
     """
     repo_root = character.REPO_ROOT
     spec = _spec_text()
+
     md_paths = sorted(set(re.findall(r"`(docs/[^`]+?\.md)`", spec)))
-    assert md_paths, "规范里没有引用任何文章"
     for path in md_paths:
         assert (repo_root / path).exists(), f"规范引用的文章不存在：{path}"
     for path in sorted(set(re.findall(r"`(docs/[^`]+?/)`", spec))):
         assert (repo_root / path).exists(), f"规范引用的目录不存在：{path}"
+
+    # 约定得写在规范里：作者填真路径时，知道「加反引号 = 受校验的引用」。
+    assert "反引号" in spec, "规范没写清「反引号里的路径会被校验」这条约定"
+
+
+def test_the_citation_regex_finds_a_cited_path():
+    """上面那条用例自己也得被验：正则找不找得到引用，得有一条用例钉住。
+
+    **一条永远「因为没有内容所以什么都没查」的守卫，等于没有守卫。**
+    这条用例拿一段造出来的文本走一遍同一个正则，
+    确认它认得出「加了反引号的引用」，也认不出「没加反引号的占位」。
+    """
+    pattern = r"`(docs/[^`]+?\.md)`"
+
+    assert re.findall(pattern, "`docs/a/b.md`") == ["docs/a/b.md"]
+    # 占位路径不加反引号——它不是引用，正则不该把它捡起来。
+    assert re.findall(pattern, "docs/你的系列/你的入门篇.md") == []
 
 
 def test_spec_has_no_broken_characters():

@@ -10,7 +10,7 @@ name: Contracts
 # 覆盖范围：
 #   - 内容契约（publish/spec/00 §4）：母稿的 front matter 必须满足字段表
 #   - 契约层（publish/publishkit）：内容契约、能力模型、发布清单、调度
-#   - 头条号 / 公众号 adapter：切片、出包、草稿箱的规则
+#   - 头条号 / 公众号 / 抖音 / B站 / 视频号 adapter：切片、出包、草稿箱的规则
 #   - 母稿 / review 层：审校信号、审校记录、摘要起草
 #
 # **每个模块一条 step**——测试跟着模块归位之后（见 acceptance/README.md
@@ -104,3 +104,14 @@ jobs:
         # 一直红到视频线清空才暴露。视频平台 adapter 的套件从今天起进门。
         if: ${{ !cancelled() }}
         run: cd platforms/douyin && python3 -m pytest tests/ -q
+
+      - name: B站 adapter 测试
+        # B站 2026-11-19 之前同样**不在 CI 里**——它的红跟抖音同款根因
+        # （期根常量随视频线重做一起改名了），也没人看见。
+        if: ${{ !cancelled() }}
+        run: cd platforms/bilibili && python3 -m pytest tests/ -q
+
+      - name: 视频号 adapter 测试
+        # 视频号同上。
+        if: ${{ !cancelled() }}
+        run: cd platforms/channels && python3 -m pytest tests/ -q

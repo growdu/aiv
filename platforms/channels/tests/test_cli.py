@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from conftest import EP_PATH
+
 CHANNELS_DIR = Path(__file__).resolve().parents[1]
 
 
@@ -44,8 +46,8 @@ def test_the_cli_reports_a_missing_video_instead_of_crashing(tmp_path):
     assert "Traceback" not in proc.stderr
 
 
-def test_marking_published_without_a_package_is_refused(tmp_path, outbox,
-                                                        capsys):
+def test_marking_published_without_a_package_is_refused(episode_dir, tmp_path,
+                                                        outbox, capsys):
     """**没有发布包就不许回填「已发布」。**
 
     上一版把「发布包不存在」降级成 WARNING，然后照样写状态、照样写快照：
@@ -53,28 +55,37 @@ def test_marking_published_without_a_package_is_refused(tmp_path, outbox,
     下一个人照着快照去找发布包，什么都没有，而「已发布」已经记上去了。
 
     **回填的前提是「发出去的是包里那一版」。** 没有包，就没有那一版。
+
+    元数据是有的（期在临时目录里现造）——失败的理由必须正是
+    「没有发布包」，不是「这一期压根没配文案」。
     """
     from channels import cli
 
     out = tmp_path / "out"
-    assert cli.main(["mark", "published", "row-lock", "--url",
-                      "https://example.com/1", "--out", str(out)]) == 1
+    assert cli.main(["mark", "published", EP_PATH, "--url",
+                      "https://example.invalid/1", "--out", str(out)]) == 1
     err = capsys.readouterr().err
     assert "发布包不存在" in err
     assert not (out / "state.json").exists(), "失败的回填留下了状态文件"
-    assert not list(outbox.glob("*.json")), "失败的回填留下了状态快照"
+    assert not list(outbox.rglob("*.json")), "失败的回填留下了状态快照"
 
 
-def test_marking_drafted_without_a_package_is_refused(tmp_path, outbox, capsys):
-    """草稿档也一样：草稿是拿这个包存上去的，没有包就无从谈起。"""
+def test_marking_drafted_without_a_package_is_refused(episode_dir, tmp_path,
+                                                       outbox, capsys):
+    """草稿档也一样：草稿是拿这个包存上去的，没有包就无从谈起。
+
+    同样要先有元数据：`channels.cli.cmd_mark` 是**先读元数据、再查发布包**，
+    顺序反了的话，这条命令撞在「读元数据」那步就退出了，
+    「没有发布包就拒绝」这条分支根本没被走到。
+    """
     from channels import cli
 
     out = tmp_path / "out"
-    assert cli.main(["mark", "drafted", "row-lock", "--out", str(out)]) == 1
+    assert cli.main(["mark", "drafted", EP_PATH, "--out", str(out)]) == 1
     err = capsys.readouterr().err
     assert "发布包不存在" in err
     assert not (out / "state.json").exists(), "失败的回填留下了状态文件"
-    assert not list(outbox.glob("*.json")), "失败的回填留下了状态快照"
+    assert not list(outbox.rglob("*.json")), "失败的回填留下了状态快照"
 
 
 def test_a_failed_mark_leaves_no_state_behind(tmp_path, capsys):
@@ -95,10 +106,19 @@ def test_a_failed_mark_leaves_no_state_behind(tmp_path, capsys):
     assert not (out / "state.json").exists(), "失败的回填留下了状态文件"
 
 
-def test_a_video_that_vanished_gives_an_error_not_a_traceback(tmp_path,
+def test_a_video_that_vanished_gives_an_error_not_a_traceback(episode_dir,
+                                                               tmp_path,
                                                                monkeypatch,
                                                                capsys):
-    """成片在预检之后没了：报错退出，别甩 traceback。"""
+    """成片在预检之后没了：报错退出，别甩 traceback。
+
+    `cmd_package` 先看文件在不在，`build_package` 又探一次——两次之间
+    文件没了的话，裸的 `FileNotFoundError` 会一路冒到终端上，
+    看着像崩溃，不像「这一条没出包」。
+
+    元数据得先读到（期在临时目录里现造）——不然命令在「读元数据」那步
+    就退出了，这条分支根本没被走到。
+    """
     from channels import cli, package
 
     def _vanished(*args, **kwargs):
@@ -107,7 +127,7 @@ def test_a_video_that_vanished_gives_an_error_not_a_traceback(tmp_path,
     video = tmp_path / "v.mp4"
     video.write_bytes(b"not really a video")
     monkeypatch.setattr(package, "build_package", _vanished)
-    assert cli.main(["package", "row-lock", "--video", str(video),
+    assert cli.main(["package", EP_PATH, "--video", str(video),
                       "--out", str(tmp_path / "out")]) == 1
     err = capsys.readouterr().err
     assert "ERROR" in err

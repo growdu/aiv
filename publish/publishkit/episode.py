@@ -40,12 +40,18 @@
 --------------------
 front matter 的格式规则（契约一 §4.2）只允许扁平的 ``key: value`` 与单层的
 ``key:`` + ``  - item`` 列表，嵌套仅 ``cascade:`` 允许。两道透传白名单
-（``platforms/blog/site/tools/sync-hexo.py`` 的 ``PASSTHROUGH_*`` 与本层的
-``PASSTHROUGH_FIELDS``）也都是按**扁平的键名**逐个搬的。
+（``tools/build-content-units.py`` 的 ``PASSTHROUGH`` 与本层的
+``PASSTHROUGH_FIELDS``）都是按**扁平的键名**认字段的。
 
 所以期号字段是一组扁平键，**没有** ``episode_media:`` 这种嵌套结构——
-嵌套字典会被两道白名单**静默丢掉**：页面照常渲染，只是期号区块是空的。
+嵌套字典在契约层的 front matter 解析器里读不出来（``episode_media:`` 会变成
+一个空列表，嵌套的键被拍平到顶层）：页面照常渲染，只是期号区块是空的。
 这正是「展示元数据通道是断的」那种故障（契约一 §2.2）的翻版。
+
+> ⚠️ **现状（2026-11-19）**：编译器那份白名单（``tools/build-content-units.py``
+> 的 ``PASSTHROUGH``）**不含** ``episode:*``，期号字段现在过不去——
+> 同一个「静默丢掉」的故障正在发生。跟踪见
+> ``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 1 条。
 
 「在哪看」为什么不进 front matter
 ---------------------------------
@@ -62,9 +68,11 @@ front matter 的格式规则（契约一 §4.2）只允许扁平的 ``key: value
 - 平台重发会换链接。两处都写必然漂：母稿里的旧链接指向已失效的地址，
   而且**没人会发现**，因为页面照常渲染。
 
-期号页的「在 B站看」按钮由构建期汇总的
+期号页的「在 B站看」按钮原由构建期汇总的
 ``platforms/blog/site/source/_data/podcast_index.json``
 提供（commit 6 落地），它读的是 outbox 快照。
+⚠️ 2026-11-18 的站点重做撤掉了整条 Hexo 链路，``source/_data/`` 已经不存在，
+期号页的平台链接**现在还没有数据源**。
 
 为什么不 import ``tools/site_root.py``
 -------------------------------------
@@ -72,6 +80,10 @@ front matter 的格式规则（契约一 §4.2）只允许扁平的 ``key: value
 （契约一 §11.1 的接缝原则）。所以 permalink 的推导在这里**重写一遍**，
 与 ``tools/site_root.py`` 的等价性由 ``publish/tests/test_episode.py`` 的一条
 兼容性测试钉住——**靠测试锁住，不靠 import**。
+
+（``tools/site_root.py`` 本身是 Hexo 时代的遗留模块：它读的 ``_config.yml``
+已经不在了，挂载点现在退化成空串。见
+``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 4 条。）
 
 这与契约一为什么不 import ``platforms/wechat/posts.py`` 的理由完全一样：
 两边各自演进，靠一条测试断言它们不漂移。
@@ -189,12 +201,13 @@ class Episode:
         year / month / day, and without them there is no honest answer.
 
         ``date`` must be the **content unit's** date (the one
-        ``platforms/blog/site/tools/sync-hexo.py`` writes into
+        ``tools/build-content-units.py`` writes into
         ``content/units/``), not the
-        master draft's ``date:`` field.  The build overwrites the draft's
-        date with the earliest git commit date, and four of the six episode
+        master draft's ``date:`` field.  The compiler takes the draft's
+        explicit ``date:`` when it has one and falls back to the earliest
+        git commit date otherwise — and four of the six episode
         drafts carry no ``date:`` at all — so a URL derived from the draft
-        would point at a different day than the site's permalink does.
+        would point at a different day than the content unit does.
         Reading a draft therefore leaves ``date`` empty, and this method
         refuses to guess.
         """
@@ -383,20 +396,25 @@ def validate_episode_series(episodes) -> list:
 def landing_url(content_id: str, date: str, root: str = "") -> str:
     """The landing URL of an episode, derived -- never hand-written.
 
-    ``= SITE_ROOT + "/" + permalink(content_id)``，permalink 用 Hexo 的
-    ``:year/:month/:day/:title/``（``_config.yml`` 的 ``permalink``）：
+    ``= SITE_ROOT + "/" + <年/月/日 + content_id>``。**当前**拼出来的是
+    ``/YYYY/MM/DD/<content_id>/``（月、日补零）：
 
     >>> landing_url("source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive", "2026-10-15")
     '/2026/10/15/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/'
 
     ``root`` 是部署挂载点：主站 ``""``，GitHub Pages 镜像 ``"/blog"``。
+
+    TODO：站点的 URL 规则现在只写在 ``platforms/blog/site/src/lib/urls.ts``
+    （文档 ``/docs/<id>/``、视频 ``/videos/<slug>/``），与这里拼的**不是同一个**。
+    这条缝还没合——见 ``review/specs/2026-11-19-整体架构与模块边界.md``
+    §五 第 10 条（形状待拍板，别在这两处各抄一遍）。
     """
     if not isinstance(content_id, str) or not content_id.strip():
         raise EpisodeFieldError("content_id 不能为空")
     day = parse_content_date(date)
-    # 月 / 日**补零**：Hexo 的 permalink 是 ``:month`` / ``:day``，
+    # 月 / 日**补零**：这里拼的是 ``{:04d}/{:02d}/{:02d}``，
     # 渲染成 ``08`` / ``24``。不补零的话 8 月的文章会得到 ``/2026/8/24/``
-    # ——一个跟站内真实地址不一样的链接。
+    # ——一个跟别的拼法不一样的链接。
     prefix = "{}/{:04d}/{:02d}/{:02d}/{}".format(
         root.rstrip("/"), day.year, day.month, day.day, quote(content_id.strip())
     )
@@ -410,12 +428,7 @@ def content_id_for_draft(path, drafts_root) -> str:
     """内容单元 id：**母稿**路径（相对 ``docs/``）去后缀。
 
     与 :func:`publishkit.schedule.content_id_for` 的区别只有一处，但它
-    是**必需**的：编译目录 ``content/units/`` 里没有 ``index.md``。
-
-    ``platforms/blog/site/tools/sync-hexo.py`` 编译时会把
-    ``docs/<目录>/index.md`` 写成
-    ``content/units/<上层目录>/<目录名>.md``（``index.md`` 变成它所在的
-    目录本身），其余文件原样搬。所以：
+    是**必需**的：母稿 ``docs/<目录>/index.md`` 要变成它所在的目录本身。
 
     ==========================================  ==========================================
     母稿                                        内容单元 id
@@ -428,9 +441,11 @@ def content_id_for_draft(path, drafts_root) -> str:
     直接拿母稿路径去后缀会得到 ``source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index``，
     派生的落地 URL 指向一个**不存在**的页面——所以这一条不能省。
 
-    与编译产物的等价性由 ``publish/tests/test_episode.py`` 的集成测试钉住：
-    真跑一遍 ``platforms/blog/site/tools/sync-hexo.py``，逐个比对母稿派生值与
-    产物里的内容单元 id。
+    ⚠️ **这条特判是旧链路口径**。现行编译器 ``tools/build-content-units.py``
+    **同构拷贝**目录树（``docs/<目录>/index.md`` → ``content/units/<目录>/index.md``，
+    内容单元 id 是 ``<目录>/index``），钉住母稿派生值与编译产物等价的集成用例
+    随 ``sync-hexo.py`` 一起删了。两侧现在对不上，见
+    ``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 9 条。
     """
     root = Path(drafts_root).resolve()
     relative = Path(path).resolve().relative_to(root)
@@ -570,12 +585,9 @@ def read_episode(path, posts_root=None, drafts_root=None) -> Episode:
     （见 :func:`episode_from_fields`）。
 
     **日期只有内容单元才有。**
-    ``platforms/blog/site/tools/sync-hexo.py`` 编译时把母稿的
-    ``date:`` 覆盖成 git 里最早的一次提交时间，站点 permalink 用的是
-    那个值——不是作者写在母稿里的那个（2026-11-14 实测：六期母稿里
-    **四期根本没写** ``date:``，两期写了的也只与 git 日期同一天、
-    不同时刻）。所以读母稿时 ``date`` 留空，读内容单元时才取它的
-    ``date``。
+    ``tools/build-content-units.py`` 编译时，母稿写了 ``date:`` 就用它，
+    没写才取 git 里最早的一次提交时间——内容单元里存的是那个值。
+    所以读母稿时 ``date`` 留空，读内容单元时才取它的 ``date``。
 
     **没有** ``episode`` 键的母稿不是一期。它仍然被读出来（``episode`` 为空
     字符串、``is_episode`` 为 False），因为这一层是**全体文章**都要经过的

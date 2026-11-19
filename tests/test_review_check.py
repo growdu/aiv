@@ -131,11 +131,31 @@ def test_load_doc_reads_first_h1_as_title(tmp_path):
     assert doc.title == "PostgreSQL MVCC"
 
 
-def test_cli_json_output_has_expected_shape():
+def _corpus(tmp_path: Path) -> Path:
+    """造一棵自己的语料树。
+
+    **不用仓库里的 `docs/`**——那条规矩是死的：仓库里曾经有过什么内容，
+    这条用例就跟着变成假红（`docs/` 现在是空的，内容在框架起来之后再做）。
+    语料自己造，身份按 `--docs-root` 指到这棵树。
+    """
+    root = tmp_path / "docs"
+    (root / "life" / "aiv").mkdir(parents=True)
+    (root / "life" / "aiv" / "人格规范.md").write_text(
+        "# 人格规范\n\n这一段是正文，够长到能过最起码的结构检查。\n\n"
+        "## 一节\n\n另一段正文。\n",
+        encoding="utf-8",
+    )
+    (root / "life" / "_index.md").write_text(
+        "# 人生与成长\n\n分类页。\n", encoding="utf-8"
+    )
+    return root
+
+
+def test_cli_json_output_has_expected_shape(tmp_path):
     """集成：真跑一次 CLI，检查 JSON 结构。"""
-    target = DOCS / "life" / "aiv" / "人格规范.md"
-    assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
-    result = run_tool(str(target), "--json")
+    root = _corpus(tmp_path)
+    target = root / "life" / "aiv" / "人格规范.md"
+    result = run_tool(str(target), "--json", "--docs-root", str(root))
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert "docs" in payload
@@ -146,10 +166,11 @@ def test_cli_json_output_has_expected_shape():
     assert isinstance(doc["signals"], list)
 
 
-def test_cli_runs_over_a_whole_pillar():
+def test_cli_runs_over_a_whole_pillar(tmp_path):
     """集成：整目录跑一遍，不许崩。"""
-    pillar = DOCS / "life"
-    result = run_tool(str(pillar), "--json")
+    root = _corpus(tmp_path)
+    pillar = root / "life"
+    result = run_tool(str(pillar), "--json", "--docs-root", str(root))
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     expected = sorted(p for p in pillar.rglob("*.md"))

@@ -34,7 +34,7 @@
 ——所以那句话不能说「逐条一致」，差异钉在测试里。
 
 （第二处差异在**生产链路上碰不到**：weixin 读的是 ``content/units/``，
-那里的缩进标量已被 sync 折叠成单行 ``key: value``。它只在直接读作者原稿
+那里的缩进标量已被编译器折叠成单行 ``key: value``。它只在直接读作者原稿
 ``docs/`` 时才会出现——而那正是 ``read_contract()`` 承诺支持的用法。）
 
 字段白名单（§4.1）与约束：
@@ -62,13 +62,14 @@ date         str             ``YYYY-MM-DD`` 或 ``YYYY-MM-DD HH:MM:SS``
 
 没有 ``episode`` 键的母稿**不是**一期，它不进期号线，也不需要写其余字段。
 
-**``date`` 不是作者写的字段，是 sync 写进 ``content/units/`` 的那一个。**
-调度层的选题规则要按日期排序（06 规格 §3.3「按 ``publish_on``（缺省用
-``date``）升序」），所以这一层得认它。
+**``date`` 是编译器写进 ``content/units/`` 的那一个**（母稿显式写了 ``date:``
+就用它，没写才取 git 里最早的一次提交时间）。调度层的选题规则要按日期排序
+（06 规格 §3.3「按 ``publish_on``（缺省用 ``date``）升序」），所以这一层得认它。
 
-但它**不在透传白名单里**：``PASSTHROUGH_FIELDS`` 是 sync 的白名单，
-加进去会改变站点渲染结果
-（``platforms/blog/site/tools/sync-hexo.py`` 写的 ``date`` 决定 permalink）。``date`` 只是被**读**，不被**搬**。
+但它**不在透传白名单里**：``PASSTHROUGH_FIELDS`` 是**契约层自己**的清单
+（编译器那份是 ``tools/build-content-units.py`` 的 ``PASSTHROUGH``），
+加进去会改变站点渲染结果——内容单元里的 ``date`` 决定站点的地址。
+``date`` 只是被**读**，不被**搬**。
 """
 
 from __future__ import annotations
@@ -102,8 +103,9 @@ __all__ = [
 #: 不是同一套取值：这里说的是「这篇是什么」，那边说的是「这个平台发什么」。
 CONTENT_KINDS = ("post", "video")
 
-#: 主题（matery）支持的转载声明取值
-#: （``platforms/blog/site/themes/matery/_config.yml``）。
+#: 转载声明的取值域（契约一 §4.1）。
+#: 这组枚举沿用旧 Hexo 主题（matery）支持的取值；2026-11-18 的站点重做
+#: 撤掉了那个主题，现行站点配置在 ``platforms/blog/site/data/site.json``。
 REPRINT_POLICIES = (
     "cc_by",
     "cc_by_nd",
@@ -174,7 +176,7 @@ _FIELD_MAX_CHARS = {
 _FM_RE = re.compile(r"^---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 #: ``date`` 字段认两种形态：纯日期与带时分秒的日期。后者是
-#: ``platforms/blog/site/tools/sync-hexo.py`` 写进 ``content/units/`` 的形状。
+#: ``tools/build-content-units.py`` 写进 ``content/units/`` 的形状。
 _DATE_FIELD_RE = re.compile(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$")
 _INT_RE = re.compile(r"^-?\d+$")
 
@@ -202,10 +204,15 @@ def _unquote(value: str) -> str:
 def parse_front_matter(text: str) -> tuple:
     """Split YAML-ish front-matter from the body.
 
-    ``platforms/blog/site/tools/sync-hexo.py`` generates the front-matter
+    ``tools/build-content-units.py`` generates the front-matter
     itself, so the shape is known and fixed: ``key: value`` scalars plus
-    ``key:`` followed by ``  - item`` lists.  A tiny hand-written parser
+    ``key:`` followed by list items.  A tiny hand-written parser
     avoids adding a YAML dependency for a format we control.
+
+    ⚠️ 编译器用 ``yaml.safe_dump`` 落盘，**长标量会按 YAML 折行**
+    （``description`` 一类字段尤其明显）。本层的格式规则不支持多行值
+    （契约一 §4.2），所以折行处之后的内容读不出来——这是编译器与契约层
+    之间的口径差，不是这一层的解析器挑食。
 
     Returns ``(fields, body)``.  A list field maps to a list of strings;
     a single-item list is kept as a one-element list so callers do not have
@@ -215,7 +222,7 @@ def parse_front_matter(text: str) -> tuple:
     两处有意分歧见模块 docstring）。
 
     **缩进标量**：``key:`` 下面缩进一个非列表项（``  wechat``）时，按 YAML 的
-    真实语义读成**标量** ``"wechat"``。这一形态不是 sync 产出的形状（sync
+    真实语义读成**标量** ``"wechat"``。这一形态不是编译器产出的形状（编译器
     把它折叠成单行 ``key: value``），只在直接读作者原稿时才会遇到。
 
     在 **LF 输入下**与 ``platforms/wechat/posts.py:82`` 的 ``parse_front_matter()``
@@ -254,7 +261,7 @@ def parse_front_matter(text: str) -> tuple:
         if raw[:1] in (" ", "\t") and list_key is not None and ":" not in raw:
             # 缩进标量：``key:`` 下面缩进的、不是列表项的一行。
             #
-            # 这一形态**不是** sync 产出的形状——sync 把它折叠成单行
+            # 这一形态**不是** 编译器产出的形状——编译器把它折叠成单行
             # ``key: value``——所以只有直接读作者原稿 ``docs/`` 时才会遇到。
             # 按 YAML 的真实语义它是**标量**：``platforms:`` 下面缩进的
             # ``wechat`` 是字符串 "wechat"，不是空列表。
@@ -385,7 +392,7 @@ def parse_content_date(value: str) -> date:
     """把 front matter 的 ``date`` 解析成 :class:`datetime.date`。
 
     认两种形态：``YYYY-MM-DD`` 与 ``YYYY-MM-DD HH:MM:SS``——后者是
-    ``platforms/blog/site/tools/sync-hexo.py`` 写进 ``content/units/`` 的形状（它把 git 的
+    ``tools/build-content-units.py`` 写进 ``content/units/`` 的形状（它把 git 的
     时间戳去掉时区偏移后原样写下来）。
 
     解析不了就抛 :class:`ContractFieldError`：``date`` 是外部输入，
@@ -484,9 +491,9 @@ def read_contract(path) -> ContentContract:
     ——两者的 front matter 是同一套。
 
     有一处例外：**缩进标量**（``platforms:`` 下面缩进一个非列表项）在原稿
-    里是作者写的，在 ``content/units/`` 里已被 sync 折叠成单行
+    里是作者写的，在 ``content/units/`` 里已被编译器折叠成单行
     ``platforms: wechat``。同一份内容，两条路径给出的**判定不同**：原稿那条
-    路径报「platforms 必须是列表」（响亮失败），sync 那条路径也是同一条报错
+    路径报「platforms 必须是列表」（响亮失败），编译器那条路径也是同一条报错
     ——所以这里不会出现「同一篇文章，一个说不发、另一个说发」的分裂。
     """
     path = Path(path)

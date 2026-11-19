@@ -111,7 +111,7 @@ def test_landing_url_derives_the_permalink():
 
 
 def test_landing_url_accepts_a_full_timestamp():
-    """内容单元的 date 带时刻（``sync-hexo.py`` 写的就是这个形状）。"""
+    """内容单元的 date 带时刻（现行编译器 ``tools/build-content-units.py`` 写的就是这个形状）。"""
     assert (
         landing_url("database/x", "2026-10-15 11:30:25")
         == "/2026/10/15/database/x/"

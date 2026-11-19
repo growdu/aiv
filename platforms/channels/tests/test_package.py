@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from conftest import EP_PATH
 from channels import package, snapshot, state
 
 
@@ -186,50 +187,36 @@ def test_marking_published_updates_the_package_meta(meta, video, tmp_path):
 # --- 命令行端到端 -----------------------------------------------------------
 
 
-def test_the_cli_packages_and_marks_an_episode(tmp_path, monkeypatch, make_video):
-    """期号 → 元数据 → 发布包 → 回填链接，一条线走完。"""
-    from pyv import epmeta
+def test_the_cli_packages_and_marks_an_episode(episode_dir, tmp_path, monkeypatch,
+                                               make_video):
+    """期号 → 元数据 → 发布包 → 回填链接，一条线走完。
 
+    期在临时目录里现造（四层坐标），成片也是现场编的——
+    仓库里既没有内容，也没有成片。
+    """
     from channels import cli
 
-    publish_dir = tmp_path / "publish"
-    publish_dir.mkdir()
-    (publish_dir / "ep01.json").write_text(json.dumps({
-        "episode": "ep01",
-        "title": "PostgreSQL 18 并行逻辑解码",
-        "cover_at": 1.0,
-        "url": "https://growdu.cn/2026/11/12/life/aiv/",
-        "channels": {
-            "title": "32 核机器，解码只占 1 核",
-            "description": "默认发布端只有一个解码线程，串行处理。",
-            "topics": ["PostgreSQL", "逻辑复制", "数据库内核"],
-        },
-    }, ensure_ascii=False), encoding="utf-8")
+    video = make_video(tmp_path / "video.mp4")
 
-    aiv_root = tmp_path / "video"
-    (aiv_root / "out").mkdir(parents=True)
-    make_video(aiv_root / "out" / "ep01.mp4")
-
-    monkeypatch.setattr(cli, "AIV_ROOT", aiv_root)
-    monkeypatch.setattr(epmeta, "PUBLISH_DIR", publish_dir)
     monkeypatch.setattr(snapshot, "OUTBOX_DIR", tmp_path / "outbox")
 
     out = tmp_path / "out"
-    assert cli.main(["package", "ep01", "--out", str(out)]) == 0
-    checklist = (out / "ep01" / "publish.md").read_text(encoding="utf-8")
+    assert cli.main(["package", EP_PATH, "--video", str(video),
+                     "--out", str(out)]) == 0
+    checklist = (out / EP_PATH / "publish.md").read_text(encoding="utf-8")
     assert "待你上传" in checklist
     assert "已发布" not in checklist
 
     url = "https://channels.weixin.qq.com/x"
-    assert cli.main(["mark", "published", "ep01", "--url", url,
+    assert cli.main(["mark", "published", EP_PATH, "--url", url,
                      "--out", str(out)]) == 0
-    assert cli.main(["status", "ep01", "--out", str(out)]) == 0
+    assert cli.main(["status", EP_PATH, "--out", str(out)]) == 0
 
-    state = json.loads((out / "state.json").read_text(encoding="utf-8"))
-    assert state["episodes"]["ep01"]["status"] == "published"
-    assert state["episodes"]["ep01"]["published_url"] == url
+    state_data = json.loads((out / "state.json").read_text(encoding="utf-8"))
+    assert state_data["episodes"][EP_PATH]["status"] == "published"
+    assert state_data["episodes"][EP_PATH]["published_url"] == url
 
-    shot = json.loads((tmp_path / "outbox" / "ep01__channels.json")
+    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__channels.json")
                       .read_text(encoding="utf-8"))
     assert shot["status"] == "published"
     assert shot["published_url"] == url

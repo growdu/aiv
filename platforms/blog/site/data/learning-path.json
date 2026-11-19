@@ -435,7 +435,7 @@
       "goal": "走完这条线，你能有一套自己的复习/学习方法，并对当下的经济周期和自己的处境有一个不靠情绪的判断。",
       "track_match": [
         {
-          "path_regex": "^life/(?!aiv($|/))"
+          "path_regex": "^life/"
         }
       ],
       "fallback_stage": "L4",
@@ -503,9 +503,6 @@
           "path_prefix": "notes/video-work/"
         },
         {
-          "path_regex": "^life/aiv($|/)"
-        },
-        {
           "path_prefix": "platform-meta/"
         }
       ],
@@ -563,9 +560,6 @@
           "match": [
             {
               "path_prefix": "notes/video-work/"
-            },
-            {
-              "path_regex": "^life/aiv($|/)"
             },
             {
               "path_prefix": "platform-meta/video-line/"

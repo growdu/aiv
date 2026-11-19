@@ -980,11 +980,11 @@ def collect_files(paths: list[str]) -> list[Path]:
     return unique
 
 
-def load_doc(path: Path) -> Doc:
+def load_doc(path: Path, docs_root: Path = DOCS_ROOT) -> Doc:
     raw = path.read_text(encoding="utf-8", errors="replace")
     lines = raw.split("\n")
     blocks = parse_blocks(lines)
-    pillar, slug = derive_identity(path)
+    pillar, slug = derive_identity(path, docs_root)
     title = ""
     for block in blocks:
         if block.kind == HEADING:
@@ -1059,6 +1059,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("paths", nargs="+", help="要检查的文件或目录")
     parser.add_argument("--json", action="store_true", help="输出 JSON 而不是人读摘要")
     parser.add_argument("--out", help="输出到文件（默认 stdout）")
+    parser.add_argument(
+        "--docs-root",
+        default=str(DOCS_ROOT),
+        help="算「支柱/篇名」时的根目录（默认：仓库的 docs/）。"
+             "换一棵树就换这个值——在临时目录里造语料验规则时用得着。",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -1067,7 +1073,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"路径不存在: {exc}", file=sys.stderr)
         return 1
 
-    docs = [check_doc(load_doc(path)) for path in files]
+    docs_root = Path(args.docs_root)
+    docs = [check_doc(load_doc(path, docs_root)) for path in files]
     if args.json:
         text = json.dumps({"docs": [to_report(d) for d in docs]}, ensure_ascii=False, indent=2)
     else:

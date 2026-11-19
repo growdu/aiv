@@ -878,12 +878,19 @@ def test_the_index_pending_count_matches_the_records():
 def test_review_records_are_not_published():
     """`video/review/` 只记录审核过程，不是对外发布内容。
 
-    发布白名单里不能有它——`sync_publish_docs.py` 是「哪些文档要发布」的
-    唯一真相，审核记录进去了就变成线上文章。
+    **这条守的是「视频线不发布」这条规矩**（2026-11-19 owner 拍板）。
+
+    以前这条是查 `sync_publish_docs.py` 的发布白名单里有没有 `review/`——
+    那套「发布副本」机制已经整套删掉了（脚本与它的守卫一起删），
+    于是这条断言的对象没了。
+
+    现在的口径更直接：**视频线一个字节都不发布**。
+    所以这条用例断言的是「发布机制本身不存在」——
+    哪天有人又把发布脚本写回来，这条会红。
     """
-    sync = (review.AIV_ROOT / "scripts" / "sync_publish_docs.py")
-    source = sync.read_text(encoding="utf-8")
-    assert "review/" not in source
+    assert not (review.AIV_ROOT / "scripts" / "sync_publish_docs.py").exists(), (
+        "视频线又冒出发布脚本了——视频线的文档是模块内部说明书，不进站点"
+    )
 
 
 def test_every_review_record_has_a_status_line():

@@ -88,6 +88,11 @@ def test_tree_covers_every_unit(dist_pages):
         for page in dist_pages
     ]
     trees = [t for t in trees if t]
+    if not wanted:
+        # **没有内容就没有树**——这是空站点的正确样子，不是错。
+        # （`docs/` 现在是空的：内容在框架起来之后再做。）
+        assert not trees, "没有内容单元，却渲染出了目录树"
+        return
     assert trees, "构建产物里一个目录树都没有"
 
     missing = sorted(url for url in wanted if not any(url in t for t in trees))
