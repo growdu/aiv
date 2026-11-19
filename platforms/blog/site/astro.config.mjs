@@ -76,6 +76,14 @@ export default defineConfig({
 
   integrations: [sitemap()],
 
+  server: {
+    // dev / preview 的主机名白名单（Astro 5.4 起）。
+    // 默认只认 localhost——用域名从别的机器指过来会被拒。
+    // growdu.cn 是上线后的正式域名；上线前在本机用它做验收时也用得上。
+    // （IP 访问不受这条限制，走的是 IP 那条路。）
+    allowedHosts: ['growdu.cn', 'www.growdu.cn'],
+  },
+
   markdown: {
     // Shiki：构建期高亮，零客户端 JS。比旧站点的 Prism（运行时）快。
     // mermaid 围栏排除掉——它不是代码，交给客户端渲染（见 rehypeMermaid）。

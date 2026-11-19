@@ -4,8 +4,15 @@
  * 琥珀黄的数据库徽标做强调。气质按《人格规范》那五条走：冷静克制、工程师、
  * 秩序感、专注、可靠——不做发光特效，不做夸张表情，线条规整。
  *
- * 排版基线：正文宽度锁死（--measure），行高 1.75，代码块与图独立成「块」。
- * 「内容占满页面」是这个站点明确要避开的毛病。
+ * 排版基线：行高 1.75，代码块与图独立成「块」。
+ *
+ * **文章页的正文要占页面 70% 以上**（作者 2026-11-18 的判断）。
+ * 之前的基线是「正文宽度锁死 680~760px」（从「内容占满页面」那个反馈来的），
+ * 结果在宽屏上正文只占 44%——两边空得像没做完。
+ * 现在的做法：文章页的版心**跟着视口走**（不满 1180px 的限制），
+ * 侧栏收窄，正文那一栏吃掉剩下的全部；**字号跟着视口放大**——
+ * 这样「占 70% 以上」与「一行 50 来个字」两件事同时成立。
+ * 索引页、列表页仍用 `--measure` 锁死版心：那里是**扫**，不是读。
  */
 
 :root {
@@ -463,25 +470,114 @@ h4 {
   font-size: 13.5px;
 }
 
+/* ── 文章页：正文占页面 70% 以上 ───────────────────────── */
+
+/*
+ * 文章页（文档页、视频页）跟索引页不是一回事：
+ * 索引页是**扫**（一页看个大概），版心锁死才对；
+ * 文章页是**读**，正文缩成一条细带，两边空一大片，读起来是浪费。
+ *
+ * 所以文章页单独一套尺寸：
+ *   - 版心跟着视口走（不满 1180px 的限制）；
+ *   - 正文撑满中间那一栏，不受 --measure 限制；
+ *   - 字号跟着视口放大（clamp），好让「占 70% 以上」
+ *     与「一行 50 来个字」两件事同时成立——
+ *     不放大字号，宽屏上就是一行一百多字，没法读。
+ */
+
+.article-page .wrap {
+  max-width: none;
+  padding-left: clamp(16px, 1.8vw, 28px);
+  padding-right: clamp(16px, 1.8vw, 28px);
+}
+
+.article-page .prose {
+  max-width: none;
+  font-size: clamp(16px, 1.4vw, 26px);
+}
+
+/* 标题、代码块、表格跟着正文字号一起缩放（em 是跟着父级的） */
+.article-page .prose h1 {
+  font-size: 1.55em;
+}
+
+.article-page .prose h2 {
+  font-size: 1.2em;
+}
+
+.article-page .prose h3 {
+  font-size: 1.05em;
+}
+
+.article-page .prose pre {
+  font-size: 0.85em;
+}
+
+.article-page .prose table {
+  font-size: 0.92em;
+}
+
+/* 侧栏也一起缩放，免得正文变大、坐标还是小小的一号字 */
+.article-page .side {
+  font-size: clamp(13px, 0.85vw, 17px);
+}
+
 /* ── 文档页三栏 ───────────────────────────────────────── */
+
+/*
+ * 三栏：学习流坐标（左）｜正文（中）｜目录坐标（右）。
+ *
+ * 栏宽是**跟着视口走的**：侧栏收窄成 clamp，正文那一栏吃掉剩下的全部。
+ * 这么排是为了让正文占页面 70% 以上——固定 210/230 的侧栏加上 1180px
+ * 的版心上限，在 1440 的屏上正文只剩 44%（两边空得像没做完）。
+ *
+ * 窄屏（≤1080px）收成两栏、再窄（≤760px）收成一栏：
+ * 侧栏是坐标，不是正文，压到没有就没意义了。
+ */
 
 .doc-layout {
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr) 230px;
-  gap: 30px;
+  grid-template-columns: clamp(150px, 11vw, 210px) minmax(0, 1fr) clamp(150px, 11vw, 200px);
+  gap: clamp(18px, 1.6vw, 30px);
   align-items: start;
 }
 
 .doc-layout.no-left {
-  grid-template-columns: minmax(0, 1fr) 230px;
+  grid-template-columns: minmax(0, 1fr) clamp(150px, 11vw, 200px);
 }
 
 .doc-layout.no-right {
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-columns: clamp(150px, 11vw, 210px) minmax(0, 1fr);
 }
 
 .doc-layout.no-left.no-right {
   grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 1080px) {
+  .doc-layout,
+  .doc-layout.no-left,
+  .doc-layout.no-right {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /*
+   * 收成一栏之后，**正文必须排在最前面**。
+   * 原来的 DOM 顺序是「学习流坐标｜正文｜目录坐标」——
+   * 收成一栏就变成先读一整条阶梯才轮到文章。
+   * 所以给正文 order:1，两条侧栏 order:2（坐标挪到文章下面）。
+   */
+  .doc-layout > main {
+    order: 1;
+  }
+
+  .doc-layout > .side {
+    order: 2;
+    position: static;
+    max-height: none;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 14px;
+  }
 }
 
 .side {
