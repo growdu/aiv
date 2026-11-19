@@ -14,6 +14,7 @@ import Outline from '../../components/Outline.astro';
 import { allUnits } from '../../lib/units';
 import { assignmentOf, getTrack } from '../../lib/learning';
 import { isPlaceholder } from '../../lib/placeholders';
+import { RULES } from '../../lib/rules';
 import { stageUrl, trackUrl } from '../../lib/urls';
 import { siteName } from '../../lib/site';
 
@@ -54,7 +55,7 @@ const platformNames: Record<string, string> = {
 <Base title={unit.data.title} nav="videos" description={unit.data.description ?? ''} bodyClass="article-page">
   <div class="wrap">
     <div class="crumbs">
-      <a href="/">{siteName}</a> / <a href="/videos/">视频</a> / <b>{unit.data.title}</b>
+      <a href="/">{siteName}</a> / <a href={RULES.video_prefix}>视频</a> / <b>{unit.data.title}</b>
     </div>
 
     <div class="doc-layout">

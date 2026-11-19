@@ -112,6 +112,11 @@ export default defineConfig({
           {
             unitsBase: path.join(here, 'src', 'content', 'units'),
             docsBase: path.join(here, '..', '..', '..', 'docs'),
+            // 共享 URL 规则（仓库根那一份，全仓库唯一）。
+            // 插件**不自己找**规则文件——路径从这里递进去，
+            // 跟 unitsBase / docsBase 一个路子。
+            // （`here` 往上三级是仓库根，跟 docsBase 同一个基准。）
+            rulesPath: path.join(here, '..', '..', '..', 'rules', 'urls.json'),
           },
         ],
       ],

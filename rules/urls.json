@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "note": "全仓库唯一的 URL 形状规则。站点（TypeScript）、根 tools/ 与契约层（Python）都读这一份——**形状只有一份，读取器各归各层**。改这里等于改全站地址。",
+  "doc_prefix": "/docs/",
+  "video_prefix": "/videos/",
+  "video_id_prefix": "video/",
+  "category_suffix": "_index",
+  "trailing_slash": true
+}

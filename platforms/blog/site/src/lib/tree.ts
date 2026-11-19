@@ -22,6 +22,7 @@
  * 所以节点上直接挂阶段标记，不再单占一栏。
  */
 import type { Unit } from './units';
+import { RULES } from './rules';
 import { unitUrl } from './urls';
 
 export interface TreeNode {
@@ -117,7 +118,7 @@ export function buildTree(units: Unit[], currentId: string): TreeRoot {
   let video: TreeNode | undefined;
   if (videoUnits.length > 0) {
     const root = emptyNode('video', 'video', 'dir');
-    root.href = '/videos/';
+    root.href = RULES.video_prefix;
     root.title = '视频';
     for (const unit of videoUnits) {
       const leaf = emptyNode(unit.id, unit.data.title, 'leaf');

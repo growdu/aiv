@@ -30,6 +30,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -51,6 +52,23 @@ CAPABILITY_PATH = Path(__file__).resolve().parent / "capability.toml"
 SITE_DIR = Path(__file__).resolve().parent / "site"
 LEARNING_PATH = SITE_DIR / "data" / "learning-path.compiled.json"
 DIST_DIR = SITE_DIR / "dist"
+
+
+def _load_shared_rules():
+    """加载根 `tools/rules.py`（共享 URL 规则在工具层的读取器）。
+
+    **按路径加载，不 import**：仓库根有个 `rules/` 目录（规则文件自己住那儿）。
+    一旦仓库根在 `sys.path` 里靠前，`import rules` 拿到的是那个**目录**
+    （命名空间包），不是根 `tools/` 里的模块——按路径加载没有这个坑。
+    """
+    path = REPO_ROOT / "tools" / "rules.py"
+    spec = importlib.util.spec_from_file_location("shared_url_rules", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_shared_rules = _load_shared_rules()
 
 #: 站点在公开互联网上的地址。**由使用者给**，框架不写死：
 #: 环境变量 `SITE_URL`（Astro 构建与 CI 用的也是同一个变量）。
@@ -141,15 +159,11 @@ def _learning() -> dict:
 def _site_url(unit_id: str, kind: str) -> str:
     """这个内容单元在站上的地址。
 
-    **口径与 `site/src/lib/urls.ts` 一致**（那是站点里唯一决定链接形状的地方）：
-    分类页的 id 尾巴带 `_index`、视频的 id 开头带 `video/`——
-    那是内容单元里的形状，不是 URL 里的形状，这里负责抹掉。
+    **口径来自共享规则**：仓库根的 `rules/urls.json` 是全仓库唯一的那份，
+    根 `tools/rules.py` 是它在工具层的读取器，站点那边（`site/src/lib/urls.ts`）
+    读的是同一个文件。这里不自己拼前缀。
     """
-    if kind == "video":
-        return "/videos/{}/".format(unit_id.removeprefix("video/"))
-    if kind == "category" or unit_id.endswith("/_index"):
-        return "/docs/{}/".format(unit_id.removesuffix("/_index"))
-    return "/docs/{}/".format(unit_id)
+    return _shared_rules.unit_url(unit_id, kind)
 
 
 def _compile_only(unit_id: str) -> dict:
