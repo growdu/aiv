@@ -1,6 +1,6 @@
 """契约层按共享规则拼地址。"""
 import pytest
-from publishkit import urls
+from publishkit import PublishKitError, urls
 
 
 def test_a_document_url_is_the_docs_url():
@@ -26,3 +26,16 @@ def test_a_rules_file_without_the_required_keys_is_refused(tmp_path):
     bad.write_text('{"version": 1}', encoding="utf-8")
     with pytest.raises(ValueError):
         urls.load_rules(bad)
+
+
+def test_a_missing_rules_file_is_a_publishkit_error(tmp_path):
+    """读不到规则文件也是契约层的错——`PublishKitError` 那一族，不是裸的 OSError。
+
+    契约层的约定：所有「有意抛出的」错都继承 `PublishKitError`，
+    调用方一句 `except PublishKitError` 就能兜住。
+    """
+    missing = tmp_path / "nope.json"
+    with pytest.raises(PublishKitError):
+        urls.load_rules(missing)
+    with pytest.raises(ValueError):
+        urls.load_rules(missing)

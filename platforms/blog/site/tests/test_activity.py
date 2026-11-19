@@ -32,6 +32,7 @@ from pathlib import Path
 import pytest
 
 from paths import CONTENT_UNITS, SITE, SITE_DATA
+from url_shape import unit_url
 
 LEDGER_FILE = SITE_DATA / "activity.json"
 COMPILED_FILE = SITE_DATA / "activity.compiled.json"
@@ -184,14 +185,11 @@ def test_timeline_docs_exist(compiled):
 
 
 def test_timeline_urls_follow_the_site_rule(compiled):
-    """URL 跟 `src/lib/urls.ts` 同一套规则：文档走 /docs/，视频走 /videos/。"""
+    """URL 跟站点同一套规则（**从共享规则推导**：文档走文档前缀，视频走视频前缀）。"""
     wrong = []
     for day in compiled["days"]:
         for doc in day.get("docs") or []:
-            if doc["kind"] == "video":
-                expected = f"/videos/{doc['id'].removeprefix('video/')}/"
-            else:
-                expected = f"/docs/{doc['id']}/"
+            expected = unit_url(doc["id"], doc["kind"])
             if doc["url"] != expected:
                 wrong.append(f"{doc['id']}：{doc['url']} ≠ {expected}")
     assert not wrong, "时间轴上的链接跟站点的 URL 规则对不上：\n" + "\n".join(wrong)

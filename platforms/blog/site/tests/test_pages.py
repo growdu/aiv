@@ -27,6 +27,7 @@ from urllib.parse import unquote, urlsplit
 import pytest
 
 from paths import CONTENT_UNITS, SITE
+from url_shape import doc_url, is_category_id, video_url
 
 DIST = SITE / "dist"
 
@@ -39,7 +40,7 @@ def _unit_ids() -> list[tuple[str, str]]:
     for path in sorted(CONTENT_UNITS.rglob("*.md")):
         rel = path.relative_to(CONTENT_UNITS).as_posix()
         unit_id = rel.removesuffix(".md")
-        if unit_id.endswith("/_index") or unit_id == "_index":
+        if is_category_id(unit_id):
             kind = "category"
         else:
             kind = _front_matter_kind(path)
@@ -55,12 +56,10 @@ def _front_matter_kind(path: Path) -> str:
 
 
 def _url_for(kind: str, unit_id: str) -> str:
-    """单元 → 站上地址（与 src/lib/urls.ts 同一套规则）。"""
+    """单元 → 站上地址（**从共享规则推导**——同一个文件，生产方读它我们也读它）。"""
     if kind == "video":
-        return f"/videos/{unit_id.removeprefix('video/')}/"
-    if kind == "category":
-        return "/docs/" + unit_id.removesuffix("/_index") + "/"
-    return f"/docs/{unit_id}/"
+        return video_url(unit_id)
+    return doc_url(unit_id)
 
 
 def _target_of(url: str) -> Path | None:

@@ -11,6 +11,7 @@
  * 页面这边拿 id 去查，两边对不上就是构建期的问题，不是页面的问题。
  */
 import { getCollection, type CollectionEntry } from 'astro:content';
+import { isCategoryId as isCategoryIdByRule, stripCategorySuffix } from './rules';
 
 export type Unit = CollectionEntry<'units'>;
 
@@ -34,14 +35,16 @@ export function timeOf(unit: Unit): number {
   return Number.isNaN(t) ? 0 : t;
 }
 
-/** 分类页的 id 以 `/_index` 结尾；文档与视频不会。 */
+/** 分类页的 id 以分类页后缀结尾；文档与视频不会。
+ *
+ * 「后缀是什么」在共享规则里（`./rules.ts`）——这里不写死。 */
 export function isCategoryId(id: string): boolean {
-  return id.endsWith('/_index') || id === '_index';
+  return isCategoryIdByRule(id);
 }
 
 /** 分类页的 id → 目录路径（`source-tracks/postgresql/_index` → `source-tracks/postgresql`）。 */
 export function categoryPath(id: string): string {
-  return id.replace(/\/_index$/, '');
+  return stripCategorySuffix(id);
 }
 
 export function unitTitle(unit: Unit): string {

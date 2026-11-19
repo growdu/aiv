@@ -7,6 +7,14 @@
 import `publish/publishkit/`。两层之间的接缝是**文件**（那份 JSON），
 不是 import——共享规则是数据，不是代码。
 
+**为什么叫 `url_rules` 而不是 `rules`**：仓库根有个 `rules/` **目录**
+（规则文件自己住那儿）。模块名跟目录同名，谁在 `sys.path` 上靠前谁赢——
+那是隐式依赖。换个名字就没有这个雷。
+
+**层间关系**：平台层与站点工具（`platforms/blog/cli.py`、
+`platforms/blog/site/tools/build-activity.py`）读**这一份**；
+根 `tools/` **不反向** import 平台层。
+
 **口径**（与站点 `platforms/blog/site/src/lib/urls.ts` 逐字相同）：
 
 - 单元 id 是内容单元相对 `content/units/` 的路径（不带 `.md`）；
@@ -14,18 +22,19 @@ import `publish/publishkit/`。两层之间的接缝是**文件**（那份 JSON�
   那是**内容单元里的形状**，不是 URL 里的形状，这里负责抹掉；
 - **不 percent-encode**：拼出来的地址逐字照抄单元 id。
 
-用法::
+用法（根 `tools/` 已经在 `sys.path` 上的前提下）::
 
-    from rules import unit_url
+    from url_rules import unit_url
     unit_url("video/row-lock", "video")   # '/videos/row-lock/'
 """
 
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from pathlib import Path
 
-# tools/rules.py → parents[0]=tools, parents[1]=仓库根
+# tools/url_rules.py → parents[0]=tools, parents[1]=仓库根
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 #: 规则文件在仓库根的那一个文件。
@@ -53,9 +62,19 @@ def load_rules(path: str | Path | None = None) -> dict:
 
     少任何一个必需键就抛 `ValueError`（消息里写清缺哪个键）——
     规则文件坏了的时候要立刻知道，而不是拼出半个对的地址。
+
+    读不到文件也抛 `ValueError`（消息里写清是哪个路径），
+    不让裸的 `FileNotFoundError` 冒出来——两层之间的错误口径要一致。
     """
     target = Path(path) if path is not None else rules_path()
-    data = json.loads(target.read_text(encoding="utf-8"))
+    try:
+        raw = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ValueError(f"读不到规则文件：{target}（{exc}）") from exc
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"规则文件不是合法的 JSON：{target}（{exc}）") from exc
     if not isinstance(data, dict):
         raise ValueError(f"规则文件不是一个对象：{target}")
     missing = [key for key in REQUIRED_KEYS if key not in data]
@@ -90,15 +109,24 @@ def _join(prefix: str, tail: str, rules: dict) -> str:
     return prefix + tail + ("/" if rules["trailing_slash"] else "")
 
 
+#: 拼地址要读规则文件，读盘 + 解析 JSON 都不便宜——同一轮构建里
+#: 规则文件不会变，缓存一份即可（变了要重跑构建，这是本来就有的纪律）。
+@lru_cache(maxsize=1)
+def _cached_rules() -> dict:
+    return load_rules()
+
+
+@lru_cache(maxsize=1024)
 def doc_url(unit_id: str) -> str:
     """文档（或分类页）在站上的地址。"""
-    rules = load_rules()
+    rules = _cached_rules()
     return _join(rules["doc_prefix"], _strip_category_suffix(unit_id, rules), rules)
 
 
+@lru_cache(maxsize=1024)
 def video_url(unit_id: str) -> str:
     """视频在站上的地址。"""
-    rules = load_rules()
+    rules = _cached_rules()
     return _join(rules["video_prefix"], _strip_video_prefix(unit_id, rules), rules)
 
 

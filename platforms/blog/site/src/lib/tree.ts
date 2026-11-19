@@ -22,7 +22,7 @@
  * 所以节点上直接挂阶段标记，不再单占一栏。
  */
 import type { Unit } from './units';
-import { RULES } from './rules';
+import { RULES, stripCategorySuffix } from './rules';
 import { unitUrl } from './urls';
 
 export interface TreeNode {
@@ -91,13 +91,13 @@ export function buildTree(units: Unit[], currentId: string): TreeRoot {
   };
 
   for (const unit of units) {
-    if (unit.data.kind === 'video' || unit.id.startsWith('video/')) {
+    if (unit.data.kind === 'video' || unit.id.startsWith(RULES.video_id_prefix)) {
       videoUnits.push(unit);
       continue;
     }
 
     const segs = unit.id.split('/');
-    const isIndex = segs[segs.length - 1] === '_index';
+    const isIndex = segs[segs.length - 1] === RULES.category_suffix;
     const parent = segs.length > 1 ? ensureDir(segs.slice(0, -1)) : undefined;
 
     if (isIndex) {
@@ -140,8 +140,8 @@ export function buildTree(units: Unit[], currentId: string): TreeRoot {
 }
 
 function markCurrent(tree: TreeRoot, currentId: string): void {
-  // 分类页的 id 带 `_index` 尾巴，树上它的键是目录路径本身
-  const key = currentId.replace(/\/_index$/, '');
+  // 分类页的 id 带分类页后缀，树上它的键是目录路径本身
+  const key = stripCategorySuffix(currentId);
   const current = findNode(tree, key);
   if (!current) return;
   current.current = true;

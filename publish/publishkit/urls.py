@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+from functools import lru_cache
 from pathlib import Path
 
 from . import PublishKitError
@@ -67,10 +68,19 @@ def load_rules(path: str | Path | None = None) -> dict:
     少任何一个必需键就抛 `RulesError`（它也是 `ValueError`），
     消息里写清缺哪个键——规则文件坏了要立刻知道，
     而不是拼出半个对的地址。
+
+    读不到文件 / 不是合法 JSON，也都是 `RulesError`：
+    **契约层所有「有意抛出的」错都是 `PublishKitError` 这一族**
+    （见 `publish/publishkit/__init__.py`），不让裸的 `FileNotFoundError`
+    冒到调用方面前。
     """
     target = Path(path) if path is not None else rules_path()
     try:
-        data = json.loads(target.read_text(encoding="utf-8"))
+        raw = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RulesError(f"读不到规则文件：{target}（{exc}）") from exc
+    try:
+        data = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise RulesError(f"规则文件不是合法的 JSON：{target}（{exc}）") from exc
     if not isinstance(data, dict):
@@ -107,15 +117,24 @@ def _join(prefix: str, tail: str, rules: dict) -> str:
     return prefix + tail + ("/" if rules["trailing_slash"] else "")
 
 
+#: 拼地址要读规则文件，读盘 + 解析 JSON 都不便宜——同一轮发布里
+#: 规则文件不会变，缓存一份即可（变了要重跑发布，这是本来就有的纪律）。
+@lru_cache(maxsize=1)
+def _cached_rules() -> dict:
+    return load_rules()
+
+
+@lru_cache(maxsize=1024)
 def doc_url(unit_id: str) -> str:
     """文档（或分类页）在站上的地址。"""
-    rules = load_rules()
+    rules = _cached_rules()
     return _join(rules["doc_prefix"], _strip_category_suffix(unit_id, rules), rules)
 
 
+@lru_cache(maxsize=1024)
 def video_url(unit_id: str) -> str:
     """视频在站上的地址。"""
-    rules = load_rules()
+    rules = _cached_rules()
     return _join(rules["video_prefix"], _strip_video_prefix(unit_id, rules), rules)
 
 

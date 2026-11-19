@@ -30,7 +30,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import os
 import re
@@ -53,22 +52,13 @@ SITE_DIR = Path(__file__).resolve().parent / "site"
 LEARNING_PATH = SITE_DIR / "data" / "learning-path.compiled.json"
 DIST_DIR = SITE_DIR / "dist"
 
+# 共享 URL 规则的读取器在根 `tools/`（`url_rules.py`）。
+# **平台层读它，根 tools/ 不反向 import 平台层**——层间只有这一条关系。
+# 放进 `sys.path` 再 import 是仓库既有做法（对照
+# `platforms/blog/site/tools/build-activity.py` 里的 `from paths import ...`）。
+sys.path.insert(0, str(REPO_ROOT / "tools"))
 
-def _load_shared_rules():
-    """加载根 `tools/rules.py`（共享 URL 规则在工具层的读取器）。
-
-    **按路径加载，不 import**：仓库根有个 `rules/` 目录（规则文件自己住那儿）。
-    一旦仓库根在 `sys.path` 里靠前，`import rules` 拿到的是那个**目录**
-    （命名空间包），不是根 `tools/` 里的模块——按路径加载没有这个坑。
-    """
-    path = REPO_ROOT / "tools" / "rules.py"
-    spec = importlib.util.spec_from_file_location("shared_url_rules", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-_shared_rules = _load_shared_rules()
+from url_rules import unit_url  # noqa: E402
 
 #: 站点在公开互联网上的地址。**由使用者给**，框架不写死：
 #: 环境变量 `SITE_URL`（Astro 构建与 CI 用的也是同一个变量）。
@@ -160,10 +150,10 @@ def _site_url(unit_id: str, kind: str) -> str:
     """这个内容单元在站上的地址。
 
     **口径来自共享规则**：仓库根的 `rules/urls.json` 是全仓库唯一的那份，
-    根 `tools/rules.py` 是它在工具层的读取器，站点那边（`site/src/lib/urls.ts`）
+    根 `tools/url_rules.py` 是它在工具层的读取器，站点那边（`site/src/lib/urls.ts`）
     读的是同一个文件。这里不自己拼前缀。
     """
-    return _shared_rules.unit_url(unit_id, kind)
+    return unit_url(unit_id, kind)
 
 
 def _compile_only(unit_id: str) -> dict:

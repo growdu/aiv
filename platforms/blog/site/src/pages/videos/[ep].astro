@@ -14,7 +14,7 @@ import Outline from '../../components/Outline.astro';
 import { allUnits } from '../../lib/units';
 import { assignmentOf, getTrack } from '../../lib/learning';
 import { isPlaceholder } from '../../lib/placeholders';
-import { RULES } from '../../lib/rules';
+import { RULES, stripVideoPrefix } from '../../lib/rules';
 import { stageUrl, trackUrl } from '../../lib/urls';
 import { siteName } from '../../lib/site';
 
@@ -23,7 +23,7 @@ export async function getStaticPaths() {
   return units
     .filter((u) => u.data.kind === 'video')
     .map((unit) => ({
-      params: { ep: unit.id.replace(/^video\//, '') },
+      params: { ep: stripVideoPrefix(unit.id) },
       props: { unit },
     }));
 }
@@ -37,7 +37,7 @@ const assignment = assignmentOf(unit.id);
 const track = assignment ? getTrack(assignment.track) : undefined;
 const stage = track && assignment ? track.stages.find((s) => s.id === assignment.stage) : undefined;
 
-const ep = unit.id.replace(/^video\//, '');
+const ep = stripVideoPrefix(unit.id);
 const media = `/media/videos/${ep}.mp4`;
 const placeholder = isPlaceholder(unit.id);
 const dateText = typeof unit.data.date === 'string' ? unit.data.date : unit.data.date.toISOString().slice(0, 10);

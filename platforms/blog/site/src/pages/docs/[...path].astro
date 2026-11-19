@@ -44,7 +44,7 @@ const children = isCategory
       const rest = u.id.slice(dir.length + 1);
       if (rest.includes('/')) {
         // 深层：只看是不是子目录页
-        return rest.endsWith('/_index');
+        return isCategoryId(rest);
       }
       return u.data.kind === 'document';
     })

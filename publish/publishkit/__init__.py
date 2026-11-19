@@ -169,11 +169,11 @@ __all__ = [
     "select_for_platform",
     "snapshot_name",
     "target_platforms",
+    "urls",
     "validate_episode_fields",
     "validate_episode_series",
     "validate_fields",
     "validate_manifest",
     "week_key",
     "week_window",
-    "urls",
 ]

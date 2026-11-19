@@ -12,21 +12,11 @@
  * 文档与分类页走文档前缀，视频走视频前缀——前缀由规则给。
  *
  * ⚠️ 分类页的 id 尾巴带分类页后缀、视频的 id 开头带视频前缀——
- * 那是**内容单元里的形状**，不是 URL 里的形状。这里负责把这两处形状抹掉。
+ * 那是**内容单元里的形状**，不是 URL 里的形状。抹掉它的动作在
+ * `./rules.ts`（全站只有那一处），这里只负责把前缀套上去。
  * 漏抹一次就是一批死链（`site/tests/test_pages.py` 守着这件事）。
  */
-import { RULES } from './rules';
-
-function stripVideoPrefix(id: string): string {
-  const prefix = RULES.video_id_prefix;
-  return prefix && id.startsWith(prefix) ? id.slice(prefix.length) : id;
-}
-
-function stripCategorySuffix(id: string): string {
-  const suffix = RULES.category_suffix;
-  const tail = suffix ? '/' + suffix : '';
-  return tail && id.endsWith(tail) ? id.slice(0, -tail.length) : id;
-}
+import { RULES, stripCategorySuffix, stripVideoPrefix } from './rules';
 
 /** 前缀 + 单元 id 的尾巴；尾巴为空时就是前缀本身。 */
 function join(prefix: string, tail: string): string {

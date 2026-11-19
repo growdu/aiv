@@ -25,6 +25,7 @@ from pathlib import Path
 import pytest
 
 from paths import CONTENT_UNITS, SITE
+from url_shape import doc_url, is_category_id, is_video_id, video_url
 
 DIST = SITE / "dist"
 
@@ -34,17 +35,17 @@ HREF = re.compile(r'href="(/[^"#?]*)"')
 
 
 def _unit_urls() -> set[str]:
-    """每个内容单元在站上的地址。"""
+    """每个内容单元在站上的地址（**从共享规则推导**）。"""
     urls: set[str] = set()
     for path in sorted(CONTENT_UNITS.rglob("*.md")):
         rel = path.relative_to(CONTENT_UNITS).as_posix()
         unit_id = rel.removesuffix(".md")
-        if unit_id == "_index" or unit_id.endswith("/_index"):
-            urls.add("/docs/" + unit_id.removesuffix("/_index").removeprefix("_index") + "/")
-        elif unit_id.startswith("video/"):
-            urls.add("/videos/" + unit_id.removeprefix("video/") + "/")
+        if is_category_id(unit_id):
+            urls.add(doc_url(unit_id))
+        elif is_video_id(unit_id):
+            urls.add(video_url(unit_id))
         else:
-            urls.add(f"/docs/{unit_id}/")
+            urls.add(doc_url(unit_id))
     return urls
 
 
