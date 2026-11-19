@@ -40,7 +40,7 @@ Two details that matter:
 
 Where it lives
 --------------
-The nginx site config is documented in ``internal/blog/部署到服务器.md``
+The nginx site config is documented in ``review/specs/ops/部署到服务器.md``
 §2.4, and the running server's copy is ``/etc/nginx/conf.d/blog.conf``
 (patched in place by ``tools/fix-soft-404.sh``).  The **document is the
 fact source**; ``platforms/blog/site/tests/test_soft_404.py`` keeps the two in step.

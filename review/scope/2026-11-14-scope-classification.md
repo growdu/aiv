@@ -1,21 +1,21 @@
 # 全树范围分类：哪些不是面向读者的技术文章
 
-- 日期：2026-11-14
-- 依据：`tools/review-check.py` 对 `docs/` 全树（621 篇）跑出的信号，加逐篇读原文的判断
-- 目的：把审校范围从「四支柱 282 篇」扩到全树之前，先把**不面向读者的技术文章**筛掉，
-  免得把站点目录页、内部工作文档、命令速查表也按技术深度五要素去审。
+- 日期：2026-11-14（2026-11-19 按清空后的 `docs/` 重做）
+- 依据：`tools/review-check.py` 对 `docs/` 全树（20 篇）跑出的信号，加逐篇读原文的判断
+- 目的：把审校范围限定在**面向读者的技术文章**上，
+  免得把站点目录页、规则模板也按技术深度五要素去审。
 
 ## 五个桶
 
 | 桶 | 含义 | 篇数 | 技术深度五要素 |
 | --- | --- | --- | --- |
-| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 105 | 不审 |
-| 2 速查/清单/操作类 | 面向读者，但形态是命令表、步骤、清单，没有成篇解释 | 48 | 不适用 |
-| 3 非技术内容 | 面向读者，但写的是生活、备考、内部规范 | 38 | 不适用 |
-| 4 转载内容 | 标了来源、署名他人的转载稿 | 17 | 不按原创稿审改 |
-| 5 技术文章 | 面向读者的技术解释 | 413 | **审** |
+| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、只有标题的未成稿 | 10 | 不审 |
+| 2 速查/清单/操作类 | 面向读者，但形态是命令表、步骤、清单，没有成篇解释 | 0 | 不适用 |
+| 3 非技术内容 | 面向读者，但写的是生活、备考、内部规范 | 9 | 不适用 |
+| 4 转载内容 | 标了来源、署名他人的转载稿 | 0 | 不按原创稿审改 |
+| 5 技术文章 | 面向读者的技术解释 | 1 | **审** |
 
-**审校工作面 = 413 篇**（桶 5）。桶 2、3 面向读者但不是技术文章，
+**审校工作面 = 1 篇**（桶 5）。桶 2、3 面向读者但不是技术文章，
 可选做表达与结构审，不套五要素；桶 1 不审；桶 4 是转载稿，
 怎么处理（保留标注 / 删除 / 重写）是站长的决定。
 
@@ -33,8 +33,7 @@
 - 内部工作文档：开发交付计划、验证步骤、测试进度表、内部规范、个人数据记录
 - 外链指北：正文只有 `# reference` 链接列表
 - 速查/清单/操作类：有内容但形态是命令表、步骤、清单，没有机制解释
-- 非技术内容：`docs/life/`、`docs/stock/`；`docs/engineering/ai-tooling/` 下的 AI 工具使用与
-  教程类（那批 AI 认知科普稿按转载/技术文章另行归类，见下面的清单）
+- 非技术内容：`docs/life/` 下的规则模板与个人记录；生活、备考类目录
 - 转载内容：正文顶部有 `> 来源:` 标记，署名他人
 
 复跑方式：
@@ -47,255 +46,48 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 
 | 支柱 | 总数 | 非内容 | 速查操作 | 非技术 | 转载 | 技术文章 | warn | DEP-00 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| source-tracks | 323 | 35 | 23 | 0 | 0 | 265 | 244 | 78 |
-| engineering | 158 | 30 | 24 | 6 | 17 | 81 | 138 | 76 |
-| distributed | 71 | 14 | 1 | 0 | 0 | 56 | 58 | 33 |
-| life | 40 | 10 | 0 | 30 | 0 | 0 | 28 | 6 |
-| platform-meta | 14 | 7 | 0 | 0 | 0 | 7 | 7 | 6 |
-| stock | 2 | 1 | 0 | 1 | 0 | 0 | 2 | 1 |
-| video_work | 2 | 2 | 0 | 0 | 0 | 0 | 2 | 2 |
-| mail | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| pcap | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| src | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| wiki | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
-| notes | 7 | 2 | 0 | 1 | 0 | 4 | 4 | 2 |
-| **合计** | **621** | **105** | **48** | **38** | **17** | **413** | **487** | **208** |
+| life | 16 | 7 | 0 | 9 | 0 | 0 | 0 | 0 |
+| source-tracks | 4 | 3 | 0 | 0 | 0 | 1 | 0 | 0 |
+| **合计** | **20** | **10** | **0** | **9** | **0** | **1** | **0** | **0** |
 
 ## 排除清单
 
-下面三桶逐篇列出。**桶 4 = `docs/` 全集减去这份清单**，不单独列。
+下面四桶逐篇列出。**桶 5 = `docs/` 全集减去这份清单**，不单独列。
 契约测试守着两件事：清单里的路径不许悬空；审校记录的原文不许落在清单里。
 
-### 桶 1 非内容（105 篇）
+### 桶 1 非内容（10 篇）
 
-#### 站点目录页（61 篇）
-- `docs/distributed/_index.md`
-- `docs/distributed/consensus/_index.md`
-- `docs/distributed/distributed-storage/_index.md`
-- `docs/distributed/field-notes/_index.md`
-- `docs/distributed/foundations/_index.md`
-- `docs/distributed/ha-and-dr/_index.md`
-- `docs/distributed/selection/_index.md`
-- `docs/engineering/_index.md`
-- `docs/engineering/ai-tooling/_index.md`
-- `docs/engineering/ai-tooling/ai-foundations/_index.md`
-- `docs/engineering/ai-tooling/ai-leverage/_index.md`
-- `docs/engineering/ai-tooling/ai-toolbox/_index.md`
-- `docs/engineering/ai-tooling/ai-video-platform/_index.md`
-- `docs/engineering/cheatsheets/_index.md`
-- `docs/engineering/containers/_index.md`
-- `docs/engineering/engineering-practice/_index.md`
-- `docs/engineering/foundations/_index.md`
-- `docs/engineering/observability/_index.md`
-- `docs/engineering/web-and-frontend/_index.md`
+#### 站点目录页（10 篇）
 - `docs/life/_index.md`
-- `docs/life/daxue/_index.md`
-- `docs/life/gaokao/_index.md`
-- `docs/life/hometown/_index.md`
-- `docs/life/road/_index.md`
-- `docs/life/shehui/_index.md`
-- `docs/mail/_index.md`
-- `docs/notes/_index.md`
-- `docs/notes/site-ops/_index.md`
-- `docs/pcap/_index.md`
-- `docs/platform-meta/_index.md`
-- `docs/platform-meta/build-pipeline/_index.md`
-- `docs/platform-meta/content-model/_index.md`
-- `docs/platform-meta/info-architecture/_index.md`
-- `docs/platform-meta/multiplatform/_index.md`
-- `docs/platform-meta/platform-overview/_index.md`
-- `docs/platform-meta/video-line/_index.md`
+- `docs/life/aiv/_index.md`
+- `docs/life/aiv/brand/_index.md`
+- `docs/life/aiv/brand/scripts/_index.md`
+- `docs/life/aiv/character/_index.md`
+- `docs/life/aiv/music/_index.md`
+- `docs/life/aiv/voice/_index.md`
 - `docs/source-tracks/_index.md`
-- `docs/source-tracks/dpdk/_index.md`
-- `docs/source-tracks/dpdk/architecture/_index.md`
-- `docs/source-tracks/dpdk/getting-started/_index.md`
-- `docs/source-tracks/dpdk/plugins-and-apps/_index.md`
-- `docs/source-tracks/dpdk/testing-and-perf/_index.md`
-- `docs/source-tracks/linux/_index.md`
-- `docs/source-tracks/linux/daily-ops/_index.md`
-- `docs/source-tracks/linux/filesystem/_index.md`
-- `docs/source-tracks/linux/kernel-internals/_index.md`
-- `docs/source-tracks/linux/memory-and-linking/_index.md`
-- `docs/source-tracks/linux/networking/_index.md`
 - `docs/source-tracks/postgresql/_index.md`
-- `docs/source-tracks/postgresql/extensions-perf/_index.md`
 - `docs/source-tracks/postgresql/getting-started/_index.md`
-- `docs/source-tracks/postgresql/index-and-query/_index.md`
-- `docs/source-tracks/postgresql/logical-replication/_index.md`
-- `docs/source-tracks/postgresql/replication-ha/_index.md`
-- `docs/source-tracks/postgresql/storage-engine/_index.md`
-- `docs/source-tracks/postgresql/transaction-mvcc/_index.md`
-- `docs/source-tracks/postgresql/wal-and-recovery/_index.md`
-- `docs/src/_index.md`
-- `docs/stock/_index.md`
-- `docs/video_work/_index.md`
-- `docs/wiki/_index.md`
-#### 只有标题的未成稿（24 篇）
 
-- `docs/engineering/foundations/use-tools/download.md`
-- `docs/distributed/ha-and-dr/Patroni详解.md`
-- `docs/distributed/consensus/corosy-qdevice源码阅读.md`
-- `docs/distributed/selection/业界高可用解决方案.md`
-- `docs/distributed/field-notes/repmgr网络割裂问题.md`
-- `docs/distributed/selection/主流分布式高可用方案.md`
-- `docs/distributed/foundations/分布式存储需要解决的问题.md`
-- `docs/distributed/foundations/分布式系统设计必知必会.md`
-- `docs/source-tracks/postgresql/logical-replication/ai_coding/逻辑复制支持ddl ai配置流程.md`
-- `docs/source-tracks/dpdk/plugins-and-apps/vpp插件开发.md`
-- `docs/engineering/foundations/python/pytest/pytest进阶.md`
-- `docs/engineering/foundations/rust/rust设计原则.md`
-- `docs/source-tracks/linux/kernel-internals/linux数据预取.md`
-- `docs/source-tracks/linux/daily-ops/shell使用.md`
-- `docs/source-tracks/linux/networking/C语言网络编程库选择.md`
-- `docs/source-tracks/linux/networking/mtu路径发现pmtu详解.md`
-- `docs/engineering/cheatsheets/gui.md`
-- `docs/engineering/cheatsheets/read-pdfbox-source-code.md`
-- `docs/source-tracks/postgresql/wal-and-recovery/Checkpoint.md`
-- `docs/source-tracks/postgresql/replication-ha/pg_logic_decode.md`
-- `docs/source-tracks/postgresql/replication-ha/pg_slot.md`
-- `docs/source-tracks/postgresql/storage-engine/mm/pg_page.md`
-- `docs/source-tracks/linux/networking/tcp socket必知必会.md`
-- `docs/source-tracks/linux/filesystem/sshfs-win精讲.md`
+### 桶 2 速查/清单/操作类（0 篇）
 
-#### 代码仓库说明（11 篇）
+当前为空——清空之后 `docs/` 里没有命令表、步骤清单这类文章。
 
-- `docs/engineering/engineering-practice/code/JavaScript-work/readme.md`
-- `docs/engineering/engineering-practice/code/assemble-work/readme.md`
-- `docs/engineering/engineering-practice/code/c-sharp-work/readme.md`
-- `docs/engineering/engineering-practice/code/c-work/readme.md`
-- `docs/engineering/engineering-practice/code/c-work/simple-editor/preview.md`
-- `docs/engineering/engineering-practice/code/c-work/ticket/readme.md`
-- `docs/engineering/engineering-practice/code/gui-work/readme.md`
-- `docs/engineering/engineering-practice/code/html-work/readme.md`
-- `docs/engineering/engineering-practice/code/java-work/readme.md`
-- `docs/engineering/engineering-practice/code/shell-work/readme.md`
-- `docs/engineering/engineering-practice/code/shell-work/vim/readme.md`
+### 桶 3 非技术内容（9 篇）
 
-#### 内部工作文档与记录（7 篇）
+视频线的规则模板与模块说明：写的是人格、形象、音色、曲库与品牌片，
+不是技术解释。
 
-- `docs/engineering/foundations/normal.md`
+- `docs/life/aiv/背景音乐规范.md`
 - `docs/life/aiv/人格规范.md`
 - `docs/life/aiv/形象与音色规范.md`
-- `docs/life/aiv/背景音乐规范.md`
-- `docs/life/shehui/zhuangxiu.md`
-- `docs/engineering/engineering-practice/opc.md`
-- `docs/video_work/video.md`
-
-#### 只有外链的指北页（2 篇）
-
-- `docs/source-tracks/linux/kernel-internals/linux内核指北.md`
-- `docs/source-tracks/linux/kernel-internals/uboot指北.md`
-
-### 桶 2 速查/清单/操作类（48 篇）
-
-- `docs/engineering/foundations/use-tools/git.md`
-- `docs/engineering/foundations/use-tools/google.md`
-- `docs/engineering/foundations/use-tools/other.md`
-- `docs/engineering/foundations/use-tools/vim.md`
-- `docs/source-tracks/postgresql/extensions-perf/macos安装mysql.md`
-- `docs/source-tracks/postgresql/getting-started/使用meson编译pg.md`
-- `docs/engineering/containers/docker compose管理容器.md`
-- `docs/engineering/containers/docker搭建个人镜像仓库.md`
-- `docs/source-tracks/dpdk/getting-started/pktgen.md`
-- `docs/source-tracks/dpdk/getting-started/pktgen编译使用.md`
-- `docs/source-tracks/dpdk/getting-started/ptpclient.md`
-- `docs/source-tracks/dpdk/plugins-and-apps/vpp使用.md`
-- `docs/source-tracks/dpdk/getting-started/交叉编译.md`
-- `docs/source-tracks/dpdk/getting-started/抓包.md`
-- `docs/engineering/engineering-practice/texlive安装.md`
-- `docs/engineering/cheatsheets/faq汇总.md`
-- `docs/engineering/web-and-frontend/go_web.md`
-- `docs/engineering/foundations/cmake使用指南.md`
-- `docs/engineering/foundations/python/pytest自动化测试.md`
-- `docs/engineering/foundations/python/python跨平台下载离线安装包.md`
-- `docs/engineering/foundations/rust/使用mdbook编译html和pdf.md`
-- `docs/engineering/foundations/rust/搭建内网rust仓库.md`
-- `docs/source-tracks/linux/memory-and-linking/ebpf/oltp.md`
-- `docs/source-tracks/linux/daily-ops/git指北.md`
-- `docs/source-tracks/linux/daily-ops/git高级指北.md`
-- `docs/source-tracks/linux/daily-ops/linux常用高级命令.md`
-- `docs/source-tracks/linux/networking/抓包指北.md`
-- `docs/source-tracks/linux/daily-ops/本地git仓库.md`
-- `docs/source-tracks/linux/daily-ops/解决SSH连接Linux超时自动断开.md`
-- `docs/distributed/consensus/openguass升级机制.md`
-- `docs/engineering/cheatsheets/python.md`
-- `docs/engineering/cheatsheets/ssh.md`
-- `docs/source-tracks/postgresql/getting-started/code-server调试postgresql.md`
-- `docs/source-tracks/postgresql/getting-started/initdb.md`
-- `docs/source-tracks/postgresql/getting-started/pg_ctl.md`
-- `docs/source-tracks/postgresql/getting-started/pg_complie_and_run.md`
-- `docs/source-tracks/postgresql/getting-started/postgresql源码编译.md`
-- `docs/source-tracks/postgresql/replication-ha/repmgr_cluster.md`
-- `docs/engineering/containers/codeserver_docker.md`
-- `docs/engineering/engineering-practice/doxygen使用指南.md`
-- `docs/engineering/engineering-practice/shell常用脚本.md`
-- `docs/engineering/engineering-practice/你一定要知道的黑客小技巧.md`
-- `docs/source-tracks/dpdk/plugins-and-apps/fastgtpu配置及cli说明文档.md`
-- `docs/source-tracks/dpdk/getting-started/vpp调试指北.md`
-- `docs/engineering/web-and-frontend/cargo构建.md`
-- `docs/engineering/web-and-frontend/python环境搭建.md`
-- `docs/engineering/web-and-frontend/react app教程.md`
-- `docs/engineering/web-and-frontend/vue开发环境搭建.md`
-
-### 桶 3 非技术内容（38 篇）
-
-- `docs/engineering/ai-tooling/ai-toolbox/01-ai常用工具和开发框架.md`
-- `docs/engineering/ai-tooling/ai-leverage/19_AI是你的杠杆普通人也能用的AI实战教程.md`
-- `docs/engineering/ai-tooling/ai-toolbox/claude配置.md`
-- `docs/engineering/ai-tooling/ai-toolbox/claude安装教程/index.md`
-- `docs/engineering/ai-tooling/ai-foundations/chatgpt使用.md`
-- `docs/engineering/ai-tooling/ai-foundations/newbing使用教程/index.md`
 - `docs/life/aiv/brand/README.md`
 - `docs/life/aiv/brand/scripts/README.md`
 - `docs/life/aiv/character/README.md`
 - `docs/life/aiv/index.md`
 - `docs/life/aiv/music/README.md`
 - `docs/life/aiv/voice/README.md`
-- `docs/notes/site-ops/blog-to-wechat/index.md`
-- `docs/life/daxue/电子科技大学-计算机-自考-复习计划/index.md`
-- `docs/life/daxue/腾冲事业编-公务员备考计划/index.md`
-- `docs/life/doctor_test/寻康杯备战方案.md`
-- `docs/life/doctor_test/寻康杯实战操作手册.md`
-- `docs/life/gaokao/biology-methods/index.md`
-- `docs/life/gaokao/chemistry-methods/index.md`
-- `docs/life/gaokao/english-roots/index.md`
-- `docs/life/gaokao/geography-methods/index.md`
-- `docs/life/gaokao/math-methods/index.md`
-- `docs/life/gaokao/math-paper2/index.md`
-- `docs/life/gaokao/physics-methods/index.md`
-- `docs/life/gaokao/politics-methods/index.md`
-- `docs/life/gaokao/yunnan-apply/index.md`
-- `docs/life/gaokao/yunnan-policy/index.md`
-- `docs/life/hometown/家中对联.md`
-- `docs/life/road/00-intro.md`
-- `docs/life/road/01-how_to_learn_program.md`
-- `docs/life/road/02-elevate_thinking.md`
-- `docs/life/road/左耳朵耗子的话——关于技术的一些思考.md`
-- `docs/life/shehui/area.md`
-- `docs/life/shehui/economic-downturn-deep-dive/index.md`
-- `docs/life/shehui/economic-downturn-strategy/index.md`
-- `docs/life/shehui/media-account/index.md`
-- `docs/life/shehui/self-host/index.md`
-- `docs/stock/A股股票筛选规则.md`
 
-### 桶 4 转载内容（17 篇）
+### 桶 4 转载内容（0 篇）
 
-正文顶部标了来源，署名他人。改写等于改别人的东西——怎么处理是站长的决定。
-
-- `docs/engineering/ai-tooling/ai-foundations/01_开场白目录.md`
-- `docs/engineering/ai-tooling/ai-foundations/02_AI到底聪明在哪从手机人脸识别说起.md`
-- `docs/engineering/ai-tooling/ai-foundations/03_AI怎么读懂文字国王减去男人等于什么.md`
-- `docs/engineering/ai-tooling/ai-foundations/04_AI是怎么突然变厉害的2012所有人以为他们作弊了.md`
-- `docs/engineering/ai-tooling/ai-foundations/05_神经网络到底是什么6000万个旋钮的真相.md`
-- `docs/engineering/ai-tooling/ai-foundations/06_AI是怎么学会的从做错一道题说起.md`
-- `docs/engineering/ai-tooling/ai-foundations/07_ChatGPT为什么能对话一篇引用17万次的论文.md`
-- `docs/engineering/ai-tooling/ai-foundations/08_AI为什么会撒谎一个律师被ChatGPT骗了.md`
-- `docs/engineering/ai-tooling/ai-foundations/09_ChatGPT回答你的三秒钟里发生了什么.md`
-- `docs/engineering/ai-tooling/ai-foundations/10_AI 到底有多聪明一份让 AI 研究者也困惑的成绩单.md`
-- `docs/engineering/ai-tooling/ai-foundations/11_AI 能创造吗从一团噪声到一幅画.md`
-- `docs/engineering/ai-tooling/ai-foundations/12_为什么 AI 能赢世界冠军却开不好车一条藏在所有 AI 背后的分界线.md`
-- `docs/engineering/ai-tooling/ai-foundations/13_这个框架会过时吗AI 的天花板和你的判断力.md`
-- `docs/engineering/ai-tooling/ai-foundations/14_怎么让AI听懂你的话同一个AI为什么他用得比你好10倍.md`
-- `docs/engineering/ai-tooling/ai-foundations/15_怎么跟AI协作不翻车AI说的话你该信几分.md`
-- `docs/engineering/ai-tooling/ai-foundations/16_AI 写代码有多厉害快了 55但错多了 75.md`
-- `docs/engineering/ai-tooling/ai-foundations/17_AI会取代我们吗它不懂孤独是什么意思.md`
+当前为空——清空之后没有转载稿。

@@ -39,7 +39,7 @@ python3 -m pytest tests/ -q
 
 ## 边界
 
-- **只搬 `docs/` 下的东西**。`internal/` 里的文件是「从 docs 移出去、
+- **只搬 `docs/` 下的东西**。移出发布面的文件是「从 docs 移出去、
   不发布」的，脚本只负责搬，不负责判断哪一篇该移出去 ——
   那是 `data/tree-migration.json` 里的 `out_map` 表说了算。
 - **不改文章正文的意思**。脚本只重写链接文字和 front matter 里的
@@ -505,7 +505,7 @@ def do_move(old_rel, new_rel):
 
 
 def do_move_out(old_rel, new_rel):
-    """把文件从 `docs/` 移到仓库里的 `internal/`（不发布，但入库）。"""
+    """把文件从 `docs/` 移到仓库里移出发布面的位置（不发布，但入库）。"""
     old_abs = os.path.join(DOCS, old_rel)
     new_abs = os.path.join(REPO, new_rel)
     if not os.path.exists(old_abs):
@@ -1119,11 +1119,11 @@ def rewrite_out_refs(targets, out_paths, report):
 
     三种形态：
 
-    - ``repo``：仓库相对路径（``docs/blog/架构.md`` → ``internal/blog/架构.md``）——
+    - ``repo``：仓库相对路径（``docs/blog/架构.md`` → 移出发布面的位置）——
       README、规格文档、工具注释里是这个写法；
-    - ``docs``：docs 相对路径（``blog/架构.md`` → ``internal/blog/架构.md``）——
+    - ``docs``：docs 相对路径（``blog/架构.md`` → 移出发布面的位置）——
       复核表里是这个写法（那一列不写 `docs/` 前缀）；
-    - ``cid``：内容单元 id（``blog/架构`` → ``internal/blog/架构``）——
+    - ``cid``：内容单元 id（``blog/架构`` → 移出发布面的位置）——
       多平台分发的转换规则表里是这个写法。
 
     移出去的文章**没有 permalink**，所以 `permalink` 形态不适用。

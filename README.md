@@ -7,7 +7,7 @@
 > 母稿在 `docs/`（文档流）与 `video/`（视频流），那里是内容的唯一真相。
 
 本文件是**仓库级总览**：讲清楚整体架构与模块划分。
-想改文章、改样式，看 [`internal/blog/架构.md`](internal/blog/架构.md)（站点构建链路，更细）。
+想改文章、改样式，看 [`review/specs/ops/架构.md`](review/specs/ops/架构.md)（站点构建链路，更细）。
 想改视频、看契约，看 [`video/README.md`](video/README.md)。
 想改平台适配，看 [`platforms/README.md`](platforms/README.md)（六个平台的共同规矩与核心流程）。
 想改发布逻辑，看 [`publish/spec/00-架构设计.md`](publish/spec/00-架构设计.md) 与
@@ -65,7 +65,7 @@
 ```
 
 > **存量说明**：原来的 560 篇文档**已整体撤出 `docs/`**（2026-11-18，commit `8632f8c7`）——
-> 它们没过审，原件留在 `drafts/` 的镜像里。`docs/` 现在只留**已过审**的母稿，
+> 它们没过审，原件留在 git 历史里（`drafts/` 的镜像已随内容清空删除）。`docs/` 现在只留**已过审**的母稿，
 > 站点也只编译 `docs/`。**存量不回炉**：不补草稿、不倒回去走 `draft → review`——
 > 补出来的是假记录。`video/` 里那 6 期成片同理——**已清空重来**，只留规则。
 
@@ -76,7 +76,7 @@
 | 产线 | 输入 | 产物 | 事实来源 |
 | --- | --- | --- | --- |
 | 技术站点 | `docs/` | 静态站 `platforms/blog/site/dist/` | `docs/` |
-| 品牌视频 AIV | `video/episodes/<slug>/` 一期一个目录 | 1920×1080 成片 | 契约 + 规范文档 |
+| 品牌视频 AIV | `video/episodes/<系列>/<合集>/<文档>/<档位>/` 一期一个目录 | 1920×1080 成片 | 契约 + 规范文档 |
 | 多平台分发 | `content/units/` 内容单元 + 能力声明 | 草稿 / 出包 / 已发链接 | `docs/`（内容）+ `platforms/<plat>/outbox/`（状态） |
 
 按**内容类型**切，是**两条流水线**（文档流 / 视频流）——见上面的图。
@@ -96,7 +96,7 @@
 
 | 层 | 位置 | 职责 | 允许依赖 |
 | --- | --- | --- | --- |
-| **草稿层** | `drafts/` | 主题 → 手动编写 / 自动生成 → 底稿；两条流水线的共同入口。**新增与修改都从这里开始**，过审才进 `docs/` / `video/`。六条线各有一份镜像（`source-tracks/` 那份是供视频线读素材的工作副本）。**目录即接口**：一级目录 = 分类，二级目录 = 二级内容，一篇文档 = 一期——在这里建目录就是新增一个对外可见的分类，慎重 | 只读 `docs/`、`video/` |
+| **草稿层** | `drafts/` | 主题 → 手动编写 / 自动生成 → 底稿；两条流水线的共同入口。**新增与修改都从这里开始**，过审才进 `docs/` / `video/`。草稿箱当前为空，目录按需新建。**目录即接口**：一级目录 = 分类，二级目录 = 二级内容，一篇文档 = 一期——在这里建目录就是新增一个对外可见的分类，慎重 | 只读 `docs/`、`video/` |
 | **内容层** | `docs/` | 母稿、图片、分类元数据 | 无（纯内容） |
 | **内容编译层** | `tools/`（平台无关）+ `platforms/blog/site/tools/`（站点这一平台的实现） | `docs/` → 内容单元；学习流规则表 → 站点数据 | 只读 `docs/`，只写 `content/units/` 与站点目录 |
 | **展示层** | `platforms/blog/site/src/` | Astro 工程：页面、组件、布局、渲染层的 remark/rehype 插件 | Astro 运行时 |
@@ -142,12 +142,12 @@
 
 | 模块 | 位置 | 干什么 |
 | --- | --- | --- |
-| 期目录 | `video/episodes/<slug>/` | 一期一个目录：口播稿、契约、发布元数据、旁白、审校记录。**目录即接口**，没有期号登记表 |
-| 视觉分镜契约 | `video/episodes/<slug>/contract.json` | 一期视频的段落划分、画面文案与数字（**每期只写这里**） |
-| 发布元数据 | `video/episodes/<slug>/publish.json` | 每期各平台的标题、简介、话题与分区（`pyv publish check` 体检） |
+| 期目录 | `video/episodes/<系列>/<合集>/<文档>/<档位>/` | 一期一个目录：口播稿、契约、发布元数据、旁白、审校记录。**目录即接口**，没有期号登记表。**一篇文档出三档**（`short`/`mid`/`full`），三档共用文档目录里的 `skeleton.yaml` |
+| 视觉分镜契约 | `video/episodes/<系列>/<合集>/<文档>/<档位>/contract.json` | 一期视频的段落划分、画面文案与数字（**每期只写这里**） |
+| 发布元数据 | `video/episodes/<系列>/<合集>/<文档>/<档位>/publish.json` | 每期各平台的标题、简介、话题与分区（`pyv publish check` 体检） |
 | 渲染引擎 | `video/pipeline/pyv/` | `pyv/cli.py` + `scenes/` + 28 个模块：`align`/`render`/`compose`/`timeline`/`subtitle`/`bgm`/`brand`/`persona`/`topics`/`doctor`/`preflight`/`review`/`layout`/`components`/`fingerprint`… |
 | 审核 | `video/review/` + `pyv/review.py` | 文本层 `VT-*` 与成片层 `VV-*` 的规则；一期的记录与抽帧清单在期目录里 |
-| 时间轴 | `episodes/<slug>/storyboard.json` | 由旁白对齐算出的产物，**不入库** |
+| 时间轴 | `episodes/<系列>/<合集>/<文档>/<档位>/storyboard.json` | 由旁白对齐算出的产物，**不入库** |
 | 场景模板 | `video/pipeline/pyv/scenes/*.py` | 位置、尺寸、配色、动效等版式常量 |
 | 形象 | `video/character/scripts/` | 3D 小象生成、加眼镜、铭牌盖章 |
 | 品牌 | `video/brand/scripts/` | 片头/片尾渲染与配乐 |
@@ -160,19 +160,25 @@
 契约少参数 → 渲染前抛 `MissingParam`；契约里的文案不许回流成场景代码里的字面量
 （`pipeline/tests/test_contract.py` 盯这条）。
 
-流水线按期切：`make EP=<slug> align|validate|brand|render|compose`。
+流水线按期切：`make EP=<期路径> align|validate|brand|render|compose`。
+期路径 = `系列/合集/文档/档位`（四层，相对 `video/episodes/`）。
 `align` 是手工步骤（需要旁白音频），其余可全自动。忘了 `EP=` 会当场报错。
+
+**素材的位置不在代码里**：`video/config.toml` 声明立绘、曲库、品牌片在哪
+（`video/pipeline/pyv/config.py` 读它）。**素材缺失不是错误**——没配就降级，
+流水线照样出片；`make doctor` 只把「配了但文件不在」报成错。
+内置字体是规则级的东西，跟着仓库走。
 
 同一套还有几档变体与审校命令：
 
 | 命令 | 干什么 |
 | --- | --- |
-| `make EP=<期号> nobrand` | 无品牌导流版（抖音那一档，去品牌片头/片尾；`NOBADGE=1` 再去铭牌） |
-| `make EP=<期号> vertical` | 9:16 竖版画布（抖音那一档，本来就不套品牌片） |
-| `make EP=<期号> mix-verify` | 成片级混音验收（稳态 duck 深度、电平差、真峰值） |
-| `make EP=<期号> review-text` | 审校·文本层（`VT-*`）：审要讲什么 |
-| `make EP=<期号> review-video` | 审校·成片层（`VV-*`）：审做出来是什么样 |
-| `make EP=<期号> review-frames` | 抽帧 + 清单：每段两帧 + 关键帧，给人和 Agent 逐帧看画面 |
+| `make EP=<期路径> nobrand` | 无品牌导流版（抖音那一档，去品牌片头/片尾；`NOBADGE=1` 再去铭牌） |
+| `make EP=<期路径> vertical` | 9:16 竖版画布（抖音那一档，本来就不套品牌片） |
+| `make EP=<期路径> mix-verify` | 成片级混音验收（稳态 duck 深度、电平差、真峰值） |
+| `make EP=<期路径> review-text` | 审校·文本层（`VT-*`）：审要讲什么 |
+| `make EP=<期路径> review-video` | 审校·成片层（`VV-*`）：审做出来是什么样 |
+| `make EP=<期路径> review-frames` | 抽帧 + 清单：每段两帧 + 关键帧，给人和 Agent 逐帧看画面 |
 
 审校的规则与边界见 [`video/review/README.md`](video/review/README.md)。
 
@@ -246,7 +252,7 @@
    `docs/`（或 `video/`）那一份，所以 `docs/` 里任何时刻都是**已过审的版本**。
    **主题**（用户产生 idea 时输入的一段话）也一样——它是流水线的**输入**，
    落进草稿的 front matter `topic:` 字段，不建目录、不单独成层。
-9. **存量不回炉**：原来的 560 篇文档已整体撤出 `docs/`（没过审，原件在 `drafts/` 的镜像里），
+9. **存量不回炉**：原来的 560 篇文档已整体撤出 `docs/`（没过审，原件留在 git 历史里），
    `video/` 里现有的 6 期成片是**存量**。
    **不补草稿、不倒回去走 `draft → review`**——补出来的是假记录。
    草稿箱管的是**新内容与改动**，存量本身不回炉。
@@ -266,9 +272,9 @@
 | 内容契约（front matter） | `docs/**` 的 front matter | 作者 | 内容单元编译器 → 内容单元 → 各 adapter |
 | 平台能力 | `platforms/<id>/capability.toml` | 手写（对着平台文档复核） | publishkit + adapter |
 | 发布清单 manifest | JSON（内存/落盘） | publishkit | adapter |
-| 视觉分镜契约 | `video/episodes/<slug>/contract.json` | 作者 | pyv 渲染引擎 |
-| 发布元数据 | `video/episodes/<slug>/publish.json` | 手写 | `pyv publish check` + 各平台 adapter |
-| 抽帧清单 | `video/episodes/<slug>/frames.md` | 审核工具 | 审核记录（逐帧复核） |
+| 视觉分镜契约 | `video/episodes/<系列>/<合集>/<文档>/<档位>/contract.json` | 作者 | pyv 渲染引擎 |
+| 发布元数据 | `video/episodes/<系列>/<合集>/<文档>/<档位>/publish.json` | 手写 | `pyv publish check` + 各平台 adapter |
+| 抽帧清单 | `video/episodes/<系列>/<合集>/<文档>/<档位>/frames.md` | 审核工具 | 审核记录（逐帧复核） |
 | 发布结果快照 | `platforms/<platform>/outbox/<content>__<platform>.json` | adapter | 幂等判定 + 站点发布索引 |
 | 调度状态 | `publish/schedule.json` | 调度层 | 调度层（周键幂等） |
 
@@ -289,7 +295,7 @@
 | `video/` | 视频生产线（规范 + 契约 + 代码） | ✅ 产物除外 |
 | `video/build/`、`video/out/` | 片段与成片 | ❌ |
 | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | ✅ 帧除外 |
-| `drafts/` | 草稿箱（主题 → 手动编写/自动生成 → 底稿；两条流水线的共同入口，底稿不参与派生；新增与修改都从这里开始，过审才进 `docs/` / `video/`；六条线各有一份镜像） | ✅ |
+| `drafts/` | 草稿箱（主题 → 手动编写/自动生成 → 底稿；两条流水线的共同入口，底稿不参与派生；新增与修改都从这里开始，过审才进 `docs/` / `video/`；当前为空，目录按需新建） | ✅ |
 | `publish/` | 契约层与调度（发布契约规格、能力模型加载、manifest、周键） | ✅ |
 | `platforms/<plat>/` | 平台 adapter（**六个**平台各一个目录，含能力声明 `capability.toml` 与发布快照 `outbox/`；目录名即平台 id） | ✅ |
 | `platforms/blog/site/` | 站点这一平台的构建链（已搬到位） | ✅ |
@@ -312,11 +318,11 @@ npm test              # 站点自己的守卫测试（26 个用例）
 make test             # 全量测试
 make topics           # 选题库规则检查
 make persona          # 人格规范检查
-make EP=<期号> all    # validate → brand → render → compose
-make EP=<期号> mix-verify     # 成片级混音验收
-make EP=<期号> review-text    # 审校·文本层（VT-*）
-make EP=<期号> review-video   # 审校·成片层（VV-*）
-make EP=<期号> review-frames  # 抽帧 + 清单（帧不入库，清单入库）
+make EP=<期路径> all    # validate → brand → render → compose
+make EP=<期路径> mix-verify     # 成片级混音验收
+make EP=<期路径> review-text    # 审校·文本层（VT-*）
+make EP=<期路径> review-video   # 审校·成片层（VV-*）
+make EP=<期路径> review-frames  # 抽帧 + 清单（帧不入库，清单入库）
 
 # 发布调度
 cd publish && python3 -m publishkit.cli schedule candidates
@@ -439,7 +445,7 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 
 | 文档 | 内容 |
 | --- | --- |
-| [`internal/blog/架构.md`](internal/blog/架构.md) | 站点构建链路的操作手册（改文章、改样式、CI 步骤） |
+| [`review/specs/ops/架构.md`](review/specs/ops/架构.md) | 站点构建链路的操作手册（改文章、改样式、CI 步骤） |
 | [`publish/spec/00-架构设计.md`](publish/spec/00-架构设计.md) | 多平台发布架构：内容契约 · 能力模型 · 清单 · 幂等 · 展示扩展点 |
 | [`publish/spec/06-发布计划与调度.md`](publish/spec/06-发布计划与调度.md) | 调度层：候选集、选题规则、周键、触发器、失败与重试 |
 | [`publish/spec/07-视频发布契约.md`](publish/spec/07-视频发布契约.md) | 视频发布：视频单元、成片预检、切片规则、状态机 |

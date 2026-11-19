@@ -23,7 +23,7 @@
   分类页与它列的文章要**一起过审**。
 - 2026-11-18 起 `docs/` 里**只有过审的内容**。此前那 560 篇母稿与 57 个分类页
   没有走过「`drafts/` → `review/` → `docs/`」这条流程，整体撤出；
-  原件在 `drafts/` 的六条线镜像里（逐字节一致），git 历史里也留着。
+  原件曾镜像在 `drafts/` 的六条线下（逐字节一致），那批镜像已随内容清空删除，git 历史里也留着。
   往后的每一篇都走同一条路：**在 `drafts/` 里改 → 过 `review/` → 复制进 `docs/`**。
 
 目标不是把文章改得更华丽，而是让它读起来更像一位有经验的工程师在清楚地说明问题：
@@ -146,6 +146,23 @@ growdu 的差异化不应是泛泛的“技术博主”，而是围绕数据库�
 7. 跑一遍机械检查（下面一节），把信号跟人工判断对齐。
 8. 在本目录留下简短记录；只有确认后的正文修改才进入 `docs/`。
 
+### 合入那一步的提交标题
+
+**改稿合入 `docs/` 的那一次提交，标题要一字不差地写成
+`docs(review): <记录文件名>`**——记录文件名就是那个 `.md` 的名字，
+不含后缀。例：记录叫 `postgresql基操.md`，提交标题就是
+`docs(review): postgresql基操`。
+
+**为什么这么严**：机器要核对「这条记录说合入了，那次提交是不是真的
+改了这篇文章」。它只认这一个标题——认标题比认正文里的某个标记稳，
+标记会被人改，标题是提交的一部分。要核对的路径还可能是**中文**，
+而 `git show --name-only` 默认把非 ASCII 路径转义成八进制
+（`"docs/.../\\350\\276\\205..."`），所以机器那一步必须带 `-z` 取原始字节
+（`tests/test_review_records.py` 盯着这条）。
+
+标题写错的后果不是「难看」，是**机器看不到那次提交**：它会以为这条记录
+从没合入过，`tests/test_review_records.py` 那边就会报「没有已合入的记录」。
+
 ## 机械检查与人工审校的关系
 
 `tools/review-check.py` 把上面这些规则里**可计算**的部分固定下来，输出一组带编号的信号
@@ -176,7 +193,7 @@ growdu 的差异化不应是泛泛的“技术博主”，而是围绕数据库�
 
 ```bash
 python3 tools/review-check.py docs/source-tracks/postgresql/getting-started/postgresql基操.md
-python3 tools/review-check.py drafts/source-tracks/postgresql        # 一棵线
+python3 tools/review-check.py drafts/                             # 草稿箱（目录即接口，按需新建）
 python3 tools/review-check.py docs --json --out /tmp/rc.json        # 机器可读
 ```
 

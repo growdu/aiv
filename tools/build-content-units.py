@@ -102,7 +102,7 @@ def git_date(rel_path: Path) -> str:
     站点上的日期用的是「这篇内容什么时候开始写的」，不是最后一次改的时间。
     `git log` 倒着取第一行。`%ai` 带时区偏移，这里**只留墙钟时间**——
     旧站点踩过一个坑：带 `+0800` 的时间被 hexo 当 UTC 又折算一次，
-    日期会莫名往前跳一天（见 `internal/blog/架构.md`）。
+    日期会莫名往前跳一天（见 `review/specs/ops/架构.md`）。
     """
     proc = subprocess.run(
         ["git", "log", "--format=%ai", "--follow", "--", str(rel_path)],
