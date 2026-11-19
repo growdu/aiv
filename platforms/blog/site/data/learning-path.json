@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "enabled": true,
   "updated": "2026-11-18",
   "note": "学习路径的分类规则表。**这里是人工策展的部分**，site/tools/build-learning-path.py 按它把每篇内容单元落到「赛道 + 阶段」。\n\n规则从上往下第一条命中即生效；track_match 决定内容单元属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**规则匹配的是内容单元的路径**（相对 content/units/，不带 .md）：\n\n- path_prefix —— 前缀匹配，目录用（source-tracks/postgresql/）\n- path_exact —— 全等匹配，单篇用（video/row-lock）\n- path_regex —— 正则匹配\n- category / tag / title_contains —— 其它匹配键\n- catch_all —— 无条件匹配，只能写在最后一个阶段\n\n**映射的是内容单元里的文档与视频**（kind = document / video）。分类页（kind = category，目录的 _index.md）不进学习流——它是目录导航，站点另有分类浏览。\n\n**drafts/ 不参与映射**：草稿还没过审，不在 docs/ 里，也就不在站上。\n\n每篇内容都该有一条自己的规则：fallback_stage 只是防崩溃的兜底（没有专属规则的内容单元会落进去），守卫测试 site/tests/test_learning_path.py 钉住它是空的 —— 加了新内容，就得给它写规则。",
   "tracks": [

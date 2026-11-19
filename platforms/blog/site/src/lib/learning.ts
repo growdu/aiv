@@ -36,12 +36,23 @@ export interface Assignment {
 
 const data = learningData as unknown as {
   generated: string;
+  enabled?: boolean;
   tracks: Track[];
   assignment: Record<string, Assignment>;
 };
 
 export const generated = data.generated;
-export const tracks: Track[] = data.tracks;
+
+/**
+ * 学习流这个模块开着没有。
+ *
+ * 关掉的方式：规则表 `data/learning-path.json` 里 `enabled: false`
+ * （文件干脆没有也行）。关掉之后**一个学习流页面都不生成**，
+ * 导航项与首页按钮也自动消失——站点退成普通的文档站。
+ */
+export const enabled = data.enabled !== false;
+
+export const tracks: Track[] = enabled ? data.tracks : [];
 
 export function getTrack(trackId: string): Track | undefined {
   return tracks.find((t) => t.id === trackId);

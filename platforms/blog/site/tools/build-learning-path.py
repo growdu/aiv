@@ -19,6 +19,9 @@
 2. **阶段可以空**。某阶段还没有内容是正常的（审校还没到那儿），
    空阶段照样渲染，只是页面上是灰的——空缺是可见的。
 3. **只映射文档与视频**。分类页（`kind: category`）是目录导航，不进学习流。
+4. **学习流可以整个关掉**。规则表 `data/learning-path.json` 里
+   `enabled: false`（或者干脆没有这个文件）→ 学习流这个模块不存在：
+   不映射、不报错、一个页面都不生成。站点退成普通的文档站。
 
 用法：
 
@@ -118,9 +121,25 @@ def match_rule(rule: dict, unit: dict) -> bool:
     return all(checks)
 
 
+def load_rules() -> dict:
+    """读规则表。
+
+    **规则表可以没有**——那意思是「不用学习流这个模块」。
+    也可以在表里写 `enabled: false` 显式关掉。两种都编出一份空的学习流，
+    并且**不检查漏归类**（没开的模块不配规则是正常的）。
+    """
+    if not RULES_PATH.exists():
+        return {"enabled": False, "tracks": []}
+    rules = json.loads(RULES_PATH.read_text(encoding="utf-8"))
+    if rules.get("enabled") is False:
+        return {"enabled": False, "tracks": []}
+    return rules
+
+
 def compile_learning_path() -> tuple[dict, list[str]]:
     """编译学习流。返回 (编译结果, 问题列表)。"""
-    rules = json.loads(RULES_PATH.read_text(encoding="utf-8"))
+    rules = load_rules()
+    enabled = rules.get("enabled", True)
     units = [u for u in load_units() if u["kind"] in LEARNABLE_KINDS]
 
     problems: list[str] = []
@@ -188,15 +207,18 @@ def compile_learning_path() -> tuple[dict, list[str]]:
         )
 
     # 漏归类：既不在任何赛道，也不在任何兜底桶里。
-    for unit in units:
-        if unit["path"] not in assignment:
-            problems.append(
-                f"漏归类：{unit['path']}（{unit['title']}）没落到任何赛道，"
-                f"学习流规则表里得给它写一条"
-            )
+    # 学习流关着的时候不查——没开的模块不配规则是正常的，不是漏。
+    if enabled:
+        for unit in units:
+            if unit["path"] not in assignment:
+                problems.append(
+                    f"漏归类：{unit['path']}（{unit['title']}）没落到任何赛道，"
+                    f"学习流规则表里得给它写一条"
+                )
 
     result = {
         "generated": rules.get("updated", ""),
+        "enabled": enabled,
         "tracks": tracks_out,
         "assignment": assignment,
     }
@@ -244,6 +266,9 @@ def main() -> int:
         return 0
 
     COMPILED_PATH.write_text(text, encoding="utf-8")
+    if not result.get("enabled", True):
+        print("学习流：关着（规则表 enabled=false 或没有规则表）——不生成任何学习流页面")
+        return 0
     total = sum(t["count"] for t in result["tracks"])
     empty = [
         f"{t['id']}/{s['id']}"

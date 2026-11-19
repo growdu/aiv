@@ -1,9 +1,9 @@
 {
-  "name": "growdu-site",
+  "name": "blog-site",
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "growdu.cn 的站点实现：一条成体系的学习流。Astro 重建（2026-11-18）。",
+  "description": "站点的 Astro 实现：目录树 + 学习流 + 时间轴。身份与结构由 data/site.json 定义。",
   "scripts": {
     "dev": "astro dev",
     "build": "npm run compile && npm run activity && npm run sync && astro build",

@@ -110,10 +110,17 @@ def test_catch_all_only_in_last_stage(rules):
                 )
 
 
+def _skip_if_disabled(compiled: dict) -> None:
+    """学习流这个模块关着的时候，「每个单元都得归类」不成立——没开的模块不配规则。"""
+    if compiled.get("enabled", True) is False:
+        pytest.skip("学习流关着（规则表 enabled: false）")
+
+
 # ── 归属：每个单元恰好一处，没有兜底 ───────────────────────
 
 
 def test_every_unit_is_assigned_exactly_once(compiled):
+    _skip_if_disabled(compiled)
     assignment = compiled["assignment"]
     unit_ids = _unit_ids()
 
@@ -125,6 +132,7 @@ def test_every_unit_is_assigned_exactly_once(compiled):
 
 
 def test_no_unit_relies_on_fallback(compiled):
+    _skip_if_disabled(compiled)
     fallbacks = [
         uid for uid, a in compiled["assignment"].items() if a.get("fallback")
     ]
@@ -133,6 +141,7 @@ def test_no_unit_relies_on_fallback(compiled):
 
 def test_a_unit_is_not_in_two_tracks(compiled):
     """一个单元只能属于一条赛道。规则表里两条赛道的 path_prefix 撞了就会犯。"""
+    _skip_if_disabled(compiled)
     seen: dict[str, str] = {}
     for uid, a in compiled["assignment"].items():
         key = f"{a['track']}/{a['stage']}"

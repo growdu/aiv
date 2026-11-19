@@ -26,4 +26,22 @@ const units = defineCollection({
   }),
 });
 
-export const collections = { units };
+/**
+ * 站点自己的页面（不是内容单元）。
+ *
+ * 跟内容单元分开，是因为**来路不同**：内容单元是 `docs/` 编出来的，
+ * 过审才上站；这些页面是站点这一层的私产，由使用者自己写
+ * （现在只有「关于」页，`content/about.md`）。
+ *
+ * 目录 `content/` 在工程根下，不在 `src/` 里——它不是构建产物，
+ * 是使用者改得动的东西。
+ */
+const pages = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './content' }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string().optional(),
+  }),
+});
+
+export const collections = { units, pages };

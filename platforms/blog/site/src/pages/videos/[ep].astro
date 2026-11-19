@@ -15,6 +15,7 @@ import { allUnits } from '../../lib/units';
 import { assignmentOf, getTrack } from '../../lib/learning';
 import { isPlaceholder } from '../../lib/placeholders';
 import { stageUrl, trackUrl } from '../../lib/urls';
+import { siteName } from '../../lib/site';
 
 export async function getStaticPaths() {
   const units = await allUnits();
@@ -53,7 +54,7 @@ const platformNames: Record<string, string> = {
 <Base title={unit.data.title} nav="videos" description={unit.data.description ?? ''} bodyClass="article-page">
   <div class="wrap">
     <div class="crumbs">
-      <a href="/">growdu</a> / <a href="/videos/">视频</a> / <b>{unit.data.title}</b>
+      <a href="/">{siteName}</a> / <a href="/videos/">视频</a> / <b>{unit.data.title}</b>
     </div>
 
     <div class="doc-layout">
@@ -80,7 +81,7 @@ const platformNames: Record<string, string> = {
         <section class="section player-block">
           <div class="player" data-media={media}>
             <p class="player-note muted">
-              成片托管在自有服务器：<code>{media}</code>。
+              成片托管在站点的媒体目录：<code>{media}</code>。
               <br />
               文件上传后这里会直接播放（HTML5 原生播放器，不引第三方）。
             </p>
@@ -90,9 +91,7 @@ const platformNames: Record<string, string> = {
         {placeholder && (
           <div class="boundary">
             <b>占位稿。</b>
-            这一期的稿子是历史产物——口径与术语都是旧的（「第三方开发者口径」、
-            「沿用 EP01~EP05」那一套），跟现行的人格与术语表对不上，正在重写。
-            先别拿它当准。
+            这一期还没定稿——内容与术语都可能在改。先别拿它当准。
           </div>
         )}
 

@@ -9,6 +9,7 @@ import UnitRow from '../../components/UnitRow.astro';
 import { allUnits } from '../../lib/units';
 import { tracks } from '../../lib/learning';
 import { isPlaceholder } from '../../lib/placeholders';
+import { siteName } from '../../lib/site';
 
 const units = await allUnits();
 const byId = new Map(units.map((u) => [u.id, u]));
@@ -25,20 +26,22 @@ const groups = tracks
   .filter((g) => g.stages.length > 0);
 ---
 
-<Base title="视频" nav="videos" description="growdu 的视频：每一期都是学习流上的一级。">
+<Base title="视频" nav="videos" description={`${siteName} 的视频。`}>
   <div class="wrap">
     <section class="section">
       <h2>视频</h2>
       <p class="section-sub">
-        {videos.length} 期。视频挂在学习流的同一张阶梯上——它们是同一条路的另一种讲法。
+        {videos.length} 期。
+        {tracks.length > 0
+          ? '视频挂在学习流的同一张阶梯上——它们是同一条路的另一种讲法。'
+          : '按发布顺序排着。'}
       </p>
     </section>
 
     {placeholderCount > 0 && (
       <div class="boundary">
-        <b>这 {placeholderCount} 期都是占位稿。</b>
-        口径与术语是历史产物，跟现行的人格与术语表对不上，正在重写。
-        先当草稿看，别当准。
+        <b>这 {placeholderCount} 期是占位稿。</b>
+        内容还没定稿——先当草稿看，别当准。
       </div>
     )}
 
@@ -62,6 +65,19 @@ const groups = tracks
         ))}
       </section>
     ))}
+
+    {/* 学习流关着的时候，视频平铺着列——不按赛道分组。 */}
+    {groups.length === 0 && videos.length > 0 && (
+      <section class="section">
+        <ul class="unit-list">
+          {videos.map((unit) => (
+            <li class="vid-row">
+              <UnitRow unit={unit} />
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     {videos.length === 0 && <p class="muted">还没有视频。</p>}
   </div>

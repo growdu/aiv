@@ -10,6 +10,7 @@ import Base from '../layouts/Base.astro';
 import StatBar from '../components/StatBar.astro';
 import Timeline from '../components/Timeline.astro';
 import { range, days, learnLines } from '../lib/activity';
+import { siteName } from '../lib/site';
 
 const activeDays = days.filter((day) => day.write || day.ai).length;
 
@@ -33,7 +34,7 @@ const rules = [
 ];
 ---
 
-<Base title="时间轴" nav="timeline" description="growdu 的写作时间轴：写了多少天、偷懒多少天、学了多少天、用了多少 AI。">
+<Base title="时间轴" nav="timeline" description={`${siteName} 的写作时间轴：写了多少天、偷懒多少天、学了多少天、用了多少 AI。`}>
   <div class="wrap">
     <section class="section">
       <h1>时间轴</h1>

@@ -64,8 +64,17 @@ function withoutSelfAliases(table) {
   );
 }
 
-// 本机验证用 http://192.168.1.99:8080；上线前用 SITE_URL 换成 https://growdu.cn。
-const siteUrl = process.env.SITE_URL || 'http://192.168.1.99:8080';
+// 站点地址。上线前用 SITE_URL 环境变量给正式域名；
+// 本机验证用 SITE_URL=http://192.168.1.99:8080。
+// 框架层不写死任何域名——那是站点自己的事。
+const siteUrl = process.env.SITE_URL || 'http://localhost:4321';
+
+// dev / preview 的主机名白名单（Astro 5.4 起）。默认只认 localhost——
+// 用域名从别的机器指过来会被拒。SITE_HOSTS 是逗号分隔的额外白名单。
+const extraHosts = (process.env.SITE_HOSTS || '')
+  .split(',')
+  .map((h) => h.trim())
+  .filter(Boolean);
 
 export default defineConfig({
   site: siteUrl,
@@ -79,9 +88,8 @@ export default defineConfig({
   server: {
     // dev / preview 的主机名白名单（Astro 5.4 起）。
     // 默认只认 localhost——用域名从别的机器指过来会被拒。
-    // growdu.cn 是上线后的正式域名；上线前在本机用它做验收时也用得上。
     // （IP 访问不受这条限制，走的是 IP 那条路。）
-    allowedHosts: ['growdu.cn', 'www.growdu.cn'],
+    allowedHosts: ['localhost', ...extraHosts],
   },
 
   markdown: {

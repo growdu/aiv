@@ -18,6 +18,7 @@ import DocTree from '../../components/DocTree.astro';
 import Outline from '../../components/Outline.astro';
 import UnitRow from '../../components/UnitRow.astro';
 import { allUnits, categoryPath, isCategoryId } from '../../lib/units';
+import { siteName } from '../../lib/site';
 
 export async function getStaticPaths() {
   const units = await allUnits();
@@ -58,7 +59,7 @@ const children = isCategory
 >
   <div class="wrap">
     <div class="crumbs">
-      <a href="/">growdu</a> / <a href="/all/">全部</a>
+      <a href="/">{siteName}</a> / <a href="/all/">全部</a>
       {unit.data.categories.length > 0 && <span> / {unit.data.categories.join(' / ')}</span>}
     </div>
 

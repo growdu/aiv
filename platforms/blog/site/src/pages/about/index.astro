@@ -1,60 +1,49 @@
 ---
+/**
+ * 关于页。
+ *
+ * **正文由使用者写**：`content/about.md`（站点私产，不是内容单元）。
+ * 框架只补一段自动生成的「现在有什么」——数字从编译结果里数出来，
+ * 不写死，改了内容它自己变。
+ *
+ * 用户还没写 about.md 时，页面给一份兜底（站点简介 + 同样的统计）。
+ */
+import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import { allUnits } from '../../lib/units';
 import { tracks } from '../../lib/learning';
+import { siteDescription, siteName } from '../../lib/site';
 
-const totalStages = tracks.reduce((n, t) => n + t.stages.length, 0);
+const units = await allUnits();
+const documents = units.filter((u) => u.data.kind !== 'category');
+const videos = units.filter((u) => u.data.kind === 'video');
+const stages = tracks.reduce((n, t) => n + t.stages.length, 0);
+
+const pages = await getCollection('pages');
+const about = pages.find((p) => p.id === 'about');
+const { Content } = about ? await render(about) : { Content: null };
 ---
 
-<Base title="关于" nav="about" description="关于 growdu：这个站点是什么，内容从哪来，怎么组织的。">
+<Base title="关于" nav="about" description={about?.data.description ?? siteDescription}>
   <div class="wrap">
     <section class="section prose">
-      <h1>关于 growdu</h1>
-
-      <p>
-        growdu 是一个人的技术学习流。站点上的每一篇文档、每一期视频都来自同一个仓库，
-        它们不是分开攒的，而是同一条路上的不同位置。
-      </p>
-
-      <h2>两套坐标</h2>
-      <p>
-        内容有它真实的形状：仓库里的<strong>目录树</strong>——一级目录是分类，
-        二级是系列，一篇是一期。这是内容的客观身份，站点不会为了好看改它。
-      </p>
-      <p>
-        内容也有给人走的形状：<strong>学习流</strong>——赛道 × 阶段。
-        赛道把不同的技术方向并排放，阶段给出「走到第几级」。
-        这套结构是算出来的，不是写死在文档里的。
-      </p>
-      <p>
-        两个坐标同时在场：文档页左边写着你在流程里的位置，右边写着它在目录树里的位置。
-        内容不因为上了网就丢掉它的来历。
-      </p>
-
-      <h2>内容从哪来</h2>
-      <p>
-        仓库里有一条固定的流水线：<code>drafts/</code> 是草稿箱，
-        过 <code>review/</code> 审校之后才进 <code>docs/</code>。
-        站点只读 <code>docs/</code>——<strong>没审校的东西不上站</strong>。
-      </p>
-      <p>
-        站点上的正文是母稿的直接编译，一个字都没改。
-        链接、图片、代码高亮、流程图这些渲染层的事情在站点这一层做，
-        不回头去动内容本身。
-      </p>
+      {Content ? (
+        <>
+          <h1>{about!.data.title}</h1>
+          <Content />
+        </>
+      ) : (
+        <>
+          <h1>关于 {siteName}</h1>
+          <p>{siteDescription}</p>
+        </>
+      )}
 
       <h2>现在有什么</h2>
       <ul>
-        <li>{tracks.length} 条赛道，共 {totalStages} 个阶段</li>
+        {tracks.length > 0 && <li>{tracks.length} 条赛道，共 {stages} 个阶段</li>}
+        <li>{documents.length} 篇内容（其中 {videos.length} 期视频）</li>
         <li>内容按审校进度上站，所以现在还很薄——这是有意的</li>
-        <li>视频的成片托管在自有服务器，站点只提供播放器</li>
-      </ul>
-
-      <h2>技术</h2>
-      <ul>
-        <li>Astro 构建，静态输出，零运行时框架</li>
-        <li>代码高亮在构建期完成（Shiki），不进浏览器</li>
-        <li>流程图在客户端按需渲染（mermaid），滚到才加载</li>
-        <li>正文宽度锁死，行高 1.75，代码块横向滚动——不让内容占满屏幕</li>
       </ul>
     </section>
   </div>

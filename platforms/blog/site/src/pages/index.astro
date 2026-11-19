@@ -1,9 +1,12 @@
 ---
 /**
- * 首页：一条学习流的门面。
+ * 首页：站点的门面。
  *
  * 首屏只回答两个问题：这里在讲什么、从哪儿开始。
  * 下面才是赛道地图（哪条线走到哪儿了）和最近更新。
+ *
+ * **首屏文案走 `data/site.json`**——框架层不认识任何站点。
+ * 学习流这个模块关着时，赛道地图整块不出现（`tracks` 是空的）。
  */
 import Base from '../layouts/Base.astro';
 import TrackCard from '../components/TrackCard.astro';
@@ -11,7 +14,7 @@ import UnitRow from '../components/UnitRow.astro';
 import StatBar from '../components/StatBar.astro';
 import { allUnits } from '../lib/units';
 import { tracksWithContent, emptyTracks, tracks } from '../lib/learning';
-import { unitUrl } from '../lib/urls';
+import { homeActions, homeLead, homeSub, homeTitle, siteName } from '../lib/site';
 
 const units = await allUnits();
 const byId = new Map(units.map((u) => [u.id, u]));
@@ -31,17 +34,20 @@ for (const track of tracks) {
 const recent = units.filter((u) => u.data.kind !== 'category').slice(0, 6);
 ---
 
-<Base title="growdu">
+<Base title={siteName}>
   <div class="wrap">
     <section class="hero">
       <div class="hero-text">
-        <h1>growdu · 一条成体系的学习流</h1>
-        <p>不是一堆文章，是一条能走完的路：从「会用」到「读得懂、还改得动」。</p>
-        <p>每一篇文档、每一期视频都挂在同一条阶梯上，标明自己在第几级。</p>
-        <div class="hero-actions">
-          <a class="btn" href="/learning/">从学习流开始</a>
-          <a class="btn ghost" href="/all/">直接翻全部内容</a>
-        </div>
+        <h1>{homeTitle}</h1>
+        {homeLead && <p>{homeLead}</p>}
+        {homeSub && <p>{homeSub}</p>}
+        {homeActions.length > 0 && (
+          <div class="hero-actions">
+            {homeActions.map((action, i) => (
+              <a class:list={['btn', { ghost: i > 0 }]} href={action.href}>{action.label}</a>
+            ))}
+          </div>
+        )}
       </div>
     </section>
 
@@ -49,15 +55,17 @@ const recent = units.filter((u) => u.data.kind !== 'category').slice(0, 6);
       <StatBar />
     </section>
 
-    <section class="section">
-      <h2>赛道地图</h2>
-      <p class="section-sub">灰色格子是还没审校到的阶段——它标着这条线缺什么。</p>
-      <div class="grid cols-3">
-        {filled.map((track) => (
-          <TrackCard track={track} videoStages={videoStages.get(track.id)} />
-        ))}
-      </div>
-    </section>
+    {filled.length > 0 && (
+      <section class="section">
+        <h2>赛道地图</h2>
+        <p class="section-sub">灰色格子是还没审校到的阶段——它标着这条线缺什么。</p>
+        <div class="grid cols-3">
+          {filled.map((track) => (
+            <TrackCard track={track} videoStages={videoStages.get(track.id)} />
+          ))}
+        </div>
+      </section>
+    )}
 
     <section class="section">
       <h2>最近更新</h2>
