@@ -44,7 +44,6 @@ from publishkit.schedule import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-REPO_OUTBOX = REPO_ROOT / "platforms"
 
 #: 2026-11-13 是周五，属于 2026-W46（周一 2026-11-09，周日 2026-11-15）。
 FRIDAY = date(2026, 11, 13)
@@ -465,15 +464,27 @@ def test_the_packaged_status_counts_as_already_handled():
     assert "unknown" not in PUBLISHED_STATUSES
 
 
-def test_the_real_outbox_index_finds_every_snapshot():
-    """真实仓库里的 566 条快照必须一条不落地被索引到。
+def test_the_index_scans_every_platform_directory(tmp_path):
+    """平台根底下**每一个**平台的 outbox 都要被扫到。
 
     这是「读侧漏改」的唯一防线：outbox 分平台之后，任何还在扫单一
     目录的读者都会把已发过的内容看成没发过——于是重复发布。
+
+    夹具自己造，不用仓库里的快照——仓库里本来就没有：
+    快照是**账**，是某个使用者的发布记录，不是框架的一部分。
     """
-    index = load_outbox_index(REPO_ROOT / "platforms")
-    assert len(index.records) == 566, f"索引到 {len(index.records)} 条快照，应为 566"
+    write_snapshot(outbox_of(tmp_path, "toutiao"), "a/toutiao-doc", "toutiao")
+    write_snapshot(outbox_of(tmp_path, "bilibili"), "b/bili-doc", "bilibili")
+    write_snapshot(outbox_of(tmp_path, "blog"), "c/blog-doc", "blog")
+
+    index = load_outbox_index(tmp_path / "platforms")
+
     assert not index.errors, f"有快照读不出来：{index.errors}"
+    assert set(index.records) == {
+        ("a/toutiao-doc", "toutiao"),
+        ("b/bili-doc", "bilibili"),
+        ("c/blog-doc", "blog"),
+    }, f"索引到的快照对不上：{sorted(index.records)}"
 
 
 # --- outbox 文件名约定（§6.5） -------------------------------------------
@@ -491,25 +502,17 @@ def test_the_snapshot_name_refuses_a_path_that_escapes_the_directory():
             flatten_content_id(bad)
 
 
-def test_the_snapshot_name_matches_the_files_already_in_the_repository():
-    """拿仓库里现存的快照反推：按 content_id 算出来的名字 == 磁盘上的文件名。
+def test_the_snapshot_name_matches_the_file_on_disk(tmp_path):
+    """按 content_id 算出来的名字 == 磁盘上那份快照的文件名。
 
-    这条用例**遍历目录里的每一个 .json**，所以 master 上多出快照
-    （``__bilibili.json`` 那批）时它自动多验几条，不用改测试。
+    夹具自己造：快照是使用者的账，不进框架仓库。
     """
-    if not REPO_OUTBOX.is_dir():
-        pytest.skip("仓库里没有 platforms/")
+    outbox = outbox_of(tmp_path, "toutiao")
+    path = write_snapshot(outbox, "distributed/consensus/常用压缩算法编程", "toutiao")
 
-    checked = 0
-    for path in sorted(REPO_OUTBOX.glob("*/outbox/*.json")):
-        data = json.loads(path.read_text(encoding="utf-8"))
-        content_id = data["content_id"]
-        platform = data["platform"]
+    data = json.loads(path.read_text(encoding="utf-8"))
 
-        assert snapshot_name(content_id, platform) == path.name
-        checked += 1
-
-    assert checked > 0
+    assert snapshot_name(data["content_id"], data["platform"]) == path.name
 
 
 # --- 平台（这一期只驱动文档类） -------------------------------------------
