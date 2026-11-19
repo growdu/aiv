@@ -8,6 +8,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "publish"))
 
+from publishkit.contract import parse_front_matter  # noqa: E402
+
 
 def _compiler():
     """按路径加载 tools/build-content-units.py（文件名带连字符，import 不了）。"""
@@ -27,9 +29,9 @@ def _compiler():
 def compiler(tmp_path, monkeypatch):
     module = _compiler()
     docs = tmp_path / "docs"
-    (docs / "a").mkdir(parents=True)
-    (docs / "a" / "_index.md").write_text(
-        "---\ntitle: 甲\ncascade:\n  categories: [甲]\n---\n\n# 甲\n", encoding="utf-8")
+    # 用例的语料都写在顶层（`docs/ep.md`）——顶层没有祖先链，
+    # 所以**不用**造 `_index.md`（造了也没人读）。
+    docs.mkdir()
     monkeypatch.setattr(module, "DOCS", docs)
     monkeypatch.setattr(module, "CONTENT_UNITS", tmp_path / "content" / "units")
     return module
@@ -49,11 +51,14 @@ def test_an_episode_field_reaches_the_content_unit(compiler):
 
 def test_a_long_description_survives_the_round_trip(compiler):
     """80 字以上的 description 不能被折行截断（今天真会）。"""
-    from publishkit.contract import parse_front_matter
     # ⚠️ 这段文本**必须含空格**（控制器裁决 R5）。PyYAML 的 safe_dump **只在空格处折行**，
     # 不含空格的串根本不折 —— 那样这条用例在修之前就绿了，证不了事。
     # 下面的串里既有中文也有 "PostgreSQL"，空格是折行点。
-    long_text = "客户端连上 PostgreSQL 需要哪几样东西，" * 12
+    #
+    # 长度取 **100 字**（裁决 F5）：既 >80 列（照样触发折行），又过得了
+    # 契约层 `description` 的 150 字上限——产出的是**契约合法**的内容单元，
+    # 不是一条过不了 `tools/check-content-contract.py` 的语料。
+    long_text = "客户端连上 PostgreSQL 需要哪几样东西，" * 4
     (compiler.DOCS / "ep.md").write_text(
         f"---\ntitle: 一期\ndate: '2026-01-01'\ndescription: {long_text}\n---\n\n正文。\n", encoding="utf-8")
     unit = compiler.build_unit(compiler.DOCS / "ep.md")
@@ -65,3 +70,41 @@ def test_the_compiler_and_the_contract_layer_agree_on_the_episode_fields(compile
     """两边对「哪些字段算期号」的口径必须一致——否则编译器传了、契约层不认。"""
     from publishkit import contract
     assert set(compiler.EPISODE_FIELDS) == set(contract.EPISODE_SCALAR_FIELDS) | set(contract.EPISODE_LIST_FIELDS)
+
+
+def test_an_empty_episode_list_is_not_passed_through(compiler):
+    """空列表/空值的期号字段**不要**搬进内容单元——契约层读不了那个形状。
+
+    ``episode_sources: []`` 落盘后，契约层的扁平解析器把 ``[]`` 读成**字符串**
+    ``'[]'``，然后报「episode_sources 必须是列表」。
+    空的就当「没有这个字段」，别搬。
+    """
+    (compiler.DOCS / "ep.md").write_text(
+        "---\ntitle: 一期\ndate: '2026-01-01'\ndescription: 一期的描述。\n"
+        "episode_sources: []\n---\n\n正文。\n", encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "ep.md")
+    assert "episode_sources" not in compiler.render(unit)
+
+
+def test_a_non_empty_episode_list_survives_the_round_trip(compiler):
+    """非空的期号列表**要**搬过去，而且契约层读得到它是列表。"""
+    (compiler.DOCS / "ep.md").write_text(
+        "---\ntitle: 一期\ndate: '2026-01-01'\ndescription: 一期的描述。\n"
+        "episode_sources:\n  - https://a.example/post\n---\n\n正文。\n", encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "ep.md")
+    fields, _ = parse_front_matter(compiler.render(unit))
+    assert fields["episode_sources"] == ["https://a.example/post"]
+
+
+def test_a_multiline_description_survives_as_one_line(compiler):
+    """母稿写 ``description: |`` 时，契约层要读得到**整段**。
+
+    契约层的 front matter 解析器是扁平的：只读每个键的**首行**。
+    多行标量落盘后它只读到第一行 → 描述被截成半句（跟 ``width`` 无关）。
+    """
+    (compiler.DOCS / "ep.md").write_text(
+        "---\ntitle: 一期\ndate: '2026-01-01'\ndescription: |\n"
+        "  第一行描述\n  第二行描述\n---\n\n正文。\n", encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "ep.md")
+    fields, _ = parse_front_matter(compiler.render(unit))
+    assert fields["description"] == "第一行描述 第二行描述"

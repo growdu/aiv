@@ -47,12 +47,10 @@ import yaml  # noqa: E402
 
 from paths import CONTENT_UNITS, DOCS  # noqa: E402
 
-#: 母稿 front matter 里允许透传给内容单元的字段。
-#: 不在表里的字段不往下传——避免母稿随手写个字段就污染所有平台。
-PASSTHROUGH = ("title", "date", "author", "description", "tags", "top", "draft")
-
-#: 母稿 front matter 里属于「期号」的字段。**必须与契约层
-#: publish/publishkit/contract.py 的 EPISODE_SCALAR_FIELDS +
+#: 母稿 front matter 里属于「期号」的字段——**母稿里唯一往下搬的一组**。
+#: 不在表里的字段不往下传：避免母稿随手写个字段就污染所有平台。
+#:
+#: **必须与契约层 publish/publishkit/contract.py 的 EPISODE_SCALAR_FIELDS +
 #: EPISODE_LIST_FIELDS 一致**——tests/test_content_units.py 钉住这条。
 #:
 #: 期号字段以前**不在**透传表里，于是被静默丢掉：页面照常渲染，
@@ -61,9 +59,9 @@ EPISODE_FIELDS = ("episode", "episode_no", "series", "episode_hook",
                   "episode_subtitle", "episode_duration_s", "episode_license",
                   "episode_sources", "episode_repro")
 
-#: 编译器自己写进 front matter 的字段（不来自母稿，母稿写了也不算数）。
-#: 母稿里的这些字段由编译器**推导**（title 可从 H1 来、description 可从
-#: 第一段来、date 可从 git 历史来、tags 要并上目录链上的），不直接抄。
+#: 编译器**自己推导**、不照抄母稿的字段。母稿写了这些字段也不直接算数：
+#: title 可从 H1 来、description 可从正文第一段来、date 可从 git 历史来、
+#: tags 要并上目录链上的。
 BASE_FIELDS = ("title", "date", "author", "description", "tags", "top", "draft")
 
 #: 目录链上的分类名取自各级 `_index.md` 的 `cascade.categories`。
@@ -219,13 +217,28 @@ def build_unit(path: Path) -> Unit:
     if not date:
         raise CompileError(f"{rel} 找不到日期（front matter 里没有 date，git 里也查不到历史）")
 
-    # 母稿里多出来的字段按白名单搬进 `extra`。白名单 = 透传表 + 期号字段；
-    # 排除集是 BASE_FIELDS（编译器自己推导的那几个）。
+    # 母稿里多出来的字段按白名单搬进 `extra`。白名单**只有期号字段**——
+    # 母稿随手写的别的字段不往下传。
     #
-    # ⚠️ 以前这行的排除元组**正好等于 PASSTHROUGH 本身**，于是 `extra` 恒空——
-    # 期号字段就是那时候没进内容单元的。
-    extra = {k: fm[k] for k in PASSTHROUGH + EPISODE_FIELDS
-             if k in fm and k not in BASE_FIELDS}
+    # 空的值**不搬**：`episode_sources: []` 落盘后，契约层的扁平解析器把
+    # `[]` 读成**字符串** `'[]'`（空值读成 `'null'`），然后报
+    # 「episode_sources 必须是列表」。空的就当「没有这个字段」，
+    # 让契约层看到**缺省**，而不是看到坏形状。
+    extra: dict = {}
+    for key in EPISODE_FIELDS:
+        if key not in fm:
+            continue
+        if key in BASE_FIELDS:
+            # 编译器自己推导的那几个字段，母稿写了也不算数——不搬。
+            continue
+        value = fm[key]
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        if isinstance(value, (list, tuple)) and not value:
+            continue
+        extra[key] = value
 
     return Unit(
         path=rel,
@@ -239,6 +252,29 @@ def build_unit(path: Path) -> Unit:
         body=body,
         extra=extra,
     )
+
+
+def one_line(value: str) -> str:
+    """把多行标量压成**一行**：连续的空白（含换行）折成一个空格，首尾去掉。
+
+    契约层的 front matter 解析器是**扁平**的：只读每个键的**首行**。
+    编译器一旦产出多行标量（母稿写 ``description: |`` 时就是），契约层
+    只读到第一行 → 描述被截成半句（跟 safe_dump 的 ``width`` 无关）。
+    """
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def flatten(value):
+    """把 front matter 的值压成单行形态。
+
+    字符串压成一行；列表里的**字符串元素**同样压；数字、布尔等非字符串
+    原样（它们本来就是单行的）。
+    """
+    if isinstance(value, str):
+        return one_line(value)
+    if isinstance(value, list):
+        return [one_line(v) if isinstance(v, str) else v for v in value]
+    return value
 
 
 def render(unit: Unit) -> str:
@@ -255,6 +291,9 @@ def render(unit: Unit) -> str:
     }
     for key, value in unit.extra.items():
         fm[key] = value
+
+    # 全部压成单行：契约层只读每个键的首行，多行标量它读不全。
+    fm = {key: flatten(value) for key, value in fm.items()}
 
     # `width=4096`：**不折行**。PyYAML 默认按 80 列折长标量，续行是缩进的
     # 标量——契约层的扁平 front matter 解析器只读首行，于是 `description`

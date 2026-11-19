@@ -67,7 +67,8 @@ date         str             ``YYYY-MM-DD`` 或 ``YYYY-MM-DD HH:MM:SS``
 （06 规格 §3.3「按 ``publish_on``（缺省用 ``date``）升序」），所以这一层得认它。
 
 但它**不在透传白名单里**：``PASSTHROUGH_FIELDS`` 是**契约层自己**的清单
-（编译器那份是 ``tools/build-content-units.py`` 的 ``PASSTHROUGH``），
+（编译器那边搬的是期号字段——``tools/build-content-units.py`` 的
+``EPISODE_FIELDS``——同样不含 ``date``），
 加进去会改变站点渲染结果——内容单元里的 ``date`` 决定站点的地址。
 ``date`` 只是被**读**，不被**搬**。
 """
