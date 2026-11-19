@@ -1,7 +1,7 @@
 # growdu · 博客与内容生产线
 
 > 一个仓库，**两条流水线、六个第三方平台**：
-> **文档流**（growdu.cn / 公众号 / 头条号）、**视频流**（抖音 / 视频号 / B 站）。
+> **文档流**（个人站点 / 公众号 / 头条号）、**视频流**（抖音 / 视频号 / B 站）。
 > 共同的**入口**是 `drafts/` —— 稿子先落草稿箱，**审过**才往下走；
 > 共同的**出口**是 `platforms/` —— 六个第三方平台，站点也在其中。
 > 母稿在 `docs/`（文档流）与 `video/`（视频流），那里是内容的唯一真相。
@@ -69,6 +69,11 @@
 > 站点也只编译 `docs/`。**存量不回炉**：不补草稿、不倒回去走 `draft → review`——
 > 补出来的是假记录。`video/` 里那 6 期成片同理——**已清空重来**，只留规则。
 
+> **模块边界以这份为准**：
+> [`review/specs/2026-11-19-整体架构与模块边界.md`](review/specs/2026-11-19-整体架构与模块边界.md)
+> ——九个模块、四处缝、依赖方向规则，以及这轮清库暴露的十一条接口缺口
+> （**写明，不装作没有**）。本文件的图与表是它的一个更短的版本。
+
 ### 三条产线的分工
 
 按**产出形态**切，三条产线：
@@ -108,6 +113,19 @@
 **依赖方向是单向的**：平台层不 import 契约层，契约层不 import 平台层。
 两边唯一的接缝是**同一份 `platforms/<plat>/capability.toml`** 与**同一份 manifest JSON**。
 这条规矩由 `publish/tests/test_capability_compat.py` 之类的一致性测试守住。
+
+### 2.1.1 模块之间只通过四处说话
+
+| 缝 | 是什么 | 谁写 | 谁读 |
+| --- | --- | --- | --- |
+| **内容单元** | `content/units/` —— 一篇文档 = 一个 markdown + 一份 front matter，正文一个字不改 | 编译器（`tools/build-content-units.py`） | 所有 adapter（**它是构建产物，不入库**，CI 里现编） |
+| **能力声明** | `platforms/<plat>/capability.toml` —— **目录名就是平台 id** | 每个 adapter | 契约层**按目录扫出来**（它因此不需要为任何平台写代码） |
+| **身份** | 站名、品牌词、账号、地址 —— **框架源码里不许出现站名** | 各模块自己的配置：站点的 `site/data/site.json`、视频线的 `video/config.toml`、发布层的 `publish/deploy/*.template` | 运行时读配置或环境变量（站点地址用 `SITE_URL`） |
+| **验收** | 每个模块一条命令，跑在自己的目录里 | —— | `acceptance/README.md` 是那份契约说明 |
+
+> **上层要下层的东西，只准通过文件要，不准通过 import 要。**
+> 这条让「加一个平台」「换掉一个平台」都只是目录的事。
+> 现在仓库里两个模块互相 import 的地方是 **0 处**。
 
 ### 2.2 站点构建链
 
@@ -297,6 +315,8 @@
 | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | ✅ 帧除外 |
 | `drafts/` | 草稿箱（主题 → 手动编写/自动生成 → 底稿；两条流水线的共同入口，底稿不参与派生；新增与修改都从这里开始，过审才进 `docs/` / `video/`；当前为空，目录按需新建） | ✅ |
 | `publish/` | 契约层与调度（发布契约规格、能力模型加载、manifest、周键） | ✅ |
+| `browser/` | 发布执行器：把「人在平台后台手动做的事」做成命令（只服务没有公开 API 的平台） | ✅ |
+| `acceptance/` | 各模块的验收契约：模块矩阵、跨模块接口、每条命令的实测数字 | ✅ |
 | `platforms/<plat>/` | 平台 adapter（**六个**平台各一个目录，含能力声明 `capability.toml` 与发布快照 `outbox/`；目录名即平台 id） | ✅ |
 | `platforms/blog/site/` | 站点这一平台的构建链（已搬到位） | ✅ |
 | `requirements/` | 依赖清单（按模块分文件） | ✅ |
@@ -362,17 +382,18 @@ cairo 的头文件（`pycairo`）。
 
 | 工作流 | 干什么 | 触发 |
 | --- | --- | --- |
-| `site.yml` | 站点构建与校验：两个 job——「校验」（内容单元是最新的、围栏体检、学习流数据是最新的）与「构建」（Astro 构建 + 站点守卫测试 + 产物挂成 artifact） | push 或 PR 到 master |
-| `contracts.yml` | 内容契约 + 契约层 / 头条 / 公众号测试 | push 或 PR 到 master |
-| `video-pipeline.yml` | 在 Ubuntu 上真跑一遍 AIV：装系统依赖与内置字体，跑全部测试（含真的合成出一段成片） | push / PR 到 master 且动了 `video/**` |
+| `site.yml` | 站点构建与校验：两个 job——「校验」（内容单元是最新的、围栏体检、学习流数据是最新的）与「构建」（Astro 构建 + 站点守卫测试 + 产物挂成 artifact） | push 或 PR 到 `main` |
+| `contracts.yml` | 内容契约 + 契约层 / 头条 / 公众号 / 抖音的测试 | push 或 PR 到 `main` |
+| `video-pipeline.yml` | 在 Ubuntu 上真跑一遍 AIV：装系统依赖与内置字体，跑全部测试（含真的合成出一段成片） | push / PR 且动了 `video/**` |
 
-`site.yml` **不部署**：线上 growdu.cn 还是旧版，那一步留给上线那一轮。
+`site.yml` **不部署**：线上还是旧版，那一步留给上线那一轮。
 它拆成两个 job 是因为校验是纯 Python、几秒钟的事，一个模块红了不该让另一个人
 等 npm install；两个 job 各带 `timeout-minutes`——run 不结束 → 并发组不释放 →
 后面全卡在 pending。
 
-`contracts.yml` 里的四步：产出内容单元 → 内容契约闸门（违规即失败）→
-契约层测试 → 两个 adapter 的测试。视频线（video）不在里面：它要 cairo 与
+`contracts.yml` 里的几步：产出内容单元 → 内容契约闸门（违规即失败）→
+契约层测试 → 各 adapter 的测试（**每个模块一条 step**，一条红了不挡住别的）。
+视频线（video）不在里面：它要 cairo 与
 ffmpeg 这套系统依赖，失败模式是「渲染不出片」而不是「契约被破」；
 它有自己的 `video-pipeline.yml`——在 Linux 上装依赖、装内置字体，跑全部测试，
 测试里**真的会合成出一段成片**并按规格核对（逐像素基准那条在 Linux 上会
@@ -409,15 +430,16 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 
 | 模块 | 状态 |
 | --- | --- |
-| 站点构建 | 已重做（Astro 学习流门面，2026-11-18）：61 页、26 个守卫用例全绿；CI 里 `site.yml` 只构建 + 校验，**部署待上线那一轮** |
-| 内容契约 | 闸门已进 CI（`contracts.yml`）；10 个内容单元（4 篇母稿 + 6 期视频）0 违规 |
+| 站点构建 | 已重做（Astro 学习流门面，2026-11-18）：51 个守卫用例全绿；CI 里 `site.yml` 只构建 + 校验，**部署待上线那一轮** |
+| 内容契约 | 闸门已进 CI（`contracts.yml`）；内容单元 0 违规 |
 | 公众号 | 已实现到**草稿箱**；发表接口无权限（`48001`），自动化边界 = 自动进草稿箱；**已进契约层**（能力声明 + outbox 幂等键） |
 | 头条号 | 出包可用；账号未认证，API 权限开不了，走「出包 + 人工发」 |
+| 抖音 | 出包可用；个人主体拿不到 API 凭据，走「出包 + 浏览器上传 + 人工确认」 |
 | 视频号 / B 站 | 出包 + 人工发布清单；B 站 `ARC_BASE` 未开通 |
-| AIV | 六期已出片（EP01~EP06）；契约化流程稳定；抖音那两档（无品牌 / 竖版）已就位 |
-| 审校 | 文档侧（`review/`）与视频侧（`video/review/`）两套机制都落地了；视频侧六期文本层跑完，成片层只有本机有成片的 EP06 跑过 |
+| AIV | **六期已清空重来**，只留规则与坐标；契约化流程在，语料不在 |
+| 审校 | 文档侧（`review/`）与视频侧（`video/review/`）两套机制都落地了；**现在没有内容可审**，机制等新内容进来再起 |
 | 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；候选集由母稿 `platforms` 决定 |
-| 顶层设计 | 2026-11-18 定了主题 → 草稿箱 → 两条流水线 → 六个平台；站点已登记进平台层（`platforms/blog/`） |
+| 顶层设计 | 2026-11-18 定了主题 → 草稿箱 → 两条流水线 → 六个平台；站点已登记进平台层（`platforms/blog/`）。2026-11-19 补了**模块边界**（九个模块、四处缝）与**十一条接口缺口**——见 [`review/specs/2026-11-19-整体架构与模块边界.md`](review/specs/2026-11-19-整体架构与模块边界.md) |
 
 **平台与契约层的关系**（六个平台，三个档位）：
 
@@ -432,12 +454,14 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 
 **还没就绪的三处**（详见各 spec 的「待验证项」）：
 
-1. 站点**只构建不部署**：新站能构建出来、没死链，但线上 growdu.cn 还是旧版——
+1. 站点**只构建不部署**：新站能构建出来、没死链，但线上还是旧版——
    部署链归上线那一轮。
 2. 调度器**从未真正跑过**：`publish/deploy/` 里的 cron / launchd 模板还没安装，
    `publish/schedule.json` 仍是空的。
-3. **视频审校还没闭环**：六期的文本层信号已出，成片层只有本机有成片的 EP06 跑过；
-   「改稿 → 重出片 → 复审成片层」这一圈还没走完（见 `video/review/INDEX.md` 的批次表）。
+3. **接口缺口十一条**（`review/specs/2026-11-19-整体架构与模块边界.md` §五），
+   其中三条要人拍板：契约层与视频编译器算出来的**落地 URL 还是 hexo 形状**
+   （站点上没有重定向）、**URL 规则还没成缝**、**视频线跟三个视频平台 adapter
+   对「一期是什么」没有共同口径**（成片路径、期身份、快照文件名三处对不上）。
 
 ---
 
@@ -445,6 +469,8 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 
 | 文档 | 内容 |
 | --- | --- |
+| [`review/specs/2026-11-19-整体架构与模块边界.md`](review/specs/2026-11-19-整体架构与模块边界.md) | **模块边界的权威**：九个模块、四处缝、依赖方向、十一条接口缺口 |
+| [`acceptance/README.md`](acceptance/README.md) | 各模块各跑各的验收契约（命令与实测数字） |
 | [`review/specs/ops/架构.md`](review/specs/ops/架构.md) | 站点构建链路的操作手册（改文章、改样式、CI 步骤） |
 | [`publish/spec/00-架构设计.md`](publish/spec/00-架构设计.md) | 多平台发布架构：内容契约 · 能力模型 · 清单 · 幂等 · 展示扩展点 |
 | [`publish/spec/06-发布计划与调度.md`](publish/spec/06-发布计划与调度.md) | 调度层：候选集、选题规则、周键、触发器、失败与重试 |
@@ -452,7 +478,7 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | [`video/README.md`](video/README.md) | 视频生产线说明与换期流程 |
 | [`video/review/README.md`](video/review/README.md) | 视频审校：文本层 `VT-*` 与成片层 `VV-*`、抽帧方法、一期一条记录 |
 | [`review/README.md`](review/README.md) | 博客内容审校：文档侧的同构机制（`tools/review-check.py`） |
-| [`video/人格规范.md`](video/%E4%BA%BA%E6%A0%BC%E8%A7%84%E8%8C%83.md) | 小象是谁、怎么想、怎么讲（9 条可机检规则） |
+| [`video/人格规范.md`](video/%E4%BA%BA%E6%A0%BC%E8%A7%84%E8%8C%83.md) | 人格是谁、怎么想、怎么讲（9 条可机检规则） |
 | `platforms/README.md` | 第三方平台层总览：六个平台、五条共同规矩、核心流程五步、加一个平台要做什么 |
 | `platforms/<plat>/docs/` | 各平台 adapter 的设计与实施计划（wechat / toutiao / blog / douyin / channels / bilibili） |
 | [`review/specs/2026-11-18-顶层设计与目录调整.md`](review/specs/2026-11-18-顶层设计与目录调整.md) | 顶层设计：主题、草稿箱、两条流水线、六个第三方平台 |
