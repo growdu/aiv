@@ -54,7 +54,12 @@ def test_the_three_templates_are_committed():
 
 
 def test_the_job_has_the_expected_label():
-    assert _load_launchd()["Label"] == "com.growdu.publish.schedule"
+    """Label 是**反 DNS 串**，且域那段是占位（使用者换成自己的域）。
+
+    模板里写的是 `com.example.*`——`example` 只是形状示例，
+    使用者安装时把它换成自己的域。断言的是**这个占位本身**。
+    """
+    assert _load_launchd()["Label"] == "com.example.publish.schedule"
 
 
 def test_the_job_runs_the_weekly_schedule():
@@ -161,9 +166,9 @@ def test_the_readme_names_every_trigger():
     """README 要把四个触发器都点到名，漏一个就有一个没人重装。"""
     text = README.read_text(encoding="utf-8")
     for label in (
-        "com.growdu.publish.schedule",
-        "com.growdu.weixin.auto-draft",
-        "com.growdu.weixin.refresh-drafts",
+        "com.example.publish.schedule",
+        "com.example.weixin.auto-draft",
+        "com.example.weixin.refresh-drafts",
     ):
         assert label in text, "安装说明里没提 {}".format(label)
 

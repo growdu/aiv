@@ -25,7 +25,7 @@ FULL_MANIFEST = {
     "digest": "大事务同步把 WAL 推满了。",
     "cover": "source/images/xxx.jpg",
     "body_html": "<p>正文</p>",
-    "source_url": "https://growdu.cn/2026/09/14/xxx/",
+    "source_url": "https://<你的站点地址>/<该篇地址>",
     "assets": ["source/images/a.png"],
 }
 

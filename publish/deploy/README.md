@@ -8,10 +8,14 @@
 
 | 触发器 | 装在哪 | 模板 | 跑什么 | 什么时候 |
 | --- | --- | --- | --- | --- |
-| `com.growdu.publish.schedule` | 本机 Mac（launchd） | `launchd.plist.template` | `publishkit.cli schedule weekly` | 每周五 09:00 |
-| `com.growdu.weixin.auto-draft` | 本机 Mac（launchd） | `../../platforms/wechat/deploy/launchd.plist.template` | `wechat.cli auto-draft --new-only` | 每两小时一次（01/03/…/23 点整） |
-| `com.growdu.weixin.refresh-drafts` | 本机 Mac（launchd） | `../../platforms/wechat/deploy/launchd-refresh.plist.template` | `wechat.cli batch --limit 100` | 每 6 小时一次（00/06/12/18 点半） |
+| `com.example.publish.schedule` | 本机 Mac（launchd） | `launchd.plist.template` | `publishkit.cli schedule weekly` | 每周五 09:00 |
+| `com.example.weixin.auto-draft` | 本机 Mac（launchd） | `../../platforms/wechat/deploy/launchd.plist.template` | `wechat.cli auto-draft --new-only` | 每两小时一次（01/03/…/23 点整） |
+| `com.example.weixin.refresh-drafts` | 本机 Mac（launchd） | `../../platforms/wechat/deploy/launchd-refresh.plist.template` | `wechat.cli batch --limit 100` | 每 6 小时一次（00/06/12/18 点半） |
 | 服务器例行发布 | 发布服务器（cron） | `crontab.template` | `publishkit.cli schedule weekly` | 每周五 09:00 |
+
+> **标签里的 `example` 是占位**：launchd 的 Label 是**反 DNS 串**，
+> `com.example.*` 只是形状示例——安装前把 `example` 换成你自己的域。
+> `platforms/wechat/deploy/` 下那两份模板带的是同一个前缀，要一起改。
 
 另有一份 `github-action.yml.template` 是**对照物**：规格 §5.2 明确说 CI schedule 不可行
 （托管 runner 的出口 IP 是动态的，公众号接口会回 40164 全挡）。它留在仓库里，是为了让
@@ -30,7 +34,7 @@
 
 | 占位符 | 换成 | 怎么取 |
 | --- | --- | --- |
-| `__REPO__` | 仓库根目录 | 本机 `/Users/growduduan/code/blog`；服务器 `/var/www/blog/app` |
+| `__REPO__` | 仓库根目录 | 本机与服务器各自的仓库根目录（本机是 checkout 所在目录，服务器是部署目录） |
 | `__PYTHON__` | 跑测试用的那个 python3 | `python3 -c "import sys; print(sys.executable)"` |
 | `__HOME__` | 用户主目录 | `$HOME` |
 | `__LOG__` | 日志文件路径 | cron 不会自己写日志，必须自己重定向 |
@@ -77,9 +81,9 @@
 改完核对：
 
 ```bash
-launchctl list | grep growdu          # 三个任务都在
-grep -A1 PYTHONPATH ~/Library/LaunchAgents/com.growdu.*.plist   # 都指向 .../platforms
+launchctl list | grep example          # 三个任务都在
+grep -A1 PYTHONPATH ~/Library/LaunchAgents/com.example.*.plist   # 都指向 .../platforms
 crontab -l | grep publishkit          # PUBLISH_SECRETS 指向 .../platforms/wechat/secrets.json
 ```
 
-`com.growdu.weixin.refresh-drafts` 是一次性的存量刷新，跑完（约 553 篇）就可以 unload 掉。
+`com.example.weixin.refresh-drafts` 是一次性的存量刷新，跑完（篇数由使用者的存量决定）就可以 unload 掉。
