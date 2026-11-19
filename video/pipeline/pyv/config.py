@@ -9,7 +9,7 @@
 ```toml
 # video/config.toml
 [brand]
-name = "growdu"
+name = "Your Name"
 
 [assets.mascot]
 image = "character/mascot.png"   # 立绘（透明底 PNG）
@@ -97,6 +97,18 @@ class Config:
     brand_audio: Path
     #: 品牌片头尾的时间窗配置
     brand_windows: Path
+    #: 品牌片片头的英文标语（留空 = 品牌片不画标语）
+    brand_intro_tagline: str
+    #: 品牌片片尾的副标题
+    brand_outro_subtitle: str
+    #: 品牌片片尾的旁白
+    brand_outro_narration: str
+    #: 角色形象的文件名前缀（形象图/姿态图的产物名）
+    character_slug: str
+    #: 角色外观描述：写进形象生成 prompt 的那一段。**参数，由使用者定**
+    character_look: str
+    #: 形象生成的原型参考图（使用者自己的原画/照片）。没配 = 不跑生成流程
+    character_source: Path | None
     #: 配置里**写明了但文件不在**的路径（doctor 拿它区分「配错」与「没配」）
     declared_missing: list[tuple[str, Path]] = field(default_factory=list)
 
@@ -127,6 +139,7 @@ def _text(table: dict, key: str, default: str = "") -> str:
 def build(data: dict, *, path: Path | None, base: Path) -> Config:
     """把一份 TOML 数据装配成 Config。"""
     brand = _dig(data, "brand")
+    character = _dig(data, "character")
     mascot = _dig(data, "assets", "mascot")
     avatar = _dig(data, "assets", "avatar")
     music = _dig(data, "assets", "music")
@@ -139,10 +152,10 @@ def build(data: dict, *, path: Path | None, base: Path) -> Config:
     config = Config(
         path=path,
         base=base,
-        brand_name=_text(brand, "name", "Growdu"),
-        brand_token=_text(brand, "token", "growdu"),
-        brand_tagline=_text(brand, "tagline", "深入数据库"),
-        brand_site=_text(brand, "site", "Growdu.cn"),
+        brand_name=_text(brand, "name", "Your Name"),
+        brand_token=_text(brand, "token", "yourbrand"),
+        brand_tagline=_text(brand, "tagline", "Your Tagline"),
+        brand_site=_text(brand, "site", "example.com"),
         mascot=_as_path(base, _text(mascot, "image")),
         mascot_plain=_as_path(base, _text(mascot, "plain")),
         avatar=_as_path(base, _text(avatar, "image")),
@@ -152,6 +165,13 @@ def build(data: dict, *, path: Path | None, base: Path) -> Config:
         brand_clips=brand_clips,
         brand_audio=brand_audio,
         brand_windows=_as_path(base, _text(brand_assets, "windows")) or (base / "brand" / "brand_windows.json"),
+        brand_intro_tagline=_text(brand, "intro_tagline"),
+        brand_outro_subtitle=_text(brand, "outro_subtitle")
+        or f"{_text(brand, 'name', 'Your Name')} · {_text(brand, 'tagline', 'Your Tagline')}",
+        brand_outro_narration=_text(brand, "outro_narration"),
+        character_slug=_text(character, "slug", "mascot"),
+        character_look=_text(character, "look"),
+        character_source=_as_path(base, _text(character, "source")),
     )
     return config
 

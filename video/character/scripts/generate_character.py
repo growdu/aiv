@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""生成 Growdu 模型形象（3D 卡通小象）。
+"""生成角色形象。
 
-素材源：video/growdu2.jpeg（形象原型，唯一来源）。
-产出：
-  character/growdu_character_2k.png       主形象（白底）
-  character/growdu_character_2k_nobg.png  透明底版（合成进视频用）
-  character/growdu_pose_sheet.png          6 姿态设定表
+素材源：配置里声明的原型参考图（`[character].source`）——**使用者的素材**。
+角色外观取 `[character].look`，文件名前缀取 `[character].slug`。
+产出（`<slug>` 是 `[character].slug`）：
+  character/<slug>_character_2k.png       主形象（白底）
+  character/<slug>_character_2k_nobg.png  透明底版（合成进视频用）
+  character/<slug>_pose_sheet.png          6 姿态设定表
 
 依赖 mcode-tools CLI（mcode-tools-master skill）：
   mcode-tools upload_temp_url <file>              # 本地图片 → 临时 URL
@@ -18,9 +19,9 @@
 
 注意：
   - 每次生成都会消耗生成额度，重复运行前先确认是否真的需要重做。
-  - 铭牌必须显示 growdu（品牌标识），但**文字不能由模型生成**：模型的中英文会
-    乱码（growdu 可能变成 giowdu / grawdu）。生成后统一跑一遍 stamp_badge.py，
-    把铭牌刷成纯白再用 PingFang SC 写上 growdu。
+  - 铭牌必须显示品牌词（`[brand].token`，品牌标识），但**文字不能由模型生成**：
+    模型的中英文会乱码。生成后统一跑一遍 stamp_badge.py，
+    把铭牌刷成纯白再用 PingFang SC 写上品牌词。
 """
 from __future__ import annotations
 
@@ -36,7 +37,16 @@ from stamp_badge import stamp_badge  # noqa: E402  同目录脚本
 HERE = Path(__file__).resolve().parent
 AIV = HERE.parent.parent           # video
 CHAR_DIR = AIV / "character"
-SOURCE_IMAGE = AIV / "growdu2.jpeg"   # 形象原型，唯一来源
+sys.path.insert(0, str(AIV / "pipeline"))
+from pyv.config import load as load_config  # noqa: E402
+
+_CONFIG = load_config()
+SLUG = _CONFIG.character_slug
+LOOK = _CONFIG.character_look or "3D 卡通风格的拟人化角色"
+BRAND_NAME = _CONFIG.brand_name
+
+# 形象原型参考图：使用者的素材，路径写在配置里。**没配 = 不跑这个脚本。**
+SOURCE_IMAGE = _CONFIG.character_source
 
 GLASSES_PROMPT = f"""眼镜（必须戴）：
 - 戴一副{GLASSES_STYLE}眼镜，镜框颜色深藏蓝 {GLASSES_COLOR}（与马甲同色），框条纤细规整，方形镜片带极小圆角
@@ -44,14 +54,14 @@ GLASSES_PROMPT = f"""眼镜（必须戴）：
 - 眼镜架在两只眼睛上，佩戴位置与角度自然，镜框总宽度与两只大眼睛的总跨度相称
 - 镜腿从镜框两侧水平伸向两只耳朵"""
 
-CHARACTER_PROMPT = f"""以图1（3D 渲染的可爱小象幼崽坐姿形象）为主体原型，生成一张专业的产品级角色设定图（character turnaround sheet）。
+CHARACTER_PROMPT = f"""以图1（{LOOK}，坐姿形象）为主体原型，生成一张专业的产品级角色设定图（character turnaround sheet）。
 
-角色设定：一位讲解数据库内核技术的拟人化小象「Growdu」，定位是「专注数据库内核方向的独立开发者」的技术讲解者。
+角色设定：一位讲解技术的拟人化角色「{BRAND_NAME}」，定位是「独立开发者」的技术讲解者。
 
 {PERSONA_PROMPT}
 
 必须保留图1的视觉特征：
-- 圆润饱满的浅蓝灰色皮肤，3D 卡通渲染质感，大眼、粉色面颊、小巧象牙
+- 图1里的全部外观特征（皮肤质感、配色、五官、配饰）一字不改
 - 整体为正面坐姿、白色纯净背景
 - 柔和均匀的棚拍打光，无强反光
 
@@ -70,7 +80,7 @@ CHARACTER_PROMPT = f"""以图1（3D 渲染的可爱小象幼崽坐姿形象）�
 
 风格：干净的 3D 卡通渲染，产品级质感，类似现代科技品牌的吉祥物设计。"""
 
-POSE_PROMPT = f"""以图1（3D 渲染的可爱小象角色，穿深藏蓝色工装马甲、佩戴黑色头戴耳机、胸口有琥珀黄圆柱数据库图标）为唯一原型，生成一张角色姿态设定表。
+POSE_PROMPT = f"""以图1（{LOOK}）为唯一原型，生成一张角色姿态设定表。
 
 IMPORTANT — 铭牌上绝对不要有任何文字：胸口那块白色矩形铭牌必须是完全空白的纯白色，没有任何字母、汉字、符号、条纹或任何类似文字的痕迹。
 
@@ -87,10 +97,10 @@ IMPORTANT — 铭牌上绝对不要有任何文字：胸口那块白色矩形铭
 6. 身体略微后仰、双手摊开，表情豁达（收束/总结姿态）
 
 {GLASSES_PROMPT}
-- 六个姿态里的小象全都戴着这副眼镜，佩戴位置与角度各自自然
+- 六个姿态里的角色全都戴着这副眼镜，佩戴位置与角度各自自然
 
 硬性要求：
-- 严格保持图1的角色设定不变：同一只小象、同样的浅蓝灰色皮肤、同样的圆眼与粉色面颊、同样的深藏蓝 (#2B4C7E) 马甲、同样的琥珀黄 (#F5A623) 圆柱数据库图标、同样的黑色头戴耳机
+- 严格保持图1的角色设定不变：同一个角色、外观与配色一字不改
 - 每个姿态的胸口都别着一块横向长方形的**白色小铭牌**（与图1同款）
 - 铭牌严格空白纯白，无任何文字或类似文字的图案
 - 六个姿态是同一个角色的不同动作，不是不同的角色；体型比例、颜色、光照完全统一
@@ -100,8 +110,12 @@ IMPORTANT — 铭牌上绝对不要有任何文字：胸口那块白色矩形铭
 
 
 def main() -> int:
-    if not SOURCE_IMAGE.exists():
-        print(f"缺少形象原型：{SOURCE_IMAGE}", file=sys.stderr)
+    if SOURCE_IMAGE is None or not SOURCE_IMAGE.exists():
+        print(
+            "缺少形象原型参考图：在 video/config.toml 的 [character].source 里写上"
+            "（留空 = 不跑生成流程，直接用 [assets.mascot].image 指的那张）",
+            file=sys.stderr,
+        )
         return 1
     CHAR_DIR.mkdir(parents=True, exist_ok=True)
     ref = upload(SOURCE_IMAGE)
@@ -112,30 +126,30 @@ def main() -> int:
         "prompt": CHARACTER_PROMPT,
         "reference_images": [{"url": ref, "mime_type": "image/jpeg"}],
         "aspect_ratio": "1:1", "area": "2K", "output_format": "png",
-        "output_file": "growdu_character_2k.png", "n": 1,
+        "output_file": f"{SLUG}_character_2k.png", "n": 1,
     }]})
     node = res["success_items"][0]["node_id"]
-    main_png = CHAR_DIR / "growdu_character_2k.png"
+    main_png = CHAR_DIR / f"{SLUG}_character_2k.png"
     download(node, main_png)
     print(f"  → {main_png.relative_to(AIV)}")
 
     print("抠透明底…")
     res = call("connector__matrix__remove_image_background", {"image_url": upload(main_png)})
-    download(res["node_id"], CHAR_DIR / "growdu_character_2k_nobg.png")
-    print(f"  → {(CHAR_DIR / 'growdu_character_2k_nobg.png').relative_to(AIV)}")
+    download(res["node_id"], CHAR_DIR / f"{SLUG}_character_2k_nobg.png")
+    print(f"  → {(CHAR_DIR / f'{SLUG}_character_2k_nobg.png').relative_to(AIV)}")
 
     print("生成 6 姿态设定表…")
     res = call("connector__matrix__generate_image", {"requests": [{
         "prompt": POSE_PROMPT,
         "reference_images": [{"url": upload(main_png), "mime_type": "image/png"}],
         "aspect_ratio": "16:9", "area": "2K", "output_format": "png",
-        "output_file": "growdu_pose_sheet.png", "n": 1,
+        "output_file": f"{SLUG}_pose_sheet.png", "n": 1,
     }]})
-    download(res["success_items"][0]["node_id"], CHAR_DIR / "growdu_pose_sheet.png")
-    print(f"  → {(CHAR_DIR / 'growdu_pose_sheet.png').relative_to(AIV)}")
+    download(res["success_items"][0]["node_id"], CHAR_DIR / f"{SLUG}_pose_sheet.png")
+    print(f"  → {(CHAR_DIR / f'{SLUG}_pose_sheet.png').relative_to(AIV)}")
 
-    print("给铭牌印上 growdu（真实字体渲染）…")
-    for target in (main_png, CHAR_DIR / "growdu_character_2k_nobg.png"):
+    print("给铭牌印上品牌词（真实字体渲染）…")
+    for target in (main_png, CHAR_DIR / f"{SLUG}_character_2k_nobg.png"):
         stamp_badge(target)
 
     print("完成。规范见 video/形象与音色规范.md")

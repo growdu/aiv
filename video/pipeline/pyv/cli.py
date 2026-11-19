@@ -163,7 +163,7 @@ def cmd_nobrand(args: argparse.Namespace) -> int:
     """产出一份「无品牌导流版」storyboard。
 
     **抖音这一档用它**：抖音禁「过度营销信息」与站外引流，片头字标与片尾的
-    `growdu.cn` 胶囊正好撞上（规格 §6.6.4）。
+    品牌胶囊正好撞上（规格 §6.6.4）。
 
     不需要品牌片素材：仓库里一张 `brand/clips/*.mp4` 都没有也能产出这一版。
     """

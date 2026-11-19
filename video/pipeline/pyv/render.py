@@ -41,7 +41,7 @@ def newest_source_mtime(scene: Scene, extra_mtime: float | None = None) -> float
         for name in RENDER_INPUT_MODULES
         if (package / name).exists()
     ]
-    # 形象素材也是渲染输入：换了小象的图（重新生成、戴眼镜……），
+    # 形象素材也是渲染输入：换了形象的图（重新生成、加配饰……），
     # 已经渲染好的片段必须作废重渲，否则画面里还是旧形象。
     candidates.extend(character.asset_mtimes())
     # **配置文件本身也是渲染输入**：它决定素材在哪。改了它却复用旧片段，

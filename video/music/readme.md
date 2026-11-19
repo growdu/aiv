@@ -3,7 +3,7 @@ title: "背景音乐库"
 date: 2026-11-11
 description: "曲库下载的背景音乐放这里，音频是使用者的素材不入库， 授权台账入库（library.json）——台账是事实，不是素材。"
 ---
-# Growdu 背景音乐库
+# 背景音乐库
 
 **规范见 [`../背景音乐规范.md`](../背景音乐规范.md)。**
 
@@ -126,10 +126,10 @@ python3 scripts/fetch_music.py --all
 ```bash
 cd video/pipeline
 python -m pyv.cli bgm verify \
-    --video ../out/postgresql-getting-started-postgresql基操-short.mp4 \
-    --narration ../episodes/postgresql/getting-started/postgresql基操/short/narration.mp3 \
+    --video ../out/<系列>-<合集>-<文档>-<档位>.mp4 \
+    --narration ../episodes/<系列>/<合集>/<文档>/<档位>/narration.mp3 \
     --music ../music/tracks/series-bed-01.wav \
-    --storyboard ../episodes/postgresql/getting-started/postgresql基操/short/storyboard.json
+    --storyboard ../episodes/<系列>/<合集>/<文档>/<档位>/storyboard.json
 ```
 
 （成片名是**压平后的期路径**；`--music` 给的是配置 `[assets.music].bed`

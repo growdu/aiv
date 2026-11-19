@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Growdu 专属片头 / 片尾渲染。
+"""品牌片头 / 片尾渲染。
 
 产出 1920×1080 / 24fps / 时长 < 3 秒 的两支品牌片：
-  brand/clips/growdu_intro_3s_1080p.mp4
-  brand/clips/growdu_outro_3s_1080p.mp4
+  brand/clips/<slug>_intro_3s_1080p.mp4
+  brand/clips/<slug>_outro_3s_1080p.mp4
 
 技术路线（与 pipeline/pyv/render.py 一致的 cairo 逐帧渲染）：
 
     AI 生成的纯环境背景底板（无角色、无文字）
-      + canonical 小象姿态图（透明底 PNG，代码合成）
+      + canonical 角色姿态图（透明底 PNG，代码合成）
       + 真实字体绘制的文字（cairo + PingFang SC）
       → rawvideo 管道 → ffmpeg 编码
 
@@ -18,8 +18,8 @@
 素材：
   brand/assets/bg_intro.png              AI 背景（深蓝数据中心）
   brand/assets/bg_outro.png              AI 背景（蓝调城市天际线）
-  brand/assets/growdu_pose_thumbsup_nobg.png   小象 · 点赞姿态（透明底）
-  brand/assets/growdu_pose_wave_nobg.png       小象 · 挥手姿态（透明底）
+  brand/assets/<slug>_pose_thumbsup_nobg.png   角色 · 点赞姿态（透明底）
+  brand/assets/<slug>_pose_wave_nobg.png       角色 · 挥手姿态（透明底）
   brand/audio/voice_intro.mp3           片头旁白（定稿音色）
   brand/audio/voice_outro.mp3           片尾旁白（定稿音色）
   brand/audio/intro_mix.wav             片头成品音轨（旁白+配乐）
@@ -51,6 +51,15 @@ CLIPS = BRAND / "clips"
 # 字体族名统一由流水线解析（macOS PingFang SC / Linux Noto Sans CJK SC）
 sys.path.insert(0, str(AIV / "pipeline"))
 from pyv import fonts  # noqa: E402
+from pyv.config import load as load_config  # noqa: E402
+
+# 品牌词、站点地址、角色文件名：全部从 `video/config.toml` 读。
+# 脚本里不写死——换一套品牌只改配置，不改代码。
+_CONFIG = load_config()
+BRAND_NAME = _CONFIG.brand_name
+BRAND_TOKEN = _CONFIG.brand_token
+BRAND_SITE = _CONFIG.brand_site
+SLUG = _CONFIG.character_slug
 
 W, H = 1920, 1080
 FPS = 24
@@ -59,16 +68,16 @@ FRAMES = int(round(DURATION * FPS))
 TIMESCALE = FPS * 1000    # 与流水线一致：concat 要求各片段时间基相同
 
 # 片头 / 片尾的文案。文字一律用真实字体在 cairo 阶段渲染，模型不碰。
-# 片尾副标题按《人格规范》§8 改写过——原「与你一起探索数据库的无边世界」
-# 是营销腔，换成「把踩过的坑写成方法」，同时命中「现场验证者」与「方法论者」。
-INTRO_TAGLINE = "Database · Knowledge · Growth"
-INTRO_CAPTION = "深入数据库 · 分享技术之美"
-OUTRO_SUBTITLE = "Growdu · 把踩过的坑写成方法"
+# 文案本身是**参数**：写在 `video/config.toml` 的 `[brand]` 里，
+# 语气按《人格规范》走（不喊口号，讲现场验证与可复现的方法）。
+INTRO_TAGLINE = _CONFIG.brand_intro_tagline
+INTRO_CAPTION = f"{_CONFIG.brand_tagline} · 分享技术之美"
+OUTRO_SUBTITLE = _CONFIG.brand_outro_subtitle
 
 # 旁白台词。音色与参数见《形象与音色规范》§2.2；
 # 重新合成：python3 ../voice/scripts/synthesize_narration.py --text "<台词>" --out <路径>
-INTRO_NARRATION = "欢迎来到 growdu，深入数据库。"
-OUTRO_NARRATION = "下次卡住的时候，记得回来。"
+INTRO_NARRATION = f"欢迎来到 {BRAND_TOKEN}，{_CONFIG.brand_tagline}。"
+OUTRO_NARRATION = _CONFIG.brand_outro_narration
 
 FONT = fonts.font_family()
 WHITE = (1.0, 1.0, 1.0)
@@ -254,7 +263,7 @@ def render_intro_frame(t: float, bg: Image.Image,
     tx = W * 0.475 + (1 - tw) * W * 0.03
     ty = H * 0.355 + (1 - tw) * H * 0.022
 
-    text(ctx, "Growdu", tx, ty, 142, WHITE, bold=True, alpha=tw)
+    text(ctx, BRAND_NAME, tx, ty, 142, WHITE, bold=True, alpha=tw)
 
     # 标语：说明文字
     text(ctx, INTRO_TAGLINE, tx, ty + 64, 40,
@@ -334,7 +343,7 @@ def render_outro_frame(t: float, bg: Image.Image,
          DEEP, alpha=tw * 0.92)
 
     # 三个胶囊按钮
-    items = ["growdu.cn", "订阅关注", "点赞支持"]
+    items = [BRAND_SITE, "订阅关注", "点赞支持"]
     delays = [0.00, 0.07, 0.14]
     gap = 22
     fonts.select_font(ctx, FONT, bold=True)
@@ -369,10 +378,10 @@ def render_outro_frame(t: float, bg: Image.Image,
 # ---------------------------------------------------------------- 编码
 
 def stamp_badge(char_path: Path) -> None:
-    """给胸口铭牌印上 growdu（真实字体渲染）。
+    """给胸口铭牌印上品牌词（真实字体渲染）。
 
-    铭牌是品牌标识，必须显示 growdu；但文字不能交给模型生成——模型的中英文
-    会乱码。所以合成前统一盖一次章：刷白铭牌，再用 PingFang SC 写上 growdu。
+    铭牌是品牌标识，必须显示品牌词；但文字不能交给模型生成——模型的中英文
+    会乱码。所以合成前统一盖一次章：刷白铭牌，再用 PingFang SC 写上品牌词。
     幂等：已经盖过章再盖一次结果完全一致。
     """
     script = AIV / "character" / "scripts" / "stamp_badge.py"
@@ -460,7 +469,7 @@ def render(which: str, bg_path: Path, char_path: Path, out_path: Path,
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="渲染 Growdu 专属片头/片尾")
+    parser = argparse.ArgumentParser(description="渲染品牌片头/片尾")
     parser.add_argument("--intro", action="store_true", help="只渲染片头")
     parser.add_argument("--outro", action="store_true", help="只渲染片尾")
     args = parser.parse_args()
@@ -469,12 +478,12 @@ def main() -> int:
 
     jobs = [
         ("intro", ASSETS / "bg_intro.png",
-         ASSETS / "growdu_pose_thumbsup_nobg.png",
-         CLIPS / "growdu_intro_3s_1080p.mp4",
+         ASSETS / f"{SLUG}_pose_thumbsup_nobg.png",
+         CLIPS / f"{SLUG}_intro_3s_1080p.mp4",
          BRAND / "audio" / "intro_mix.wav"),
         ("outro", ASSETS / "bg_outro.png",
-         ASSETS / "growdu_pose_wave_nobg.png",
-         CLIPS / "growdu_outro_3s_1080p.mp4",
+         ASSETS / f"{SLUG}_pose_wave_nobg.png",
+         CLIPS / f"{SLUG}_outro_3s_1080p.mp4",
          BRAND / "audio" / "outro_mix.wav"),
     ]
     for which, bg, char, out, audio in jobs:

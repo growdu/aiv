@@ -19,7 +19,7 @@
 | `pipeline/` | 出片流水线：`pyv/` 渲染引擎 + `tests/` + `Makefile` |
 | `episodes/` | 期的坐标：四层 `系列/合集/文档/档位`，**一期 = 一个档位目录**，口播稿、契约、发布元数据、旁白、审校记录都在里面 |
 | `review/` | 视频审校的规则（文本层 `VT-*`、成片层 `VV-*`），一期的审校记录与抽帧清单在期目录里 |
-| `character/` | 3D 小象形象：生成、加眼镜、铭牌盖章（`scripts/`） |
+| `character/` | 3D 角色形象：生成、加眼镜、铭牌盖章（`scripts/`） |
 | `brand/` | 品牌片头/片尾：渲染与配乐（`scripts/`） |
 | `voice/` | 旁白音色与合成（`scripts/`） |
 | `music/` | 背景音乐曲库：授权台账（入库，是授权事实）+ 曲库文件（用户自带，不入库） |
@@ -31,10 +31,10 @@
 
 ```toml
 [brand]
-name = "Growdu"        # 落版与片尾字幕上的名字
-token = "growdu"       # 品牌词：画面里出现它就算有品牌标识
-tagline = "深入数据库"  # 片头副标题
-site = "Growdu.cn"     # 片尾落版
+name = "<站名>"       # 落版与片尾字幕上的名字
+token = "<品牌词>"    # 品牌词：画面里出现它就算有品牌标识
+tagline = "<标语>"    # 片头副标题
+site = "<站点地址>"   # 片尾落版
 
 [assets.mascot]
 image = ""             # 立绘（透明底 PNG）；空 = 不画形象
@@ -53,6 +53,10 @@ clips = "brand/clips"     # 品牌片
 audio = "brand/audio"     # 品牌成品音轨
 windows = "brand/brand_windows.json"
 ```
+
+上面 `<站名>` / `<品牌词>` / `<标语>` / `<站点地址>` 是**占位**，
+取值分别见 `[brand].name` / `[brand].token` / `[brand].tagline` / `[brand].site`；
+角色产物文件名前缀见 `[character].slug`，角色外观描述见 `[character].look`。
 
 三条规矩：
 
@@ -79,7 +83,7 @@ python3 -m pyv.cli config <key>
 
 | 文档 | 内容 |
 | --- | --- |
-| [人格规范.md](人格规范.md) | 小象是谁、怎么想、怎么讲；9 条可机检规则 |
+| [人格规范.md](人格规范.md) | 角色是谁、怎么想、怎么讲；9 条可机检规则 |
 | [形象与音色规范.md](形象与音色规范.md) | 角色设定、铭牌文字的确定性、旁白音色定稿 |
 | [背景音乐规范.md](背景音乐规范.md) | 选曲白名单、风格标准、技术规格、混音与 ducking 规则 |
 | [选题库.md](选题库.md) | 每期的题目、口播骨架、画面契约草案与数字出处（选题的唯一事实来源） |
@@ -234,8 +238,8 @@ video/episodes/<系列>/<合集>/<文档>/<档位>/
                  一级   二级   三级   四级
 ```
 
-一级是系列（`postgresql`），二级是合集（`getting-started`），
-三级是文档（一篇母稿，`postgresql基操`），四级是档位（`short` / `mid` / `full`）。
+一级是系列（`<系列>`），二级是合集（`<合集>`），
+三级是文档（一篇母稿，`<文档>`），四级是档位（`short` / `mid` / `full`）。
 
 **一期 = 一个档位目录**，所以一篇文档出三期（short/mid/full），
 每期有自己的口播稿、契约与旁白；共享的是那一篇文档的骨架
@@ -245,8 +249,8 @@ video/episodes/<系列>/<合集>/<文档>/<档位>/
 
 ```bash
 cd video/pipeline
-make EP=postgresql/getting-started/postgresql基操/short align   # 按这一期的旁白对齐出时间轴
-make EP=postgresql/getting-started/postgresql基操/short all     # validate → brand → render → compose
+make EP=<系列>/<合集>/<文档>/<档位> align   # 按这一期的旁白对齐出时间轴
+make EP=<系列>/<合集>/<文档>/<档位> all     # validate → brand → render → compose
 ```
 
 `EP` 收的是**期路径**（四段，相对 `video/episodes/`），它决定这一期读哪个目录：
@@ -266,8 +270,8 @@ make EP=postgresql/getting-started/postgresql基操/short all     # validate →
 期路径会**压平**成一个文件名片段（斜杠换连字符），`out/` 与 `build/` 里用的就是它：
 
 ```
-postgresql/getting-started/postgresql基操/short
-→ postgresql-getting-started-postgresql基操-short
+<系列>/<合集>/<文档>/<档位>
+→ <系列>-<合集>-<文档>-<档位>
 ```
 
 片段目录也按期分开（`build/<期路径压平>/`）：各期的段 id 会重名（`s01`…），
@@ -342,8 +346,8 @@ python3 tools/build-content-units.py         # docs/ → content/units/（站点
 
 ### 站内相对链接是怎么变成绝对路径的
 
-母稿里的站内链接是相对路径（`./postgresql基操.md`），站点的 URL 是另一套
-（`/docs/source-tracks/postgresql/...`）。这层翻译在**渲染时**做
+母稿里的站内链接是相对路径（`./<文档>.md`），站点的 URL 是另一套
+（`/docs/<系列>/<合集>/<文档>/`）。这层翻译在**渲染时**做
 （`platforms/blog/site/src/lib/remark-site-links.mjs`），
 它在 **AST 上**改链接字段——不用正则扫全文，所以代码块里的内容一个都不碰。
 

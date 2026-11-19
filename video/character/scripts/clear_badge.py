@@ -2,7 +2,7 @@
 """把胸口铭牌抹掉，产出一份「无标牌」形象素材。
 
 **为什么要这一份。** 抖音禁「过度营销信息」与站外引流（规格 §6.6.4）。
-片头字标与片尾的 `growdu.cn` 胶囊已经去掉了，剩下的是胸口这枚铭牌——
+片头字标与片尾的品牌胶囊已经去掉了，剩下的是胸口这枚铭牌——
 画面占比极小，但确实是品牌标识。先按「保留」投一条，被判了再换
 （规格 §十四 第 16 条）。
 
@@ -32,8 +32,14 @@ CHAR_DIR = AIV / "character"
 sys.path.insert(0, str(HERE))
 from stamp_badge import find_badge            # noqa: E402
 
+sys.path.insert(0, str(AIV / "pipeline"))
+from pyv.config import load as load_config  # noqa: E402
+
+# 角色文件名前缀从配置读（`[character].slug`）——脚本里不写死。
+SLUG = load_config().character_slug
+
 # 输出文件名：与 `character.STATIC_IMAGE` 同目录，名字带 nobadge。
-OUTPUT_NAME = "growdu_character_2k_nobg_nobadge.png"
+OUTPUT_NAME = f"{SLUG}_character_2k_nobg_nobadge.png"
 
 # 取色时往外扩多少像素找马甲色。太小会被铭牌自己的白边干扰，
 # 太大会取到马甲外面的背景。
@@ -209,7 +215,7 @@ def clear_badge(source: str | Path, output: str | Path | None = None) -> Path | 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     targets = [Path(a) for a in argv] if argv else [
-        CHAR_DIR / "growdu_character_2k_nobg.png"]
+        CHAR_DIR / f"{SLUG}_character_2k_nobg.png"]
     for target in targets:
         clear_badge(target)
     return 0

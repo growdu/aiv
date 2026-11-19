@@ -45,7 +45,7 @@ AVATAR_IMAGE = config_mod.config().avatar
 def use_image(path: str | Path) -> bool:
     """换一份形象素材（无标牌版等）。文件不存在返回 False。
 
-    **为什么需要它**：胸口那枚 `growdu` 铭牌也是品牌标识。抖音判
+    **为什么需要它**：胸口那枚品牌铭牌也是品牌标识。抖音判
     「过度营销信息」时要换成无铭牌那份（`character/scripts/clear_badge.py`
     产出，`make EP=… nobrand NOBADGE=1`）。
 

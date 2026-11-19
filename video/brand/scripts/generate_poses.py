@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""生成品牌片用的小象姿态素材（点赞 / 挥手）。
+"""生成品牌片用的角色姿态素材（点赞 / 挥手）。
 
 产出：
-  brand/assets/growdu_pose_thumbsup_nobg.png   小象 · 点赞姿态（2048²，透明底）
-  brand/assets/growdu_pose_wave_nobg.png         小象 · 挥手姿态（2048²，透明底）
+  brand/assets/<slug>_pose_thumbsup_nobg.png   角色 · 点赞姿态（2048²，透明底）
+  brand/assets/<slug>_pose_wave_nobg.png         角色 · 挥手姿态（2048²，透明底）
 
-参考图是主形象 `character/growdu_character_2k.png`（白底），
+参考图是主形象 `character/<slug>_character_2k.png`（白底），
 prompt 只描述姿态差异，角色设定（浅蓝灰皮肤 / 深藏蓝马甲 / 琥珀黄数据库图标 /
 黑色头戴耳机 / 深藏蓝方形细边框眼镜）原样继承，不重新发明。
 
@@ -17,7 +17,7 @@ prompt 只描述姿态差异，角色设定（浅蓝灰皮肤 / 深藏蓝马甲 
 有个固定毛病，会在镜框或镜腿上贴一小块白色小铭牌。
 
 铭牌上不写任何字：模型写的中英文会乱码，文字一律由
-`character/scripts/stamp_badge.py` 用真实字体盖上 `growdu`。
+`character/scripts/stamp_badge.py` 用真实字体盖上品牌词。
 
 依赖 mcode-tools CLI（先加载 `mcode-tools-master` skill）。
 每次运行都会消耗生成额度，重复执行前先确认是否真的需要重做。
@@ -43,7 +43,14 @@ from _mcode import call, download, upload          # noqa: E402
 from add_glasses import (GLASSES_COLOR, GLASSES_STYLE, cleanup_glasses)  # noqa: E402
 from stamp_badge import stamp_badge                # noqa: E402
 
-CHARACTER = AIV / "character" / "growdu_character_2k.png"
+sys.path.insert(0, str(AIV / "pipeline"))
+from pyv.config import load as load_config  # noqa: E402
+
+_CONFIG = load_config()
+SLUG = _CONFIG.character_slug
+LOOK = _CONFIG.character_look or "3D 卡通风格的拟人化角色"
+
+CHARACTER = AIV / "character" / f"{SLUG}_character_2k.png"
 ASSETS = BRAND / "assets"
 
 IDENTITY = f"""角色设定与图1逐项保持一致：
@@ -55,7 +62,7 @@ IDENTITY = f"""角色设定与图1逐项保持一致：
 
 COMMON_TAIL = """画面要求：
 - 纯白背景 (#FFFFFF)，主体居中，四周留出充足白边
-- 马甲**上部**必须有一块**白色矩形铭牌**：横向长方形，约小象一个手掌宽、
+- 马甲**上部**必须有一块**白色矩形铭牌**：横向长方形，约角色一个手掌宽、
   拇指高，纯白无字，位置在胸口琥珀黄圆柱图标的上方偏右；
   这块铭牌是品牌标识，**不能省掉**
 - 那块白色矩形铭牌保持**完全空白**，不要写任何文字、字母或符号
@@ -63,7 +70,7 @@ COMMON_TAIL = """画面要求：
 - 不要任何文字标签、边框、说明文字
 - 干净的产品级 3D 卡通渲染质感"""
 
-THUMBSUP_PROMPT = f"""以图1（3D 渲染的可爱小象角色）为唯一原型，生成这只小象的「点赞」姿态。
+THUMBSUP_PROMPT = f"""以图1（{LOOK}）为唯一原型，生成这个角色的「点赞」姿态。
 
 {IDENTITY}
 
@@ -75,7 +82,7 @@ THUMBSUP_PROMPT = f"""以图1（3D 渲染的可爱小象角色）为唯一原型
 
 {COMMON_TAIL}"""
 
-WAVE_PROMPT = f"""以图1（3D 渲染的可爱小象角色）为唯一原型，生成这只小象的「挥手」姿态。
+WAVE_PROMPT = f"""以图1（{LOOK}）为唯一原型，生成这个角色的「挥手」姿态。
 
 {IDENTITY}
 
@@ -88,8 +95,8 @@ WAVE_PROMPT = f"""以图1（3D 渲染的可爱小象角色）为唯一原型，�
 {COMMON_TAIL}"""
 
 POSES = {
-    "thumbsup": (THUMBSUP_PROMPT, ASSETS / "growdu_pose_thumbsup_nobg.png"),
-    "wave": (WAVE_PROMPT, ASSETS / "growdu_pose_wave_nobg.png"),
+    "thumbsup": (THUMBSUP_PROMPT, ASSETS / f"{SLUG}_pose_thumbsup_nobg.png"),
+    "wave": (WAVE_PROMPT, ASSETS / f"{SLUG}_pose_wave_nobg.png"),
 }
 
 
@@ -109,7 +116,7 @@ def generate(prompt: str, dest: Path) -> None:
     print(f"  → {dest}")
 
     # 擦镜框杂物：模型戴上方形眼镜后有个反复出现的毛病——会在镜框或镜腿上
-    # 贴一小块白色小铭牌（实测写着 growdu）。它既是视觉噪点，又会被铭牌检测
+    # 贴一小块白色小铭牌（实测写着品牌词）。它既是视觉噪点，又会被铭牌检测
     # 当成真正的铭牌（它四周全是镜框色）。prompt 里已经禁止了，但模型不听，
     # 所以图生图之后必须再做一次局部修补（详见 add_glasses.py 的说明）。
     cleanup_glasses(dest, dest)
@@ -123,7 +130,7 @@ def generate(prompt: str, dest: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="生成品牌片用的小象姿态素材")
+    parser = argparse.ArgumentParser(description="生成品牌片用的角色姿态素材")
     parser.add_argument("--thumbsup", action="store_true", help="只生成点赞姿态")
     parser.add_argument("--wave", action="store_true", help="只生成挥手姿态")
     args = parser.parse_args(argv)

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""给胸口铭牌印上 growdu（真实字体渲染）。
+"""给胸口铭牌印上品牌词（真实字体渲染）。
 
-规范：铭牌**必须**显示 growdu——那是品牌标识，不能空着。但文字**不能**交给
-模型生成：模型的中英文会乱码（growdu 可能变成 giowdu / grawdu）。
+规范：铭牌**必须**显示品牌词（取 `video/config.toml` 的 `[brand].token`）——
+那是品牌标识，不能空着。但文字**不能**交给模型生成：模型的中英文会乱码
+（品牌词可能被写成同音的怪字）。
 
 所以生成之后统一做一次后处理：
 
   1. 自动定位胸口那块白铭牌（不硬编码坐标，重生成后依然有效）
   2. 把铭牌刷成纯白，抹掉模型写的任何字
-  3. 用内置字体的粗体面写上 growdu
+  3. 用内置字体的粗体面写上品牌词
 
 文字来源于是从「模型碰运气」变成「代码确定」：模型这次碰巧写对了也不算数，
 下次重新生成时铭牌照样是对的。
@@ -46,7 +47,14 @@ sys.path.insert(0, str(AIV / "pipeline"))
 from pyv import fonts  # noqa: E402
 
 FONT = fonts.font_family()
-TEXT = "growdu"
+
+# 品牌词与角色文件名前缀：**从配置读**，脚本里不写死。
+sys.path.insert(0, str(AIV / "pipeline"))
+from pyv.config import load as load_config  # noqa: E402
+
+_CONFIG = load_config()
+TEXT = _CONFIG.brand_token
+SLUG = _CONFIG.character_slug
 TEXT_COLOR = (0x1B, 0x2A, 0x47)          # 深藏蓝，跟字幕主色一致
 TEXT_WIDTH_RATIO = 0.76                  # 文字宽度占铭牌宽度的比例
 TEXT_HEIGHT_RATIO = 0.52                 # 文字高度占铭牌高度的比例
@@ -82,17 +90,17 @@ MIN_HEIGHT_RATIO = 0.015    # 铭牌高度至少占画布高 1.5%（2048 画布 
 # 这条约束挡的是「镜框上的白牌把真铭牌挤掉」——那块白牌四周全是深藏蓝的
 # 镜框，「马甲占比」比胸口那块真铭牌还高，光看颜色分不开。
 MIN_BADGE_SUBJECT_Y = 0.45  # 铭牌上沿必须低于主体高度的 45%
-# 铭牌是**纯白**的塑料牌，而小象的脚趾是奶油色、眼睛是高光：
+# 铭牌是**纯白**的塑料牌，而角色的脚趾是奶油色、眼睛是高光：
 # 实测铭牌区域「三个通道都 ≥ 240」的像素占 85%~89%，
 # 脚趾只有 21%，眼睛 1%。这条把「胸口的白块」和「脚上的白块」分开。
 WHITE_CHANNEL_MIN = 240
 MIN_WHITE_FRACTION = 0.55
 
 DEFAULT_TARGETS = (
-    CHAR_DIR / "growdu_character_2k.png",
-    CHAR_DIR / "growdu_character_2k_nobg.png",
-    BRAND_ASSETS / "growdu_pose_thumbsup_nobg.png",
-    BRAND_ASSETS / "growdu_pose_wave_nobg.png",
+    CHAR_DIR / f"{SLUG}_character_2k.png",
+    CHAR_DIR / f"{SLUG}_character_2k_nobg.png",
+    BRAND_ASSETS / f"{SLUG}_pose_thumbsup_nobg.png",
+    BRAND_ASSETS / f"{SLUG}_pose_wave_nobg.png",
 )
 
 
@@ -310,7 +318,7 @@ def plan_badge(image: Image.Image) -> Badge | None:
 
 
 def stamp_badge(path: str | Path) -> Badge | None:
-    """把铭牌刷白并印上 growdu。返回铭牌信息；没找到铭牌返回 None。"""
+    """把铭牌刷白并印上品牌词。返回铭牌信息；没找到铭牌返回 None。"""
     path = Path(path)
     if not path.exists():
         print(f"  - {path.name}：文件不存在，跳过", file=sys.stderr)
@@ -326,7 +334,7 @@ def stamp_badge(path: str | Path) -> Badge | None:
     arr = np.array(image)
     # 1. 抹掉模型写的任何字，整块刷成纯白
     arr[y0:y1, x0:x1, :3] = 255
-    # 2. 用真实字体写上 growdu
+    # 2. 用真实字体写上品牌词
     mask = render_text_mask(TEXT, badge.size, badge.origin, box_w, box_h)
     alpha = (mask.astype(np.uint16) / 255.0)[..., None]
     color = np.array(TEXT_COLOR, dtype=np.float64)[None, None, :]

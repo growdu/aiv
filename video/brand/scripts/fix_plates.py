@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""修复 Growdu 片头/片尾底板中被 16:9 画幅裁断的文字。
+"""修复品牌片头/片尾底板中被 16:9 画幅裁断的文字。
 
 原始品牌分镜是更宽的画幅，裁到 16:9 (1920x1080) 时把右侧文字切断了：
 
-* 片头底板：``Growdu`` 字标、``Database · Knowledge · Growth`` 标语被截断，
+* 片头底板：品牌字标、英文标语被截断，
   中文标语药丸的右端也被切掉；
 * 片尾底板：中文副标题左右溢出，第三个按钮（点赞）只剩半个。
 
@@ -22,11 +22,33 @@
 """
 
 import os
+import sys
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 品牌字标、站点地址、标语：全部从 `video/config.toml` 读，脚本里不写死。
+sys.path.insert(0, os.path.join(ROOT, "pipeline"))
+from pyv.config import load as load_config  # noqa: E402
+
+_CONFIG = load_config()
+BRAND_NAME = _CONFIG.brand_name
+BRAND_SITE = _CONFIG.brand_site
+INTRO_TAGLINE = _CONFIG.brand_intro_tagline
+
+
+def _split_subtitle(text):
+    """副标题拆成「拉丁部分」与「中文部分」。
+
+    以 ``·`` 为界：左边用拉丁字体，右边用中文字体。
+    没有 ``·`` 就整句当拉丁部分（中文部分留空）。
+    """
+    if "·" in text:
+        left, right = text.split("·", 1)
+        return left.strip() + "· ", right.strip()
+    return text, ""
 # 底板目录：现在是 brand/plates/，早期版本在 brand/assets/plates/。
 # 两个都认，免得脚本因为目录挪过家就直接崩。
 PLATES = next(
@@ -310,18 +332,18 @@ def fix_intro(path):
     items = []
 
     f_wm, size = fit_font(
-        AVENIR_HEAVY[0], AVENIR_HEAVY[1], "Growdu", MARGIN - 1112, 230
+        AVENIR_HEAVY[0], AVENIR_HEAVY[1], BRAND_NAME, MARGIN - 1112, 230
     )
-    bb = probe.textbbox((0, 0), "Growdu", font=f_wm)
+    bb = probe.textbbox((0, 0), BRAND_NAME, font=f_wm)
     items.append(
-        (lambda d, c: draw_tracked(d, (1112, 396 - bb[1]), "Growdu", f_wm, c), white)
+        (lambda d, c: draw_tracked(d, (1112, 396 - bb[1]), BRAND_NAME, f_wm, c), white)
     )
     print("  字标字号 %d" % size)
 
     f_tag, size = fit_font(
         AVENIR_MEDIUM[0],
         AVENIR_MEDIUM[1],
-        "Database · Knowledge · Growth",
+        INTRO_TAGLINE,
         MARGIN - 1078,
         90,
         tracking=2,
@@ -332,7 +354,7 @@ def fix_intro(path):
             lambda d, c: draw_tracked(
                 d,
                 (1078, 596 - bb[1]),
-                "Database · Knowledge · Growth",
+                INTRO_TAGLINE,
                 f_tag,
                 c,
                 tracking=2,
@@ -344,7 +366,7 @@ def fix_intro(path):
 
     pill = (995, 696, MARGIN, 830)
     items.append((lambda d, c: draw_pill(d, pill, c, width=3), cyan))
-    w_txt, g_txt = "深入数据库 · 分享", "技术之美"
+    w_txt, g_txt = f"{_CONFIG.brand_tagline} · 分享", "技术之美"
     f_cn, size = fit_font(
         CJK_W6[0], CJK_W6[1], w_txt + g_txt, pill[2] - pill[0] - 100, 90
     )
@@ -380,7 +402,7 @@ def fix_outro(path):
     probe = ImageDraw.Draw(Image.new("RGB", (8, 8)))
 
     # 副标题：右对齐到 1860（与「感谢观看！」同一右边界）
-    latin, cjk = "Growdu · ", "与你一起，探索数据库的无边世界"
+    latin, cjk = _split_subtitle(_CONFIG.brand_outro_subtitle)
     best = None
     for size in range(84, 30, -1):
         fl, fc = (
@@ -404,7 +426,7 @@ def fix_outro(path):
     pad_l, pad_r, icon_gap = 30, 34, 18
     icon = 52
     specs = [
-        ("growdu.cn", "globe", AVENIR_MEDIUM, 0),
+        (BRAND_SITE, "globe", AVENIR_MEDIUM, 0),
         ("订阅关注", "play", CJK_W6, 0),
         ("点赞支持", "thumb", CJK_W6, 0),
     ]
@@ -441,8 +463,8 @@ def fix_outro(path):
 def main():
     os.makedirs(BACKUP, exist_ok=True)
     for name, fn in (
-        ("growdu_intro_1080p.png", fix_intro),
-        ("growdu_outro_1080p.png", fix_outro),
+        (f"{_CONFIG.character_slug}_intro_1080p.png", fix_intro),
+        (f"{_CONFIG.character_slug}_outro_1080p.png", fix_outro),
     ):
         path = os.path.join(PLATES, name)
         bak = os.path.join(BACKUP, name)

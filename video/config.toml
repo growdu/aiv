@@ -21,6 +21,23 @@ tagline = "深入数据库"
 # 片尾落版（通常是站点地址）
 site = "Growdu.cn"
 
+# 品牌片（片头/片尾）上的文案。留空 = 用脚本里的通用写法。
+intro_tagline = "Database · Knowledge · Growth"
+outro_subtitle = "Growdu · 把踩过的坑写成方法"
+outro_narration = "下次卡住的时候，记得回来。"
+
+[character]
+# 角色形象：**你的**素材与描述。规则在这里，值由使用者定。
+#
+# slug —— 产出文件的前缀（形象图、姿态图的文件名用它）。
+# look —— 角色外观的一段描述，写进形象生成 prompt 的第一句。
+#         换一套形象就改这一段，脚本不用动。
+# source —— 形象生成的原型参考图（你自己的原画/照片）。
+#           留空 = 不跑生成流程，直接用 `assets.mascot.image` 指的那张。
+slug = "growdu"
+look = "3D 卡通小象幼崽，浅蓝灰色皮肤，圆大眼、粉色面颊、小巧象牙、头顶呆毛；穿深藏蓝 (#2B4C7E) 工装马甲，胸口一枚琥珀黄 (#F5A623) 圆柱图标，别一块白色小铭牌"
+source = "growdu2.jpeg"
+
 [assets.mascot]
 # 立绘：透明底 PNG。缺了就降级成「不画形象」，不影响出片。
 # 换素材也可以不动这里：`make ... render --character <路径>` 临时换。

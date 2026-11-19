@@ -9,9 +9,9 @@ video/episodes/<系列>/<合集>/<文档>/<档位>/
 
 | 层 | 是什么 | 例子 |
 | --- | --- | --- |
-| 一级 | **系列**——一条主线 | `postgresql` |
-| 二级 | **合集**——主线下的一块 | `getting-started` |
-| 三级 | **文档**——一篇母稿 | `postgresql基操` |
+| 一级 | **系列**——一条主线 | `<系列>` |
+| 二级 | **合集**——主线下的一块 | `<合集>` |
+| 三级 | **文档**——一篇母稿 | `<文档>` |
 | 四级 | **档位**——这篇文档的三条片子 | `short` / `mid` / `full` |
 
 **一期 = 一个档位目录。** 同一篇文档的三档是三期，各有自己的口播稿、契约与旁白；
@@ -33,15 +33,15 @@ video/episodes/<系列>/<合集>/<文档>/<档位>/
 期路径的例子：
 
 ```
-postgresql/getting-started/postgresql基操/short
+<系列>/<合集>/<文档>/<档位>
 └──── 一级 ────┘ └─ 二级 ─┘ └── 三级 ──┘ └ 四级 ┘
 ```
 
 期路径会**压平**成一个文件名片段（斜杠换连字符），`out/` 与 `build/` 里用的就是它：
 
 ```
-postgresql/getting-started/postgresql基操/short
-→ postgresql-getting-started-postgresql基操-short.mp4
+<系列>/<合集>/<文档>/<档位>
+→ <系列>-<合集>-<文档>-<档位>.mp4
 ```
 
 压平的理由很实际：`out/` 下面会长出一层一层的目录，翻起来费劲，
@@ -84,17 +84,17 @@ postgresql/getting-started/postgresql基操/short
 
 ```bash
 # 期根下四层：系列/合集/文档/档位
-mkdir -p video/episodes/postgresql/getting-started/postgresql基操/short
+mkdir -p video/episodes/<系列>/<合集>/<文档>/<档位>
 ```
 
 口播稿的 front matter 记着三个名字，缺一个流水线就认不出这一期：
 
 ```yaml
 ---
-title: "PostgreSQL 基操 · 短版"
-episode: postgresql/getting-started/postgresql基操   # 文档路径
-episode_number: ep01                                  # 期号
-tier: short                                           # 档位
+title: "<文档标题> · 短版"
+episode: <系列>/<合集>/<文档>        # 文档路径
+episode_number: ep01                 # 期号
+tier: short                          # 档位
 ---
 ```
 
@@ -102,16 +102,16 @@ tier: short                                           # 档位
 
 ```bash
 python3 video/voice/scripts/synthesize_narration.py \
-    --script video/episodes/postgresql/getting-started/postgresql基操/short/口播稿.md \
-    --out video/episodes/postgresql/getting-started/postgresql基操/short/narration.mp3
+    --script video/episodes/<系列>/<合集>/<文档>/<档位>/口播稿.md \
+    --out video/episodes/<系列>/<合集>/<文档>/<档位>/narration.mp3
 ```
 
 出片：
 
 ```bash
 cd video/pipeline
-make EP=postgresql/getting-started/postgresql基操/short align   # 按旁白对齐出时间轴
-make EP=postgresql/getting-started/postgresql基操/short all     # validate → brand → render → compose
+make EP=<系列>/<合集>/<文档>/<档位> align   # 按旁白对齐出时间轴
+make EP=<系列>/<合集>/<文档>/<档位> all     # validate → brand → render → compose
 ```
 
 `align` 是手工步骤，要单独跑（在 `all` 之前）。

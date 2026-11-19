@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""给 Growdu 的 3D 卡通小象戴上一副深藏蓝方形眼镜。
+"""给角色形象戴上一副深藏蓝方形眼镜。
 
 规范（见 `video/形象与音色规范.md` §1.1）：配饰新增**深藏蓝 #2B4C7E
-方形细边框眼镜**，镜片透明——小象是数据库内核讲解者，一副方框眼镜强化
+方形细边框眼镜**，镜片透明——角色是技术讲解者，一副方框眼镜强化
 「技术宅」气质，同时和深藏蓝马甲同色，视觉系统统一。
+
+**形象本身是使用者的**：角色的外观描述取 `video/config.toml` 的
+`[character].look`，素材文件名前缀取 `[character].slug`——脚本里不写死。
 
 为什么必须用 AI 重生成，不能用代码贴上去：
 3D 渲染的眼镜要有镜框厚度、高光、镜腿在耳朵处的遮挡关系、镜片在皮肤上的
@@ -42,33 +45,40 @@ HERE = Path(__file__).resolve().parent
 AIV = HERE.parent.parent                     # video
 STAGING = AIV / "_staging"
 
+sys.path.insert(0, str(AIV / "pipeline"))
+from pyv.config import load as load_config  # noqa: E402
+
+_CONFIG = load_config()
+SLUG = _CONFIG.character_slug
+LOOK = _CONFIG.character_look or "3D 卡通风格的拟人化角色"
+
 # 眼镜规格：改这里等于改规范，生成 prompt 与测试都引用它
 GLASSES_COLOR = "#2B4C7E"
 GLASSES_STYLE = "方形细边框"
 
 # 批次清单：(相对 video 的素材路径, 是否透明底, 宽高比)
 BATCH: tuple[tuple[str, bool, str], ...] = (
-    ("character/growdu_character_2k.png", False, "1:1"),
-    ("brand/assets/growdu_pose_thumbsup_nobg.png", True, "1:1"),
-    ("brand/assets/growdu_pose_wave_nobg.png", True, "1:1"),
-    ("character/growdu_pose_sheet.png", False, "16:9"),
+    (f"character/{SLUG}_character_2k.png", False, "1:1"),
+    (f"brand/assets/{SLUG}_pose_thumbsup_nobg.png", True, "1:1"),
+    (f"brand/assets/{SLUG}_pose_wave_nobg.png", True, "1:1"),
+    (f"character/{SLUG}_pose_sheet.png", False, "16:9"),
 )
 
 # 白底主形象派生出透明底版：抠一次背景得到，不单独生成
-DERIVED = ("character/growdu_character_2k_nobg.png",)
-MAIN_WHITE = "character/growdu_character_2k.png"
+DERIVED = (f"character/{SLUG}_character_2k_nobg.png",)
+MAIN_WHITE = f"character/{SLUG}_character_2k.png"
 
-_SINGLE_PROMPT = f"""以图1（3D 渲染的可爱小象角色）为唯一原型，生成**同一只小象**的新画面。
+_SINGLE_PROMPT = f"""以图1（{LOOK}）为唯一原型，生成**同一个角色**的新画面。
 
 角色必须与图1逐项保持一致：
-- 同一只小象：同样的浅蓝灰色皮肤、同样的大眼与长睫毛、同样的粉色面颊、同样的小巧象牙、同样的头顶呆毛
+- 同一个角色：同样的外观、同样的配色与细节（以图1为准）
 - 同样的深藏蓝 (#2B4C7E) 技术工装马甲、胸口同样的琥珀黄 (#F5A623) 圆柱数据库图标
 - 同样的黑色头戴式耳机 + 麦克风臂
 - 同样的姿态、表情、视角、镜头、构图、主体位置与大小
 - 同样的柔和均匀棚拍光、同样的干净产品级 3D 卡通渲染质感、同样的纯白背景 (#FFFFFF)
 
 唯一新增元素：
-- 给小象戴上一副**{GLASSES_STYLE}眼镜**，镜框颜色为深藏蓝 {GLASSES_COLOR}（与马甲同色），
+- 给角色戴上一副**{GLASSES_STYLE}眼镜**，镜框颜色为深藏蓝 {GLASSES_COLOR}（与马甲同色），
   框条纤细规整，方形镜片（带极小圆角）
 - 镜片**完全透明**：能清楚看到两只大眼睛，不要镜片反光、不要镜片变色、不要墨镜遮眼
 - 眼镜架在两只眼睛上，佩戴位置与角度自然，镜框总宽度与两只大眼睛的总跨度相称
@@ -80,18 +90,18 @@ _SINGLE_PROMPT = f"""以图1（3D 渲染的可爱小象角色）为唯一原型�
   不要改表情、不要改姿态、不要改背景、不要加别的配饰、不要改体型比例
 - 胸口那块白色矩形铭牌必须保持**完全空白**，不要写任何文字、字母或符号"""
 
-_SHEET_PROMPT = f"""以图1（3D 渲染的可爱小象角色 6 姿态设定表）为唯一原型，生成**同一只小象**的新设定表。
+_SHEET_PROMPT = f"""以图1（{LOOK}，6 姿态设定表）为唯一原型，生成**同一个角色**的新设定表。
 
 整张表必须与图1逐项保持一致：
 - 同样是 3 列 × 2 行、共 6 个姿态、纯白背景 (#FFFFFF)、均匀排布、姿态之间留清晰白间隔
-- 每个姿态都是同一只小象：同样的浅蓝灰色皮肤、大眼长睫毛、粉色面颊、小巧象牙、头顶呆毛
+- 每个姿态都是同一个角色：外观与配色完全一致（以图1为准）
 - 同样的深藏蓝 (#2B4C7E) 工装马甲、胸口琥珀黄 (#F5A623) 圆柱数据库图标、同样的黑色头戴式耳机
 - 每个姿态的胸口都别着同样一块**白色小铭牌**（横向长方形，保持空白纯白，不写任何文字）
 - 同样的六个姿态内容（正面坐姿 / 右手指向 / 手托下巴思考 / 举数字 2 / 低头 / 摊手收束）
 - 同样的光线、材质与产品级 3D 卡通渲染质感
 
 唯一新增元素：
-- 六个姿态的小象**全部戴上一副{GLASSES_STYLE}眼镜**，镜框颜色为深藏蓝 {GLASSES_COLOR}
+- 六个姿态的角色**全部戴上一副{GLASSES_STYLE}眼镜**，镜框颜色为深藏蓝 {GLASSES_COLOR}
   （与马甲同色），框条纤细规整，方形镜片带极小圆角
 - 镜片**完全透明**：能清楚看到眼睛，不要镜片反光、不要变色、不要墨镜遮眼
 - 眼镜在每个姿态里的佩戴位置与角度都自然，镜框总宽度与两只大眼睛的总跨度相称
@@ -113,12 +123,12 @@ def build_prompt(sheet: bool = False) -> str:
 # 擦镜框杂物的补丁 prompt。
 #
 # 模型有个反复出现的毛病：戴上方形眼镜后，会在镜框或镜腿上贴一小块
-# 白色铭牌（实测写着 growdu）。它既是视觉噪点，又会被铭牌检测当成
+# 白色铭牌（实测写着品牌词）。它既是视觉噪点，又会被铭牌检测当成
 # 真正的铭牌——它四周全是镜框色，「马甲占比」比胸口那块真铭牌还高。
 #
 # 用模型做局部修补，而不是用代码涂抹：代码抹出来的色块是平的，一眼假；
 # 模型能按周围的镜框与皮肤重新长出边缘。
-CLEANUP_PROMPT = """以图1（3D 渲染的可爱小象，戴着深藏蓝方形细边框眼镜）为唯一原型，生成同一张图。
+CLEANUP_PROMPT = f"""以图1（{LOOK}，戴着深藏蓝方形细边框眼镜）为唯一原型，生成同一张图。
 
 这是一次**局部修补**，只做一件事：
 - 检查眼镜的镜框与镜腿。如果镜框或镜腿上贴着一小块**白色小铭牌**
@@ -128,7 +138,7 @@ CLEANUP_PROMPT = """以图1（3D 渲染的可爱小象，戴着深藏蓝方形�
 - 如果镜框和镜腿上本来就没有任何白色小牌子，就**原样保持**，不要改动任何地方。
 
 除这一处修补之外，整张图必须与图1保持一致：
-- 同一只小象：同样的浅蓝灰色皮肤、大眼长睫毛、粉色面颊、小巧象牙、头顶呆毛
+- 同一个角色：外观与配色完全一致（以图1为准）
 - 同样的深藏蓝 (#2B4C7E) 工装马甲、胸口同样的琥珀黄 (#F5A623) 圆柱数据库图标
 - 同样的黑色头戴式耳机 + 麦克风臂、胸口那块白色小铭牌
 - 同样的眼镜造型：深藏蓝方形细边框、透明镜片、镜腿
@@ -137,7 +147,7 @@ CLEANUP_PROMPT = """以图1（3D 渲染的可爱小象，戴着深藏蓝方形�
 
 严禁：不要重新设计角色、不要改眼镜造型、不要在镜框或镜腿上留下任何白色标签或贴纸、不要改任何颜色。"""
 
-CLEANUP_SHEET_PROMPT = """以图1（3D 渲染的可爱小象 6 姿态设定表，六个小象都戴着深藏蓝方形细边框眼镜）为唯一原型，生成同一张设定表。
+CLEANUP_SHEET_PROMPT = f"""以图1（{LOOK}，6 姿态设定表，六个姿态都戴着深藏蓝方形细边框眼镜）为唯一原型，生成同一张设定表。
 
 这是一次**局部修补**，只做一件事：
 - 检查六个姿态里每一副眼镜的镜框与镜腿。凡是镜框或镜腿上贴着一小块
@@ -204,7 +214,7 @@ def generate_glasses(src: Path, dst: Path, *, transparent: bool = False,
 
 
 def stamp(dst: Path) -> None:
-    """给铭牌盖上 growdu（真实字体渲染，模型写的字一律不算数）。"""
+    """给铭牌盖上品牌词（真实字体渲染，模型写的字一律不算数）。"""
     if stamp_badge(dst) is None:
         print(f"  ! {dst.name}：没找到铭牌，铭牌文字未盖章", file=sys.stderr)
 
@@ -290,7 +300,7 @@ def _promote(only: str | None = None) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="给 Growdu 小象戴深藏蓝方形眼镜")
+    parser = argparse.ArgumentParser(description="给角色形象戴深藏蓝方形眼镜")
     parser.add_argument("src", nargs="?", help="源图（单张模式）")
     parser.add_argument("dst", nargs="?", help="目标图（单张模式）")
     parser.add_argument("--transparent", action="store_true",

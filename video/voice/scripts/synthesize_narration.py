@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""按规范合成 Growdu 视频旁白。
+"""按规范合成视频旁白。
 
 音色定稿（依据 video/形象与音色规范.md §2.2，对标 ddl-voiceover.mp3）：
   voice_id : Chinese (Mandarin)_Radio_Host
@@ -10,7 +10,7 @@
    方法见规范文档 §2.1（基频 F0 / 共振峰 F1,F2 / 频谱重心 / 语速 四项测量）。
 
 用法：
-  python3 scripts/synthesize_narration.py --text "大家好，我是growdu。"
+  python3 scripts/synthesize_narration.py --text "大家好，我是<你的名字>。"
   python3 scripts/synthesize_narration.py --script 字幕.md --out narration.mp3
 
 依赖 mcode-tools CLI（mcode-tools-master skill）。
@@ -71,7 +71,7 @@ def download(node_id: str, dest: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="合成 Growdu 视频旁白")
+    parser = argparse.ArgumentParser(description="合成视频旁白")
     src = parser.add_mutually_exclusive_group(required=True)
     src.add_argument("--text", help="直接给出的口播文本")
     src.add_argument("--script", help="Markdown 口播稿文件（取第一个代码块）")

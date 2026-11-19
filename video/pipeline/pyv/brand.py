@@ -54,7 +54,7 @@ BRAND_TOKEN = _CONFIG.brand_token
 BRAND_COPY_PARAMS = ("badge",)
 
 # 剥掉品牌名之后空了，用这句兜底。
-# 落版标签通常是「独立开发者 · growdu」，剥完剩下的就是「独立开发者」；
+# 落版标签通常是「独立开发者 · 品牌名」，剥完剩下的就是「独立开发者」；
 # 这一句只是「万一剥空了」的兜底。
 NEUTRAL_LABEL = "独立开发者"
 
@@ -248,7 +248,7 @@ def _remove_brand_scenes(raw: dict) -> list[dict]:
 def strip_brand_word(text: str) -> str:
     """把品牌词从落版标签里去掉。
 
-    「独立开发者 · growdu」→「独立开发者」。
+    「独立开发者 · 品牌名」→「独立开发者」。
 
     按分隔符分段，**整段丢掉**，而不是做字符串替换：
     替换会留下「独立开发者 · 」这种尾巴，也会把正文里正当出现的词改掉。
@@ -287,12 +287,12 @@ def make_nobrand(storyboard_path: str | Path, out_path: str | Path) -> Path:
     """产出一份「无品牌导流版」storyboard。
 
     **抖音这一档用它**（规格 §6.6.4）：抖音禁「过度营销信息」与站外引流，
-    而我们的片头字标与片尾的 `growdu.cn` 胶囊正好撞在这两条上。
+    而我们的片头字标与片尾的品牌胶囊正好撞在这两条上。
 
     做两件事：
 
     1. 去掉品牌片场景（`brand_intro` / `brand_outro`），正文时间码相应回退
-    2. 落版标签去掉品牌名：「独立开发者 · growdu」→「独立开发者」
+    2. 落版标签去掉品牌名：「独立开发者 · 品牌名」→「独立开发者」
 
     **吉祥物胸口那枚铭牌不在这一步**——那是**素材**上的东西，要换素材
     （见 `video/character/scripts/clear_badge.py`）。这一版保留它：

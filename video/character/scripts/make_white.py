@@ -3,18 +3,18 @@
 
 **为什么要这一份。** `brand/scripts/generate_poses.py` 用主形象当参考图去
 生成姿态图，模型在「图生图」时会连着参考图的**背景**一起学——参考图是
-白底，生成出来的小象才是白底；参考图是透明底，模型很可能给出一张透明底
+白底，生成出来的形象才是白底；参考图是透明底，模型很可能给出一张透明底
 或者脏背景的图，姿态素材的抠底就白做了。
 
 所以姿态生成需要一张**白底**的主形象当参考图。
 
 **为什么不重新生成一张。** 重新生成会让吉祥物形象漂移：皮肤色、马甲色、
-数据库图标、耳机、眼镜全都要重新赌一次，赌出来的小象跟已经入库的
-`growdu_character_2k_nobg.png` 不是同一只，品牌的视觉一致性就断了。
+数据库图标、耳机、眼镜全都要重新赌一次，赌出来的形象跟已经入库的
+`character/<slug>_character_2k_nobg.png` 不是同一个，品牌的视觉一致性就断了。
 合成是**无损**的：像素照抄，只把透明的地方填成白。
 
 产物：
-  character/growdu_character_2k.png    白底主形象（2048²，alpha 全 255）
+  character/<slug>_character_2k.png    白底主形象（2048²，alpha 全 255）
 
 用法：
     python3 scripts/make_white.py                  # 产出默认素材
@@ -31,9 +31,15 @@ HERE = Path(__file__).resolve().parent
 AIV = HERE.parent.parent                     # video
 CHAR_DIR = AIV / "character"
 
+sys.path.insert(0, str(AIV / "pipeline"))
+from pyv.config import load as load_config  # noqa: E402
+
+# 角色文件名前缀从配置读（`[character].slug`）——脚本里不写死。
+SLUG = load_config().character_slug
+
 # 输入：透明底主形象（入库的那份）。输出：白底主形象。
-SOURCE_NAME = "growdu_character_2k_nobg.png"
-OUTPUT_NAME = "growdu_character_2k.png"
+SOURCE_NAME = f"{SLUG}_character_2k_nobg.png"
+OUTPUT_NAME = f"{SLUG}_character_2k.png"
 
 
 def make_white(source: str | Path, output: str | Path | None = None) -> Path:

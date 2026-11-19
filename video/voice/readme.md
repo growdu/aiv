@@ -3,7 +3,7 @@ title: "音色"
 date: 2026-11-11
 description: "后续视频旁白统一使用这套音色。规范见 ../形象与音色规范.md §2。"
 ---
-# Growdu 音色
+# 音色
 
 后续视频旁白统一使用这套音色。**规范见 [`../形象与音色规范.md`](../形象与音色规范.md) §2**。
 
@@ -40,7 +40,7 @@ F2 偏差 +31 Hz、动态跨度 107 Hz vs 参照 102 Hz。
 
 ```bash
 cd video/voice
-python3 scripts/synthesize_narration.py --text "大家好，我是growdu。"
+python3 scripts/synthesize_narration.py --text "大家好，我是<品牌词>。"
 python3 scripts/synthesize_narration.py --script 字幕.md --out narration.mp3
 ```
 

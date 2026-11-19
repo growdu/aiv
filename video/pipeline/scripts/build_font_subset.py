@@ -126,7 +126,8 @@ FACES = (
 #: - `scripts/redgreen_check.py` 的读音样本 `ŋ`（TTS 载荷，不是画面）
 #:
 #: 素材脚本（`character/`）不在内：它们往素材上写的是 ASCII 品牌词
-#: 「growdu」，已被 ASCII 段覆盖；散文 docstring 不进字体。
+#: （取值见 `video/config.toml` 的 `[brand].token`），已被 ASCII 段覆盖；
+#: 散文 docstring 不进字体。
 #:
 #: 但 **`brand/scripts/render_brand.py` 在内**：它把品牌片的中文文案
 #: （「深入数据库 · 分享技术之美」「感谢观看」「把踩过的坑写成方法」……）
