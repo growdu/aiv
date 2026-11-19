@@ -2,10 +2,10 @@ name: Contracts
 
 # 契约闸门：内容契约 + 契约层与各平台 adapter 的测试。
 #
-# 为什么单独一个工作流，而不是塞进 hexo.yml：
-# hexo.yml 是**构建与部署**（push 到 master 就发版），这里是**守约束**
+# 为什么单独一个工作流，而不是塞进 site.yml：
+# site.yml 是**站点这一个平台的构建与校验**，这里是**守跨模块的约束**
 # （内容契约违规 = 构建失败）。两者的触发时机、失败后果、跑的时长都不同，
-# 混在一起会让「部署失败」和「约束被破」变成同一件事。
+# 混在一起会让「站点构建失败」和「约束被破」变成同一件事。
 #
 # 覆盖范围：
 #   - 内容契约（publish/spec/00 §4）：母稿的 front matter 必须满足字段表
@@ -18,7 +18,7 @@ name: Contracts
 # 所以每条测试 step 都带 `if: ${{ !cancelled() }}`——前一条红了，后面的
 # 照样跑完，各自报各自的账。
 #
-# 站点模块由 site-guard.yml 负责（那边还带 `::error::` 注解）；
+# 站点模块由 site.yml 负责（那边还带 `::error::` 注解）；
 # 视频线（video）由 video-pipeline.yml 负责——它需要 cairo / ffmpeg / 字体
 # 这套系统依赖，容器里装起来比重，且它的失败模式是「渲染不出片」
 # 而不是「契约被破」。
@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # sync-hexo.py 用 git log 取最早提交时间当文章日期，
+          # 编译器用 git log 取最早提交时间当文章日期，
           # 浅克隆会让日期算错。
           fetch-depth: 0
 
@@ -61,18 +61,20 @@ jobs:
       - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements/publish.txt -r requirements/toutiao.txt -r requirements/wechat.txt
+          pip install -r requirements/publish.txt -r requirements/toutiao.txt -r requirements/wechat.txt -r requirements/site.txt
 
       - name: Build content units
-        # 内容单元是 sync 的产物，也是契约层与 adapter 真正读的东西。
+        # 内容单元是编译器的产物，也是契约层与 adapter 真正读的东西。
         # 没有它，adapter 的测试没有语料。
-        run: python3 platforms/blog/site/tools/sync-hexo.py
+        #
+        # 编译器在根 `tools/build-content-units.py`（平台无关的那一半），
+        # 站点重做之前这里跑的是站点私有的 `sync-hexo.py`——那个脚本
+        # 随旧站点一起撤掉了。
+        run: python3 tools/build-content-units.py
 
-      - name: Adapt content units into the site
-        # 站点拿到的那份内容单元副本（source/_posts/）。
-        # 微信与头条的 adapter 读的是**站点那份**（图片按「文章目录的上一级」
-        # 解析，图片住在站点的 source/images/ 里），所以这一步不能省。
-        run: python3 platforms/blog/site/tools/adapt-units.py
+      - name: Build video content units
+        # 视频线的口播稿 → content/units/video/。母稿在 video/ 那一线。
+        run: python3 tools/build-video-pages.py
 
       - name: Content contract gate
         # 违规即失败：标题超长、platforms 不是列表、difficulty 越界……

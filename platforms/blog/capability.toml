@@ -1,7 +1,7 @@
 # 个人站点 growdu.cn 的平台能力声明。
 #
 # 这是**站点第一次被当成第三方平台登记**的地方。在这之前，站点走的是
-# 另一条路：docs/ 母稿 → platforms/blog/site/tools/sync-hexo.py → content/units/ → 站点 source/_posts/ → public/，
+# 另一条路：docs/ 母稿 → 编译器 → content/units/ → 站点副本 → Astro → dist/，
 # 不经能力声明、不经发布清单、不经 outbox 快照。
 #
 # 现在它跟公众号、头条号、抖音、视频号、B 站住在一个目录下，
@@ -15,31 +15,34 @@
 #
 # 数值来源：站点自身的产物实测（2026-11-18，见
 # platforms/blog/docs/01-站点即第三方平台.md §4）与
-# .github/workflows/hexo.yml 里的部署注释。
+# .github/workflows/site.yml 的构建步骤。
 
 id = "blog"
 name = "个人站点 growdu.cn"
 kind = "document"
 
-# 站点不需要任何凭据：推上去就部署，没有账号、没有 token。
+# 站点不需要任何凭据：推上去就重建，没有账号、没有 token。
 auth = "none"
 
 # api_publish = 自动发布。
 #
 # 六个平台里**只有站点是这个档**——它是我们自己的站，发布链路是
-# 「push 到 master → CI 构建 → rsync 到服务器 + 推 GitHub Pages」，
-# 全程没有人工参与。别的平台停在这一档以下，是因为**平台那边**
-# 的权限或审核拦着，不是我们偷懒。
+# 「push 到 master → CI 构建 → 部署」，全程没有人工参与。别的平台停在这一档以下，
+# 是因为**平台那边**的权限或审核拦着，不是我们偷懒。
+#
+# ⚠️ 声明的是这个平台的**档位**（它没有「逐篇等人点发布」这回事）。
+# **部署那一步还没做**：现在的 CI（`.github/workflows/site.yml`）只构建与校验，
+# 不往 growdu.cn 推——上线那一轮才接上。接上之前，站点在公网上还是旧版。
 automation = "api_publish"
 
 # precheck = 本地预检。
 #
 # 站点没有「平台机审」这回事（它是我们自己的站），
 # 但发布前有一整套本地闸门：
+#   site/tools/check-markdown.py  —— 围栏体检（CI 里扫 docs/；本地不带参数时扫 docs/ 与 drafts/）
+#   site/tests/                   —— 站点契约测试（学习流归属、死链、页面齐全）
+#   tools/build-content-units.py  —— 内容契约与内容单元编译（--check 只查不改）
 #   tools/check-content-contract.py —— 内容契约
-#   tools/check-markdown.py         —— front matter 与格式
-#   tools/check-internal-links.py   —— 站内链接
-#   .github/workflows/site-guard.yml —— 根级站点契约测试
 # 这套闸门就是站点的「平台审核」。
 review = "precheck"
 
@@ -51,21 +54,22 @@ verified = "2026-11-18"
 
 [limits]
 # 站点唯一的媒体限额是**我们自己的取舍**，不是站点的限制：
-# 站点产物一共 167 MB / 2400 个文件（2026-11-18 实测，
-# CI 部署那一步要搬三遍），单张图超过 2 MB 就会让 git 仓库
-# 与 CI 传输都明显变重。
-#
-# 站点的 markdown 里图片走 source/images/，按原文件名落盘，
-# 不做转码——所以这个数字约束的是**进 git 之前**，
+# 站点的图片随母稿进 git（docs/ 下），构建时按原文件名拷进 public/images/，
+# 不做转码——所以这个数字约束的是「**进 git 之前**」，
 # 不是「上传到站点时」。
+#
+# 2 MB 这个数来自旧站点的实测（那时产物有 167 MB / 2400 个文件）。
+# 现在站点重做成 Astro（2026-11-18），产物是 693 KB / 66 个文件——
+# 体积不再是大头，但**图片进 git 这一点没变**，所以这条约束照旧成立：
+# 单张图超过 2 MB，仓库与 CI 传输都要明显变重。
 image_bytes = 2097152
 
 [adapter]
 # 包目录是 <仓库>/platforms/blog/，命令在 <仓库>/platforms/ 下跑：
 # `python3 -m blog.cli status`。
 #
-# 站点没有 `publish` 子命令：它是**全量构建**（一次 push 重建全站
-# 2400 个页面），不是逐篇出包。逐篇的事留给 CI，
-# 这里只提供「这个平台是什么」「这一篇能不能进站」的查询。
+# 站点没有 `publish` 子命令：它是**全量构建**（一次 push 重建全站），
+# 不是逐篇出包。逐篇的事留给 CI，
+# 这里只提供「这个平台是什么」「站上现在是什么样子」「这一篇能不能进站」三个查询。
 package = "blog"
 command = ["python3", "-m", "blog.cli"]

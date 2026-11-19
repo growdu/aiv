@@ -28,11 +28,13 @@
 
     python3 tools/build-content-units.py            # 编译
     python3 tools/build-content-units.py --check    # 只检查（幂等性 + 完整性）
+    python3 tools/build-content-units.py --only <id>  # 只编一篇（只读，出一段 JSON）
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -246,6 +248,50 @@ def compile_units() -> list[Unit]:
     return units
 
 
+def locate_source(rel_id: str) -> Path:
+    """在 `docs/` 里定位一篇稿子。
+
+    `rel_id` 是相对 `docs/` 的路径，带不带 `.md` 都认。三种形态都找：
+
+    | 形态 | 位置 | 内容单元 id |
+    | --- | --- | --- |
+    | flat 稿 | `docs/<名>.md` | `<名>` |
+    | bundle 稿 | `docs/<名>/index.md` | `<名>/index` |
+    | 分类页 | `docs/<名>/_index.md` | `<名>/_index` |
+    """
+    rel = rel_id.strip().lstrip("/")
+    if rel.endswith(".md"):
+        rel = rel[:-3]
+    for candidate in (DOCS / f"{rel}.md", DOCS / rel / "index.md", DOCS / rel / "_index.md"):
+        if candidate.is_file():
+            return candidate
+    raise CompileError(f"docs/ 里找不到这一篇：{rel_id}")
+
+
+def compile_only(rel_id: str) -> dict:
+    """只编译一篇，返回它推导出来的字段。**不动磁盘。**
+
+    给「这一篇能不能进站」这类问题用的——**规则只在这里有一份**，
+    平台层（`platforms/blog/cli.py`）问的是这个编译器，不是自己抄一遍规则。
+    """
+    path = locate_source(rel_id)
+    unit = build_unit(path)
+    rel = unit.path.as_posix()
+    unit_id = rel[:-3] if rel.endswith(".md") else rel
+    return {
+        "ok": True,
+        "unit_id": unit_id,
+        "kind": unit.kind,
+        "title": unit.title,
+        "description": unit.description,
+        "date": unit.date,
+        "author": unit.author,
+        "categories": unit.categories,
+        "tags": unit.tags,
+        "source_path": rel,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="把 docs/ 编译成 content/units/")
     ap.add_argument(
@@ -253,7 +299,21 @@ def main() -> int:
         action="store_true",
         help="只检查：编译到内存里，跟磁盘上已有的内容单元比对，不一致就非零退出",
     )
+    ap.add_argument(
+        "--only",
+        metavar="ID",
+        help="只编一篇（相对 docs/ 的路径，带不带 .md 都认），只读，出一段 JSON",
+    )
     args = ap.parse_args()
+
+    if args.only:
+        try:
+            result = compile_only(args.only)
+        except CompileError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
 
     try:
         units = compile_units()

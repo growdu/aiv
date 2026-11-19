@@ -1,0 +1,8 @@
+# 站点模块（platforms/blog/site/）与根编译器（tools/build-content-units.py）。
+#
+# pyyaml —— 内容单元编译器与学习流编译器都要读 front matter。
+#           （站点这一层没有自己的依赖文件：编译器在根 tools/，
+#           是平台无关的那一半，两边共用这一份。）
+# pytest —— 站点自己的守卫测试（site/tests/）。
+-r dev.txt
+pyyaml>=6.0

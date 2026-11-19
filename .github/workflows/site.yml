@@ -1,0 +1,176 @@
+name: Site
+
+# 站点（growdu.cn）的构建与校验。
+#
+# 2026-11-18 站点重做之前，这里有两条工作流：
+#   hexo.yml       —— 构建与部署（hexo + matery 主题）
+#   site-guard.yml —— 站点契约测试
+# 站点重做把 hexo 换成了 Astro，两条都作废了：
+# hexo.yml 引用的 `sync-hexo.py`、`adapt-units.py`、`_config.matery.yml`、
+# `themes/matery/`、`patch-theme.py`、`copy-vendor.py`、`subset-icons.py`、
+# `source/sw.js` **全部不存在**——它每次 push 必红，却一直没人看见。
+#
+# 现在合成这一条，两个 job：
+#   verify —— 守约束（内容单元是最新的、围栏体检、学习流数据是最新的）
+#   build  —— 出产物（Astro 构建 + 站点守卫测试 + 产物作为 artifact 挂上）
+#
+# **不部署。** upload 那一步留给上线那一轮（见
+# `review/specs/2026-11-18-站点重做-学习流门面.md` §十四）。
+# 线上 growdu.cn 现在还是旧版；这一条只保证「新站能构建出来、且没死链」。
+#
+# 为什么校验与构建分开：校验是纯 Python、几秒钟的事，一个模块红了
+# 不该让另一个人等 npm install；构建要装依赖、跑 Astro，慢一个量级。
+# 两个 job 各带 `timeout-minutes`——run 不结束 → 并发组不释放 →
+# 后面全卡在 pending。
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  # 这里可以取消：校验与构建都只关心最新状态，几分钟的事。
+  # 部署那种「必须跑完」的活才不能取消。
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: 校验
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # 编译器用 git log 取母稿**最早一次提交**的时间当日期，
+          # 浅克隆（checkout 的默认行为）只带最新一个提交，日期会算错。
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 装依赖
+        run: python3 -m pip install -r requirements/site.txt
+
+      - name: 编译内容单元
+        # docs/（已过审的母稿）→ content/units/（所有平台共用的那一半）。
+        # 内容单元**不入库**，所以 CI 里现编——本地跑过不代表 CI 有。
+        run: python3 tools/build-content-units.py
+
+      - name: 编译视频内容单元
+        # 视频线的口播稿 → content/units/video/。母稿在 video/ 那一线，
+        # 不在 docs/ 里，所以这一步跟上面那一步是两件事。
+        # **必须在上面那一步之后**：学习流的规则表按 id 归类，
+        # 视频单元晚一步出现就会「漏归类」，学习流编译直接断。
+        run: python3 tools/build-video-pages.py
+
+      - name: 内容单元与母稿一致
+        # `--check` 干两件事：
+        #   1. **幂等**——再编一遍，与上一步写进磁盘的逐字节比对。
+        #      编译器必须每次编出一样的东西（日期取自 git log，最容易出偏差）。
+        #   2. **无残留**——磁盘上不能有 `docs/` 里已经撤掉的旧单元。
+        #
+        # 注意：**内容单元不入库**（`content/units/` 在 .gitignore 里），
+        # 所以这一步在 CI 里不是「比入库的东西」——它是「比这一轮编出来的
+        # 和上一行编出来的」。本地跑它才有另一层意思：
+        # 你改了 `docs/` 却忘了重新编译，它会告诉你磁盘上的是旧的。
+        run: python3 tools/build-content-units.py --check
+
+      - name: 围栏体检
+        # 扫 docs/：围栏畸形、表格列数不齐、mermaid 块不对……
+        # 这些是**母稿层**的毛病，在这里就报出来，别等渲染时才发现。
+        #
+        # **只扫 docs/，不扫 drafts/。** 站点只编译 docs/，闸门就该跟它对齐。
+        # drafts/ 是草稿箱，里面躺着 560 多篇没过的审的存量镜像，
+        # 格式问题有 79 条——那是**母稿层**的账（见顶层设计 spec 的 G3），
+        # 归审校那一轮处理；在这里一起扫，闸门就永远红着，等于没有闸门。
+        # 本地跑 `python3 platforms/blog/site/tools/check-markdown.py`（不带参数）
+        # 仍然扫 docs/ + drafts/——开发者自查草稿用那条。
+        run: python3 platforms/blog/site/tools/check-markdown.py docs/
+
+      - name: 学习流数据是最新的
+        # 规则表 + 内容单元 → data/learning-path.compiled.json。
+        # 漏归类是**构建失败**，不许静默——所以编译结果入库，
+        # CI 里比对着查。
+        run: python3 platforms/blog/site/tools/build-learning-path.py --check
+
+  build:
+    name: 构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 装依赖
+        # 学习流编译器要读 front matter（pyyaml），站点测试要 pytest。
+        run: python3 -m pip install -r requirements/site.txt
+
+      - name: 编译内容单元
+        # 与 verify job 同样的两步。job 之间不共享工作区，
+        # 所以这一步在这里要再跑一遍。
+        run: |
+          python3 tools/build-content-units.py
+          python3 tools/build-video-pages.py
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: 装站点依赖
+        run: npm ci
+        working-directory: platforms/blog/site
+
+      - name: 构建站点
+        # npm run build = 学习流编译 → 内容同步 → astro build。
+        # **必须在编译内容单元之后**：学习流编译器读的是 content/units/，
+        # 那时候它必须已经在。
+        #
+        # SITE_URL 决定 sitemap 与 canonical 的地址——本机默认是
+        # 192.168.1.99（见 astro.config.mjs），CI 里出的是要发出去的产物，
+        # 所以给上正式域名。
+        run: npm run build
+        working-directory: platforms/blog/site
+        env:
+          SITE_URL: https://growdu.cn
+
+      - name: 站点契约测试
+        # 守的是**产物**：每个内容单元都有页面、站内没有死链
+        # （site/tests/test_pages.py）。
+        #
+        # 这一步不能省，也不能放到 verify job 里——它要的是 dist/，
+        # 而 dist/ 是这个 job 刚构建出来的。
+        run: |
+          set -o pipefail
+          cd platforms/blog/site
+          python3 -m pytest tests/ -q -rf 2>&1 | tee /tmp/pytest.log || true
+          # 失败条目用 ::error:: 报成注解：**不登录也能从 API 看到是哪条挂了**。
+          # 工作流日志要仓库管理员权限才能下，注解不要——CI 挂了却看不到原因，
+          # 等于白跑。
+          #
+          # `|| true` 必须在**大括号里**：管道优先级高于 `||`，写成
+          # `grep ... || true | while` 会被解析成 `grep || (true | while)`；
+          # 而且没有匹配时 grep 退出码是 1，在 `set -e` 下会把整个步骤打断。
+          { grep -E "^(FAILED|ERROR) " /tmp/pytest.log || true; } \
+            | while IFS= read -r line; do
+                echo "::error title=站点契约测试失败::${line}"
+              done
+          if grep -qE "^(FAILED|ERROR) " /tmp/pytest.log; then exit 1; fi
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v7
+        with:
+          name: site-dist
+          path: ./platforms/blog/site/dist
+          retention-days: 3

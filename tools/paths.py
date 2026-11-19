@@ -29,19 +29,40 @@ CONTENT_UNITS = REPO_ROOT / "content" / "units"
 
 # 站点（第六个平台）的家
 SITE = REPO_ROOT / "platforms" / "blog" / "site"
-SITE_SOURCE = SITE / "source"          # 站点私有的源目录
-SITE_POSTS = SITE_SOURCE / "_posts"    # 站点拿到的那份内容单元副本
-SITE_PUBLIC = SITE / "public"          # 站点产物（整站）
-SITE_THEMES = SITE / "themes"
-SITE_TOOLS = SITE / "tools"
-SITE_CONFIG = SITE / "_config.yml"
-#: 站点自己的主题覆盖配置（对 matery 的覆盖层）
-SITE_MATERY_CONFIG = SITE / "_config.matery.yml"
-#: 主题外的自制素材（logo、头像、收款码……）——站点自己的资产，
-#: 不该让构建链伸手到仓库根去拿。
-SITE_ASSETS = SITE / "theme-assets"
-#: 站点私有的数据表（首屏策展、学习路径规则、重定向、阅读量快照……）
+
+#: 站点私有的**数据表**（学习流规则表、编译结果、代码块语言别名表……）。
 SITE_DATA = SITE / "data"
+
+#: 站点私有的工具（学习流编译、内容同步、围栏体检）。
+SITE_TOOLS = SITE / "tools"
+
+#: 站点的**构建产物**——Astro 的输出目录。整站构建的结果都在这儿。
+SITE_DIST = SITE / "dist"
+
+#: 站点的**静态资源源码**目录（`public/`）：favicon 入库，
+#: `images/`、`js/` 是构建时从 `docs/` 与 `node_modules/` 同步进来的，不入库。
+#:
+#: ⚠️ 它**不是**站点产物——产物是 `SITE_DIST`。
+#: （2026-11-18 站点重做之前，这里放的是 hexo 的产物 `public/`，
+#: 同一个名字换了含义，这是那轮重做留下的最隐蔽的一处。）
+SITE_PUBLIC = SITE / "public"
+
+# --- 以下是 hexo 时代的路径 -------------------------------------------------
+#
+# 站点重做（2026-11-18）把 hexo 换成了 Astro，上面的目录已经不存在了。
+# 这些常量**先留着**：引用它们的模块（`publish/`、`platforms/wechat/`、
+# `platforms/toutiao/`、`tools/` 里几个脚本）伸手进站点目录拿东西，
+# 那是那些模块的欠账（见 `review/specs/2026-11-18-站点重做-学习流门面.md` §14.5），
+# 该由那些模块自己解耦掉——**解耦的方式是把跨平台的规则搬回根 `tools/`，
+# 不是继续引用某个平台的私有目录**。
+SITE_SOURCE = SITE / "source"          # 站点私有的源目录（已不存在）
+SITE_POSTS = SITE_SOURCE / "_posts"    # 站点拿到的那份内容单元副本（已不存在）
+SITE_THEMES = SITE / "themes"          # 主题目录（已不存在）
+SITE_CONFIG = SITE / "_config.yml"     # 站点配置（已不存在）
+#: 站点自己的主题覆盖配置（对 matery 的覆盖层，已不存在）
+SITE_MATERY_CONFIG = SITE / "_config.matery.yml"
+#: 主题外的自制素材（logo、头像、收款码……，已不存在）
+SITE_ASSETS = SITE / "theme-assets"
 
 # 根 tools/ —— 平台无关的工具住这儿
 ROOT_TOOLS = REPO_ROOT / "tools"

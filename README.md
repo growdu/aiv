@@ -57,16 +57,17 @@
                    目录名即包名，各自一套 adapter：
                    适配 → 生成 → review → output → upload
 
-  站点这个平台（blog/）的实现是 hexo 那一套：
-     docs/ ──sync-hexo.py──▶ content/units/ ──adapt-units.py──▶ platforms/blog/site/source/_posts/
-            ──hexo generate──▶ platforms/blog/site/public/ ──CI──▶ growdu.cn
+  站点这个平台（blog/）的实现是 Astro 那一套（2026-11-18 站点重做）：
+     docs/ ──tools/build-content-units.py──▶ content/units/
+            ──site/tools/sync-content.py──▶ platforms/blog/site/src/content/units/
+            ──npx astro build──▶ platforms/blog/site/dist/ ──CI──▶ 产物（部署待上线那一轮）
   （站点这一平台的构建链就住在 platforms/blog/site/）
 ```
 
-> **存量说明**：`docs/` 里现有的 560 篇、`video/` 里现有的 6 期成片是**存量**——
-> 它们在草稿箱这一层存在之前就写完、审过、验证过，停在 `review` 的**下游**，
-> **不倒回去**走 `draft → review`。草稿箱约束的是**新内容**。
-> 所以「那 560 篇的草稿在哪」是个没有答案、也**不需要有答案**的问题。
+> **存量说明**：原来的 560 篇文档**已整体撤出 `docs/`**（2026-11-18，commit `8632f8c7`）——
+> 它们没过审，原件留在 `drafts/` 的镜像里。`docs/` 现在只留**已过审**的母稿，
+> 站点也只编译 `docs/`。**存量不回炉**：不补草稿、不倒回去走 `draft → review`——
+> 补出来的是假记录。`video/` 里现有的 6 期成片同理。
 
 ### 三条产线的分工
 
@@ -74,7 +75,7 @@
 
 | 产线 | 输入 | 产物 | 事实来源 |
 | --- | --- | --- | --- |
-| 技术站点 | `docs/` | 静态站 `platforms/blog/site/public/` | `docs/` |
+| 技术站点 | `docs/` | 静态站 `platforms/blog/site/dist/` | `docs/` |
 | 品牌视频 AIV | `video/contracts/*.json` + 口播稿 + 旁白 | 1920×1080 成片 | 契约 + 规范文档 |
 | 多平台分发 | `content/units/` 内容单元 + 能力声明 | 草稿 / 出包 / 已发链接 | `docs/`（内容）+ `platforms/<plat>/outbox/`（状态） |
 
@@ -97,8 +98,8 @@
 | --- | --- | --- | --- |
 | **草稿层** | `drafts/` | 主题 → 手动编写 / 自动生成 → 底稿；两条流水线的共同入口。**新增与修改都从这里开始**，过审才进 `docs/` / `video/`。六条线各有一份镜像（`source-tracks/` 那份是供视频线读素材的工作副本）。**目录即接口**：一级目录 = 分类，二级目录 = 二级内容，一篇文档 = 一期——在这里建目录就是新增一个对外可见的分类，慎重 | 只读 `docs/`、`video/` |
 | **内容层** | `docs/` | 母稿、图片、分类元数据 | 无（纯内容） |
-| **内容编译层** | `tools/`（平台无关）+ `platforms/blog/site/tools/`（站点这一平台的实现） | `docs/` → 内容单元、主题补丁、校验 | 只读 `docs/`，只写 `content/units/` 与站点源目录 |
-| **展示层** | `platforms/blog/site/themes/matery/` | EJS 模板、CSS/JS、静态资源 | Hexo 运行时 |
+| **内容编译层** | `tools/`（平台无关）+ `platforms/blog/site/tools/`（站点这一平台的实现） | `docs/` → 内容单元；学习流规则表 → 站点数据 | 只读 `docs/`，只写 `content/units/` 与站点目录 |
+| **展示层** | `platforms/blog/site/src/` | Astro 工程：页面、组件、布局、渲染层的 remark/rehype 插件 | Astro 运行时 |
 | **视频生产层** | `video/` | 契约 → 时间轴 → 片段 → 成片 | 只读自己的契约与素材 |
 | **审核层** | `review/`、`video/review/` | 审校规则、一期一条记录、抽帧清单 | 只读 `docs/`、`video/` 的契约与产物 |
 | **发布契约层** | `publish/publishkit/` | 内容契约 / 能力模型 / manifest / 调度 | **不认识任何平台** |
@@ -113,25 +114,28 @@
 **站点这一平台的构建链住在 `platforms/blog/site/`**——站点是六个平台之一，
 它的实现就该住在自己的目录里，「加平台只动 `platforms/`」这句话对站点才成立。
 
+站点重做（2026-11-18）把 hexo 换成了 **Astro**：站点不再是「一堆文章页」，
+而是**一条学习流**——首页是赛道地图，每条赛道有阶段，每篇内容挂在某一格里。
+设计与实现记录见
+[`review/specs/2026-11-18-站点重做-学习流门面.md`](review/specs/2026-11-18-站点重做-学习流门面.md)。
+
 | 模块 | 位置 | 干什么 |
 | --- | --- | --- |
-| 内容编译 | `platforms/blog/site/tools/sync-hexo.py` | `docs/` → `content/units/` + 站点 `source/images/`，重建 front matter，生成 landing page |
-| 内容单元适配 | `platforms/blog/site/tools/adapt-units.py` | `content/units/` → 站点 `source/_posts/`（站点是内容单元的**一个消费者**） |
-| 主题补丁 | `platforms/blog/site/tools/patch-theme.py` | marker-based 幂等注入：SEO meta、相关文章、PV、OG 卡片等 |
-| 素材搬运 | `platforms/blog/site/tools/copy-vendor.py` | logo、打赏图 → 主题 `medias/` |
-| 内容校验 | `platforms/blog/site/tools/check-markdown.py` / `tools/fix-markdown.py` | front matter、链接、格式校验与修复 |
+| 内容编译 | `tools/build-content-units.py` | `docs/` → `content/units/`：推导 front matter（标题、描述、日期、分类链），**正文一个字不改** |
+| 视频内容单元 | `tools/build-video-pages.py` | 视频线的口播稿 → `content/units/video/`（母稿在 `video/` 那一线） |
+| 学习流编译 | `platforms/blog/site/tools/build-learning-path.py` | 规则表（`site/data/learning-path.json`）+ 内容单元 → `site/data/learning-path.compiled.json`。**漏归类 = 构建失败** |
+| 内容同步 | `platforms/blog/site/tools/sync-content.py` | `content/units/` → `site/src/content/units/`；`docs/` 的图片 → `site/public/images/`；mermaid 自托管 → `site/public/js/` |
+| 渲染 | `platforms/blog/site/src/` | Astro 工程：页面、组件、布局；链接与图片重写、mermaid 转换在 `site/src/lib/` 的 remark/rehype 插件里 |
+| 围栏体检 | `platforms/blog/site/tools/check-markdown.py` | 扫 `docs/` 与 `drafts/`：畸形围栏、表格列数、mermaid 块…… |
+| 站点守卫 | `platforms/blog/site/tests/` | 学习流归属、死链、页面齐全（26 个用例） |
 | 契约闸门 | `tools/check-content-contract.py` | 按内容契约校验所有内容单元，违规退出码 1（CI 用） |
-| CDN 本地化 | `tools/localize-cdn.py` | 把主题的 jsDelivr CDN 换成本地资源（国内访问） |
-| 评论初始化 | `platforms/blog/site/tools/init-gitalk-issues.js` | 为新文章预创建 Gitalk issue |
-| Hexo 扩展 | `platforms/blog/site/scripts/*.js` | filter/helper：mermaid 渲染、HTML 文章处理、智能摘要 |
-| 主题 | `platforms/blog/site/themes/matery/` | 站点外观；覆盖配置在 `platforms/blog/site/_config.matery.yml`（**不要改主题自带的 `_config.yml`**） |
 
-配置分工：`_config.yml` 是 Hexo 自身的；`_config.matery.yml` 是对主题的覆盖。
-站点的 `source/` 与 `public/` 都在 `.gitignore` 里，CI 现生成；
+`site/` 里**入库的是私产**（`src/`、`data/`、`tools/`、`tests/`、`public/favicon.svg`），
+**不入库的是产物**（`site/src/content/units/`、`site/public/images|js/`、`site/dist/`）；
 `content/units/` 同理——它也是构建产物。
 
 > **内容单元住在 `content/units/`**，不在站点目录里：它**所有平台共用**，
-> 是「内容单元」这一层与各平台之间的接缝。站点通过 `adapt-units.py` 拿自己那份副本。
+> 是「内容单元」这一层与各平台之间的接缝。站点通过 `sync-content.py` 拿自己那份副本。
 > 见 [`review/specs/2026-11-18-顶层设计与目录调整.md`](review/specs/2026-11-18-顶层设计与目录调整.md) §4.2。
 
 ### 2.3 AIV 视频生产线
@@ -202,7 +206,7 @@
 | --- | --- | --- | --- |
 | 微信公众号 | `platforms/wechat/` | 图文 → 草稿箱（`draft/add`） | `api_draft`：自动生成 + 自动进草稿箱，**发表由人点**（账号无发表接口权限） |
 | 今日头条 | `platforms/toutiao/` | 图文 → 头条版排版包 / 半自动出包 | `manual`（能力声明）：出包 + 人工发（账号未认证，API 权限开不了） |
-| **个人站点** | `platforms/blog/` | markdown → 整站静态站 → CI 部署 | **`api_publish`**：六个里唯一——推上去就部署（`review = "precheck"`，靠本地闸门） |
+| **个人站点** | `platforms/blog/` | markdown → 整站静态站 → CI 构建（部署待上线那一轮） | **`api_publish`**：六个里唯一——这个平台没有「等人点发表」这回事（`review = "precheck"`，靠本地闸门） |
 | 抖音 | `platforms/douyin/` | 视频 → 竖版切片 + 出包 + 浏览器上传（后台可暂存 `drafted`，待你点发表） | `manual`：个人主体拿不到 API 凭据，走浏览器自动化 |
 | 微信视频号 | `platforms/channels/` | 视频 → 切片 + 人工发布清单 | `manual`：视频号无普通创作者发布接口 |
 | 哔哩哔哩 | `platforms/bilibili/` | 视频 → 投稿包 + 字幕 | `manual`（`ARC_BASE` 权限开通后可转 `api_publish`） |
@@ -216,7 +220,7 @@
 超长文章拆分、SVG/代码高亮、mermaid、合集与分类、品牌图文，已跑到草稿箱。
 
 **站点是唯一的例外，例外只有一处：出包粒度。**
-那五个是「一篇一个包、发一篇」，站点是「一次 push 重建全站 2400 个页面」——
+那五个是「一篇一个包、发一篇」，站点是「一次 push 重建全站」——
 所以 `platforms/blog/` **没有 `publish` 子命令**，只有 `status` 与 `check`。
 详见 [`platforms/blog/docs/01-站点即第三方平台.md`](platforms/blog/docs/01-站点即第三方平台.md)。
 
@@ -241,9 +245,9 @@
    `docs/`（或 `video/`）那一份，所以 `docs/` 里任何时刻都是**已过审的版本**。
    **主题**（用户产生 idea 时输入的一段话）也一样——它是流水线的**输入**，
    落进草稿的 front matter `topic:` 字段，不建目录、不单独成层。
-9. **存量不回炉**：`docs/` 里现有的 560 篇、`video/` 里现有的 6 期成片是**存量**，
-   在草稿箱这一层存在之前就写完、审过、验证过，停在 `review` 的**下游**。
-   **不补草稿、不倒回去走 `draft → review`**——补出来的 560 份是假记录。
+9. **存量不回炉**：原来的 560 篇文档已整体撤出 `docs/`（没过审，原件在 `drafts/` 的镜像里），
+   `video/` 里现有的 6 期成片是**存量**。
+   **不补草稿、不倒回去走 `draft → review`**——补出来的是假记录。
    草稿箱管的是**新内容与改动**，存量本身不回炉。
 10. **目录即接口**：`docs/` 的**目录结构**就是接口——一级目录 = 一个分类，
     二级目录 = 一块二级内容，一篇文档 = 一期。方向与系列**目录派生**，
@@ -258,7 +262,7 @@
 
 | 契约 | 文件 | 生产者 | 消费者 |
 | --- | --- | --- | --- |
-| 内容契约（front matter） | `docs/**` 的 front matter | 作者 | sync-hexo → Hexo → 各 adapter |
+| 内容契约（front matter） | `docs/**` 的 front matter | 作者 | 内容单元编译器 → 内容单元 → 各 adapter |
 | 平台能力 | `platforms/<id>/capability.toml` | 手写（对着平台文档复核） | publishkit + adapter |
 | 发布清单 manifest | JSON（内存/落盘） | publishkit | adapter |
 | 视觉分镜契约 | `video/contracts/<EP>.json` | 作者 | pyv 渲染引擎 |
@@ -273,12 +277,13 @@
 
 | 路径 | 内容 | 是否入库 |
 | --- | --- | --- |
-| `docs/` | 内容母稿（唯一真相） | ✅ |
+| `docs/` | 内容母稿（唯一真相；**只有已过审的**） | ✅ |
 | `content/units/` | 内容单元仓库（CI 生成；**所有平台共用的那一半**） | ❌ 构建产物 |
-| `platforms/blog/site/source/` | Hexo 源（CI 生成；站点平台的产物） | ❌ 仅 `all/`、`recommended/` |
-| `platforms/blog/site/public/` | 构建产物（站点平台的产物） | ❌ |
-| `platforms/blog/site/themes/matery/` | 主题（站点平台的实现） | ✅ |
-| `platforms/blog/site/` | 站点这一平台的构建链：配置、主题、脚本、hexo 扩展 | ✅（产物除外） |
+| `platforms/blog/site/src/` | Astro 工程：页面、组件、布局、渲染插件（站点平台的实现） | ✅ |
+| `platforms/blog/site/src/content/units/` | 内容单元的站点副本（构建时同步） | ❌ 构建产物 |
+| `platforms/blog/site/public/` | 静态资源源码（favicon 入库；`images/`、`js/` 同步进来） | 仅 favicon ✅ |
+| `platforms/blog/site/dist/` | 构建产物（整站） | ❌ |
+| `platforms/blog/site/` | 站点这一平台的构建链：页面、数据、工具、守卫 | ✅（产物除外） |
 | `tools/` | 平台无关的构建与校验脚本（含 `paths.py`——路径常量的唯一出处） | ✅ |
 | `video/` | 视频生产线（规范 + 契约 + 代码） | ✅ 产物除外 |
 | `video/build/`、`video/out/` | 片段与成片 | ❌ |
@@ -288,7 +293,7 @@
 | `platforms/<plat>/` | 平台 adapter（**六个**平台各一个目录，含能力声明 `capability.toml` 与发布快照 `outbox/`；目录名即平台 id） | ✅ |
 | `platforms/blog/site/` | 站点这一平台的构建链（已搬到位） | ✅ |
 | `requirements/` | 依赖清单（按模块分文件） | ✅ |
-| `.github/workflows/` | `hexo.yml`（构建部署）、`contracts.yml`（契约闸门） | ✅ |
+| `.github/workflows/` | `site.yml`（站点构建与校验）、`contracts.yml`（契约闸门）、`video-pipeline.yml`（视频线） | ✅ |
 
 ---
 
@@ -296,9 +301,11 @@
 
 ```bash
 # 站点（在 platforms/blog/site/ 里）
-npm run sync          # docs → content/units/ → 站点 source/_posts/（等价 platforms/blog/site/tools/sync-hexo.py + adapt-units.py）
-npm run build         # hexo generate
-npm run server        # 本地预览
+npm run compile       # 学习流规则表 + 内容单元 → site/data/learning-path.compiled.json
+npm run sync          # 内容单元 → site/src/content/units/；docs/ 的图片 → public/images/
+npm run build         # compile + sync + astro build（产物在 site/dist/）
+npm run preview       # 本地预览
+npm test              # 站点自己的守卫测试（26 个用例）
 
 # AIV 视频（cd video/pipeline）
 make test             # 全量测试
@@ -316,12 +323,13 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 cd publish && python3 -m publishkit.cli schedule status
 
 # 站点这个平台（cd platforms）
-python3 -m blog.cli status                # 这个平台是什么、有什么限额、账本上多少条
-python3 -m blog.cli check <content_id>    # 这一篇能不能进站（标题 / 构建排除 / 分类链）
+python3 -m blog.cli status                # 这个平台是什么、站上现在是什么样子
+python3 -m blog.cli check <content_id>    # 这一篇能不能进站（母稿 / 编译器 / 地址 / 学习流归属）
 
-# 契约闸门
-python3 platforms/blog/site/tools/sync-hexo.py   # 先产出内容单元（content/units/）
-python3 tools/check-content-contract.py         # 校验 578 个内容单元（572 篇文章 + 6 期视频内容单元），违规退出码 1
+# 内容单元与契约闸门（在仓库根）
+python3 tools/build-content-units.py      # docs/ → content/units/（母稿编译）
+python3 tools/build-video-pages.py        # 视频线的口播稿 → content/units/video/
+python3 tools/check-content-contract.py   # 按内容契约校验内容单元，违规退出码 1
 ```
 
 ---
@@ -334,8 +342,11 @@ python3 tools/check-content-contract.py         # 校验 578 个内容单元（5
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements/publish.txt        # 契约层与调度层（零运行时依赖）
 pip install -r requirements/wechat.txt         # 公众号 adapter
+pip install -r requirements/site.txt           # 站点模块与根编译器（含 pyyaml）
 pip install -r requirements/video-pipeline.txt # AIV 视频生产线
 ```
+
+站点还要 Node 22 与 `npm ci`（在 `platforms/blog/site/` 里）。
 
 pip 装不了的系统依赖：`ffmpeg` / `ffprobe`（出片与切片）、中文字体（封面与字幕）、
 cairo 的头文件（`pycairo`）。
@@ -344,10 +355,14 @@ cairo 的头文件（`pycairo`）。
 
 | 工作流 | 干什么 | 触发 |
 | --- | --- | --- |
-| `hexo.yml` | 构建与部署 | push 到 master |
+| `site.yml` | 站点构建与校验：两个 job——「校验」（内容单元是最新的、围栏体检、学习流数据是最新的）与「构建」（Astro 构建 + 站点守卫测试 + 产物挂成 artifact） | push 或 PR 到 master |
 | `contracts.yml` | 内容契约 + 契约层 / 头条 / 公众号测试 | push 或 PR 到 master |
 | `video-pipeline.yml` | 在 Ubuntu 上真跑一遍 AIV：装系统依赖与内置字体，跑全部测试（含真的合成出一段成片） | push / PR 到 master 且动了 `video/**` |
-| `site-guard.yml` | 根级站点契约测试：部署工作流的形状、文档死链与页内锚点、站点根路径前缀 | push 或 PR 到 master |
+
+`site.yml` **不部署**：线上 growdu.cn 还是旧版，那一步留给上线那一轮。
+它拆成两个 job 是因为校验是纯 Python、几秒钟的事，一个模块红了不该让另一个人
+等 npm install；两个 job 各带 `timeout-minutes`——run 不结束 → 并发组不释放 →
+后面全卡在 pending。
 
 `contracts.yml` 里的四步：产出内容单元 → 内容契约闸门（违规即失败）→
 契约层测试 → 两个 adapter 的测试。视频线（video）不在里面：它要 cairo 与
@@ -356,9 +371,10 @@ ffmpeg 这套系统依赖，失败模式是「渲染不出片」而不是「契�
 测试里**真的会合成出一段成片**并按规格核对（逐像素基准那条在 Linux 上会
 跳过并说明原因，不是红，也不是假装绿）。
 
-`site-guard.yml` 跑的是根级 `tests/`：这些测试以前只在本机跑，CI 里没有任何
-地方执行它们，于是「测试全绿」和「CI 绿」是两件事。它**不阻塞部署**
-（独立工作流、独立并发组），挂了只报注解。
+站点模块的测试住在 `platforms/blog/site/tests/`，**验收在站点自己的目录里跑**
+（`cd platforms/blog/site && python3 -m pytest tests/ -q`）。它守的是**产物**
+（每个内容单元都有页面、站内没有死链），所以必须先有 `dist/`——`site.yml`
+里那一步放在 build job 内就是这个原因，没构建过就跳过。
 
 ### 给一篇文章声明发布平台
 
@@ -386,8 +402,8 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 
 | 模块 | 状态 |
 | --- | --- |
-| 站点构建 | 成熟，CI 全自动（2~3 分钟） |
-| 内容契约 | 闸门已进 CI（`contracts.yml`）；578 个内容单元 0 违规 |
+| 站点构建 | 已重做（Astro 学习流门面，2026-11-18）：61 页、26 个守卫用例全绿；CI 里 `site.yml` 只构建 + 校验，**部署待上线那一轮** |
+| 内容契约 | 闸门已进 CI（`contracts.yml`）；10 个内容单元（4 篇母稿 + 6 期视频）0 违规 |
 | 公众号 | 已实现到**草稿箱**；发表接口无权限（`48001`），自动化边界 = 自动进草稿箱；**已进契约层**（能力声明 + outbox 幂等键） |
 | 头条号 | 出包可用；账号未认证，API 权限开不了，走「出包 + 人工发」 |
 | 视频号 / B 站 | 出包 + 人工发布清单；B 站 `ARC_BASE` 未开通 |
@@ -402,15 +418,15 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | --- | --- | --- | --- |
 | 公众号 | `platforms/wechat/capability.toml` | `platforms/wechat/outbox/`（入库） | 草稿箱（人工发表） |
 | 头条号 | `platforms/toutiao/capability.toml` | `platforms/toutiao/outbox/`（入库） | 出包（人工上传） |
-| **个人站点** | `platforms/blog/capability.toml` | `platforms/blog/outbox/`（**现在空着**，账本待回填） | **整站部署**（`api_publish`：推上去就部署；出包是全量重建，不是逐篇） |
+| **个人站点** | `platforms/blog/capability.toml` | `platforms/blog/outbox/`（**现在空着**，账本待回填） | **整站部署**（`api_publish`：出包是全量重建，不是逐篇；部署那一步**还没接**，归上线那一轮） |
 | 抖音 | `platforms/douyin/capability.toml` | `platforms/douyin/outbox/`（入库） | 出包 + 浏览器上传 + 人工确认发表（个人主体拿不到 API 凭据） |
 | 视频号 | `platforms/channels/capability.toml` | `platforms/channels/outbox/`（入库） | 出包 + 人工发布清单 |
 | B 站 | `platforms/bilibili/capability.toml` | `platforms/bilibili/outbox/`（入库） | 投稿包（`ARC_BASE` 未开通） |
 
 **还没就绪的三处**（详见各 spec 的「待验证项」）：
 
-1. 站点**看不到视频**：video widget 关着、菜单无视频入口、outbox 也没汇总成
-   `publish_index`。
+1. 站点**只构建不部署**：新站能构建出来、没死链，但线上 growdu.cn 还是旧版——
+   部署链归上线那一轮。
 2. 调度器**从未真正跑过**：`publish/deploy/` 里的 cron / launchd 模板还没安装，
    `publish/schedule.json` 仍是空的。
 3. **视频审校还没闭环**：六期的文本层信号已出，成片层只有本机有成片的 EP06 跑过；

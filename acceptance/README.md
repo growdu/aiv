@@ -52,7 +52,7 @@
 
 | 接口 | 从 → 到 | 怎么验 | Expected |
 | --- | --- | --- | --- |
-| I1 内容单元 → 站点 | `content/units/` → `platforms/blog/site/source/_posts/` | `diff -r content/units platforms/blog/site/source/_posts` | 无输出（逐字节副本） |
+| I1 内容单元 → 站点 | `content/units/` → `platforms/blog/site/src/content/units/` | `diff -r content/units platforms/blog/site/src/content/units` | 无输出（逐字节副本） |
 | I2 内容单元 → publish 契约层 | `content/units/` → `publish/` | 契约层从 `content/units/` 读出的 `content_id` 集合 == 单元 id 集合 | 集合相等 |
 | I3 内容单元 → toutiao / wechat | `content/units/` → 两个 adapter | 两个 adapter 默认的文章目录 == 内容单元仓库 | 相等 |
 
@@ -79,7 +79,7 @@ I2 已经有测试钉着：`publish/tests/test_episode.py` 的集成用例
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
 | 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、摘要起草 | 196 passed / 3 skipped | 196 passed / 3 skipped |
-| 2 | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点：渲染、构建、主题、部署工作流的形状 | 332 passed | 332 passed |
+| 2 | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点：学习流归属、死链、页面齐全（2026-11-18 站点重做后） | 26 passed | 26 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度 | 411 passed / 1 skipped | 411 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 394 passed / 2 skipped | 394 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 504 passed / 1 skipped | 504 passed / 1 skipped |
@@ -93,6 +93,12 @@ I2 已经有测试钉着：`publish/tests/test_episode.py` 的集成用例
   站点 `tests/` **332 条**。**199 + 332 = 531**——一条不多、一条不少。
 - 计划里写的基线「`tests/` + `publish/tests/` = 939 passed / 4 skipped」也仍然成立：
   归位前 528 + 411 = 939；归位后 (196 + 332) + 411 = 939。
+
+> ⚠️ **站点重做（2026-11-18，hexo → Astro）推翻了上面这组账里的站点那一半。**
+> 站点那一套 332 条是 hexo 时代的（渲染、构建、主题、部署工作流的形状），
+> 随旧站点一起撤掉了；新的站点套件是 **26 条**（学习流归属、死链、页面齐全）。
+> 所以「199 + 332 = 531」这条对账**只对归位那一轮成立**，
+> 不是今天的基线——今天的站点基线是表里第 2 行的 **26 passed**。
 
 ### 视频流水线那 3 个红（**既有的，不是这次改动造成的**）
 
@@ -125,7 +131,7 @@ I2 已经有测试钉着：`publish/tests/test_episode.py` 的集成用例
 | 工作流 | 跑哪几个模块 |
 | --- | --- |
 | `.github/workflows/contracts.yml` | 母稿 / review 层、publish 契约层、头条 adapter、微信 adapter——**每个模块一条 step**，每条带 `if: ${{ !cancelled() }}`，一个模块红不挡住别的模块 |
-| `.github/workflows/site-guard.yml` | 站点模块（带 `::error::` 注解，不登录也能看到是哪条挂了） |
+| `.github/workflows/site.yml` | 站点模块：`verify` job 守约束（内容单元 / 围栏 / 学习流数据），`build` job 出产物 + 跑站点守卫测试（带 `::error::` 注解，不登录也能看到是哪条挂了） |
 | `.github/workflows/video-pipeline.yml` | 视频流水线 |
 
 **每个模块只在一个地方跑一次**——不重复收集，也就不会「多出一条用例」。

@@ -60,8 +60,9 @@
 - 每加一个平台，**下游**要各自适配一遍（内容适配 → 视频生成 → review → output → upload），
   **上游**（`docs/` `video/` `drafts/` `review/`）一个字都不用改。
 
-> 站点这一平台的构建链（hexo / `public/` / 主题 / 站点脚本）**已经搬进 `platforms/blog/site/`**，
-> 所以「加平台只动 `platforms/`」这句话对六个平台**全都**成立。
+> 站点这一平台的构建链（Astro 工程 / 内容同步 / 学习流编译 / 守卫测试）
+> **已经搬进 `platforms/blog/site/`**，所以「加平台只动 `platforms/`」这句话
+> 对六个平台**全都**成立。
 
 ---
 
@@ -153,21 +154,22 @@ image_bytes = 20971520
 
 每个平台的 adapter 干的是同一件事，五个步骤：
 
-| 步 | 干什么 | 站点上的对应物（`platforms/blog/site/`） |
+| 步 | 干什么 | 站点上的对应物 |
 | --- | --- | --- |
-| **适配** | 按 `capability.toml` 的限额裁标题、压正文、配图、转换格式 | `platforms/blog/site/tools/sync-hexo.py` |
-| **生成** | 渲染成平台要的形态（HTML / 竖版切片 / 投稿包 / 静态站） | hexo + `platforms/blog/site/themes/matery/` |
-| **review** | 按这个平台自己的规矩过一遍（封面尺寸、栏目、口径） | `platforms/blog/site/tools/check-*.py` + `site-guard.yml` |
-| **output** | 出一个可发布的东西（包 / manifest / 整站 `public/`） | `platforms/blog/site/public/` |
-| **upload** | 送出去（调平台 API / 浏览器自动化 / CI 部署） | rsync + GitHub Pages |
+| **适配** | 按 `capability.toml` 的限额裁标题、压正文、配图、转换格式 | 根编译器 `tools/build-content-units.py`（母稿 → 内容单元） |
+| **生成** | 渲染成平台要的形态（HTML / 竖版切片 / 投稿包 / 静态站） | Astro：`platforms/blog/site/` 的 `astro build` |
+| **review** | 按这个平台自己的规矩过一遍（封面尺寸、栏目、口径） | `platforms/blog/site/tools/check-markdown.py` + `build-learning-path.py --check` + `platforms/blog/site/tests/` |
+| **output** | 出一个可发布的东西（包 / manifest / 整站） | `platforms/blog/site/dist/` |
+| **upload** | 送出去（调平台 API / 浏览器自动化 / CI 部署） | **还没做**——归上线那一轮 |
 
 **站点的 output 与 upload 粒度不同**：它是全量的一次，
 另外五个是逐篇的一次。所以站点没有 `publish` 子命令。
 
-> **站点的构建链也是平台层的东西。** hexo、`public/`、主题、站点脚本
+> **站点的构建链也是平台层的东西。** Astro 工程、`public/`、站点脚本
 > 都住在 `platforms/blog/site/`，跟站点 adapter 放在一起——
 > 这样「加平台只动 `platforms/`」对站点也成立。
-> 搬移见 `review/specs/2026-11-18-顶层设计与目录调整.md` §4.2（D9 / D10）。
+> 搬移见 `review/specs/2026-11-18-顶层设计与目录调整.md` §4.2（D9 / D10），
+> 站点重做见 `review/specs/2026-11-18-站点重做-学习流门面.md`。
 
 ---
 

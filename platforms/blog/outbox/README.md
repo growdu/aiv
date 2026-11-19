@@ -10,27 +10,27 @@
 
 | 字段 | 意思 |
 | --- | --- |
-| `content_id` | 内容单元 id（`docs/` 下的相对路径） |
+| `content_id` | 内容单元 id（相对 `content/units/` 的路径，不带 `.md`） |
 | `platform` | 平台 id，这里恒为 `blog` |
-| `kind` | `document` / `video`——站点只收 `document` |
+| `kind` | `document` / `video`——站点两种都收（视频单元是口播稿，也是文章） |
 | `status` | `drafted` / `packaged` / `published` / `failed` |
 | `title` | 站上的标题 |
-| `published_url` | 发出去之后的地址；站点的地址就是 `https://growdu.cn/<路径>/` |
+| `published_url` | 发出去之后的地址；站点的地址规则在 `site/src/lib/urls.ts`（文档走 `/docs/<id>/`，视频走 `/videos/<slug>/`） |
 | `reason` | 没发出去时为什么（人读的） |
 | `updated_at` | 快照落盘的时间 |
 
 ## 文件名
 
 `<content_id>__<平台 id>.json` —— 例如
-`source-tracks/postgresql/extensions-perf/benchmarksql使用教程__blog.json`。
+`source-tracks/postgresql/getting-started/postgresql基操__blog.json`。
 
 **文件名就是幂等键**，跟另外五个平台同一个约定。
 同一个 `content_id` 在同一个平台上只该有一份快照：重跑一遍发布，
 撞到已有的快照就说明「这篇发过了」，不重复发。
 
 > 这条跟另外五个平台有一个**前提差别**：那五个是「一篇一篇发」，
-> 发过的不能重发。站点是**整站重建**——一次 push 把全站 2400 个页面
-> 重来一遍，同一篇文章当然会被重新渲染、重新部署。
+> 发过的不能重发。站点是**整站重建**——一次 push 把全站重来一遍，
+> 同一篇文章当然会被重新渲染、重新部署。
 > 所以站点这边的快照记的不是「发过没有」，而是
 > **「这一篇当前在站上是什么状态」**。它是账，不是锁。
 
@@ -40,12 +40,12 @@
 
 站点刚被登记成第六个第三方平台（2026-11-18，见
 `review/specs/2026-11-18-顶层设计与目录调整.md`），
-账本还没建——要把 560 篇内容单元全部回填成快照，
+账本还没建——要把全部内容单元回填成快照，
 得先定「回填的 status 是什么」（站上从来没有「published_at」，
 只有 git 历史），这是个要单独做的一步，不在这一次里。
 
 在账本建起来之前，站点「发了没有」的真相在两个地方：
-**git 历史**（哪一次 push 把它带上站的）与 **CI 构建产物**（`public/`）。
+**git 历史**（哪一次 push 把它带上站的）与 **CI 构建产物**（`site/dist/`）。
 快照补上之后，这两个才是补充，不是唯一。
 
 > ⚠️ 这个目录**不许先放快照试试**。
