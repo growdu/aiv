@@ -188,7 +188,7 @@ def test_brand_copy_is_in_sync_with_the_specs():
     docs = {
         "形象与音色规范": (aiv / "形象与音色规范.md").read_text(encoding="utf-8"),
         "人格规范": (aiv / "人格规范.md").read_text(encoding="utf-8"),
-        "brand/README": (aiv / "brand" / "README.md").read_text(encoding="utf-8"),
+        "brand/readme": (aiv / "brand" / "readme.md").read_text(encoding="utf-8"),
     }
     for text in (render.INTRO_TAGLINE, render.INTRO_CAPTION, render.OUTRO_SUBTITLE,
                  render.INTRO_NARRATION, render.OUTRO_NARRATION):

@@ -1,11 +1,4 @@
 {
-  "note": "占位内容单元：这些稿子是历史产物（口径与术语都是旧的），正在重写。重写完就删掉这个文件，站点自动恢复原样。**这里只标「是占位」，不改内容**——改稿是视频线的事。",
-  "units": [
-    "video/csn-total-ordering",
-    "video/parallel-apply",
-    "video/pg-parallel-decode",
-    "video/row-lock",
-    "video/structured-ddl",
-    "video/wal-interleave"
-  ]
+  "note": "占位内容单元：这些稿子是历史产物（口径与术语都是旧的），正在重写。**这里只标「是占位」，不改内容**——改稿是视频线的事。\n\n名单当前是空的：清空重建之后没有占位稿。往里加 id，那个单元的页面上就会明说「这是占位」。",
+  "units": []
 }

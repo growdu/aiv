@@ -81,12 +81,12 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/life/aiv/背景音乐规范.md`
 - `docs/life/aiv/人格规范.md`
 - `docs/life/aiv/形象与音色规范.md`
-- `docs/life/aiv/brand/README.md`
-- `docs/life/aiv/brand/scripts/README.md`
-- `docs/life/aiv/character/README.md`
-- `docs/life/aiv/index.md`
-- `docs/life/aiv/music/README.md`
-- `docs/life/aiv/voice/README.md`
+- `docs/life/aiv/brand/readme.md`
+- `docs/life/aiv/brand/scripts/readme.md`
+- `docs/life/aiv/character/readme.md`
+- `docs/life/aiv/视频线总览.md`
+- `docs/life/aiv/music/readme.md`
+- `docs/life/aiv/voice/readme.md`
 
 ### 桶 4 转载内容（0 篇）
 

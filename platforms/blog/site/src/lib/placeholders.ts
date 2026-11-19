@@ -8,7 +8,7 @@
  *
  * **这里只标状态，不改内容**：改稿是内容线的事，站点这边只负责不误导读者。
  *
- * 名单在 `site/data/placeholder-units.json`；重写完删掉那个文件，
+ * 名单在 `site/data/placeholder-units.json`；重写完把名单清空，
  * 站点自动恢复原样。
  */
 import data from '../../data/placeholder-units.json';

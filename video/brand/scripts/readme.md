@@ -42,7 +42,7 @@ python3 scripts/generate_poses.py             # 点赞 / 挥手姿态（眼镜�
 python3 scripts/generate_backgrounds.py       # 两张 AI 背景（生成完过语义验收）
 ```
 
-三个脚本的分工与踩过的坑见 [`../README.md`](../README.md)。
+三个脚本的分工与踩过的坑见 [`../readme.md`](../readme.md)。
 
 ## 旧版 8 秒片（已废弃，保留作兜底素材的再生成入口）
 

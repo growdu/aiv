@@ -86,9 +86,9 @@ python3 -m pyv.cli config <key>
 | [上机指南.md](上机指南.md) | 换机器怎么装依赖、字体差异、常见故障 |
 | [review/README.md](review/README.md) | 视频审校规范：两层规则、抽帧方法、一期一条记录 |
 
-模块自己的说明在 [character/README.md](character/README.md)、
-[brand/README.md](brand/README.md)、[voice/README.md](voice/README.md)、
-[music/README.md](music/README.md)。
+模块自己的说明在 [character/readme.md](character/readme.md)、
+[brand/readme.md](brand/readme.md)、[voice/readme.md](voice/readme.md)、
+[music/readme.md](music/readme.md)。
 
 ## 选题库
 
@@ -357,15 +357,25 @@ python3 tools/build-content-units.py         # docs/ → content/units/（站点
 ### AIV 专题页
 
 专题页「AIV 视频生产线：九个环节、唯一契约与入库边界」
-（正本 `index.md`，发布副本 `docs/life/aiv/index.md`）讲的是这条线本身：
+（正本 `视频线总览.md`，发布副本 `docs/life/aiv/视频线总览.md`）讲的是这条线本身：
 九个环节、唯一契约、入库边界，以及「片尾接回片头」的配乐闭环。
 
 **补页面，而不是改链接**：目标页不存在时相对链接原样留下，所以要**把页面写出来**，
 而不是去改引用它的那些链接（原理见上一节）。
 
-落地方式：正本 `index.md` + 发布副本 `docs/life/aiv/index.md`，
-并把 `index.md` 加进 `video/scripts/sync_publish_docs.py` 的 `PUBLISH_DOCS`，
+落地方式：正本 `视频线总览.md` + 发布副本 `docs/life/aiv/视频线总览.md`，
+并把 `视频线总览.md` 加进 `video/scripts/sync_publish_docs.py` 的 `PUBLISH_DOCS`，
 这样副本漂移继续被 `test_publish_copy.py` 抓住。
+
+**发布出去的文件名就是 URL 的一段**，所以有两条硬要求：
+
+- **一律小写**——站点会把 URL 段小写化，`README.md` 上去变成 `readme/`，
+  而别处的链接按原名写，就对不上了。
+- **不能叫 `index.md`**——那是目录落地页的位置，一篇叫 `index.md` 的稿子
+  会跟同目录的分类页抢同一个 URL，稿子直接消失（站上就少了一页，还不报错）。
+
+这两条由 `video/scripts/sync_publish_docs.py` 在发布时守住：白名单里的名字
+不合规，它直接拒绝发布。
 
 ### 一个容易踩的坑：正文里的方括号
 

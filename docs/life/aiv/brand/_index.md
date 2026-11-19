@@ -14,5 +14,5 @@ tags:
 
 ## 文档
 
-- [品牌片头 / 片尾](./README.md)
+- [品牌片头 / 片尾](./readme.md)
 - [品牌片脚本：渲染与配乐](./scripts/_index.md)
