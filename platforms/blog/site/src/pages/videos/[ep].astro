@@ -13,6 +13,7 @@ import DocTree from '../../components/DocTree.astro';
 import Outline from '../../components/Outline.astro';
 import { allUnits } from '../../lib/units';
 import { assignmentOf, getTrack } from '../../lib/learning';
+import { isPlaceholder } from '../../lib/placeholders';
 import { stageUrl, trackUrl } from '../../lib/urls';
 
 export async function getStaticPaths() {
@@ -36,6 +37,7 @@ const stage = track && assignment ? track.stages.find((s) => s.id === assignment
 
 const ep = unit.id.replace(/^video\//, '');
 const media = `/media/videos/${ep}.mp4`;
+const placeholder = isPlaceholder(unit.id);
 const dateText = typeof unit.data.date === 'string' ? unit.data.date : unit.data.date.toISOString().slice(0, 10);
 
 const platformNames: Record<string, string> = {
@@ -84,6 +86,15 @@ const platformNames: Record<string, string> = {
             </p>
           </div>
         </section>
+
+        {placeholder && (
+          <div class="boundary">
+            <b>占位稿。</b>
+            这一期的稿子是历史产物——口径与术语都是旧的（「第三方开发者口径」、
+            「沿用 EP01~EP05」那一套），跟现行的人格与术语表对不上，正在重写。
+            先别拿它当准。
+          </div>
+        )}
 
         {unit.data.description && (
           <div class="prose">

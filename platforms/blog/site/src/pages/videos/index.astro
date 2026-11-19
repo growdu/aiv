@@ -8,10 +8,12 @@ import Base from '../../layouts/Base.astro';
 import UnitRow from '../../components/UnitRow.astro';
 import { allUnits } from '../../lib/units';
 import { tracks } from '../../lib/learning';
+import { isPlaceholder } from '../../lib/placeholders';
 
 const units = await allUnits();
 const byId = new Map(units.map((u) => [u.id, u]));
 const videos = units.filter((u) => u.data.kind === 'video');
+const placeholderCount = videos.filter((u) => isPlaceholder(u.id)).length;
 
 const groups = tracks
   .map((track) => ({
@@ -31,6 +33,14 @@ const groups = tracks
         {videos.length} 期。视频挂在学习流的同一张阶梯上——它们是同一条路的另一种讲法。
       </p>
     </section>
+
+    {placeholderCount > 0 && (
+      <div class="boundary">
+        <b>这 {placeholderCount} 期都是占位稿。</b>
+        口径与术语是历史产物，跟现行的人格与术语表对不上，正在重写。
+        先当草稿看，别当准。
+      </div>
+    )}
 
     {groups.map((group) => (
       <section class="section">

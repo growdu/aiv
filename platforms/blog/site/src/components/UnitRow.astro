@@ -5,6 +5,7 @@
  * 列表里所有的内容都长这样——文档和视频混排，靠徽标区分。
  */
 import { unitUrl } from '../lib/urls';
+import { isPlaceholder } from '../lib/placeholders';
 import type { Unit } from '../lib/units';
 
 interface Props {
@@ -26,6 +27,7 @@ const d = typeof date === 'string' ? date : date.toISOString().slice(0, 10);
     {kind === 'category' && <span class="badge">目录</span>}
     <span class="unit-title">{title}</span>
   </a>
+  {isPlaceholder(unit.id) && <span class="badge ph">占位</span>}
   <span class="unit-date">{d}</span>
   {showDescription && description && <p class="unit-desc">{description}</p>}
 </li>
@@ -65,5 +67,15 @@ const d = typeof date === 'string' ? date : date.toISOString().slice(0, 10);
     color: var(--muted);
     font-size: 13.5px;
     line-height: 1.6;
+  }
+
+  /* 占位稿的标记：琥珀色，跟「视频」那个徽标区分开 */
+  .badge.ph {
+    margin-left: 6px;
+    background: transparent;
+    border: 1px solid var(--accent-line);
+    color: #a86f12;
+    font-size: 11px;
+    vertical-align: 1px;
   }
 </style>
