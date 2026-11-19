@@ -1,4 +1,4 @@
-"""growdu.cn（个人站点）adapter 的命令行入口。
+"""个人站点（blog）adapter 的命令行入口。
 
     python3 -m blog.cli status
     python3 -m blog.cli check <content_id>
@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -51,8 +52,10 @@ SITE_DIR = Path(__file__).resolve().parent / "site"
 LEARNING_PATH = SITE_DIR / "data" / "learning-path.compiled.json"
 DIST_DIR = SITE_DIR / "dist"
 
-#: 站点在公开互联网上的地址。
-SITE_URL = "https://growdu.cn"
+#: 站点在公开互联网上的地址。**由使用者给**，框架不写死：
+#: 环境变量 `SITE_URL`（Astro 构建与 CI 用的也是同一个变量）。
+#: 没配 = 还没上线，status 里如实说「未配置」。
+SITE_URL_ENV = "SITE_URL"
 
 #: 内容单元编译器（平台无关，在根 `tools/`）。**只问它，不自己复刻规则。**
 COMPILER = REPO_ROOT / "tools" / "build-content-units.py"
@@ -191,7 +194,8 @@ def _status() -> int:
     limits = data.get("limits", {})
 
     print("平台：{}（{}）".format(data.get("name", "?"), data.get("id", "?")))
-    print("地址：{}".format(SITE_URL))
+    site_url = os.environ.get(SITE_URL_ENV, "")
+    print("地址：{}".format(site_url or "未配置（设 {} 环境变量）".format(SITE_URL_ENV)))
     print("形态：{}（站点上的一切都是 markdown 页面）".format(data.get("kind", "?")))
     print("自动化：{}".format(data.get("automation", "?")))
     print("发布前审核：{}".format(data.get("review", "?")))
@@ -382,7 +386,7 @@ def _report_assignment(unit_id: str, learnable: bool = True) -> None:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="blog.cli",
-        description="growdu.cn（个人站点）adapter 的命令行入口",
+        description="个人站点（blog）adapter 的命令行入口",
     )
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("status", help="这个平台是什么、站上现在是什么样子")

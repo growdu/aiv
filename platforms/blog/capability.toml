@@ -1,4 +1,4 @@
-# 个人站点 growdu.cn 的平台能力声明。
+# 个人站点（blog）的平台能力声明。
 #
 # 这是**站点第一次被当成第三方平台登记**的地方。在这之前，站点走的是
 # 另一条路：docs/ 母稿 → 编译器 → content/units/ → 站点副本 → Astro → dist/，
@@ -18,7 +18,7 @@
 # .github/workflows/site.yml 的构建步骤。
 
 id = "blog"
-name = "个人站点 growdu.cn"
+name = "个人站点"
 kind = "document"
 
 # 站点不需要任何凭据：推上去就重建，没有账号、没有 token。
@@ -32,7 +32,7 @@ auth = "none"
 #
 # ⚠️ 声明的是这个平台的**档位**（它没有「逐篇等人点发布」这回事）。
 # **部署那一步还没做**：现在的 CI（`.github/workflows/site.yml`）只构建与校验，
-# 不往 growdu.cn 推——上线那一轮才接上。接上之前，站点在公网上还是旧版。
+# 不往线上推——上线那一轮才接上。接上之前，站点在公网上还是旧版。
 automation = "api_publish"
 
 # precheck = 本地预检。

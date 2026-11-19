@@ -12,7 +12,7 @@
 | `bilibili` | 哔哩哔哩 | 视频 | `manual` | 平台机审 | [`bilibili/`](bilibili/) |
 | `channels` | 微信视频号 | 视频 | `manual` | 平台机审 | [`channels/`](channels/) |
 | `douyin` | 抖音 | 视频 | `manual` | 平台机审 | [`douyin/`](douyin/) |
-| `blog` | 个人站点 growdu.cn | 文档 | `api_publish` | 本地预检 | [`blog/`](blog/) |
+| `blog` | 个人站点 | 文档 | `api_publish` | 本地预检 | [`blog/`](blog/) |
 
 > `blog` 是 2026-11-18 顶层设计加进来的第六个平台——**站点也是第三方平台**。
 > 讲清楚它跟另外五个哪儿一样、哪儿不一样，见
