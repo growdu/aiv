@@ -90,7 +90,7 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 504 passed / 1 skipped | 504 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 115 passed | 115 passed |
 | 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1050 passed / 60 skipped | 1050 passed / 60 skipped |
-| 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | （待填） | （待填） |
+| 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 68 passed | 68 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 55 passed | 55 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 99 passed / 64 skipped / 1 failed | 99 passed / 64 skipped / 1 failed |
 
@@ -134,6 +134,29 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 
 > **规律：一条用例如果依赖「仓库里曾经有过的内容」，它迟早会因为
 > 内容被清掉而变成假红。** 新的用例一律在自己造语料。
+
+### 「两个 adapter 补进矩阵」那轮（2026-11-19 夜）
+
+B站与视频号两个 adapter 之前**既不在验收矩阵里，也不在任何 CI 工作流里**——
+它们的红没人看得见。现已进矩阵、进 `contracts.yml`。
+
+| 套件 | 变动 | 为什么 |
+| --- | --- | --- |
+| B站 | 6 红 → 0 红（68 条） | 跟抖音同款根因：`pyv.epmeta.PUBLISH_DIR` 这个常量随视频线重做一起改名成 `EPISODES_DIR` 了，4 处 `monkeypatch.setattr` 全抛 `AttributeError`，用例在夹具阶段就炸了，根本没跑到自己的断言。改法照抖音：自己在 `tmp_path` 里造四层坐标的一期（期目录 + `publish.json`），`monkeypatch` 掉 `epmeta.EPISODES_DIR`。生产代码一行未动 |
+| 视频号 | 4 红 → 0 红（55 条） | 同上 |
+| CI | +2 条 step | `contracts.yml` 现在有 10 条 step，每个模块一条，都带 `if: ${{ !cancelled() }}` |
+
+> 顺带钉住一条以前没有的守卫：**测试不许往仓库的 `platforms/*/outbox/` 写东西**。
+> 基准取**会话起点**而不是每个测试的前后——前后比对看不见**上一个测试**留下的
+> 东西（那个文件在本次起点就已经存在了，于是「前后一样」）。
+> 再补一条判据：入库目录里只允许有 git 跟踪的文件（`git ls-files -z`——
+> 默认的 `git ls-files` 遇到非 ASCII 路径会写成八进制转义并加引号，
+> 拿那个字符串跟文件系统上的真实中文名比对，永远比不上）。
+
+> **B站那轮顺带查出两个真问题**（不是测试红，是生产代码与流水线对不上）：
+> adapter 找成片的路径 `video/out/<期路径>.mp4` 跟流水线出片的
+> `video/out/<ep_id>.mp4` 对不上；快照文件名带斜杠，落在入库目录的**子目录**里。
+> 两条都记在 [`review/specs/2026-11-19-整体架构与模块边界.md`](../review/specs/2026-11-19-整体架构与模块边界.md) §五。
 
 ### 那 1 个红（`browser/`）
 

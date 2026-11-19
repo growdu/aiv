@@ -12,6 +12,7 @@ import pytest
 from PIL import Image
 
 from bilibili import assets, package, snapshot, state
+from conftest import EP_PATH, publish_payload, reprint_payload, write_episode
 
 
 # --- 产物结构 ----------------------------------------------------------------
@@ -505,41 +506,29 @@ def test_marking_published_updates_the_package_meta(meta, video, tmp_path):
 
 
 # --- 命令行端到端 ------------------------------------------------------------
+#
+# 本机素材（成片、storyboard）按 **adapter 自己找它们的路径**摆：
+# 写死一份路径的话，adapter 换了路径约定，测试还在原地测一个
+# 它早就不去的地方。
 
 
-def test_the_cli_packages_and_marks_an_episode(tmp_path, monkeypatch, make_video):
-    """期号 → 元数据 → 发布包 → 回填链接，一条线走完。"""
-    from pyv import epmeta
+def _stage_video(cli, monkeypatch, tmp_path, make_video) -> Path:
+    """把成片摆到 adapter 默认找它的位置。"""
+    monkeypatch.setattr(cli, "AIV_ROOT", tmp_path / "video")
+    video = cli._video_path(EP_PATH)
+    video.parent.mkdir(parents=True, exist_ok=True)
+    make_video(video)
+    return video
 
-    from bilibili import cli
 
-    publish_dir = tmp_path / "publish"
-    publish_dir.mkdir()
-    (publish_dir / "ep02.json").write_text(
-        json.dumps(
-            {
-                "episode": "ep02",
-                "title": "一个 64 位计数器，决定所有事务的提交顺序",
-                "cover_at": 1.0,
-                "url": "https://growdu.cn/2026/11/12/life/aiv/",
-                "bilibili": {
-                    "title": "一个 64 位计数器，决定所有事务的提交顺序",
-                    "description": "并发时 commit 的先后是乱的。",
-                    "tags": ["openGauss", "数据库", "源码"],
-                    "tid": 231,
-                    "copyright": 1,
-                    "no_reprint": 1,
-                },
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
+def _stage_storyboard(cli, tmp_path) -> Path:
+    """把 storyboard 摆到 adapter 默认找它的位置。
 
-    aiv_root = tmp_path / "video"
-    (aiv_root / "out").mkdir(parents=True)
-    make_video(aiv_root / "out" / "ep02.mp4")
-    (aiv_root / "storyboard_ep02.json").write_text(
+    里面有一条字幕——storyboard 在，字幕就得在。
+    """
+    storyboard = cli._storyboard_path(EP_PATH)
+    storyboard.parent.mkdir(parents=True, exist_ok=True)
+    storyboard.write_text(
         json.dumps(
             {
                 "subtitles": [{"start": 0.0, "end": 1.5, "text": "命令行也出字幕"}],
@@ -549,69 +538,57 @@ def test_the_cli_packages_and_marks_an_episode(tmp_path, monkeypatch, make_video
         ),
         encoding="utf-8",
     )
+    return storyboard
 
-    monkeypatch.setattr(cli, "AIV_ROOT", aiv_root)
-    monkeypatch.setattr(epmeta, "PUBLISH_DIR", publish_dir)
-    monkeypatch.setattr(snapshot, "OUTBOX_DIR", tmp_path / "outbox")
+
+def test_the_cli_packages_and_marks_an_episode(episode_dir, tmp_path, monkeypatch,
+                                               make_video):
+    """期号 → 元数据 → 发布包 → 回填链接，一条线走完。
+
+    期在临时目录里现造（四层坐标的期目录 + `publish.json`），
+    成片与 storyboard 也是现场摆的——仓库里既没有内容，也没有成片。
+    """
+    from bilibili import cli
+
+    _stage_video(cli, monkeypatch, tmp_path, make_video)
+    _stage_storyboard(cli, tmp_path)
 
     out = tmp_path / "out"
-    assert cli.main(["package", "ep02", "--out", str(out)]) == 0
-    checklist = (out / "ep02" / "publish.md").read_text(encoding="utf-8")
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 0
+    checklist = (out / EP_PATH / "publish.md").read_text(encoding="utf-8")
     assert "待你上传" in checklist
     assert "已发布" not in checklist
     # storyboard 在，字幕就得在
-    assert "命令行也出字幕" in (out / "ep02" / "subtitle.srt").read_text(encoding="utf-8")
+    assert "命令行也出字幕" in (out / EP_PATH / "subtitle.srt").read_text(encoding="utf-8")
 
     url = "https://www.bilibili.com/video/BV1xx"
-    assert cli.main(["mark", "published", "ep02", "--url", url, "--out", str(out)]) == 0
-    assert cli.main(["status", "ep02", "--out", str(out)]) == 0
+    assert cli.main(["mark", "published", EP_PATH, "--url", url, "--out", str(out)]) == 0
+    assert cli.main(["status", EP_PATH, "--out", str(out)]) == 0
 
     state_data = json.loads((out / "state.json").read_text(encoding="utf-8"))
-    assert state_data["episodes"]["ep02"]["status"] == "published"
-    assert state_data["episodes"]["ep02"]["published_url"] == url
+    assert state_data["episodes"][EP_PATH]["status"] == "published"
+    assert state_data["episodes"][EP_PATH]["published_url"] == url
 
-    shot = json.loads((tmp_path / "outbox" / "ep02__bilibili.json").read_text(encoding="utf-8"))
+    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__bilibili.json")
+                      .read_text(encoding="utf-8"))
     assert shot["status"] == "published"
     assert shot["published_url"] == url
     # 回填出来的快照同样要相对路径——快照要入库
     assert not Path(shot["package_dir"]).is_absolute(), f"package_dir 是绝对路径：{shot['package_dir']}"
 
 
-def test_the_cli_fails_loudly_when_the_video_is_missing(tmp_path, monkeypatch, capsys):
-    """成片不在就报错退出，不能出一个没有视频的包。"""
-    from pyv import epmeta
+def test_the_cli_fails_loudly_when_the_video_is_missing(episode_dir, tmp_path,
+                                                       monkeypatch, capsys):
+    """成片不在就报错退出，不能出一个没有视频的包。
 
+    元数据是有的（期在临时目录里现造）——不然这条命令撞在「读元数据」
+    那步就退出了，「成片不存在」这条分支根本没被走到。
+    """
     from bilibili import cli
 
-    publish_dir = tmp_path / "publish"
-    publish_dir.mkdir()
-    (publish_dir / "ep02.json").write_text(
-        json.dumps(
-            {
-                "episode": "ep02",
-                "title": "x",
-                "cover_at": 1.0,
-                "bilibili": {
-                    "title": "t",
-                    "description": "d",
-                    "tags": ["a"],
-                    "tid": 231,
-                    "copyright": 1,
-                    "no_reprint": 1,
-                },
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
+    monkeypatch.setattr(cli, "AIV_ROOT", tmp_path / "video")
 
-    aiv_root = tmp_path / "video"
-    (aiv_root / "out").mkdir(parents=True)
-
-    monkeypatch.setattr(cli, "AIV_ROOT", aiv_root)
-    monkeypatch.setattr(epmeta, "PUBLISH_DIR", publish_dir)
-
-    assert cli.main(["package", "ep02", "--out", str(tmp_path / "out")]) == 1
+    assert cli.main(["package", EP_PATH, "--out", str(tmp_path / "out")]) == 1
     assert "成片不存在" in capsys.readouterr().err
 
 
@@ -640,73 +617,103 @@ def test_the_drafted_phrase_does_not_say_published():
     assert phrase != notify.phrase("published")
 
 
-def test_marking_drafted_keeps_it_unpublished(tmp_path, monkeypatch, make_video):
+def test_marking_drafted_keeps_it_unpublished(episode_dir, tmp_path, monkeypatch,
+                                             make_video):
     """标成 drafted：状态与快照都更新，但**没有公开链接**。"""
-    from pyv import epmeta
+    from bilibili import cli
 
-    from bilibili import cli, snapshot
-
-    publish_dir = tmp_path / "publish"
-    publish_dir.mkdir()
-    (publish_dir / "ep02.json").write_text(json.dumps({
-        "episode": "ep02", "title": "x", "cover_at": 1.0,
-        "bilibili": {"title": "t", "description": "d", "tags": ["a"],
-                     "tid": 230, "copyright": 1, "no_reprint": 1},
-    }, ensure_ascii=False), encoding="utf-8")
-
-    aiv_root = tmp_path / "video"
-    aiv_root.joinpath("out").mkdir(parents=True)
-    make_video(aiv_root / "out" / "ep02.mp4")
-
-    monkeypatch.setattr(cli, "AIV_ROOT", aiv_root)
-    monkeypatch.setattr(epmeta, "PUBLISH_DIR", publish_dir)
-    monkeypatch.setattr(snapshot, "OUTBOX_DIR", tmp_path / "outbox")
+    _stage_video(cli, monkeypatch, tmp_path, make_video)
 
     out = tmp_path / "out"
-    assert cli.main(["package", "ep02", "--out", str(out)]) == 0
-    assert cli.main(["mark", "drafted", "ep02", "--out", str(out)]) == 0
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 0
+    assert cli.main(["mark", "drafted", EP_PATH, "--out", str(out)]) == 0
 
     state_data = json.loads((out / "state.json").read_text(encoding="utf-8"))
-    assert state_data["episodes"]["ep02"]["status"] == "drafted"
-    assert state_data["episodes"]["ep02"]["published_url"] is None
+    assert state_data["episodes"][EP_PATH]["status"] == "drafted"
+    assert state_data["episodes"][EP_PATH]["published_url"] is None
 
-    shot = json.loads((tmp_path / "outbox" / "ep02__bilibili.json")
+    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__bilibili.json")
                       .read_text(encoding="utf-8"))
     assert shot["status"] == "drafted"
     assert shot["published_url"] is None
 
 
-def test_marking_published_without_a_url_is_refused(tmp_path, monkeypatch, capsys,
+def test_marking_published_without_a_url_is_refused(episode_dir, tmp_path,
+                                                     monkeypatch, capsys,
                                                      make_video):
     """没有公开链接就不许说「已发布」。
 
     **「存了草稿」被人当成「发出去了」是最贵的错**，
     所以这条命令必须拒绝没有 --url 的 published。
     """
-    from pyv import epmeta
+    from bilibili import cli
 
-    from bilibili import cli, snapshot
-
-    publish_dir = tmp_path / "publish"
-    publish_dir.mkdir()
-    (publish_dir / "ep02.json").write_text(json.dumps({
-        "episode": "ep02", "title": "x", "cover_at": 1.0,
-        "bilibili": {"title": "t", "description": "d", "tags": ["a"],
-                     "tid": 230, "copyright": 1, "no_reprint": 1},
-    }, ensure_ascii=False), encoding="utf-8")
-
-    aiv_root = tmp_path / "video"
-    aiv_root.joinpath("out").mkdir(parents=True)
-    make_video(aiv_root / "out" / "ep02.mp4")
-
-    monkeypatch.setattr(cli, "AIV_ROOT", aiv_root)
-    monkeypatch.setattr(epmeta, "PUBLISH_DIR", publish_dir)
-    monkeypatch.setattr(snapshot, "OUTBOX_DIR", tmp_path / "outbox")
+    _stage_video(cli, monkeypatch, tmp_path, make_video)
 
     out = tmp_path / "out"
-    assert cli.main(["package", "ep02", "--out", str(out)]) == 0
-    assert cli.main(["mark", "published", "ep02", "--out", str(out)]) == 2
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 0
+    assert cli.main(["mark", "published", EP_PATH, "--out", str(out)]) == 2
     assert "--url" in capsys.readouterr().err
+
+
+# --- 磁盘上的那一期 ---------------------------------------------------------
+
+
+def test_the_episode_on_disk_carries_the_episode_path_as_its_identity(
+        on_disk_meta):
+    """期身份 = 期目录相对期根的路径。
+
+    `publish.json` 里的 `episode` 字段填的就是它——出包时 adapter 要拿
+    命令行上的那个期号跟它对上（`pyv.epmeta.check_meta` 的 `epmeta.episode`
+    那道闸）。填错了就是两期认成一期。
+    """
+    assert on_disk_meta.episode == EP_PATH
+    assert on_disk_meta.bilibili["tid"] == 231
+    assert on_disk_meta.bilibili["copyright"] == 1
+
+
+# --- 转载那一档：copyright = 2 必须给 source ---------------------------------
+
+
+def test_a_reprint_episode_packages_with_its_source(episodes_root, tmp_path,
+                                                    monkeypatch, make_video):
+    """转载那一档（`copyright = 2`）给出 `source` 就能出包。
+
+    `source` 是转载的来源地址——平台会拒没有来源的转载（规格 §4.3）。
+    清单里也要说清这是转载：人照着清单填投稿表单。
+    """
+    from bilibili import cli
+
+    write_episode(episodes_root, EP_PATH, reprint_payload(EP_PATH))
+    _stage_video(cli, monkeypatch, tmp_path, make_video)
+
+    out = tmp_path / "out"
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 0
+    checklist = (out / EP_PATH / "publish.md").read_text(encoding="utf-8")
+    # 清单里「原创」那一行的**取值**是转载（行标题就叫「原创」，
+    # 说的是这个字段本身）。
+    assert "| 原创 | 转载 |" in checklist
+
+
+def test_a_reprint_without_a_source_is_refused(episodes_root, tmp_path,
+                                               monkeypatch, make_video, capsys):
+    """转载缺 `source` 就不许出包。
+
+    这条规矩由契约层判（`pyv.epmeta` 的 `required_when`），adapter 只负责
+    把 finding 变成一次干净的失败——**不能悄悄出一个发不出去的包**。
+    """
+    from bilibili import cli
+
+    payload = publish_payload(EP_PATH)
+    payload["bilibili"]["copyright"] = 2      # 转载，但不给 source
+    write_episode(episodes_root, EP_PATH, payload)
+    _stage_video(cli, monkeypatch, tmp_path, make_video)
+
+    out = tmp_path / "out"
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 1
+    err = capsys.readouterr().err
+    assert "source" in err
+    assert not (out / EP_PATH).exists(), "预检没过还留下了半个包"
 
 
 def test_a_failing_webhook_does_not_break_the_run(capsys):
