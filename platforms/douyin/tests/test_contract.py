@@ -2,6 +2,7 @@
 
 import pytest
 
+from conftest import synthetic_copies, write_episode
 from douyin import contract
 from pyv import epmeta
 
@@ -223,31 +224,40 @@ def test_ordinary_technical_words_are_not_domains():
         "PostgreSQL 18 的并行逻辑解码，WAL 交错着写") == []
 
 
-# --- 入库的真实元数据 ------------------------------------------------------
+# --- 合成的期 ---------------------------------------------------------------
+#
+# 仓库里不再存着任何一期：内容是使用者自己的事（框架只做框架）。
+# 闸要守的是**拼装出来的文案**，所以期在测试里现造——造几期形状不同的，
+# 让「每一期都过闸」这条规则在合成素材上也被验一遍。
 
 
-def test_every_stored_episode_passes_the_douyin_gates():
-    """六期入库的抖音文案必须过两道闸。
+def test_every_episode_copy_passes_the_douyin_gates(tmp_path):
+    """每一期的抖音文案必须过两道闸。
 
     闸不是给测试用的——它是真的会在出包时拦住东西。
-    真实文案就躺在仓库里，在这里跑一遍，就不用等到出包那天才发现。
+    期在测试里现造（仓库里没有内容），但闸照样得在它们身上过一遍：
+    短版、中版、长版各有各的文案形状。
     """
     limits = epmeta.load_limits("douyin")
-    for path in sorted(epmeta.PUBLISH_DIR.glob("*.json")):
-        meta = epmeta.load_meta(path.stem)
+    for episode, payload in synthetic_copies():
+        root = write_episode(tmp_path, episode, payload)
+        meta = epmeta.load_meta(episode, root=root)
         copy = contract.slice_copy(meta)
         text = contract.build_text(copy)
-        assert contract.check_text_length(text, limits) == [], path.name
-        assert contract.check_no_outbound(text) == [], path.name
+        assert contract.check_text_length(text, limits) == [], episode
+        assert contract.check_no_outbound(text) == [], episode
 
 
-def test_no_stored_episode_leaks_the_site_domain_into_the_douyin_copy():
+def test_no_episode_copy_leaks_the_site_domain_into_the_douyin_copy(tmp_path):
     """**站点地址不能进抖音文案**——那是站外引流（规格 §6.6.4）。
 
     元数据顶层有个 `url` 字段（站点详情页），别的平台会把它附在文案末尾。
     抖音不行：这一栏留着但 `build_text` 不用它。这条测试守着这个区别。
     """
-    for path in sorted(epmeta.PUBLISH_DIR.glob("*.json")):
-        meta = epmeta.load_meta(path.stem)
+    for episode, payload in synthetic_copies():
+        root = write_episode(tmp_path, episode, payload)
+        meta = epmeta.load_meta(episode, root=root)
         copy = contract.slice_copy(meta)
-        assert meta.url not in contract.build_text(copy), path.name
+        text = contract.build_text(copy)
+        assert meta.url not in text, episode
+        assert contract.check_no_outbound(text) == [], episode

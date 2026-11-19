@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from conftest import EP_PATH
+
 DOUYIN_DIR = Path(__file__).resolve().parents[1]
 
 
@@ -63,11 +65,13 @@ def test_the_missing_video_hint_points_at_the_vertical_target():
     assert "__nobrand" not in cli.MISSING_VIDEO_HINT
 
 
-def test_the_missing_video_hint_reaches_the_terminal(tmp_path, monkeypatch, capsys):
+def test_the_missing_video_hint_reaches_the_terminal(episode_dir, tmp_path,
+                                                      monkeypatch, capsys):
     """提示要真的打到 stderr 上——只写在常量里等于没写。
 
-    把成片目录指到一个空的地方，「缺成片」这条分支就不依赖本机状态：
-    这台机器有六期成片、那台没有，测出来的结果会两样。
+    期在临时目录里现造（仓库里没有内容了），成片目录指到一个空的地方，
+    「缺成片」这条分支就不依赖本机状态：这台机器有成片、那台没有，
+    测出来的结果会两样。
 
     **也不能顺手往仓库的 outbox 写快照**：命令在**另一个进程**里跑，
     conftest 那个 monkeypatch 拦不住。上一版这个测试就把
@@ -77,23 +81,24 @@ def test_the_missing_video_hint_reaches_the_terminal(tmp_path, monkeypatch, caps
     from douyin import cli
 
     monkeypatch.setattr(cli, "AIV_ROOT", tmp_path / "video")
-    assert cli.main(["package", "structured-ddl"]) == 1
+    assert cli.main(["package", EP_PATH]) == 1
     err = capsys.readouterr().err
     assert "vertical" in err
-    assert "make EP=structured-ddl vertical" in err
+    assert f"make EP={EP_PATH} vertical" in err
 
 
 def test_the_default_video_is_the_vertical_one():
-    """默认成片是 `<EP>__vertical.mp4`。
+    """默认成片是竖版那一档（`__vertical`）。
 
     静默回退到横版或带品牌的那版，等于发错片子——发出去就收不回来了：
     横版在抖音信息流里吃亏，带品牌那版会被判过度营销 + 站外引流。
     """
     from douyin import cli
 
-    assert cli._video_path("row-lock").name == "row-lock__vertical.mp4"
-    assert cli._video_path("row-lock").name != "row-lock.mp4"
-    assert cli._video_path("row-lock").name != "row-lock__nobrand.mp4"
+    name = cli._video_path(EP_PATH).name
+    assert name == "short__vertical.mp4"
+    assert name != "short.mp4"
+    assert "__nobrand" not in name
 
 
 def test_marking_published_without_a_url_is_refused(tmp_path):
@@ -103,8 +108,8 @@ def test_marking_published_without_a_url_is_refused(tmp_path):
     assert "--url" in proc.stderr
 
 
-def test_marking_published_without_a_package_is_refused(tmp_path, outbox,
-                                                        capsys):
+def test_marking_published_without_a_package_is_refused(episode_dir, tmp_path,
+                                                        outbox, capsys):
     """**没有发布包就不许回填「已发布」。**
 
     上一版把「发布包不存在」降级成 WARNING，然后照样写状态、照样写快照：
@@ -112,11 +117,14 @@ def test_marking_published_without_a_package_is_refused(tmp_path, outbox,
     下一个人照着快照去找发布包，什么都没有，而「已发布」已经记上去了。
 
     **回填的前提是「发出去的是包里那一版」**。没有包，就没有那一版。
+
+    元数据是有的（期在临时目录里现造）——失败的理由必须正是
+    「没有发布包」，不是「这一期压根没配文案」。
     """
     from douyin import cli
 
     out = tmp_path / "out"
-    assert cli.main(["mark", "published", "row-lock", "--url",
+    assert cli.main(["mark", "published", EP_PATH, "--url",
                       "https://www.douyin.com/video/1", "--out", str(out)]) == 1
     err = capsys.readouterr().err
     assert "发布包不存在" in err
@@ -142,7 +150,8 @@ def test_a_failed_mark_leaves_no_state_behind(tmp_path, capsys):
     assert not (out / "state.json").exists(), "失败的回填留下了状态文件"
 
 
-def test_a_video_that_vanished_gives_an_error_not_a_traceback(tmp_path,
+def test_a_video_that_vanished_gives_an_error_not_a_traceback(episode_dir,
+                                                               tmp_path,
                                                                monkeypatch,
                                                                capsys):
     """成片在预检之后没了：报错退出，别甩 traceback。
@@ -150,6 +159,9 @@ def test_a_video_that_vanished_gives_an_error_not_a_traceback(tmp_path,
     `cmd_package` 先看文件在不在，`build_package` 又探一次——两次之间
     文件没了的话，裸的 `FileNotFoundError` 会一路冒到终端上，
     看着像崩溃，不像「这一条没出包」。
+
+    元数据得先读到（期在临时目录里现造）——不然命令在「读元数据」那步
+    就退出了，这条分支根本没被走到。
     """
     from douyin import cli, package
 
@@ -159,7 +171,7 @@ def test_a_video_that_vanished_gives_an_error_not_a_traceback(tmp_path,
     video = tmp_path / "v.mp4"
     video.write_bytes(b"not really a video")
     monkeypatch.setattr(package, "build_package", _vanished)
-    assert cli.main(["package", "row-lock", "--video", str(video),
+    assert cli.main(["package", EP_PATH, "--video", str(video),
                       "--out", str(tmp_path / "out")]) == 1
     err = capsys.readouterr().err
     assert "ERROR" in err

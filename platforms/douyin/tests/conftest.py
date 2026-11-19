@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -9,6 +10,94 @@ for extra in (REPO_ROOT / "platforms", REPO_ROOT / "video" / "pipeline"):
         sys.path.insert(0, str(extra))
 
 from pyv import epmeta  # noqa: E402
+
+
+# --- 合成的一期 -------------------------------------------------------------
+#
+# **仓库里不再存着任何一期**：内容是使用者自己的事（框架只做框架）。
+# 所以期在测试里现造——造出来的形状必须跟现在的坐标一致：
+#
+# ```
+# video/episodes/<系列>/<合集>/<文档>/<档位>/publish.json
+#                  一级   二级   三级   四级
+# ```
+#
+# 一期 = 一个档位目录，期身份是**期目录相对期根的路径**（四段，斜杠连起来）。
+# `pyv.epmeta.load_meta(期路径)` 落到 `期根/期路径/publish.json`，
+# 所以期路径同时也是 adapter 命令行上那个「期号」。
+
+#: 合成期的坐标：系列 / 合集 / 文档 / 档位。
+EP_COORD = ("数据库内核", "事务与并发", "行锁", "short")
+
+#: 期路径（期身份）：四段用斜杠连起来。
+EP_PATH = "/".join(EP_COORD)
+
+
+def publish_payload(episode: str = EP_PATH, **overrides) -> dict:
+    """一份合法的抖音发布元数据（`publish.json` 的内容）。
+
+    `episode` 字段填**期路径**——出包时它要跟 adapter 拿到的那个期号对上
+    （`pyv.epmeta.check_meta` 的 `epmeta.episode` 那道闸）。
+
+    `url` 是站点详情页：**抖音这一档不许把它放进文案**，
+    所以这里给它一个看着像站点地址的值，让那条规则有东西可守。
+    """
+    payload = {
+        "episode": episode,
+        "title": "PostgreSQL 18 并行逻辑解码",
+        "cover_at": 1.0,
+        "url": "https://example.invalid/2026/11/12/postgres/",
+        "douyin": {
+            "title": "32 核机器，解码只占 1 核",
+            "description": "默认发布端只有一个解码线程，串行处理。",
+            "topics": ["PostgreSQL", "逻辑复制", "数据库内核"],
+        },
+    }
+    payload.update(overrides)
+    return payload
+
+
+def write_episode(root: Path, episode: str = EP_PATH,
+                  payload: dict | None = None) -> Path:
+    """在期根 `root` 下造一期：四层坐标的目录 + `publish.json`。
+
+    返回期目录。目录建在 `root/期路径` 下——期身份就是目录的相对路径。
+    """
+    target = Path(root) / episode
+    target.mkdir(parents=True, exist_ok=True)
+    (target / epmeta.PUBLISH_NAME).write_text(
+        json.dumps(payload if payload is not None else publish_payload(episode),
+                   ensure_ascii=False),
+        encoding="utf-8")
+    return target
+
+
+def synthetic_copies() -> list[tuple[str, dict]]:
+    """三期形状不同的合成文案：短版、中版、长版。
+
+    三个档位各有自己的文案（同一篇文档的三档是三期），
+    长度与话题数都不一样——闸要在这几种形状上都验一遍。
+    """
+    shapes = (
+        ("数据库内核/事务与并发/行锁/short", {
+            "title": "32 核机器，解码只占 1 核",
+            "description": "默认发布端只有一个解码线程，串行处理。",
+            "topics": ["PostgreSQL", "逻辑复制", "数据库内核"],
+        }),
+        ("数据库内核/事务与并发/行锁/mid", {
+            "title": "行锁：一条 UPDATE 卡住整张表",
+            "description": "从 MVCC 讲到锁的等待队列，看清楚并发是怎么串起来的。",
+            "topics": ["PostgreSQL", "行锁", "MVCC", "事务", "并发"],
+        }),
+        ("数据库内核/事务与并发/行锁/full", {
+            "title": "从快照隔离到 Serializable：隔离级别怎么实现的",
+            "description": "从快照隔离到 Serializable，隔离级别到底怎么实现的，一讲到底。"
+                          * 10,
+            "topics": ["数据库", "内核"],
+        }),
+    )
+    return [(episode, publish_payload(episode, douyin=section))
+            for episode, section in shapes]
 
 
 def _encode(path: Path, seconds: int = 3, size: str = "1920x1080") -> Path:
@@ -142,3 +231,37 @@ def meta():
 def video(tmp_path, make_video):
     """现场造一段 3 秒的小视频当成片。"""
     return make_video(tmp_path / "ep01.mp4")
+
+
+# --- 磁盘上的那一期 ---------------------------------------------------------
+
+
+@pytest.fixture
+def episodes_root(tmp_path, monkeypatch):
+    """期根指到临时目录。
+
+    `pyv.epmeta` 的期根是模块常量 `EPISODES_DIR`（`meta_path` 读它，
+    `load_meta` 也就靠它找 `期路径/publish.json`）——
+    改这一个常量，adapter 与测试就都落在临时目录里。
+
+    仓库里不再存着任何一期，所以这不是「绕过」什么，是现在唯一的形态。
+    """
+    root = tmp_path / "episodes"
+    root.mkdir()
+    monkeypatch.setattr(epmeta, "EPISODES_DIR", root)
+    return root
+
+
+@pytest.fixture
+def episode_dir(episodes_root):
+    """一期合成的期目录（四层坐标），里面有一份 `publish.json`。"""
+    return write_episode(episodes_root)
+
+
+@pytest.fixture
+def on_disk_meta(episode_dir):
+    """从磁盘读回来的那一期元数据（走 `epmeta.load_meta` 的默认路径）。
+
+    这是 adapter 真正走的那条路：命令行拿期号 → 读元数据。
+    """
+    return epmeta.load_meta(EP_PATH)
