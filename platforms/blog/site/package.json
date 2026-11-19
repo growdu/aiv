@@ -1,37 +1,22 @@
 {
-  "name": "blog",
-  "version": "1.0.0",
+  "name": "growdu-site",
+  "version": "2.0.0",
   "private": true,
+  "type": "module",
+  "description": "growdu.cn 的站点实现：一条成体系的学习流。Astro 重建（2026-11-18）。",
   "scripts": {
-    "build": "hexo generate",
-    "server": "hexo server",
-    "sync": "python3 tools/sync-hexo.py && python3 ../../tools/build-video-pages.py && python3 tools/adapt-units.py && python3 tools/build-learning-path.py && python3 tools/build-publish-index.py"
-  },
-  "hexo": {
-    "version": "7.3.0"
+    "dev": "astro dev",
+    "build": "npm run compile && npm run sync && astro build",
+    "preview": "astro preview",
+    "compile": "python3 tools/build-learning-path.py",
+    "sync": "python3 tools/sync-content.py",
+    "check": "python3 tools/check-markdown.py",
+    "test": "python3 -m pytest tests/ -q"
   },
   "dependencies": {
-    "hexo": "^7.0.0",
-    "hexo-renderer-marked": "^7.0.1",
-    "hexo-renderer-stylus": "^3.0.0",
-    "hexo-renderer-ejs": "^2.0.0",
-    "hexo-generator-searchdb": "^1.4.0",
-    "hexo-generator-index": "^4.0.0",
-    "hexo-generator-archive": "^2.0.0",
-    "hexo-generator-category": "^2.0.0",
-    "hexo-generator-tag": "^2.0.0",
-    "hexo-generator-sitemap": "^3.0.0",
-    "hexo-generator-feed": "^3.0.0",
-    "hexo-wordcount": "^6.0.1",
-    "prismjs": "^1.29.0",
-    "mermaid": "10.9.8",
-    "gitalk": "^1.7.2",
-    "jquery": "^4.0.0",
-    "materialize-css": "^1.0.0",
-    "@fortawesome/fontawesome-free": "^6.5.1",
-    "aos": "^2.3.4",
-    "swiper": "^14.0.7",
-    "@fancyapps/fancybox": "^3.5.7",
-    "lazysizes": "^5.3.2"
+    "@astrojs/markdown-remark": "^7.3.9",
+    "@astrojs/sitemap": "^3.7.5",
+    "astro": "^7.4.12",
+    "mermaid": "^12.3.0"
   }
 }

@@ -1,0 +1,120 @@
+---
+/**
+ * 阶段页：赛道 × 阶段。
+ *
+ * 这是学习流里最细的一格——「这一级该学的东西，站点上有哪些」。
+ * 上下级都给出链接，方便顺着阶梯走。
+ */
+import Base from '../../../layouts/Base.astro';
+import UnitRow from '../../../components/UnitRow.astro';
+import { allUnits } from '../../../lib/units';
+import { tracks } from '../../../lib/learning';
+import { stageUrl, trackUrl } from '../../../lib/urls';
+import type { Track, Stage } from '../../../lib/learning';
+
+export function getStaticPaths() {
+  return tracks.flatMap((track) =>
+    track.stages.map((stage) => ({
+      params: { track: track.id, stage: stage.id },
+      props: { track, stage },
+    })),
+  );
+}
+
+interface Props {
+  track: Track;
+  stage: Stage;
+}
+
+const { track, stage } = Astro.props;
+const units = await allUnits();
+const byId = new Map(units.map((u) => [u.id, u]));
+const stageUnits = stage.units.map((id) => byId.get(id)).filter((u) => u !== undefined);
+
+const idx = track.stages.findIndex((s) => s.id === stage.id);
+const prev = idx > 0 ? track.stages[idx - 1] : undefined;
+const next = idx >= 0 && idx < track.stages.length - 1 ? track.stages[idx + 1] : undefined;
+---
+
+<Base title={`${stage.id} ${stage.title}`} nav="learning" description={`${track.title} · ${stage.title}：${stage.goal}`}>
+  <div class="wrap">
+    <div class="crumbs">
+      <a href="/">growdu</a> / <a href="/learning/">学习流</a> /
+      <a href={trackUrl(track.id)}>{track.title}</a> / <b>{stage.id}</b>
+    </div>
+
+    <section class="section">
+      <h1 class="stage-title">
+        <span class="lv">{stage.id}</span>
+        {stage.title}
+      </h1>
+      <p class="stage-goal">{stage.goal}</p>
+    </section>
+
+    <section class="section">
+      <h2>这一级的内容（{stage.count} 篇）</h2>
+      {stageUnits.length > 0 ? (
+        <ul class="unit-list">
+          {stageUnits.map((unit) => (
+            <UnitRow unit={unit} />
+          ))}
+        </ul>
+      ) : (
+        <div class="notice">
+          这一阶段还没有过审的内容。
+          <a href={trackUrl(track.id)}>回到 {track.title} 看看整条线 →</a>
+        </div>
+      )}
+    </section>
+
+    <nav class="stage-nav">
+      {prev ? (
+        <a class="btn ghost" href={stageUrl(track.id, prev.id)}>← {prev.id} {prev.title}</a>
+      ) : (
+        <span></span>
+      )}
+      {next ? (
+        <a class="btn ghost" href={stageUrl(track.id, next.id)}>{next.id} {next.title} →</a>
+      ) : (
+        <span></span>
+      )}
+    </nav>
+  </div>
+</Base>
+
+<style>
+  .stage-title {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 6px 0 6px;
+    font-size: 26px;
+  }
+
+  .stage-title .lv {
+    font-size: 15px;
+    color: var(--brand);
+    font-weight: 800;
+  }
+
+  .stage-goal {
+    margin: 0;
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 720px;
+  }
+
+  .unit-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: 760px;
+  }
+
+  .stage-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 30px 0 10px;
+  }
+</style>

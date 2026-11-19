@@ -1,0 +1,69 @@
+---
+/**
+ * 一行内容单元：标题 + 类型徽标 + 日期 + 一句话摘要。
+ *
+ * 列表里所有的内容都长这样——文档和视频混排，靠徽标区分。
+ */
+import { unitUrl } from '../lib/urls';
+import type { Unit } from '../lib/units';
+
+interface Props {
+  unit: Unit;
+  /** 高亮当前所在的一行 */
+  current?: boolean;
+  showDescription?: boolean;
+}
+
+const { unit, current = false, showDescription = true } = Astro.props;
+const { title, kind, date, description } = unit.data;
+const href = unitUrl(unit.id, kind);
+const d = typeof date === 'string' ? date : date.toISOString().slice(0, 10);
+---
+
+<li class:list={['unit-row', { on: current }]}>
+  <a href={href}>
+    {kind === 'video' && <span class="badge vid">视频</span>}
+    {kind === 'category' && <span class="badge">目录</span>}
+    <span class="unit-title">{title}</span>
+  </a>
+  <span class="unit-date">{d}</span>
+  {showDescription && description && <p class="unit-desc">{description}</p>}
+</li>
+
+<style>
+  .unit-row {
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--line-soft);
+  }
+
+  .unit-row:last-child {
+    border-bottom: 0;
+  }
+
+  .unit-row a {
+    display: inline;
+  }
+
+  .unit-title {
+    margin-left: 6px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .unit-row.on .unit-title {
+    color: var(--brand);
+  }
+
+  .unit-date {
+    float: right;
+    color: var(--faint);
+    font-size: 12.5px;
+  }
+
+  .unit-desc {
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+</style>

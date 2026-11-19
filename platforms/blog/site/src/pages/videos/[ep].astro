@@ -1,0 +1,158 @@
+---
+/**
+ * 单期视频。
+ *
+ * 页面结构：播放器 → 口播稿（全文）→ 平台分发 → 学习流位置。
+ *
+ * **成片托管在自有服务器**：站点引用 `/media/videos/<ep>.mp4`（master 文件）。
+ * 文件还没上传之前，这里显示占位而不是坏掉的播放器。
+ */
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { allUnits } from '../../lib/units';
+import { assignmentOf, getTrack } from '../../lib/learning';
+import { stageUrl, trackUrl } from '../../lib/urls';
+
+export async function getStaticPaths() {
+  const units = await allUnits();
+  return units
+    .filter((u) => u.data.kind === 'video')
+    .map((unit) => ({
+      params: { ep: unit.id.replace(/^video\//, '') },
+      props: { unit },
+    }));
+}
+
+const { unit } = Astro.props;
+const { Content } = await render(unit);
+
+const assignment = assignmentOf(unit.id);
+const track = assignment ? getTrack(assignment.track) : undefined;
+const stage = track && assignment ? track.stages.find((s) => s.id === assignment.stage) : undefined;
+
+const ep = unit.id.replace(/^video\//, '');
+const media = `/media/videos/${ep}.mp4`;
+const dateText = typeof unit.data.date === 'string' ? unit.data.date : unit.data.date.toISOString().slice(0, 10);
+
+const platformNames: Record<string, string> = {
+  bilibili: '哔哩哔哩',
+  channels: 'YouTube',
+  douyin: '抖音',
+  wechat: '微信视频号',
+  xiaohongshu: '小红书',
+  bilibili_video: '哔哩哔哩',
+};
+---
+
+<Base title={unit.data.title} nav="videos" description={unit.data.description ?? ''}>
+  <div class="wrap">
+    <div class="crumbs">
+      <a href="/">growdu</a> / <a href="/videos/">视频</a> / <b>{unit.data.title}</b>
+    </div>
+
+    <section class="section">
+      <h1 class="ep-title">{unit.data.title}</h1>
+      <p class="ep-meta muted">
+        {dateText}
+        {unit.data.author && <> · {unit.data.author}</>}
+        {track && assignment && (
+          <>
+            {' · '}
+            <a href={trackUrl(track.id)}>{track.title}</a> {assignment.stage}
+            {stage && <> {stage.title}</>}
+          </>
+        )}
+      </p>
+    </section>
+
+    <section class="section player-block">
+      <div class="player" data-media={media}>
+        <p class="player-note muted">
+          成片托管在自有服务器：<code>{media}</code>。
+          <br />
+          文件上传后这里会直接播放（HTML5 原生播放器，不引第三方）。
+        </p>
+      </div>
+    </section>
+
+    {unit.data.description && (
+      <div class="prose">
+        <div class="tldr"><b>TL;DR</b>{unit.data.description}</div>
+      </div>
+    )}
+
+    {unit.data.platforms && unit.data.platforms.length > 0 && (
+      <section class="section">
+        <h2>已分发到</h2>
+        <p class="small">
+          {unit.data.platforms.map((p) => (
+            <span class="badge accent" style="margin-right:6px">{platformNames[p] ?? p}</span>
+          ))}
+        </p>
+      </section>
+    )}
+
+    <section class="section">
+      <h2>口播稿</h2>
+      <p class="section-sub">视频的原始文本。下面这份就是发布用的稿子，一个字没改。</p>
+      <article class="prose">
+        <Content />
+      </article>
+    </section>
+
+    {track && assignment && (
+      <nav class="ep-nav">
+        <a class="btn ghost" href={stageUrl(track.id, assignment.stage)}>
+          ← 回到 {assignment.stage} {stage?.title}
+        </a>
+        <a class="btn ghost" href={trackUrl(track.id)}>{track.title} 全线 →</a>
+      </nav>
+    )}
+  </div>
+</Base>
+
+<style>
+  .ep-title {
+    margin: 6px 0 4px;
+    font-size: 27px;
+  }
+
+  .ep-meta {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .player-block {
+    margin: 0 0 24px;
+  }
+
+  .player {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-soft);
+    padding: 26px;
+    text-align: center;
+  }
+
+  .player-note {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .player code {
+    font-family: var(--font-mono);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+  }
+
+  .ep-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 24px 0 10px;
+  }
+</style>

@@ -1,14 +1,26 @@
-# Build output
-/platforms/blog/site/public/
+# ── 站点构建产物（Astro 重建，2026-11-18）────────────────────
+# Astro 的 outDir 是 dist/。public/ 是**静态资源源码**（favicon 等，入库），
+# 里面同步进来的 images/ 与 js/ 是构建产物，不入库。
+/platforms/blog/site/dist/
+/platforms/blog/site/public/images/
+/platforms/blog/site/public/js/
+# 内容单元的站点副本（sync-content.py 同步进来的，不入库）
+/platforms/blog/site/src/content/units/
+# 学习流的编译结果（build-learning-path.py 编出来的，跟内容单元一样是产物）
+/platforms/blog/site/data/learning-path.compiled.json
+# Astro 的类型缓存
+/platforms/blog/site/.astro/
+# 旧 hexo 站点的 source/（已从工作树删除，索引里还有，等提交删除后这行就失效）
 /platforms/blog/site/source/
-!/platforms/blog/site/source/all/
-!/platforms/blog/site/source/recommended/
 
-# 搬走之前的位置。仓库里已经没有这两个目录了，但**别人的旧 checkout 里还有**
-# （站点搬进 platforms/ 之前构建出来的产物），留着这两行是为了不让它们
+# 搬走之前的位置。仓库里已经没有这些目录了，但**别人的旧 checkout 里还有**
+# （站点搬进 platforms/ 之前构建出来的产物），留着这几行是为了不让它们
 # 在 `git status` 里冒出来——否则一次 `git add -A` 就把上千个 HTML 扫进仓库。
 # 等旧 checkout 都清干净了，这几行可以删。
-public/
+# 注意必须锚定到仓库根：写成 `public/` 会连新站点的 public/ 一起忽略，
+# 而 public/ 里是要放 favicon 的（git 不能把被忽略目录里的文件再捞回来）。
+/public/
+/site/public/
 /source/
 !/source/all/
 !/source/recommended/

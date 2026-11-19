@@ -1,12 +1,11 @@
-"""让这个模块的测试**在模块目录里也能跑**。
+"""让站点自己的测试**在站点目录里也能跑**。
 
 pytest 默认只把测试文件所在目录塞进 ``sys.path``；没有这一段，
-``cd platforms/blog/site && python3 -m pytest tests/`` 就找不到仓库根的
-``tools``，测试会以「模块不存在」假红。仓库根塞进去，模块才真是自足的。
+``from paths import CONTENT_UNITS`` 之类的引用会在别的 cwd 下以「模块不存在」假红。
+仓库根与 ``tools/`` 都塞进去，路径常量才有唯一来源。
 
 层数自己数过：``platforms/blog/site/tests/conftest.py`` 的
-``parents[0]=tests``、``[1]=site``、``[2]=blog``、``[3]=platforms``、
-``[4]=仓库根``——**是 4，不是 3**。
+``parents[0]=tests``、``[1]=site``、``[2]=blog``、``[3]=platforms``、``[4]=仓库根``。
 """
 
 import sys

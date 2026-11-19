@@ -1,0 +1,63 @@
+---
+/**
+ * 文档页左栏：这条赛道在哪儿、这一阶段有哪些内容、当前这篇在哪儿。
+ *
+ * 左栏是**学习流坐标**（人在流程里的位置），右栏是**目录坐标**
+ *（这篇在仓库目录树里的位置）。两套坐标同时在场，这正是这个站点的设计：
+ * 内容有它真实的目录身份，也有一个给人走的流程位置。
+ */
+import { unitUrl, stageUrl } from '../lib/urls';
+import type { Track } from '../lib/learning';
+import type { Unit } from '../lib/units';
+
+interface Props {
+  track: Track;
+  stageId: string;
+  unitsById: Map<string, Unit>;
+  currentUnitId?: string;
+}
+
+const { track, stageId, unitsById, currentUnitId = '' } = Astro.props;
+const stage = track.stages.find((s) => s.id === stageId);
+---
+
+<div class="side-group">
+  <h4>学习流位置</h4>
+  <div class="side-item">
+    <a href={`/learning/${track.id}/`}>{track.title}</a>
+    <span class="muted"> / </span>
+    <b>{stageId}</b>
+  </div>
+  {stage && <div class="side-item muted">{stage.title}</div>}
+</div>
+
+<div class="side-group">
+  <h4>这个阶段</h4>
+  {stage && stage.units.length > 0 ? (
+    stage.units.map((id) => {
+      const unit = unitsById.get(id);
+      if (!unit) return null;
+      return (
+        <div class:list={['side-item', { on: id === currentUnitId, vid: unit.data.kind === 'video' }]}>
+          {unit.data.kind === 'video' && <span class="badge vid">视</span>}
+          <a href={unitUrl(id, unit.data.kind)}>{unit.data.title}</a>
+        </div>
+      );
+    })
+  ) : (
+    <div class="side-item muted">这一阶段还没有过审的内容。</div>
+  )}
+  {stage && <div class="side-item" style="margin-top:6px"><a href={stageUrl(track.id, stage.id)}>阶段页 →</a></div>}
+</div>
+
+<div class="side-group">
+  <h4>同赛道的其他阶段</h4>
+  {track.stages
+    .filter((s) => s.id !== stageId)
+    .map((s) => (
+      <div class:list={['side-item', { muted: s.count === 0 }]}>
+        <a href={stageUrl(track.id, s.id)}>{s.id} {s.title}</a>
+        {s.count > 0 && <span class="muted"> · {s.count}</span>}
+      </div>
+    ))}
+</div>
