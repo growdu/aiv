@@ -98,7 +98,18 @@ class Doc:
 
     @property
     def rel_path(self) -> str:
-        return self.path.relative_to(REPO_ROOT).as_posix()
+        """The path shown to the reader.
+
+        Usually relative to the repository root. A file **outside** the
+        repository (a scratch copy in a temp directory, a draft on
+        another disk) still has to be checkable — the relative path is
+        for humans, it is not a criterion — so fall back to the
+        absolute path instead of raising.
+        """
+        try:
+            return self.path.relative_to(REPO_ROOT).as_posix()
+        except ValueError:
+            return self.path.as_posix()
 
     def paragraphs(self) -> list[Block]:
         return [b for b in self.blocks if b.kind == PARAGRAPH]

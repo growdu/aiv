@@ -87,9 +87,10 @@ jobs:
         # 这些是**母稿层**的毛病，在这里就报出来，别等渲染时才发现。
         #
         # **只扫 docs/，不扫 drafts/。** 站点只编译 docs/，闸门就该跟它对齐。
-        # drafts/ 是草稿箱，里面躺着 560 多篇没过的审的存量镜像，
-        # 格式问题有 79 条——那是**母稿层**的账（见顶层设计 spec 的 G3），
-        # 归审校那一轮处理；在这里一起扫，闸门就永远红着，等于没有闸门。
+        # drafts/ 是草稿箱（现在还是空的，内容层没起）；
+        # 草稿的格式问题归**母稿层**的账（见顶层设计 spec 的 G3），
+        # 归审校那一轮处理；在这里一起扫，闸门就跟着草稿的红一起变红，
+        # 等于没有闸门。
         # 本地跑 `python3 platforms/blog/site/tools/check-markdown.py`（不带参数）
         # 仍然扫 docs/ + drafts/——开发者自查草稿用那条。
         run: python3 platforms/blog/site/tools/check-markdown.py docs/

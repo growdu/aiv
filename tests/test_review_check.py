@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -132,27 +133,28 @@ def test_load_doc_reads_first_h1_as_title(tmp_path):
 
 def test_cli_json_output_has_expected_shape():
     """集成：真跑一次 CLI，检查 JSON 结构。"""
-    target = (DOCS / "source-tracks" / "postgresql" /
-              "transaction-mvcc" / "postgresql-mvcc" / "index.md")
+    target = DOCS / "life" / "aiv" / "人格规范.md"
     assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
     result = run_tool(str(target), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert "docs" in payload
     doc = payload["docs"][0]
-    assert doc["pillar"] == "source-tracks"
-    assert doc["slug"] == "postgresql/transaction-mvcc/postgresql-mvcc"
+    assert doc["pillar"] == "life"
+    assert doc["slug"] == "aiv/人格规范"
     assert doc["stats"]["paragraphs"] > 0
     assert isinstance(doc["signals"], list)
 
 
 def test_cli_runs_over_a_whole_pillar():
     """集成：整目录跑一遍，不许崩。"""
-    pillar = DOCS / "source-tracks" / "postgresql"
+    pillar = DOCS / "life"
     result = run_tool(str(pillar), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert len(payload["docs"]) >= 50
+    expected = sorted(p for p in pillar.rglob("*.md"))
+    assert len(payload["docs"]) == len(expected)
+    assert {d["pillar"] for d in payload["docs"]} == {"life"}
 
 
 def test_cli_reports_missing_path():
@@ -163,29 +165,36 @@ def test_cli_reports_missing_path():
 
 # 审校过的正文合入后，段落不该又长回去——AIF-03 盯的就是「单段 > 200 字」。
 # 改文章时把两段并回一段，这条测试会报出来：审校完的稿子不能带新债。
-REVIEWED_ARTICLES = (
-    "source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md",
-    "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
-    "source-tracks/postgresql/transaction-mvcc/learning-path/06-heap-and-mvcc.md",
-    "source-tracks/postgresql/wal-and-recovery/checkpoint机制浅析.md",
-    "distributed/foundations/分布式一致性协议.md",
-    "engineering/foundations/file.md",
-    "distributed/field-notes/corosync-down网卡仍处于多数派/index.md",
-    "distributed/ha-and-dr/tptc.md",
-    "source-tracks/linux/networking/从原理到实践，彻底告别 IPv6 上网不稳定的问题.md",
-    "source-tracks/postgresql/replication-ha/Postgresql存储、索引及系统优化、主备切换/index.md",
-)
+#
+# **审校工作面由范围文档定**（桶 5 = `docs/` 全集减去排除清单），
+# 不是写死的路径清单：内容进来时范围文档更新，工作面就跟着变；
+# 内容清空时工作面是空的，这条测试自动空转（现在正是这样）。
+SCOPE_DOC = REPO_ROOT / "review" / "scope" / "2026-11-14-scope-classification.md"
+EXCLUDED_PATH_RE = re.compile(r"^- `(docs/[^`]+)`$", re.M)
+
+
+def review_surface() -> list[Path]:
+    """`docs/` 里面向读者的技术文章（审校工作面）。"""
+    text = SCOPE_DOC.read_text(encoding="utf-8")
+    section = text.split("## 排除清单", 1)[1]
+    excluded = set(EXCLUDED_PATH_RE.findall(section))
+    out = []
+    for path in sorted(DOCS.rglob("*.md")):
+        rel = path.relative_to(REPO_ROOT).as_posix()
+        if rel not in excluded:
+            out.append(path)
+    return out
 
 
 def test_reviewed_articles_have_no_long_paragraph_signal():
     """集成：已合入审校的文章不该再被 AIF-03 命中。"""
-    for rel in REVIEWED_ARTICLES:
-        result = run_tool(str(DOCS / rel), "--json")
+    for path in review_surface():
+        result = run_tool(str(path), "--json")
         assert result.returncode == 0, result.stderr
         payload = json.loads(result.stdout)
         hits = [s for s in payload["docs"][0]["signals"]
                 if s["rule"] == "AIF-03" and s["severity"] == "warn"]
-        assert not hits, f"{rel} 还有超长段落：{hits}"
+        assert not hits, f"{path} 还有超长段落：{hits}"
 
 
 # --- AIF 规则 -------------------------------------------------------------
@@ -680,16 +689,23 @@ def test_fig_02_finds_a_reference_in_the_middle_of_a_paragraph(tmp_path):
     assert "下图" in signals[0].detail
 
 
-def test_the_checker_reports_fig_signals_for_a_real_article():
-    """集成：真实文章上跑一遍，FIG-01/FIG-02 真的会报出来。"""
-    target = DOCS / "distributed" / "consensus" / "一文读懂openguass dcf网络模块.md"
-    assert target.exists(), "样例文章不在了，集成测试要换一个真实文章"
+def test_the_checker_reports_fig_signals_for_a_real_article(tmp_path):
+    """集成：CLI 跑一遍，六张超限的图聚合成一条 FIG-01。
+
+    面向读者的技术文章清空之后没有「真实文章」可跑了，
+    这里用一份临时稿把这条聚合行为钉住——它是审校排队列时看的那一列：
+    六张图超限是「这篇的图整体太密」**一件事**，不是六条信号。
+    """
+    diagram = "\n".join(f"    N{i} --> N{i + 1}" for i in range(20))
+    block = "```mermaid\ngraph TB\n" + diagram + "\n```"
+    target = tmp_path / "六张图.md"
+    target.write_text("# 标题\n\n" + "\n\n".join([block] * 6) + "\n", encoding="utf-8")
     result = run_tool(str(target), "--json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     signals = payload["docs"][0]["signals"]
     fig1 = [s for s in signals if s["rule"] == "FIG-01"]
-    assert fig1, "这篇有 6 张超长的链式流程图，检查器却没报 FIG-01"
+    assert fig1, "六张超限的图，检查器却没报 FIG-01"
     assert fig1[0]["severity"] == "warn"
     # 聚合信号：位置全部写进 detail，而不是每张图一条
     assert "6 张图超限" in fig1[0]["detail"]

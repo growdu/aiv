@@ -115,11 +115,9 @@ CHILD_MARKER = "REVIEW_RECORDS_CONTRACT_CHILD"
 #: 计划（plans/）、范围划分（scope/）。它们都不是记录，所以这条豁免名单
 #: 一直在长。
 #:
-#: ``description-drafts.md`` 是 2026-11-16 阶段 1 新加的：它是
-#: ``tools/draft-descriptions.py`` 起草的文章摘要的**复核表**，交给作者过目用，
-#: 不是「对某一篇文章的审校记录」——没有原文路径、没有审校状态、也不进
-#: INDEX.md 的进度表。把它算成记录，等于逼它长成一副记录的样子。
-NON_RECORD_FILES = ("README.md", "INDEX.md", "description-drafts.md")
+#: （2026-11-16 阶段 1 加的 ``description-drafts.md``——摘要复核表——
+#: 随内容清空一起没了，工具 ``draft-descriptions.py`` 也删了。）
+NON_RECORD_FILES = ("README.md", "INDEX.md")
 
 
 def record_files() -> list[Path]:
@@ -212,18 +210,20 @@ def index_table() -> tuple[list[str], dict[Path, dict[str, str]]]:
     return columns, rows
 
 
-def git(*args: str, extra_env: dict[str, str] | None = None) -> str:
+def git(*args: str, extra_env: dict[str, str] | None = None,
+        cwd: Path | None = None) -> str:
     """Run git and return its stdout, decoded as UTF-8.
 
     The encoding is pinned on purpose: ``text=True`` follows the machine
     locale, and a runner with a POSIX locale would mangle the Chinese
     paths this file is about.  ``extra_env`` lets a caller reproduce a
-    different machine's git configuration.
+    different machine's git configuration.  ``cwd`` lets a caller work in
+    a throwaway repository instead of this one.
     """
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
-    result = subprocess.run(["git", *args], cwd=REPO_ROOT, env=env,
+    result = subprocess.run(["git", *args], cwd=cwd or REPO_ROOT, env=env,
                             capture_output=True, encoding="utf-8",
                             errors="replace")
     return result.stdout
@@ -284,7 +284,8 @@ def accepted_source_paths(source: str) -> set[str]:
     return {source} | historical_source_paths(source)
 
 
-def changed_paths(sha: str, *, extra_env: dict[str, str] | None = None) -> list[str]:
+def changed_paths(sha: str, *, extra_env: dict[str, str] | None = None,
+                  cwd: Path | None = None) -> list[str]:
     """The raw paths a commit touched.
 
     ``git show --name-only`` C-quotes non-ASCII pathnames unless
@@ -298,7 +299,7 @@ def changed_paths(sha: str, *, extra_env: dict[str, str] | None = None) -> list[
     independent of any git configuration.
     """
     out = git("show", "--name-only", "--pretty=format:", "-z", sha,
-              extra_env=extra_env)
+              extra_env=extra_env, cwd=cwd)
     return [p for p in out.split("\0") if p]
 
 
@@ -402,66 +403,72 @@ def test_docs_tree_has_no_review_leakage():
     assert not records, f"docs/ 下出现了审校记录: {records}"
 
 
-def _naive_changed_paths(sha: str, *, extra_env: dict[str, str] | None = None) -> list[str]:
+def _naive_changed_paths(sha: str, *, extra_env: dict[str, str] | None = None,
+                         cwd: Path | None = None) -> list[str]:
     """The pre-fix way of reading a commit's paths: no ``-z``.
 
     Kept here so the guard can prove the hazard is real instead of only
     asserting the happy path.
     """
-    out = git("show", "--name-only", "--pretty=format:", sha, extra_env=extra_env)
+    out = git("show", "--name-only", "--pretty=format:", sha,
+              extra_env=extra_env, cwd=cwd)
     return [line for line in out.split("\n") if line]
 
 
-def _chinese_records_with_a_merge_commit() -> list[Path]:
-    """中文路径、且已经有合入提交的记录。
+CHINESE_SOURCE = "docs/分布式一致性协议.md"
 
-    只挑「有合入提交」的：这条守卫验的是「从提交里读路径」这一步，
-    还没合入的记录没有提交可比，混进来只会让守卫误报。
+
+def _synthetic_chinese_commit(tmp_path: Path) -> tuple[Path, str]:
+    """一个临时仓库：提交了一个中文文件名的文件。
+
+    这条守卫验的是 **git 的路径转义**，跟这个仓库里有没有审校记录
+    无关。内容清空之后记录也没了——守着「等哪天正好有一份中文记录」
+    的守卫等于没有守卫，所以这里自己造一份被测对象。
+
+    返回 ``(仓库路径, 提交 sha)``。
     """
-    return [p for p in record_files()
-            if not p.stem.isascii() and parse_record(p)["source"]
-            and merged_commit_for(p.stem)]
+    repo = tmp_path / "repo"
+    (repo / "docs").mkdir(parents=True)
+    (repo / "docs" / "分布式一致性协议.md").write_text("# 标题\n", encoding="utf-8")
+    env = dict(os.environ,
+               GIT_AUTHOR_NAME="test", GIT_AUTHOR_EMAIL="test@example.com",
+               GIT_COMMITTER_NAME="test", GIT_COMMITTER_EMAIL="test@example.com")
+    for args in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "docs(review): 中文记录"]):
+        subprocess.run(["git", *args], cwd=repo, env=env, check=True,
+                       capture_output=True)
+    sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, env=env,
+                         capture_output=True, encoding="utf-8", check=True).stdout.strip()
+    return repo, sha
 
 
-def test_changed_paths_are_raw_even_when_git_quotes_non_ascii_paths():
+def test_changed_paths_are_raw_even_when_git_quotes_non_ascii_paths(tmp_path):
     """单元：取「提交改了哪些文件」不能受 git 的路径转义影响。
 
     ``git show --name-only`` 默认把非 ASCII 路径 C 转义成
     ``"docs/distributed/foundations/\\350\\276\\205..."``，除非 ``core.quotePath`` 是 false。
     那是**每台机器自己的** git 配置：开发机常关掉，CI runner 保持默认。
     两边对同一个提交给出的文本不同，路径比对必然一边成一边败。
-
-    所有「中文路径 + 已合入」的记录都过一遍——只查第一条的话，
-    新增一条记录就可能挑到另一条，覆盖面看着变宽、实际没变。
     """
-    chinese = _chinese_records_with_a_merge_commit()
-    assert chinese, "没有带中文路径且已合入的记录，测不到路径转义这个坑"
-    for record in chinese:
-        info = parse_record(record)
-        accepted = accepted_source_paths(info["source"])
-        for sha in merged_commit_for(record.stem):
-            paths = changed_paths(sha, extra_env=CI_LIKE_GIT_ENV)
-            assert accepted & set(paths), (
-                f"{info['source']} 不在提交的改动列表里：{paths}")
+    repo, sha = _synthetic_chinese_commit(tmp_path)
+    paths = changed_paths(sha, extra_env=CI_LIKE_GIT_ENV, cwd=repo)
+    assert CHINESE_SOURCE in paths, (
+        f"带 -z 的改动列表里没有中文路径：{paths}")
 
 
-def test_the_ci_like_git_environment_really_breaks_the_naive_path_reading():
+def test_the_ci_like_git_environment_really_breaks_the_naive_path_reading(tmp_path):
     """单元：CI 样的 git 环境确实会让「不带 -z 的路径读取」失败。
 
     没有这一条，上面那条守卫可能是**空转**的：如果这个环境其实并不
     转义路径，那么 ``changed_paths`` 改不改都一样，守卫就成了永远绿
     的摆设——这正是「守卫从被测代码取阈值」之外的另一种自证。
     """
-    record = _chinese_records_with_a_merge_commit()[0]
-    info = parse_record(record)
-    sha = merged_commit_for(record.stem)[0]
-    naive = _naive_changed_paths(sha, extra_env=CI_LIKE_GIT_ENV)
-    accepted = accepted_source_paths(info["source"])
-    assert not (accepted & set(naive)), (
+    repo, sha = _synthetic_chinese_commit(tmp_path)
+    naive = _naive_changed_paths(sha, extra_env=CI_LIKE_GIT_ENV, cwd=repo)
+    assert CHINESE_SOURCE not in naive, (
         "CI 样的 git 环境没有转义非 ASCII 路径，上一条守卫测不到东西")
-    raw = changed_paths(sha, extra_env=CI_LIKE_GIT_ENV)
-    assert accepted & set(raw), (
-        f"{info['source']} 不在带 -z 的改动列表里：{raw}")
+    raw = changed_paths(sha, extra_env=CI_LIKE_GIT_ENV, cwd=repo)
+    assert CHINESE_SOURCE in raw, (
+        f"带 -z 的改动列表里没有中文路径：{raw}")
 
 
 def test_readme_documents_the_fact_markers_the_contract_enforces():
