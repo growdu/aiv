@@ -8,6 +8,8 @@
 /platforms/blog/site/src/content/units/
 # 学习流的编译结果（build-learning-path.py 编出来的，跟内容单元一样是产物）
 /platforms/blog/site/data/learning-path.compiled.json
+# 活动数据的编译结果（build-activity.py 编出来的；账本本身 activity.json 入库）
+/platforms/blog/site/data/activity.compiled.json
 # Astro 的类型缓存
 /platforms/blog/site/.astro/
 # 旧 hexo 站点的 source/（已从工作树删除，索引里还有，等提交删除后这行就失效）

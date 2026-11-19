@@ -8,6 +8,7 @@
 import Base from '../layouts/Base.astro';
 import TrackCard from '../components/TrackCard.astro';
 import UnitRow from '../components/UnitRow.astro';
+import StatBar from '../components/StatBar.astro';
 import { allUnits } from '../lib/units';
 import { tracksWithContent, emptyTracks, tracks } from '../lib/learning';
 import { unitUrl } from '../lib/urls';
@@ -42,6 +43,10 @@ const recent = units.filter((u) => u.data.kind !== 'category').slice(0, 6);
           <a class="btn ghost" href="/all/">直接翻全部内容</a>
         </div>
       </div>
+    </section>
+
+    <section class="section">
+      <StatBar />
     </section>
 
     <section class="section">

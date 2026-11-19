@@ -107,6 +107,12 @@ jobs:
         # `--check` 是给本地用的（改了规则表忘了重编，它会提醒你）。
         run: python3 platforms/blog/site/tools/build-learning-path.py
 
+      - name: 活动数据编译
+        # 账本（site/data/activity.json）+ 内容单元 → data/activity.compiled.json。
+        # 首页那四个数字与 /timeline/ 的时间轴都读它。
+        # 账本只增不改、站点不挖仓库旧历史，所以这一步永远是快的。
+        run: python3 platforms/blog/site/tools/build-activity.py
+
   build:
     name: 构建
     runs-on: ubuntu-latest

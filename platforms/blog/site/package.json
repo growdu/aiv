@@ -6,9 +6,10 @@
   "description": "growdu.cn 的站点实现：一条成体系的学习流。Astro 重建（2026-11-18）。",
   "scripts": {
     "dev": "astro dev",
-    "build": "npm run compile && npm run sync && astro build",
+    "build": "npm run compile && npm run activity && npm run sync && astro build",
     "preview": "astro preview",
     "compile": "python3 tools/build-learning-path.py",
+    "activity": "python3 tools/build-activity.py",
     "sync": "python3 tools/sync-content.py",
     "check": "python3 tools/check-markdown.py",
     "test": "python3 -m pytest tests/ -q"
