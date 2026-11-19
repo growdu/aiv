@@ -253,10 +253,14 @@ def strip_brand_word(text: str) -> str:
     按分隔符分段，**整段丢掉**，而不是做字符串替换：
     替换会留下「独立开发者 · 」这种尾巴，也会把正文里正当出现的词改掉。
     剥完空了用 `NEUTRAL_LABEL` 兜底。
+
+    **两边都比小写**：只把待比较的那段小写化、配置值原样留着的话，
+    配置成 ``token = "GrowDu"`` 的使用者会永远匹配不上——「去品牌」
+    静悄悄地不生效，还不报错。
     """
     parts = [part.strip() for part in text.split("·")]
     kept = [part for part in parts
-            if part and BRAND_TOKEN not in part.lower()]
+            if part and BRAND_TOKEN.lower() not in part.lower()]
     if not kept:
         return NEUTRAL_LABEL
     return " · ".join(kept)
@@ -272,7 +276,7 @@ def _strip_brand_copy(scenes: list[dict]) -> list[str]:
         touched = False
         for key in BRAND_COPY_PARAMS:
             value = params.get(key)
-            if not isinstance(value, str) or BRAND_TOKEN not in value.lower():
+            if not isinstance(value, str) or BRAND_TOKEN.lower() not in value.lower():
                 continue
             cleaned = strip_brand_word(value)
             if cleaned != value:

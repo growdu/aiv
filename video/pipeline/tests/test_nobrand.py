@@ -65,6 +65,18 @@ def test_a_text_without_the_brand_word_is_untouched():
     assert brand.strip_brand_word("独立开发者") == "独立开发者"
 
 
+def test_a_mixed_case_configured_token_is_stripped(monkeypatch):
+    """配置里的品牌词带大写时也要剥掉。
+
+    判据的两边都得比小写：只把待比较的那段小写化、配置值原样留着的话，
+    ``token = "GrowDu"`` 的使用者永远匹配不上——「去品牌」静悄悄地
+    不生效，还不报错。
+    """
+    monkeypatch.setattr(brand, "BRAND_TOKEN", "GrowDu")
+    assert brand.strip_brand_word("独立开发者 · GrowDu") == "独立开发者"
+    assert brand.strip_brand_word("GrowDu") == brand.NEUTRAL_LABEL
+
+
 def test_the_remaining_segments_keep_their_order():
     """分段丢掉含品牌词的那一段，**其余按原顺序**保留。"""
     assert brand.strip_brand_word(
