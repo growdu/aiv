@@ -1,21 +1,35 @@
-"""期号定位：一期 = 一个目录。
+"""期定位：一期 = 一个档位目录。
 
-**这里没有登记表。** 一期在磁盘上是什么，路径说了算：
+**坐标就是接口。** 期根是 `video/episodes/`，往下四层：
 
-    video/episodes/<slug>/口播稿.md        母稿：口播 + 字幕表
-    video/episodes/<slug>/contract.json    视觉分镜契约
-    video/episodes/<slug>/publish.json     发布元数据
-    video/episodes/<slug>/narration.mp3    旁白（媒体产物）
-    video/episodes/<slug>/storyboard.json  时间轴（媒体产物）
-    video/episodes/<slug>/review.md        审校记录
-    video/episodes/<slug>/frames.md        抽帧清单
+```
+video/episodes/<系列>/<合集>/<文档>/<档位>/
+                 一级   二级   三级   四级
+```
 
-**slug 是身份，期号（ep01…）是播放顺序**，两回事：
-slug 进路径（改标题不改路径），期号是编辑事实——落在口播稿的 front matter
-（`episode_number: ep01`）与《选题库》的 `id` 上，两边对得上才算数。
-front matter 里 `episode` 记的也是 slug（跟期目录名一样），不是期号。
+| 层 | 是什么 | 例子 |
+| --- | --- | --- |
+| 一级 | **系列**——一条主线 | `postgresql` |
+| 二级 | **合集**——主线下的一块 | `getting-started` |
+| 三级 | **文档**——一篇母稿 | `postgresql基操` |
+| 四级 | **档位**——这篇文档的三条片子 | `short` / `mid` / `full` |
 
-新一期不用改代码：建目录、放文件、跑流水线。
+**一期 = 一个档位目录**。同一篇文档的三档是三期，各有自己的口播稿、
+契约、旁白；它们共享的是那一篇文档的骨架（`skeleton.yaml`，放在文档目录里）。
+
+期身份 = **期目录相对期根的路径**，例如
+`postgresql/getting-started/postgresql基操/short`。
+文件名前缀（`out/`、`build/`）用压平后的 `ep_id()`——斜杠换成连字符。
+
+**两个名字，别混**：
+
+| | 是什么 | 落在哪 |
+| --- | --- | --- |
+| **文档路径** | `系列/合集/文档`——母稿的身份 | 口播稿与契约的 front matter `episode` |
+| **期号** | 播放顺序（`ep01`） | 口播稿 front matter `episode_number` |
+| **档位** | 三档里的哪一档 | 口播稿 front matter `tier`，也是目录名 |
+
+**没有登记表。** 目录就是登记表：建目录、放文件，就是新的一期。
 以前这里有一张 Python 侧的登记表，Makefile 里还有一份 shell 侧的副本，
 两份靠一个测试盯着别漂移。现在没有登记表可漂了。
 """
@@ -27,8 +41,14 @@ from pathlib import Path
 # video/ 是 pipeline/ 的上一级：pyv/episodes.py → pyv → pipeline → video
 AIV_ROOT = Path(__file__).resolve().parents[2]
 
-#: 一期的根目录。每个子目录就是一期。
+#: 期根。坐标从这儿往下数。
 EPISODES_DIR = AIV_ROOT / "episodes"
+
+#: 档位。一篇文档的三档，目录名固定。
+TIERS = ("short", "mid", "full")
+
+#: 坐标的层数：系列 / 合集 / 文档 / 档位
+DEPTH = 4
 
 SCRIPT_NAME = "口播稿.md"
 CONTRACT_NAME = "contract.json"
@@ -41,13 +61,26 @@ FRAMES_NAME = "frames.md"
 #: 抽出来的帧（媒体产物）。清单在期目录里，帧在这个子目录里。
 FRAMES_SUBDIR = "frames"
 
+#: 文档目录里放的**讲稿骨架**——一篇母稿解析出来的中间物，三档共用。
+SKELETON_NAME = "skeleton.yaml"
+
 
 @dataclass(frozen=True)
 class Episode:
-    """一期。`slug` 是身份，`root` 是这一期的目录。"""
+    """一期。`ep` 是期身份（期目录相对期根的路径），`root` 是这一期的目录。"""
 
-    slug: str
+    ep: str
     root: Path
+
+    @property
+    def doc(self) -> str:
+        """文档路径（`系列/合集/文档`）——这一期属于哪篇文档。"""
+        return "/".join(self.ep.split("/")[:-1])
+
+    @property
+    def tier(self) -> str:
+        """档位：`short` / `mid` / `full`。"""
+        return self.ep.rsplit("/", 1)[-1]
 
     @property
     def script(self) -> Path:
@@ -82,87 +115,126 @@ class Episode:
         return self.root / FRAMES_NAME
 
 
-def episode_root(slug: str) -> Path:
-    """这一期的目录。"""
-    return EPISODES_DIR / slug
+def episode_root(ep: str) -> Path:
+    """这一期的目录。`ep` 是期路径（相对期根）。"""
+    return EPISODES_DIR / ep
 
 
-def episode(slug: str) -> Episode:
-    return Episode(slug=slug, root=episode_root(slug))
+def episode(ep: str) -> Episode:
+    return Episode(ep=ep, root=episode_root(ep))
 
 
-def episode_at(root: str | Path, slug: str) -> Episode:
+def episode_at(root: str | Path, ep: str) -> Episode:
     """指定目录下的期。
 
     测试夹具与外部调用走这条：期目录不在默认根下时，
     路径照样由目录说了算。
     """
-    return Episode(slug=slug, root=Path(root))
+    return Episode(ep=ep, root=Path(root))
+
+
+def doc_root(doc: str) -> Path:
+    """文档目录（三层：系列/合集/文档）。"""
+    return EPISODES_DIR / doc
+
+
+def ep_id(ep: str) -> str:
+    """期路径压平成一个文件名片段（斜杠 → 连字符）。"""
+    return ep.replace("/", "-")
 
 
 def known_eps_at(root: str | Path) -> list[str]:
-    """指定目录下有的期（目录名），按 slug 排序。"""
+    """指定根下有的期（相对路径），按期路径排序。
+
+    **认的是坐标**：期 = 深度 4 且末段是档位名的目录。
+    """
     base = Path(root)
     if not base.is_dir():
         return []
-    return sorted(
-        path.name
-        for path in base.iterdir()
-        if path.is_dir() and not path.name.startswith(".")
-    )
+    found: list[str] = []
+    for path in base.rglob("*"):
+        if not path.is_dir() or path.name.startswith("."):
+            continue
+        relative = path.relative_to(base)
+        if len(relative.parts) != DEPTH or relative.parts[-1] not in TIERS:
+            continue
+        found.append(relative.as_posix())
+    return sorted(found)
 
 
 def known_eps() -> list[str]:
-    """磁盘上有的期（目录名），按 slug 排序。
+    """磁盘上有的期（期路径），按期路径排序。
 
     **没有登记表**：目录就是登记表。
     """
-    if not EPISODES_DIR.is_dir():
+    return known_eps_at(EPISODES_DIR)
+
+
+def known_docs_at(root: str | Path) -> list[str]:
+    """指定根下有的文档（相对路径，三层），按文档路径排序。"""
+    base = Path(root)
+    if not base.is_dir():
         return []
-    return sorted(
-        path.name
-        for path in EPISODES_DIR.iterdir()
-        if path.is_dir() and not path.name.startswith(".")
-    )
+    found: list[str] = []
+    for path in base.rglob("*"):
+        if not path.is_dir() or path.name.startswith("."):
+            continue
+        relative = path.relative_to(base)
+        if len(relative.parts) != DEPTH - 1:
+            continue
+        if any(child.is_dir() and child.name in TIERS for child in path.iterdir()):
+            found.append(relative.as_posix())
+    return sorted(found)
 
 
-def script_path(slug: str) -> Path:
-    return episode(slug).script
+def known_docs() -> list[str]:
+    """磁盘上有的文档（文档路径）。"""
+    return known_docs_at(EPISODES_DIR)
 
 
-def contract_path(slug: str) -> Path:
-    return episode(slug).contract
+def script_path(ep: str) -> Path:
+    return episode(ep).script
 
 
-def publish_path(slug: str) -> Path:
-    return episode(slug).publish
+def contract_path(ep: str) -> Path:
+    return episode(ep).contract
 
 
-def narration_path(slug: str) -> Path:
-    return episode(slug).narration
+def publish_path(ep: str) -> Path:
+    return episode(ep).publish
 
 
-def storyboard_path(slug: str) -> Path:
-    return episode(slug).storyboard
+def narration_path(ep: str) -> Path:
+    return episode(ep).narration
 
 
-def review_path(slug: str) -> Path:
-    return episode(slug).review
+def storyboard_path(ep: str) -> Path:
+    return episode(ep).storyboard
 
 
-def frames_dir(slug: str) -> Path:
-    return episode(slug).frames_dir
+def review_path(ep: str) -> Path:
+    return episode(ep).review
 
 
-def frames_manifest_path(slug: str) -> Path:
-    return episode(slug).frames_manifest
+def frames_dir(ep: str) -> Path:
+    return episode(ep).frames_dir
+
+
+def frames_manifest_path(ep: str) -> Path:
+    return episode(ep).frames_manifest
+
+
+def skeleton_path(doc: str) -> Path:
+    """讲稿骨架（文档级，三档共用）。"""
+    return doc_root(doc) / SKELETON_NAME
 
 
 def _front_matter(path: Path) -> dict[str, str]:
     """读 front matter 里的顶层标量键值对。
 
     只取顶层、只取标量——口播稿的 front matter 就是 `title` / `episode`
-    / `episode_number` 这样的单行键值对。嵌套结构读不了也不需要，读不到就当没有。
+    / `tier` / `episode_number` 这样的单行键值对。嵌套结构读不了也不需要，
+    读不到就当没有。
     """
     if not path.is_file():
         return {}
@@ -182,12 +254,22 @@ def _front_matter(path: Path) -> dict[str, str]:
     return fields
 
 
-def ep_number(slug: str) -> str:
+def ep_number(ep: str) -> str:
     """这一期的期号标签（`ep01` 这样的），取自口播稿的 front matter。
 
     取不到就返回空串：期号是编辑事实，没有就不该编一个。
 
     **front matter 里有两个名字，别混**：
-    `episode` 是 slug（身份，跟期目录名一致），`episode_number` 才是期号。
+    `episode` 是**文档路径**（这篇属于哪篇文档），`episode_number` 才是期号。
     """
-    return _front_matter(script_path(slug)).get("episode_number", "")
+    return _front_matter(script_path(ep)).get("episode_number", "")
+
+
+def ep_doc(ep: str) -> str:
+    """这一期 front matter 里记的文档路径（没有就空串）。"""
+    return _front_matter(script_path(ep)).get("episode", "")
+
+
+def ep_tier(ep: str) -> str:
+    """这一期 front matter 里记的档位（没有就空串）。"""
+    return _front_matter(script_path(ep)).get("tier", "")

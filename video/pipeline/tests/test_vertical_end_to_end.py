@@ -17,7 +17,9 @@
 最后还把成片第一帧解出来数像素——字幕必须烧在画面里，
 而且必须整个落在平台 UI 区**之上**。
 
-素材是**已入库**的真实旁白与真实 BGM：产物不入库、输入才入库。
+素材是**使用者自带的**真实旁白与真实 BGM：产物不入库，**输入也不入库**
+（版权是他们的）。本机没有这两样就跳过——跳过说的是「这台机器没素材」，
+不是「流水线坏了」。
 """
 from __future__ import annotations
 
@@ -26,6 +28,7 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from pyv import compose as compose_mod
 from pyv import episodes
@@ -43,7 +46,6 @@ from pyv.timeline import (
 )
 
 AIV_ROOT = episodes.AIV_ROOT
-BGM = AIV_ROOT / "music/tracks/series-bed-01.wav"
 
 #: 竖版画布
 WIDTH, HEIGHT = 1080, 1920
@@ -89,12 +91,22 @@ def _probe(path: Path) -> dict:
     return json.loads(out)
 
 
-def _narration() -> Path:
-    """一份**已入库**的旁白音频（期目录里的，没有就退到仓库里那份）。"""
-    return scene_segments.narration()
+def _assets() -> tuple[Path, Path]:
+    """旁白与 BGM——两份都是使用者自带的素材。
+
+    **没有就跳过**：素材不在仓库里是正常的（版权是曲作者和配音方的），
+    把「这台机器没素材」报成「流水线坏了」是假红。
+    """
+    narration = scene_segments.narration()
+    bgm = scene_segments.bgm()
+    if narration is None:
+        pytest.skip("本机没有旁白素材：旁白是使用者自带的，仓库不带着走")
+    if bgm is None or not bgm.is_file():
+        pytest.skip("本机没有 BGM：配在 video/config.toml 的 [assets.music].bed")
+    return narration, bgm
 
 
-def _storyboard(narration: Path) -> Storyboard:
+def _storyboard(narration: Path, bgm: Path) -> Storyboard:
     """两段正文场景，画布是竖版。"""
     half = DURATION / 2
     scenes = [
@@ -106,7 +118,7 @@ def _storyboard(narration: Path) -> Storyboard:
     return Storyboard(
         version=1,
         video=Video(width=WIDTH, height=HEIGHT, fps=24, duration=DURATION),
-        audio=Audio(narration=str(narration), bgm=str(BGM)),
+        audio=Audio(narration=str(narration), bgm=str(bgm)),
         subtitle_style=SubtitleStyle(primary=SUBTITLE_FILL, outline="#000000"),
         scenes=scenes,
         subtitles=[SubtitleEvent(start=0.0, end=DURATION, text=SUBTITLE_TEXT)],
@@ -177,17 +189,16 @@ def _top_level_boxes(path: Path) -> list[str]:
 
 
 def test_a_fresh_clone_can_produce_a_broadcastable_vertical_episode(tmp_path):
-    """从入库素材直接合成出符合规格的竖版成片。"""
-    narration = _narration()
-    storyboard = _storyboard(narration)
+    """从素材直接合成出符合规格的竖版成片。"""
+    narration, bgm = _assets()
+    storyboard = _storyboard(narration, bgm)
     assert storyboard.validate() == [], (
         f"合成的竖版 storyboard 不合契约：{storyboard.validate()}"
     )
-    assert BGM.is_file(), f"仓库里没有 BGM：{BGM}"
 
     out = tmp_path / "ep-vertical-smoke.mp4"
     compose_mod.compose(storyboard, tmp_path / "build", out,
-                        narration=narration, bgm=BGM)
+                        narration=narration, bgm=bgm)
 
     assert out.is_file(), f"竖版成片没生成：{out}"
     assert out.stat().st_size > 0, "竖版成片是空的"
@@ -225,11 +236,11 @@ def test_the_vertical_episode_is_faststart(tmp_path):
     竖版是抖音那一档的产物，手机上看是边下边播；moov 垫在后面的话，
     首屏要等整个文件下完。
     """
-    narration = _narration()
-    storyboard = _storyboard(narration)
+    narration, bgm = _assets()
+    storyboard = _storyboard(narration, bgm)
     out = tmp_path / "ep-vertical-faststart.mp4"
     compose_mod.compose(storyboard, tmp_path / "build", out,
-                        narration=narration, bgm=BGM)
+                        narration=narration, bgm=bgm)
 
     raw = out.read_bytes()
     moov = raw.find(b"moov")
@@ -274,11 +285,11 @@ def test_the_vertical_subtitle_is_burned_in_and_above_the_platform_ui(tmp_path):
     这条是竖版**独有**的判据：横版字幕贴着底边是对的，竖版贴着底边
     就会被抖音的导航栏盖住。横版的冒烟测不出这条。
     """
-    narration = _narration()
-    storyboard = _storyboard(narration)
+    narration, bgm = _assets()
+    storyboard = _storyboard(narration, bgm)
     out = tmp_path / "ep-vertical-subtitle.mp4"
     compose_mod.compose(storyboard, tmp_path / "build", out,
-                        narration=narration, bgm=BGM)
+                        narration=narration, bgm=bgm)
 
     pixels = _first_frame(out)
     assert pixels.shape[:2] == (HEIGHT, WIDTH), (

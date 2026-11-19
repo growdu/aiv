@@ -1,11 +1,14 @@
-"""小象形象接入（统一入口）。
+"""形象接入（统一入口）。
 
-仓库里只有一套形象素材：
+**形象是用户自带的素材，不是框架的一部分。** 它长什么样、叫什么名字，
+都是用这套流水线的人自己的事；框架只认「立绘在哪」——位置写在
+`video/config.toml` 的 `[assets.mascot]` 里。
 
-| 素材 | 位置 | 是否入库 |
+| 素材 | 配在哪 | 缺了会怎样 |
 | --- | --- | --- |
-| 3D 卡通形象 | `video/character/growdu_character_2k_nobg.png` | 是（出片必需） |
-| 无标牌形象 | `video/character/growdu_character_2k_nobg_nobadge.png` | 是（抖音这档备用） |
+| 立绘（透明底） | `[assets.mascot].image` | 不画形象（**不是错误**） |
+| 无标牌立绘 | `[assets.mascot].plain` | 换不了素材，仅此而已 |
+| 落版头像 | `[assets.avatar].image` | 落版不带头像 |
 
 形象是 3D 渲染的静态图，**不做部件切分动画**——连通块阈值与绝对坐标都是为
 2D 扁平图硬编码的，3D 渲染的渐变高光会直接破坏分割。按《形象与音色规范》
@@ -13,7 +16,7 @@
 
 换素材走 `use_image()`（命令行是 `render --character <路径>`）。默认素材
 缺失时的降级策略是：有形象就画，没有就完全不画。任何情况下都不抛异常
-——媒体产物不入库，缺素材是常态而不是错误。但**显式指定**的素材缺失
+——素材不入库，缺素材是常态而不是错误。但**显式指定**的素材缺失
 会报错：那是指错了，不是没有。
 """
 from __future__ import annotations
@@ -24,17 +27,19 @@ import cairo
 import numpy as np
 from PIL import Image
 
+from pyv import config as config_mod
+
 # video/ 是 pipeline/ 的上一级：pyv/character.py → pyv → pipeline → video
 AIV_ROOT = Path(__file__).resolve().parents[2]
 # video/ 与 platforms/ 同级，都挂在仓库根下
 REPO_ROOT = AIV_ROOT.parents[0]
 
-# 3D 形象（透明底，合成进视频用这个）
-DEFAULT_STATIC_IMAGE = AIV_ROOT / "character" / "growdu_character_2k_nobg.png"
+# 立绘（透明底，合成进视频用这个）。**由配置决定**——配置里没写就是没有。
+DEFAULT_STATIC_IMAGE = config_mod.config().mascot
 # 当前用的形象素材。换素材走 `use_image()`，别直接改这个常量。
 STATIC_IMAGE = DEFAULT_STATIC_IMAGE
-# 个人头像（已入库，用于落版；不使用任何公司 Logo）
-AVATAR_IMAGE = REPO_ROOT / "themes" / "matery" / "source" / "medias" / "avatar.jpg"
+# 落版头像（没有就不带）
+AVATAR_IMAGE = config_mod.config().avatar
 
 
 def use_image(path: str | Path) -> bool:
@@ -113,7 +118,7 @@ class Mascot:
         self._source = STATIC_IMAGE
         self._surface = None
         self._box = (0, 0, 0, 0)
-        if STATIC_IMAGE.exists():
+        if STATIC_IMAGE is not None and STATIC_IMAGE.exists():
             image = Image.open(STATIC_IMAGE).convert("RGBA")
             self._surface = pil_to_cairo(image)
             self._box = subject_box(image)
@@ -154,19 +159,21 @@ class Mascot:
 
 
 def avatar_path() -> Path | None:
-    """个人头像（落版用）。没有就返回 None，调用方跳过整块。"""
+    """落版头像。没有就返回 None，调用方跳过整块。"""
+    if AVATAR_IMAGE is None:
+        return None
     return AVATAR_IMAGE if AVATAR_IMAGE.exists() else None
 
 
 def asset_mtimes() -> list[float]:
     """形象素材的修改时间。
 
-    渲染的产物依赖这些素材：换了小象的图（重新生成、加眼镜……），
+    渲染的产物依赖这些素材：换了立绘的图（重新生成、加眼镜……），
     已经渲染好的片段就该作废重渲，否则画面里还是旧形象。
     只看 Python 模块的修改时间是发现不了素材换了的。
     """
     times: list[float] = []
     for path in (STATIC_IMAGE, AVATAR_IMAGE):
-        if path.exists():
+        if path is not None and path.exists():
             times.append(path.stat().st_mtime)
     return times

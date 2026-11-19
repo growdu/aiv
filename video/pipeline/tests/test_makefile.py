@@ -1,6 +1,6 @@
 """Makefile 的期号分流。
 
-`make EP=<slug>` 是换一期的唯一入口。**一期 = `video/episodes/<slug>/` 一个目录**，
+`make EP=<期路径>` 是换一期的唯一入口。**一期 = `video/episodes/<系列>/<合集>/<文档>/<档位>/` 一个目录**，
 Makefile 里不再有期号登记表——路径从 `EP` 派生。
 
 所以这条守卫盯住两件事：

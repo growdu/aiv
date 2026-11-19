@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""把 AIV 的口播稿变成站上的视频页。
+"""把视频线的口播稿变成站上的视频页。
 
-**母稿是 ``video/字幕-<主题>.md``**——那一行一句的口播稿与字幕表，是这条线
-入库的唯一真相；画面契约在 ``video/contracts/<期号>.json``，发布状态在
-``platforms/<平台>/outbox/*.json``。
+**一期 = 一个档位目录**：``video/episodes/<系列>/<合集>/<文档>/<档位>/``。
+那一行一句的口播稿与字幕表（``口播稿.md``）是这条线入库的唯一真相；
+画面契约在同一个期目录里的 ``contract.json``，发布元数据在 ``publish.json``，
+发布状态在 ``platforms/<平台>/outbox/*.json``。
 
 生成的是**内容单元**（``content/units/video/<期号>.md``），不是页面：
 视频和文章走同一套渲染、同一个 permalink、同一条「已发布到」通道。
 这也补上了规格 §9.3 说的那句话——站点是内容谱系的根，而视频此前
 在站上零呈现（video widget 关着、菜单无入口）。
 
-期号与口播稿的对应关系读的是 ``video/pipeline/Makefile``（那里的
-``ifeq ($(EP),<期号>)`` 登记），**不另建一份映射表**——两个地方各记一遍
-就会漂。
+期从哪来：**扫目录**。期根下面四层，末层是档位（``short``/``mid``/``full``），
+就是一个期——**目录就是登记表**，不另建一份映射表（两个地方各记一遍就会漂）。
+口径与 ``video/pipeline/pyv/episodes.py`` 是同一套。
+
+**还没有期是合法状态**：一条期都没有时生成 0 个内容单元，不是错。
 
 生成物是派生产物：``content/units/video/`` 每次构建现生成（与 ``sync-hexo.py``
 的产物一个待遇）。
@@ -40,36 +43,62 @@ from pathlib import Path
 # 根 tools/ 的脚本：parents[1] 就是仓库根。
 # 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from paths import CONTENT_UNITS, REPO_ROOT  # noqa: E402
+from paths import CONTENT_UNITS, REPO_ROOT, SITE_DATA  # noqa: E402
 
 AIV_ROOT = REPO_ROOT / "video"
-MAKEFILE = AIV_ROOT / "pipeline" / "Makefile"
-CONTRACTS_DIR = AIV_ROOT / "contracts"
+EPISODES_DIR = AIV_ROOT / "episodes"
 PLATFORMS_DIR = REPO_ROOT / "platforms"
 POSTS_DIR = CONTENT_UNITS
 
+#: 一期的坐标：期根往下四层 `系列/合集/文档/档位`。
+EP_DEPTH = 4
+#: 末层是档位——只有这三个名字算期目录。
+TIERS = ("short", "mid", "full")
+SCRIPT_NAME = "口播稿.md"
+CONTRACT_NAME = "contract.json"
+PUBLISH_NAME = "publish.json"
+
 CATEGORY = "视频"
-AUTHOR = "growdu"
-
-# Makefile 里的登记：ifeq ($(EP),<期号>) / SCRIPT := $(ROOT)/字幕-<主题>.md
-_EP_RE = re.compile(r"ifeq\s*\(\$\(EP\),\s*([A-Za-z0-9_-]+)\)")
-_SCRIPT_RE = re.compile(r"^\s*SCRIPT\s*:=\s*\$\(ROOT\)/(.+?)\s*$", re.MULTILINE)
 
 
-def read_episode_scripts():
-    """Map every episode to its script file, as registered in the Makefile."""
-    text = MAKEFILE.read_text(encoding="utf-8")
+def site_author():
+    """站点的作者名——从站点身份文件读，不写死。
+
+    **框架层不许写死站名**：身份在 ``platforms/blog/site/data/site.json``，
+    改那一个文件就够。读不到就用 ``author`` 键，再读不到就空着
+    （空着也不会让构建炸——身份是站点的事，不是这一行视频页的事）。
+    """
+    path = SITE_DATA / "site.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if not isinstance(data, dict):
+        return ""
+    return str(data.get("author") or data.get("name") or "").strip()
+
+
+def read_episodes():
+    """磁盘上的每一期：期路径 → 期目录。
+
+    **坐标就是接口**：期根 ``video/episodes/`` 往下四层
+    ``系列/合集/文档/档位``，末层是档位名——**一期 = 一个档位目录**。
+    目录里有一份 ``口播稿.md`` 才算一期（没有母稿的目录不是期）。
+
+    这里不查任何登记表，也不解析 Makefile：**目录就是登记表**。
+    """
+    if not EPISODES_DIR.is_dir():
+        return {}
     episodes = {}
-    for match in _EP_RE.finditer(text):
-        episode = match.group(1)
-        tail = text[match.end():]
-        script = _SCRIPT_RE.search(tail)
-        if script:
-            episodes[episode] = script.group(1)
-    if not episodes:
-        raise SystemExit(
-            f"在 {MAKEFILE} 里没读到任何期号登记——Makefile 的格式变了？"
-        )
+    for path in sorted(EPISODES_DIR.rglob("*")):
+        if not path.is_dir():
+            continue
+        rel = path.relative_to(EPISODES_DIR)
+        if len(rel.parts) != EP_DEPTH or rel.parts[-1] not in TIERS:
+            continue
+        if not (path / SCRIPT_NAME).is_file():
+            continue
+        episodes[rel.as_posix()] = path
     return episodes
 
 
@@ -148,17 +177,16 @@ def rewrite_links(body, script_to_permalink):
     return re.sub(r"\]\(([^)]+)\)", replace, body)
 
 
-def read_publish_meta(episode):
-    """这一期的发布元数据（``video/publish/<EP>.json``）。
+def read_publish_meta(ep_dir):
+    """这一期的发布元数据（期目录里的 ``publish.json``）。
 
     **它是母版标题的出处**（视频发布契约 §4.3：「这一期的标题（母版标题）。
-    各平台文案默认从这里派生」）。画面契约 ``video/contracts/<EP>.json`` 里的
-    title 是**画面标题**，两者不必相同——EP01 的画面标题是「openGauss 的并行
-    逻辑解码」，母版标题是「PostgreSQL 18 并行逻辑解码」。
+    各平台文案默认从这里派生」）。画面契约（同目录的 ``contract.json``）里的
+    title 是**画面标题**，两者不必相同。
 
     所以站上的视频页用母版标题：那一期在 B站/视频号叫什么，站内就叫什么。
     """
-    path = AIV_ROOT / "publish" / f"{episode}.json"
+    path = ep_dir / PUBLISH_NAME
     if not path.is_file():
         return {}
     try:
@@ -168,17 +196,17 @@ def read_publish_meta(episode):
     return data if isinstance(data, dict) else {}
 
 
-def build_page(episode, script_path, outbox):
-    """Build one content unit. Returns ``(slug, markdown)``."""
-    script_file = AIV_ROOT / script_path
+def build_page(episode, ep_dir, outbox, content_id):
+    """Build one content unit. Returns ``(title, date, markdown)``."""
+    script_file = ep_dir / SCRIPT_NAME
     fields, body = parse_front_matter(script_file.read_text(encoding="utf-8"))
 
-    contract_file = CONTRACTS_DIR / f"{episode}.json"
+    contract_file = ep_dir / CONTRACT_NAME
     contract = {}
     if contract_file.is_file():
         contract = json.loads(contract_file.read_text(encoding="utf-8"))
 
-    meta = read_publish_meta(episode)
+    meta = read_publish_meta(ep_dir)
     # 母版标题优先：那一期在平台上叫什么，站内就叫什么。
     title = meta.get("title") or contract.get("title") or fields.get("title") or episode
     date = fields.get("date") or "1970-01-01"
@@ -186,15 +214,15 @@ def build_page(episode, script_path, outbox):
 
     platforms = sorted(
         platform
-        for (content_id, platform) in outbox
-        if content_id == episode
+        for (cid, platform) in outbox
+        if cid == content_id
     )
 
     front_matter = [
         "---",
         f'title: "{title}"',
         f"date: {date}",
-        f"author: {AUTHOR}",
+        f"author: {site_author()}",
         "categories:",
         f"  - {CATEGORY}",
         "tags:",
@@ -214,41 +242,50 @@ def build_page(episode, script_path, outbox):
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="build-video-pages",
-        description="把 AIV 的口播稿生成成站上的视频内容单元。",
+        description="把视频线的口播稿生成成站上的视频内容单元。",
     )
     parser.parse_args(argv)
 
-    episodes = read_episode_scripts()
+    episodes = read_episodes()
     outbox = read_outbox()
-
-    # 先算出每期口播稿对应的站内地址：兄弟期之间的链接要指向这些地址。
-    script_to_permalink = {}
-    episode_meta = {}
-    for episode, script_path in sorted(episodes.items()):
-        script_file = AIV_ROOT / script_path
-        if not script_file.is_file():
-            print(f"跳过 {episode}：找不到 {script_file}", file=sys.stderr)
-            continue
-        fields, _body = parse_front_matter(script_file.read_text(encoding="utf-8"))
-        date = fields.get("date") or "1970-01-01"
-        url = permalink(date, f"video/{episode}")
-        script_to_permalink[f"./{script_path}"] = url
-        episode_meta[episode] = (script_path, date, url)
 
     posts_dir = POSTS_DIR / "video"
     posts_dir.mkdir(parents=True, exist_ok=True)
 
+    if not episodes:
+        # **还没有期是合法状态**：一条期都没有，生成 0 个单元，不是错。
+        print("还没有期：video/episodes/ 下没有期目录，生成 0 个视频内容单元")
+        print("合集页（系列页）由 platforms/blog/site/tools/build-series-page.py 生成")
+        return 0
+
+    # 先算出每期口播稿对应的站内地址：兄弟期之间的链接要指向这些地址。
+    script_to_permalink = {}
+    episode_meta = {}
+    for episode, ep_dir in sorted(episodes.items()):
+        script_file = ep_dir / SCRIPT_NAME
+        fields, _body = parse_front_matter(script_file.read_text(encoding="utf-8"))
+        date = fields.get("date") or "1970-01-01"
+        # 内容单元的身份是**期号**（front matter 的 episode_number）——
+        # 播放顺序那一串。期路径会随目录重排变，期号是站上认得的那个。
+        content_id = fields.get("episode_number") or episode.replace("/", "-")
+        url = permalink(date, f"video/{content_id}")
+        # 兄弟期之间的链接：相对期根的路径与带 ./ 的写法都认。
+        rel = script_file.relative_to(EPISODES_DIR).as_posix()
+        script_to_permalink[f"./{rel}"] = url
+        script_to_permalink[rel] = url
+        episode_meta[episode] = (ep_dir, date, url, content_id)
+
     pages = []
-    for episode, (script_path, date, url) in sorted(episode_meta.items()):
-        title, _date, markdown = build_page(episode, script_path, outbox)
+    for episode, (ep_dir, date, url, content_id) in sorted(episode_meta.items()):
+        title, _date, markdown = build_page(episode, ep_dir, outbox, content_id)
         body_start = markdown.index("---", 4) + 3
         front, body = markdown[:body_start], markdown[body_start:]
         body = rewrite_links(body, script_to_permalink)
-        path = posts_dir / f"{episode}.md"
+        path = posts_dir / f"{content_id}.md"
         path.write_text(front + body, encoding="utf-8")
 
         platforms = sorted(
-            platform for (content_id, platform) in outbox if content_id == episode
+            platform for (cid, platform) in outbox if cid == content_id
         )
         pages.append((episode, title, date, url, platforms))
 

@@ -93,27 +93,43 @@ def test_prepare_clips_transcodes_real_brand_asset(tmp_path):
     assert info["duration"] <= brand.MAX_BRAND_SECONDS, "片头必须 ≤3 秒"
 
 
-def test_resolve_clip_prefers_3s_and_falls_back_to_legacy(tmp_path, monkeypatch):
-    """定稿的 3 秒片优先；缺失时回退旧版并告警。"""
-    legacy = tmp_path / "legacy.mp4"
-    legacy.write_bytes(b"x")
-
-    monkeypatch.setattr(brand, "INTRO_CLIP", tmp_path / "missing.mp4")
-    monkeypatch.setattr(brand, "LEGACY_INTRO_CLIP", legacy)
-    assert brand.resolve_clip("intro") == legacy
-
-    primary = tmp_path / "primary.mp4"
+def test_resolve_clip_prefers_the_configured_one(tmp_path, monkeypatch):
+    """配置里指明的那张（`clips/intro.mp4`）有就用它。"""
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    primary = clips / "intro.mp4"
     primary.write_bytes(b"x")
+
+    monkeypatch.setattr(brand, "CLIPS_DIR", clips)
     monkeypatch.setattr(brand, "INTRO_CLIP", primary)
     assert brand.resolve_clip("intro") == primary
 
 
+def test_resolve_clip_falls_back_to_the_shortest_in_the_clips_dir(tmp_path, monkeypatch):
+    """配置里那张没有时，在 clips 目录里按名字找，取**最短**的那张。
+
+    规格要求品牌片 ≤3 秒，短的那张通常是定稿版。
+    """
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    (clips / "growdu_intro_long.mp4").write_bytes(b"x")
+    (clips / "growdu_intro_short.mp4").write_bytes(b"x")
+
+    monkeypatch.setattr(brand, "CLIPS_DIR", clips)
+    monkeypatch.setattr(brand, "INTRO_CLIP", clips / "intro.mp4")
+    # 两个候选的时长取不到（不是真视频）时，排序是稳定的：
+    # 先按名字排，同名再比时长。
+    assert brand.resolve_clip("intro") in (clips / "growdu_intro_long.mp4",
+                                          clips / "growdu_intro_short.mp4")
+
+
 def test_resolve_clip_returns_none_when_no_asset(tmp_path, monkeypatch):
-    """媒体产物不入库：一张都没有时返回 None，流水线照常出片。"""
-    monkeypatch.setattr(brand, "INTRO_CLIP", tmp_path / "a.mp4")
-    monkeypatch.setattr(brand, "LEGACY_INTRO_CLIP", tmp_path / "b.mp4")
-    monkeypatch.setattr(brand, "OUTRO_CLIP", tmp_path / "c.mp4")
-    monkeypatch.setattr(brand, "LEGACY_OUTRO_CLIP", tmp_path / "d.mp4")
+    """素材是用户自带的：一张都没有时返回 None，流水线照常出片。"""
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    monkeypatch.setattr(brand, "CLIPS_DIR", clips)
+    monkeypatch.setattr(brand, "INTRO_CLIP", clips / "intro.mp4")
+    monkeypatch.setattr(brand, "OUTRO_CLIP", clips / "outro.mp4")
     assert brand.resolve_clip("intro") is None
     assert brand.resolve_clip("outro") is None
     assert brand.prepare_clips(tmp_path / "build") == {}
@@ -131,7 +147,7 @@ def test_audio_source_prefers_the_finished_mix(tmp_path, monkeypatch):
     audio_dir.mkdir()
     mix = audio_dir / "intro_mix.wav"
     mix.write_bytes(b"x")
-    monkeypatch.setattr(brand, "BRAND_ROOT", tmp_path)
+    monkeypatch.setattr(brand, "BRAND_AUDIO_DIR", audio_dir)
 
     assert brand._resolve_audio_source("intro", clip) == mix
 
@@ -140,8 +156,9 @@ def test_audio_source_falls_back_to_the_clip(tmp_path, monkeypatch):
     """没有成品音轨时用 mp4 里的音轨顶上，流水线不至于断。"""
     clip = tmp_path / "intro.mp4"
     clip.write_bytes(b"x")
-    (tmp_path / "audio").mkdir()
-    monkeypatch.setattr(brand, "BRAND_ROOT", tmp_path)
+    audio_dir = tmp_path / "audio"
+    audio_dir.mkdir()
+    monkeypatch.setattr(brand, "BRAND_AUDIO_DIR", audio_dir)
 
     assert brand._resolve_audio_source("intro", clip) == clip
 

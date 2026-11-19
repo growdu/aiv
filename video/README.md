@@ -5,20 +5,75 @@
 技术图示一律由代码绘制（cairo + ffmpeg），不交给模型生成；
 形象是 3D 静帧 + 位移/缩放/淡入，文字用真实字体在 cairo 阶段渲染。
 **入库的是事实**（规范、契约、台账、代码），**产物不入库**（成片、片段、时间轴、发布包留本机）。
-**出片必需的输入也入库**（旁白、曲库、形象素材、品牌片）——没有它们就出不了片，
-不入库就等于每次换机器都要重新搬一遍。见[上机指南.md](上机指南.md)。
+**素材归使用者**：立绘、曲库、品牌片是「用这套流水线的人」自己的东西——
+版权是他们的，口味也是他们的，所以它们不进仓库，只在
+[`config.toml`](config.toml) 里声明位置。
+**素材缺失不是错误**：没配就是没配，流水线降级（不画形象 / 不铺 BGM / 不带品牌片），
+照样出片；**配了但文件不在**才是错，`make doctor` 会单独报出来。
+见[上机指南.md](上机指南.md)。
 
 ## 目录
 
 | 目录 | 内容 |
 | --- | --- |
 | `pipeline/` | 出片流水线：`pyv/` 渲染引擎 + `tests/` + `Makefile` |
-| `episodes/` | 一期视频：一个目录，口播稿、契约、发布元数据、旁白、审校记录都在里面 |
+| `episodes/` | 期的坐标：四层 `系列/合集/文档/档位`，**一期 = 一个档位目录**，口播稿、契约、发布元数据、旁白、审校记录都在里面 |
 | `review/` | 视频审校的规则（文本层 `VT-*`、成片层 `VV-*`），一期的审校记录与抽帧清单在期目录里 |
 | `character/` | 3D 小象形象：生成、加眼镜、铭牌盖章（`scripts/`） |
 | `brand/` | 品牌片头/片尾：渲染与配乐（`scripts/`） |
 | `voice/` | 旁白音色与合成（`scripts/`） |
-| `music/` | 背景音乐曲库：授权台账 + 曲库文件（授权 CC0-1.0，都入库） |
+| `music/` | 背景音乐曲库：授权台账（入库，是授权事实）+ 曲库文件（用户自带，不入库） |
+
+## 配置入口
+
+素材的位置不写死在代码里，也不写死在 Makefile 里，而是写在
+[`config.toml`](config.toml) 里——那是**框架与使用者之间那道缝**：
+
+```toml
+[brand]
+name = "Growdu"        # 落版与片尾字幕上的名字
+token = "growdu"       # 品牌词：画面里出现它就算有品牌标识
+tagline = "深入数据库"  # 片头副标题
+site = "Growdu.cn"     # 片尾落版
+
+[assets.mascot]
+image = ""             # 立绘（透明底 PNG）；空 = 不画形象
+plain = ""             # 无标牌立绘（可选）
+
+[assets.avatar]
+image = ""             # 落版头像（可选）
+
+[assets.music]
+dir = "music/tracks"       # 曲库目录
+bed = ""                   # 正文铺底那首；空 = 不铺 BGM
+library = "music/library.json"
+
+[assets.brand]
+clips = "brand/clips"     # 品牌片
+audio = "brand/audio"     # 品牌成品音轨
+windows = "brand/brand_windows.json"
+```
+
+三条规矩：
+
+- **相对路径按配置文件所在目录解析**；绝对路径照用。
+- **环境变量 `VIDEO_CONFIG`** 指到别的配置文件——同一个仓库里跑两套片子时用。
+- **素材缺失不是错误**。没配就是没配，流水线降级出片；配了但文件不在才是错。
+
+脚本怎么问配置要值：
+
+```bash
+cd video/pipeline
+python3 -m pyv.cli config <key>
+```
+
+支持的 key：`path`、`brand_name`、`brand_token`、`brand_tagline`、`brand_site`、
+`mascot`、`mascot_plain`、`avatar`、`music_dir`、`bgm`、`music_library`、
+`brand_clips`、`brand_audio`、`brand_windows`。
+**没配就打印空行**——脚本据此「不传这个参数」。
+
+**内置字体不在配置里**：它是规则级的东西（两台机器用同一份字体文件，
+跨机版式才一致），跟着仓库走。
 
 ## 规范
 
@@ -56,17 +111,17 @@ make topics       # python -m pyv.cli topics check
 
 ### 进度
 
-这条线刚清空重来：规则齐了，还没有期。建一期就是建一个目录，
+这条线刚清空重来：规则齐了，还没有期。建一期就是建一个档位目录，
 见 [episodes/README.md](episodes/README.md)。
 
 ## 本期内容进契约，版式常量留代码
 
 一条视频的**画面文案与数字**（标题、副标题、标签、核数、顺序号、性能倍数……）
-全部写在 `episodes/<slug>/contract.json` 的视觉分镜契约里，不写在场景代码里。
+全部写在 `episodes/<期路径>/contract.json` 的视觉分镜契约里，不写在场景代码里。
 
 | | 放哪 | 谁定 |
 | --- | --- | --- |
-| 文案、数字、标签、枚举 | `episodes/<slug>/contract.json` | 每一期 |
+| 文案、数字、标签、枚举 | `episodes/<期路径>/contract.json` | 每一期 |
 | 位置、尺寸、配色、动效 | `pipeline/pyv/scenes/*.py` | 模板 |
 
 这么分是为了让「换一期」不再等于「改一遍代码」：新一期只写契约，
@@ -87,19 +142,24 @@ cd video/pipeline
 python3 scripts/install_font.py   # 装内置字体（两台机器用同一份，跨机版式一致）
 make doctor      # 环境自检：这台机器缺什么、怎么补（换机器先跑这个）
 make test        # 全量测试
-make persona     # 按《人格规范》检查口播稿
 make topics      # 按《选题库》的规则检查选题
 make bgm         # 按《背景音乐规范》检查曲库台账
-make mix-verify  # 成片级混音验收（规范 §5.7）
 make pronunciation  # 多音字读音验收（要联网合成探针）
-make probe       # ffprobe 看成片的时长、编码与像素格式
+```
+
+下面几条要指定期路径（`EP=` 收的是期路径，见 §换一期）：
+
+```bash
+make EP=<期路径> persona     # 按《人格规范》检查这一期的口播稿
+make EP=<期路径> mix-verify  # 成片级混音验收（规范 §5.7）
+make EP=<期路径> probe       # ffprobe 看成片的时长、编码与像素格式
 ```
 
 出片链路（`align → validate → brand → render → compose`）需要旁白音频
-（`episodes/<slug>/narration.mp3`，**已入库**）与视觉分镜契约
-（`episodes/<slug>/contract.json`，已入库）——契约决定**画面上写什么**，
+（`episodes/<期路径>/narration.mp3`）与视觉分镜契约
+（`episodes/<期路径>/contract.json`）——契约决定**画面上写什么**，
 旁白决定**什么时候出现**。
-时间轴 `episodes/<slug>/storyboard.json` 由 `align` 从旁白算出来，是产物，不入库。
+时间轴 `episodes/<期路径>/storyboard.json` 由 `align` 从旁白算出来，是产物，不入库。
 
 ### 出片之后：验收、体检与审校
 
@@ -107,11 +167,11 @@ make probe       # ffprobe 看成片的时长、编码与像素格式
 
 | 环节 | 命令 | 查什么 |
 | --- | --- | --- |
-| 成片验收 | `make EP=<slug> mix-verify` | 稳态 duck 深度、旁白/BGM 电平差、真峰值（规范 §5.7） |
-| 发布体检 | `python3 -m pyv.cli publish check --episode <slug>` | 发布元数据 + 成片技术门槛（每个平台各判一遍） |
-| 文本层审校 | `make review-text EP=<slug>` | `VT-*`：口播腔调、数字出处、口播与字幕是否一致 |
-| 成片层审校 | `make review-video EP=<slug>` | `VV-*`：漏画、字幕没烧上、旁白静音、时长与时间轴对不上 |
-| 抽帧看画面 | `make review-frames EP=<slug>` | 每段两帧 + 关键帧，出一份「这一帧该有什么文案」的对照清单 |
+| 成片验收 | `make EP=<期路径> mix-verify` | 稳态 duck 深度、旁白/BGM 电平差、真峰值（规范 §5.7） |
+| 发布体检 | `python3 -m pyv.cli publish check --episode <期路径>` | 发布元数据 + 成片技术门槛（每个平台各判一遍） |
+| 文本层审校 | `make review-text EP=<期路径>` | `VT-*`：口播腔调、数字出处、口播与字幕是否一致 |
+| 成片层审校 | `make review-video EP=<期路径>` | `VV-*`：漏画、字幕没烧上、旁白静音、时长与时间轴对不上 |
+| 抽帧看画面 | `make review-frames EP=<期路径>` | 每段两帧 + 关键帧，出一份「这一帧该有什么文案」的对照清单 |
 
 审校的两层、阈值与边界见 [review/README.md](review/README.md)。
 
@@ -120,14 +180,15 @@ make probe       # ffprobe 看成片的时长、编码与像素格式
 抖音禁「过度营销信息」与站外引流，所以另出两档：
 
 ```bash
-make EP=<slug> nobrand            # 去品牌片头/片尾
-make EP=<slug> nobrand NOBADGE=1  # 再去掉胸口铭牌（铭牌也是品牌标识）
-make EP=<slug> vertical           # 9:16 竖版
+make EP=<期路径> nobrand            # 去品牌片头/片尾
+make EP=<期路径> nobrand NOBADGE=1  # 再去掉胸口铭牌（铭牌也是品牌标识）
+make EP=<期路径> vertical           # 9:16 竖版
 ```
 
 三件事要记住：
 
-- **片段目录与成片都另起一份**（`build/<slug>__nobrand/`、`out/<slug>__nobrand.mp4`），
+- **片段目录与成片都另起一份**
+  （`build/<期路径压平>__nobrand/`、`out/<期路径压平>__nobrand.mp4`），
   不跟带品牌的版本共用——共用会让增量渲染把带品牌片的片段当成可复用的。
 - **竖版本来就不套品牌片**：品牌片素材是横版的，贴到竖版画布上会被拉变形，
   `pyv.cli brand` 会直接拒绝。
@@ -166,18 +227,35 @@ cd video/pipeline && make doctor                       # 自检
 
 ## 换一期
 
-一期 = 一个目录，路径说了算：
+**坐标就是接口。** 期根 `video/episodes/`，往下四层：
+
+```
+video/episodes/<系列>/<合集>/<文档>/<档位>/
+                 一级   二级   三级   四级
+```
+
+一级是系列（`postgresql`），二级是合集（`getting-started`），
+三级是文档（一篇母稿，`postgresql基操`），四级是档位（`short` / `mid` / `full`）。
+
+**一期 = 一个档位目录**，所以一篇文档出三期（short/mid/full），
+每期有自己的口播稿、契约与旁白；共享的是那一篇文档的骨架
+（`skeleton.yaml`，放在文档目录里，三档共用）。
+
+期路径就是这四段：
 
 ```bash
 cd video/pipeline
-make EP=<slug> align        # 按这一期的旁白对齐出时间轴
-make EP=<slug> all          # validate → brand → render → compose
+make EP=postgresql/getting-started/postgresql基操/short align   # 按这一期的旁白对齐出时间轴
+make EP=postgresql/getting-started/postgresql基操/short all     # validate → brand → render → compose
 ```
 
-`EP` 收的是 **slug**（英文小写连字符），它决定这一期读哪个目录：
-`episodes/<slug>/` 里的口播稿、契约、旁白，就是这一期的输入。
-**忘了 `EP=` 会当场报错**，不会拿空路径去跑，
+`EP` 收的是**期路径**（四段，相对 `video/episodes/`），它决定这一期读哪个目录：
+那一层里的口播稿、契约、旁白，就是这一期的输入。
+**忘了 `EP=` 会当场报错退出 2**，不会拿空路径去跑；
+路径写错了也一样（目录不存在时报错）。
 也不会静悄悄地拿上一期的稿子出片。
+
+**没有登记表**：建目录、放文件，就是新的一期。
 
 期目录里放这一期的全部输入与产物：`口播稿.md`（口播稿 + 字幕表）、
 `contract.json`（视觉分镜契约）、`publish.json`（发布元数据）、
@@ -185,30 +263,36 @@ make EP=<slug> all          # validate → brand → render → compose
 `review.md`（这一期的审校记录）、`frames.md`（抽帧清单）、
 `frames/`（抽出来的帧）。哪些入库、哪些是产物，看下面这张表。
 
-片段目录也按期分开（`build/<slug>/`）：各期的段 id 会重名（`s01`…），
+期路径会**压平**成一个文件名片段（斜杠换连字符），`out/` 与 `build/` 里用的就是它：
+
+```
+postgresql/getting-started/postgresql基操/short
+→ postgresql-getting-started-postgresql基操-short
+```
+
+片段目录也按期分开（`build/<期路径压平>/`）：各期的段 id 会重名（`s01`…），
 共用一个目录会互相覆盖。
 
 | 入库 | 不入库（留本机） |
 | --- | --- |
-| `episodes/<slug>/contract.json` 视觉分镜契约 | `episodes/<slug>/storyboard.json` 时间轴 |
-| `episodes/<slug>/口播稿.md` 口播稿与字幕表 | `build/<slug>/*.mp4` 片段 |
-| `pipeline/pyv/scenes/*.py` 场景代码 | `out/<slug>.mp4` 成片 |
-| `episodes/<slug>/narration.mp3` 旁白（**出片必需**） | 发布包 |
-| `music/tracks/*.wav` 曲库（**出片必需**） | `episodes/<slug>/frames/*.png` 抽出来的帧 |
-| `character/growdu_character_2k_nobg.png` 立绘（**出片必需**） | |
-| `brand/clips/*.mp4`、`brand/audio/*_mix.wav` 品牌片与音轨 | |
+| `episodes/<期路径>/口播稿.md` 口播稿与字幕表 | `episodes/<期路径>/storyboard.json` 时间轴 |
+| `episodes/<期路径>/contract.json` 视觉分镜契约 | `episodes/<期路径>/narration.mp3` 旁白（TTS 合成，本机素材） |
+| `episodes/<期路径>/publish.json` 发布元数据 | `build/<期路径压平>/*.mp4` 片段 |
+| `episodes/<期路径>/review.md` 审校记录 | `out/<期路径压平>.mp4` 成片 |
+| `episodes/<期路径>/frames.md` 抽帧清单 | `episodes/<期路径>/frames/*.png` 抽出来的帧 |
+| `episodes/<文档路径>/skeleton.yaml` 讲稿骨架（三档共用） | 发布包 |
+| `pipeline/pyv/scenes/*.py` 场景代码 | 立绘、曲库、品牌片（用户素材，位置在 `config.toml`） |
 | `pipeline/assets/fonts/*.otf` 内置字体子集（**跨机版式一致要用**） | |
-| `episodes/<slug>/publish.json` 发布元数据 | |
-| `episodes/<slug>/frames.md` 抽帧清单 | |
+| `music/library.json` 曲库授权台账（授权是事实） | |
+| `brand/brand_windows.json` 片头片尾的配乐窗口（决策是事实） | |
 
 抽帧的**帧不入库、清单入库**：帧是产物，跟着本机的成片走；清单是
 「这一期抽了哪些帧、每帧该有什么文案」的对照表——审核记录里的判断要能对着它复核。
-（`.gitignore` 里这一条的放行顺序要紧：先放行目录，再拦内容，最后放行清单。）
 
 ## 审校（review）
 
 `review/` 存放对这条线的**审校规范与进度**，一期的审校记录在期目录里
-（`episodes/<slug>/review.md`），规范在
+（`episodes/<期路径>/review.md`），规范在
 [review/README.md](review/README.md)。目标不是把片子做得更华丽，
 而是让它像一位有经验的工程师在清楚地讲一件事：具体、自然、有判断。
 
@@ -221,9 +305,9 @@ make EP=<slug> all          # validate → brand → render → compose
 
 ```bash
 cd video/pipeline
-make review-text   EP=<slug>   # 文本层
-make review-video  EP=<slug>   # 成片层（需要本机有 out/<slug>.mp4）
-make review-frames EP=<slug>   # 抽帧 + 清单（帧不入库，清单入库）
+make review-text   EP=<期路径>   # 文本层
+make review-video  EP=<期路径>   # 成片层（需要本机有 out/<期路径压平>.mp4）
+make review-frames EP=<期路径>   # 抽帧 + 清单（帧不入库，清单入库）
 ```
 
 三条规矩：
@@ -234,19 +318,20 @@ make review-frames EP=<slug>   # 抽帧 + 清单（帧不入库，清单入库�
 - **改稿会改到画面**：口播改了，契约的句子覆盖关系可能变，`align` 要重算时间轴、
   片段要重渲。只审文本不审成片，等于审了一份没出片的稿子。
 
-一期一条记录在 `episodes/<slug>/review.md`，进度在 `review/INDEX.md`（只维护一份）。
+一期一条记录在 `episodes/<期路径>/review.md`，进度在 `review/INDEX.md`（只维护一份）。
 `review/` 只记录审核过程与结论，**不是对外发布内容**，不进 `docs/`，
 也不进发布白名单（与文档侧的根 `review/` 同一条纪律）。
 
 ## 发布到博客的那一份
 
-`video/` 在仓库根，不在 `docs/` 下面，而 `sync-hexo.py` 只扫 `docs/`——
+`video/` 在仓库根，不在 `docs/` 下面，而站点读的是从 `docs/` 编译出来的内容单元——
 所以上面那些**文档**在 `docs/life/aiv/` 另存一份，博客上发的就是那一份。
 
 改完 `video/` 里的文档后跑：
 
 ```bash
-python3 video/scripts/sync_publish_docs.py
+python3 video/scripts/sync_publish_docs.py   # video/ 的文档 → docs/life/aiv/
+python3 tools/build-content-units.py         # docs/ → content/units/（站点读的那一份）
 ```
 
 `pipeline/tests/test_publish_copy.py` 盯着两份是否一致：漂了会红，
@@ -257,13 +342,13 @@ python3 video/scripts/sync_publish_docs.py
 
 ### 站内相对链接是怎么变成绝对路径的
 
-博客里大量用 `../xxx/index.html` 这种写法，但站点的真实 URL 带日期
-（`/2026/11/11/life/gaokao/yunnan-policy/`）。**Hexo 在构建时会重写**：
-目标页存在时，相对链接被改成带日期的绝对路径。
+母稿里的站内链接是相对路径（`./postgresql基操.md`），站点的 URL 是另一套
+（`/docs/source-tracks/postgresql/...`）。这层翻译在**渲染时**做
+（`platforms/blog/site/src/lib/remark-site-links.mjs`），
+它在 **AST 上**改链接字段——不用正则扫全文，所以代码块里的内容一个都不碰。
 
-**目标页不存在时，链接就原样留下**，于是 404。实测：
-`../aiv/背景音乐规范.md` 被正确重写成了 `/blog/2026/11/11/life/aiv/背景音乐规范/`，
-而 `../aiv/index.html` 因为专题页不存在，保持字面量、点了就是 404。
+**目标页不存在时，链接就原样留下**，于是 404。
+重写认的是「同目录下那个 `.md` 文件在不在」，所以链接得写成 `.md` 结尾的相对路径。
 
 所以补一个缺失的页面时**不用去改引用它的那些链接**——把页面写出来，
 链接会自己恢复。反过来，看到「相对链接 404」要先查目标页在不在，
@@ -284,8 +369,8 @@ python3 video/scripts/sync_publish_docs.py
 
 ### 一个容易踩的坑：正文里的方括号
 
-`sync-hexo.py` 重写站内相对链接用的是一条「左方括号 + 文字 + 右方括号 +
-左圆括号 + 地址 + 右圆括号」的匹配，它**不认代码块**。
+链接重写是按「左方括号 + 文字 + 右方括号 + 左圆括号 + 地址 + 右圆括号」
+的形状匹配的，它**不认代码块**。
 正文里任何不成对的左方括号（比如区间写法里的半开区间记号）
 都会让它一路吃到后面某个链接的右圆括号，把中间整段包成一个链接——
 markdown 源码看着没变，渲染出来却是上千字的巨型蓝色链接。

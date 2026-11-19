@@ -6,8 +6,8 @@
 
 用法（在 `video/pipeline/` 下跑）：
 
-    python3 scripts/preview_scenes.py --contract ../episodes/<slug>/contract.json
-    python3 scripts/preview_scenes.py --contract ../episodes/<slug>/contract.json \
+    python3 scripts/preview_scenes.py --contract ../episodes/<期路径>/contract.json
+    python3 scripts/preview_scenes.py --contract ../episodes/<期路径>/contract.json \
         --times 0.2 0.6 --out ../_staging/preview
 
 输出是 PNG，一个场景一张。默认抓三个时间点：开场、居中、收尾。

@@ -13,7 +13,7 @@
 而画面变了不会有任何报错，只有逐像素比对能发现。
 
 **契约从哪来。** 一期 = 一个目录：磁盘上有期就读期目录里的契约，
-没有期就读**夹具期**（`tests/fixtures/fixture/contract.json`）。
+没有期就读**夹具期**（`tests/fixtures/演示系列/演示合集/夹具文档/short/contract.json`）。
 结构守卫不依赖磁盘上有没有期。
 
 **逐像素基准的处境**（见 `tests/fixtures/scene_baseline.json`）：
@@ -40,7 +40,8 @@ FIXTURES = Path(__file__).parent / "fixtures"
 BASELINE = FIXTURES / "scene_baseline.json"
 
 #: 夹具期的契约（磁盘上没有期时读它）。
-FIXTURE_CONTRACT = FIXTURES / "fixture" / "contract.json"
+FIXTURE_CONTRACT = (FIXTURES / "演示系列" / "演示合集" / "夹具文档"
+                   / "short" / "contract.json")
 
 
 def _contract_sources() -> list[tuple[str, Path]]:

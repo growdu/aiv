@@ -103,4 +103,4 @@ else
 fi
 
 echo
-echo "装完了。下一步：cd video/pipeline && make EP=row-lock align validate brand render compose mix-verify"
+echo "装完了。下一步：cd video/pipeline && make EP=<期路径> align validate brand render compose mix-verify"

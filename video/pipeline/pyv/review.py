@@ -7,7 +7,7 @@
 
 **两层都只出信号，不下结论。**「这句像不像人讲」「这张图讲清了没有」
 需要上下文和眼睛，由人和 Agent 判断，结论落在
-`video/episodes/<slug>/review.md`。
+`video/episodes/<期路径>/review.md`。
 
 规范在 `video/review/README.md`，设计在
 `video/review/specs/2026-11-16-video-review-design.md`。
@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from pyv import align
+from pyv import config as config_mod
 from pyv import contract as contract_mod
 from pyv import episodes
 from pyv import persona
@@ -266,8 +267,8 @@ def _probe_duration(path: str | Path) -> float | None:
 def load_materials(episode: str) -> Materials:
     """装齐文本层的输入。
 
-    口播稿与字幕表来自 `video/episodes/<slug>/口播稿.md`，契约来自
-    `video/episodes/<slug>/contract.json`，母稿与数字出处来自
+    口播稿与字幕表来自 `video/episodes/<期路径>/口播稿.md`，契约来自
+    `video/episodes/<期路径>/contract.json`，母稿与数字出处来自
     `video/选题库.md` 的对应期（期号取自口播稿的 front matter）。
     """
     script_path = episodes.script_path(episode)
@@ -578,7 +579,7 @@ def check_text(episode: str) -> Report:
 def load_media(episode: str) -> Media:
     """装齐成片层的输入。产物不在就记 note，不静默跳过。"""
     notes: list[str] = []
-    video = AIV_ROOT / "out" / f"{episode}.mp4"
+    video = AIV_ROOT / "out" / f"{episodes.ep_id(episode)}.mp4"
     if not video.is_file():
         notes.append(f"成片不在本机（{video}）：成片层整体跳过")
         video = None
@@ -599,8 +600,12 @@ def load_media(episode: str) -> Media:
         notes.append(f"旁白不在本机（{narration}）：VV-03 跳过")
         narration = None
 
-    bgm = AIV_ROOT / "music" / "tracks" / "series-bed-01.wav"
-    if not bgm.is_file():
+    bgm = config_mod.config().music_bed
+    if bgm is None:
+        notes.append("BGM 母带没配（config.toml 的 [assets.music].bed）："
+                     "VV-06 跳过")
+        bgm = None
+    elif not bgm.is_file():
         notes.append(f"BGM 母带不在本机（{bgm}）：VV-06 跳过")
         bgm = None
 

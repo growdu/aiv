@@ -139,7 +139,7 @@ def _drawable(ch: str) -> bool:
 
 
 def _episode_contracts() -> list[Path]:
-    """磁盘上各期的契约（`video/episodes/<slug>/contract.json`）。"""
+    """磁盘上各期的契约（`video/episodes/<期路径>/contract.json`）。"""
     from pyv import episodes as episodes_mod
 
     return [episodes_mod.contract_path(slug)
@@ -148,7 +148,7 @@ def _episode_contracts() -> list[Path]:
 
 
 def _episode_scripts() -> list[Path]:
-    """磁盘上各期的口播稿（`video/episodes/<slug>/口播稿.md`）。"""
+    """磁盘上各期的口播稿（`video/episodes/<期路径>/口播稿.md`）。"""
     from pyv import episodes as episodes_mod
 
     return [episodes_mod.script_path(slug)

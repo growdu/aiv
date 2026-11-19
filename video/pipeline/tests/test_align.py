@@ -6,7 +6,7 @@ import pytest
 
 from pyv import align
 
-# 真实口播稿在期目录里（`video/episodes/<slug>/口播稿.md`）。
+# 真实口播稿在期目录里（`video/episodes/<期路径>/口播稿.md`）。
 # 视频线清空重来之后磁盘上没有期——下面那两条「真实契约」的用例
 # 在没有期时跳过，有期时自动盯上那一期。
 AIV_ROOT = Path(__file__).resolve().parents[2]

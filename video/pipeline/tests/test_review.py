@@ -37,15 +37,16 @@ pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 # ---------------------------------------------------------------- 夹具
 
 
-#: 夹具期在 `tests/fixtures/fixture/` 下——把期目录指到 `tests/fixtures`，
-#: slug 就是 `fixture`，`review` 那套按路径找文件的逻辑就能真跑一遍。
+#: 夹具期在 `tests/fixtures/演示系列/演示合集/夹具文档/short/` 下——
+#: 把期根指到 `tests/fixtures`，期路径就是那四层，
+#: `review` 那套按坐标找文件的逻辑就能真跑一遍。
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
-FIXTURE_EPISODE = "fixture"
+FIXTURE_EPISODE = "演示系列/演示合集/夹具文档/short"
 
 
 @pytest.fixture
 def fixture_episode(monkeypatch) -> str:
-    """夹具期的 slug（期目录已被指到 `tests/fixtures`）。"""
+    """夹具期的期路径（期根已被指到 `tests/fixtures`）。"""
     monkeypatch.setattr(episodes, "EPISODES_DIR", FIXTURES_DIR)
     return FIXTURE_EPISODE
 
@@ -764,7 +765,7 @@ def test_review_module_does_not_import_the_tools_checker():
 def _index_table() -> tuple[list[str], list[list[str]]]:
     """进度表（`video/review/INDEX.md`）里的表头与数据行。
 
-    **列的位置不写死**：表头自己说了哪一列是「slug」、哪一列是「待确认项」，
+    **列的位置不写死**：表头自己说了哪一列是「期路径」、哪一列是「待确认项」，
     改了列序或加了列，这条也跟着走。表里第二张表（「批次说明」）不取。
     """
     assert REVIEW_INDEX.is_file(), f"进度表不在：{REVIEW_INDEX}"
@@ -793,7 +794,7 @@ def _index_column(header: list[str], name: str) -> int:
 def test_every_episode_has_a_review_record():
     """期目录里有期，就有这一期的记录。
 
-    记录在期目录里（`video/episodes/<slug>/review.md`）——**路径说了算**，
+    记录在期目录里（`video/episodes/<期路径>/review.md`）——**路径说了算**，
     不再有一张「哪一期该有记录」的登记表。
     """
     for slug in episodes.known_eps():
@@ -809,8 +810,8 @@ def test_review_records_match_the_index():
     判据是**集合相等**：表里有的期磁盘上必须有，磁盘上有的期表里必须有。
     """
     header, rows = _index_table()
-    slug_column = _index_column(header, "slug")
-    listed = {row[slug_column] for row in rows}
+    ep_column = _index_column(header, "期路径")
+    listed = {row[ep_column] for row in rows}
     on_disk = set(episodes.known_eps())
     assert listed == on_disk, (
         f"进度表与磁盘对不上：表里有 {sorted(listed - on_disk)}，"
@@ -858,18 +859,18 @@ def test_the_index_pending_count_matches_the_records():
     已改的条目仍然留在记录里（它是改动的依据），但不再欠着。
     """
     header, rows = _index_table()
-    slug_column = _index_column(header, "slug")
+    ep_column = _index_column(header, "期路径")
     pending_column = _index_column(header, "待确认项")
     for row in rows:
-        slug = row[slug_column]
-        record = episodes.review_path(slug)
+        ep = row[ep_column]
+        record = episodes.review_path(ep)
         if not record.is_file():
             continue  # 缺记录由「每期都有记录」那条报
         assert row[pending_column].isdigit(), (
-            f"{slug} 的「待确认项」列不是数字：{row[pending_column]}")
+            f"{ep} 的「待确认项」列不是数字：{row[pending_column]}")
         pending = _pending_items(record)
         assert int(row[pending_column]) == pending, (
-            f"{slug}：进度表写着 {row[pending_column]} 条待确认，"
+            f"{ep}：进度表写着 {row[pending_column]} 条待确认，"
             f"记录里没改掉的是 {pending} 条——对一下"
         )
 

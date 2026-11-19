@@ -1,4 +1,6 @@
 ---
+title: "品牌片头 / 片尾"
+date: 2026-11-11
 description: "Growdu 专属的两支品牌片：片头 Growdu 字标 + 数据库标语；片尾 感谢观看 + 落版三胶囊。 两支都是 2.833 秒（68 帧 @ 24fps），都在 3 秒上限内，都带 growdu 小象形象。"
 ---
 # DBMedia · Growdu 品牌片头 / 片尾
@@ -8,22 +10,34 @@ description: "Growdu 专属的两支品牌片：片头 Growdu 字标 + 数据库
 Growdu 专属的两支品牌片：**片头 `Growdu` 字标 + 数据库标语；片尾 `感谢观看` + 落版三胶囊。**
 两支都是 **2.833 秒（68 帧 @ 24fps）**，都在 3 秒上限内，都带 growdu 小象形象。
 
-## 目录
+## 素材在哪：问配置
+
+品牌片是**使用者自己的素材**——版权是他们的，口味也是他们的，
+所以仓库里不携带它们，只声明位置。位置写在 `video/config.toml`：
+
+```toml
+[assets.brand]
+clips = "brand/clips"                  # 品牌片（片头/片尾 mp4）
+audio = "brand/audio"                  # 品牌成品音轨
+windows = "brand/brand_windows.json"   # 片头片尾的配乐窗口决定
+```
+
+按这个配置，素材目录里该放什么：
 
 ```
 brand/
-├── clips/
-│   ├── growdu_intro_3s_1080p.mp4    片头（2.833s / 68 帧 / 24fps / 时间基 1/24000）**入库**
-│   └── growdu_outro_3s_1080p.mp4    片尾（同上）**入库**
-├── assets/
-│   ├── bg_intro.png                 AI 背景：深蓝数据中心（16:9）**本机**
-│   ├── bg_outro.png                 AI 背景：蓝调城市天际线（16:9）**本机**
-│   ├── growdu_pose_thumbsup_nobg.png  小象 · 点赞姿态（2048²，透明底，戴方框眼镜）**本机**
-│   └── growdu_pose_wave_nobg.png      小象 · 挥手姿态（2048²，透明底，戴方框眼镜）**本机**
-├── audio/
-│   ├── intro_mix.wav / outro_mix.wav       成品音轨（旁白 + 配乐，2.833s）**入库**
-│   └── voice_intro.mp3 / voice_outro.mp3   旁白（定稿音色）**本机**，需要时重合成
-├── brand_windows.json                      片头片尾的配乐窗口决定（**入库**）
+├── clips/                              品牌片：片头 / 片尾 mp4（**使用者的素材**）
+│   ├── growdu_intro_3s_1080p.mp4        片头（2.833s / 68 帧 / 24fps / 时间基 1/24000）
+│   └── growdu_outro_3s_1080p.mp4        片尾（同上）
+├── assets/                            渲染品牌片要用的源素材（**使用者的素材**）
+│   ├── bg_intro.png                    AI 背景：深蓝数据中心（16:9）
+│   ├── bg_outro.png                    AI 背景：蓝调城市天际线（16:9）
+│   ├── growdu_pose_thumbsup_nobg.png   小象 · 点赞姿态（2048²，透明底，戴方框眼镜）
+│   └── growdu_pose_wave_nobg.png       小象 · 挥手姿态（2048²，透明底，戴方框眼镜）
+├── audio/                             品牌成品音轨（**使用者的素材**）
+│   ├── intro_mix.wav / outro_mix.wav       成品音轨（旁白 + 配乐，2.833s）
+│   └── voice_intro.mp3 / voice_outro.mp3   旁白（定稿音色），需要时重合成
+├── brand_windows.json                 片头片尾的配乐窗口决定（**入库**：决策是事实）
 └── scripts/
     ├── render_brand.py              渲染两支片（当前唯一入口）
     ├── generate_backgrounds.py      生成两张 AI 背景（含语义验收）
@@ -34,14 +48,17 @@ brand/
     └── render.sh                    【旧版 8 秒片】Ken Burns 渲染
 ```
 
-**入库的是「出片必需的最小集」，不是全部**：
+**仓库里只留一样东西**：`brand_windows.json`。
+它记的是「片头片尾取曲子的哪一段」这个决定——**决策入库，音频不入库**。
+换曲子时重挑一次即可，不用改任何脚本。
 
-- `clips/*.mp4` 与 `audio/*_mix.wav` **入库**——`make brand` 要把它们插进
-  契约首尾，缺了成片就没有品牌片（另一台机器 clone 完要能直接出片）；
-- `assets/` 与旁白 mp3 **不入库**，保留本机；需要时跑脚本重新生成。
+**素材缺失不是错误**：没配就是没配，`make brand` 安静跳过，
+流水线照常出片，只是不带片头片尾。
+**配了但文件不在才是错**：`make doctor` 会单独报出来。
 
-`brand_windows.json` 是**入库**的：它记的是「片头片尾取曲子的哪一段」这个决定
-（决策入库，音频不入库）。换曲子时重挑一次即可，不用改任何脚本。
+挑片规则（`pipeline/pyv/brand.py`）：先看配置指明的那张
+（`clips/intro.mp4` 之类），没有就在 clips 目录里按名字找
+（文件名含 `intro` / `outro`），取**最短**的那张——规格要求 ≤ 3 秒。
 
 ## 片头片尾的配乐：片尾接回片头
 
@@ -55,7 +72,7 @@ brand/
 
 ```bash
 cd video/pipeline
-python -m pyv.cli bgm windows       # 重挑并写进 brand/brand_windows.json
+python -m pyv.cli bgm windows       # 重挑并写进配置的 windows 路径（默认 brand/brand_windows.json）
 python -m pyv.cli bgm brand-check   # 校验：首尾相接 / 曲子指纹 / 能量
 ```
 
@@ -113,11 +130,13 @@ python3 voice/scripts/synthesize_narration.py \
   --text "下次卡住的时候，记得回来。" --out brand/audio/voice_outro.mp3
 ```
 
+（`brand/audio` 是配置 `[assets.brand].audio` 声明的那个目录。）
+
 ## 重新生成
 
 ```bash
 cd video/pipeline
-python -m pyv.cli bgm windows          # 挑片头片尾的配乐窗口（写进 brand/brand_windows.json）
+python -m pyv.cli bgm windows          # 挑片头片尾的配乐窗口（写进配置的 windows 路径）
 cd ../brand
 python3 scripts/make_audio_brand.py    # 按窗口从曲库取 motif，混出成品音轨
 python3 scripts/render_brand.py        # 铭牌盖章 + 渲染片头 + 片尾（--intro / --outro 可单渲）
@@ -131,12 +150,12 @@ python3 scripts/render_brand.py        # 铭牌盖章 + 渲染片头 + 片尾（
 
 ### 源素材没了怎么办
 
-`assets/` 不入库，换机器或者素材丢了，按下面这条链重新生成（每一步都有脚本，
-路线可复现）：
+`assets/` 是使用者的素材，仓库不携带。换机器或者素材丢了，
+按下面这条链重新生成（每一步都有脚本，路线可复现）：
 
 ```bash
 cd video
-python3 character/scripts/make_white.py        # 白底主形象（从入库的透明底合成）
+python3 character/scripts/make_white.py        # 白底主形象（从透明底主形象合成）
 cd brand
 python3 scripts/generate_poses.py              # 点赞 / 挥手姿态（眼镜修补 + 抠底 + 盖章）
 python3 scripts/generate_backgrounds.py        # 两张 AI 背景（含语义验收）
@@ -147,7 +166,7 @@ python3 scripts/render_brand.py                # 重渲两支片
 依赖 `mcode-tools` CLI（先加载 `mcode-tools-master` skill）。
 
 **白底主形象是「合成」出来的，不是重新生成的**——重新生成会让吉祥物形象漂移，
-跟已入库的透明底主形象对不上。
+跟已有的透明底主形象对不上。
 
 ### 踩过的坑
 
@@ -178,8 +197,9 @@ python3 scripts/render_brand.py                # 重渲两支片
 - **成品音轨必须接进成片，不能只做好放在那儿。** 2026-11-12 踩过：
   motif 的成品音轨（`intro_mix.wav`）做出来了，却没接进成片——
   `brand.py` 当时从品牌片 mp4 里抽音轨，嵌进去的还是切换前的旧 AI 配乐。
-  现在 `pyv/brand.py` 的 `_resolve_audio_source()` 优先取
-  `brand/audio/*_mix.wav`，mp4 音轨只作兜底，换配乐不必重渲 3D 形象。
+  现在 `pyv/brand.py` 的 `_resolve_audio_source()` 优先取配置的
+  品牌音轨目录里的 `{intro,outro}_mix.wav`，mp4 音轨只作兜底，
+  换配乐不必重渲 3D 形象。
 - **淡出要短。** 片尾的音乐是片头那段的前一截，末尾淡出 0.3 秒会把刚接上的
   闭环淡没。现在片头淡入 0.08 秒、淡出 0.08 秒，片尾不淡入（它的窗口是曲子
   中段的接缝，淡入像另起一段），成品混音再收 0.05 秒。
@@ -190,24 +210,25 @@ python3 scripts/render_brand.py                # 重渲两支片
 
 ```bash
 cd pipeline
-make brand     # 把 brand_intro / brand_outro 插进契约首尾，正文整体后移
-make render    # 渲染正文片段
-make compose   # 拼接 + 混音（品牌片音轨自动对位）出片
+make EP=<期路径> brand     # 把 brand_intro / brand_outro 插进契约首尾，正文整体后移
+make EP=<期路径> render    # 渲染正文片段
+make EP=<期路径> compose   # 拼接 + 混音（品牌片音轨自动对位）出片
 ```
 
 要点：
 
-- `brand.py` 优先用定稿的 3 秒片（`growdu_intro_3s_1080p.mp4` /
-  `growdu_outro_3s_1080p.mp4`）；缺失时才回退旧的 8 秒片并打印告警。
+- `brand.py` 按配置的 clips 目录挑片：先看 `clips/intro.mp4` 之类指明的那张，
+  没有就在目录里按名字找（文件名含 `intro` / `outro`），取最短的那张；
+  一张都没有就安静跳过。
 - 素材会被转码成 1920×1080 @24fps、时间基 1/24000，与 cairo 渲染出的正文片段
   完全一致，concat 才不会漂时长。
 - 品牌片自带人声 + 配乐，`compose` 会把每段品牌音轨按场景起点 `adelay` 对位后
   与正文旁白 `amix`；正文旁白自动推迟到第一个 `code` 场景的起点。
-- 品牌音轨取的是 `brand/audio/*_mix.wav`（成品音轨），不是品牌片 mp4 里烘焙的那条；
-  详见上面的「踩过的坑」。
+- 品牌音轨取的是配置的音轨目录里的 `{intro,outro}_mix.wav`（成品音轨），
+  不是品牌片 mp4 里烘焙的那条；详见上面的「踩过的坑」。
 - `make brand` 可重复执行：旧的 `brand_*` 场景会被移除、正文位移会被撤销后重算。
-- 媒体文件不入库，所以新克隆的机器上**一张品牌片都没有**——`brand.py` 会安静跳过，
-  流水线照常出片，只是不带片头片尾。
+- 品牌片是使用者的素材，仓库里不携带——新克隆的机器上**一张品牌片都没有**，
+  `brand.py` 会安静跳过，流水线照常出片，只是不带片头片尾。
 
 ## 快速合并
 

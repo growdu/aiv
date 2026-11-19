@@ -6,12 +6,12 @@
 
 判定分两类：
 
-- **硬约束（error）**：违反就不像 growdu，出片前必须改；
+- **硬约束（error）**：违反就不像本人，出片前必须改；
 - **倾向（warning）**：不算错，但提示这一期没把人格透出来。
 
 用法：
 
-    python -m pyv.cli persona check --script ../episodes/<slug>/口播稿.md
+    python -m pyv.cli persona check --script ../episodes/<期路径>/口播稿.md
 
 能力域的划分依据是博客文章的真实覆盖范围（规范 §3.1），
 越界主题的依据是博客里没有实现记录的方向（规范 §3.3）。
@@ -299,7 +299,7 @@ def _rule_no_brand_self(sentences: list[str]) -> list[Finding]:
             if word in lowered:
                 findings.append(Finding(
                     "persona.no-brand-self", ERROR,
-                    f"第 {index} 句以机构/平台自称「{word}」——growdu 自称「我」", index,
+                    f"第 {index} 句以机构/平台自称「{word}」——讲述者自称「我」", index,
                 ))
                 break
     return findings
@@ -348,7 +348,7 @@ def _rule_domain(sentences: list[str]) -> list[Finding]:
             findings.append(Finding(
                 "persona.domain", ERROR,
                 f"第 {index} 句讲的是零覆盖方向（{'、'.join(zero[:3])}）"
-                f"——博客里没有任何实现记录，growdu 讲不了这个深度", index,
+                f"——语料里没有任何实现记录，讲述者讲不了这个深度", index,
             ))
         shallow = [w for w in shallow_words if w in lowered]
         if shallow:
@@ -361,7 +361,7 @@ def _rule_domain(sentences: list[str]) -> list[Finding]:
     if any_zero and not any_in_domain:
         findings.append(Finding(
             "persona.domain", ERROR,
-            "整期都在讲能力边界外的主题——growdu 讲不了这个深度",
+            "整期都在讲能力边界外的主题——讲述者讲不了这个深度",
         ))
     return findings
 

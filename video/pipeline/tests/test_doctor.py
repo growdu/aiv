@@ -36,7 +36,7 @@ def test_doctor_says_so_when_there_is_no_episode(monkeypatch, tmp_path):
 
 def test_missing_narration_is_reported_as_an_error(monkeypatch, tmp_path):
     """期在、旁白不在 → 报错，并给出能照着抄的合成命令。"""
-    (tmp_path / "some-ep").mkdir()
+    (tmp_path / "系列甲" / "合集甲" / "文档甲" / "short").mkdir(parents=True)
     monkeypatch.setattr(episodes_mod, "EPISODES_DIR", tmp_path)
     checks = doctor._check_narrations()
     assert checks
@@ -47,10 +47,38 @@ def test_missing_narration_is_reported_as_an_error(monkeypatch, tmp_path):
 
 
 def test_missing_asset_error_carries_a_fix_hint(monkeypatch, tmp_path):
-    monkeypatch.setattr(doctor, "AIV_ROOT", tmp_path)
+    """**配了但文件不在**才是错——报出来，并说清改哪儿。"""
+    from pyv import config as config_mod
+
+    cfg = config_mod.build(
+        {"assets": {"music": {"bed": str(tmp_path / "missing.wav")}}},
+        path=tmp_path / "config.toml",
+        base=tmp_path,
+    )
+    monkeypatch.setattr(config_mod, "config", lambda: cfg)
     checks = doctor._check_assets()
     hard = [c for c in checks if c.level == doctor.ERROR]
     assert hard and all(c.fix for c in hard)
+    assert "config.toml" in hard[0].fix
+
+
+def test_unconfigured_asset_is_not_an_error(monkeypatch, tmp_path):
+    """**没配不是错**——素材是用户自带的，没有就是没有，流水线降级。"""
+    from pyv import config as config_mod
+
+    cfg = config_mod.build({}, path=None, base=tmp_path)
+    monkeypatch.setattr(config_mod, "config", lambda: cfg)
+    checks = doctor._check_assets()
+    assert checks
+    assert not [c for c in checks if c.level == doctor.ERROR], (
+        f"没配的素材不该报错：{[c.detail for c in checks if c.level == doctor.ERROR]}"
+    )
+    # 立绘、无标牌立绘、落版头像、正文铺底这四项没配就是「没配」，不算缺失。
+    unconfigured = [c for c in checks if "没配" in c.detail]
+    assert len(unconfigured) == 4, (
+        f"该报「没配」的项数不对：{[c.name for c in unconfigured]}"
+    )
+    assert all(c.ok for c in unconfigured)
 
 
 def test_report_shows_the_fix_command(capsys):

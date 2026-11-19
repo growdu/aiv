@@ -15,15 +15,19 @@ proved the *pieces* work on Linux (cairo drawing, ffmpeg encode, ffprobe,
 font fallback, audio measurement) but not the *whole*.
 
 This test closes that gap with a synthetic episode: two code scenes at the
-real resolution, the real narration mp3 and the real BGM wav (both tracked
-in git), composed into a real mp4.  The output is then checked against the
-spec -- 1920x1080 / 24fps / h264 yuv420p / aac 48kHz stereo /
-``video_track_timescale = 24000`` -- because "it produced a file" is not
-the claim; "it produced a *broadcastable* file" is.
+real resolution, the real narration mp3 and the real BGM wav (both are
+**user-supplied assets** -- they are not tracked in git), composed into a
+real mp4.  The output is then checked against the spec -- 1920x1080 /
+24fps / h264 yuv420p / aac 48kHz stereo / ``video_track_timescale =
+24000`` -- because "it produced a file" is not the claim; "it produced a
+*broadcastable* file" is.
 
-If a fresh clone cannot produce that file, this goes red.  That is exactly
-the promise the "上机指南" makes, so it belongs in the suite that runs on
-every Linux push.
+If the assets are there and the compose still fails, this goes red.  That
+is exactly the promise the "上机指南" makes, so it belongs in the suite
+that runs on every Linux push.  When the assets are **not** there -- the
+normal case on a machine that is not the one making the videos -- the
+test skips: "this machine has no narration" is not "the pipeline is
+broken".
 """
 
 from __future__ import annotations
@@ -31,6 +35,8 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+
+import pytest
 
 from pyv import compose as compose_mod
 from pyv import episodes, fonts
@@ -46,7 +52,6 @@ from pyv.timeline import (
 )
 
 AIV_ROOT = episodes.AIV_ROOT
-BGM = AIV_ROOT / "music/tracks/series-bed-01.wav"
 
 # 成片时长（秒）。三秒够走完「渲染 → 拼接 → 混音 → 封装」，
 # 又不至于让 CI 多花一分钟。
@@ -88,12 +93,22 @@ def _probe(path):
     return json.loads(out)
 
 
-def _narration() -> Path:
-    """一份**已入库**的旁白音频（期目录里的，没有就退到仓库里那份）。"""
-    return scene_segments.narration()
+def _assets() -> tuple[Path, Path]:
+    """旁白与 BGM——两份都是使用者自带的素材。
+
+    **没有就跳过**：素材不在仓库里是正常的（授权属于曲作者与配音方），
+    把「这台机器没素材」报成「流水线坏了」是假红。
+    """
+    narration = scene_segments.narration()
+    bgm = scene_segments.bgm()
+    if narration is None:
+        pytest.skip("本机没有旁白素材：旁白是使用者自带的，仓库不带着走")
+    if bgm is None or not bgm.is_file():
+        pytest.skip("本机没有 BGM：配在 video/config.toml 的 [assets.music].bed")
+    return narration, bgm
 
 
-def _storyboard(narration) -> Storyboard:
+def _storyboard(narration: Path, bgm: Path) -> Storyboard:
     """两段正文场景，规格与正式成片一致。"""
     half = DURATION / 2
     scenes = [
@@ -103,7 +118,7 @@ def _storyboard(narration) -> Storyboard:
     return Storyboard(
         version=1,
         video=Video(width=1920, height=1080, fps=24, duration=DURATION),
-        audio=Audio(narration=str(narration), bgm=str(BGM)),
+        audio=Audio(narration=str(narration), bgm=str(bgm)),
         subtitle_style=SubtitleStyle(primary=SUBTITLE_FILL, outline="#000000"),
         scenes=scenes,
         subtitles=[SubtitleEvent(start=0.0, end=DURATION, text=SUBTITLE_TEXT)],
@@ -140,14 +155,13 @@ def test_the_chinese_subtitle_has_real_glyphs_in_the_current_font():
 
 
 def test_a_fresh_clone_can_produce_a_broadcastable_episode(tmp_path):
-    """从入库素材直接合成出符合规格的成片。"""
-    narration = _narration()
-    storyboard = _storyboard(narration)
+    """从素材直接合成出符合规格的成片。"""
+    narration, bgm = _assets()
+    storyboard = _storyboard(narration, bgm)
     assert storyboard.validate() == [], f"合成的 storyboard 不合契约：{storyboard.validate()}"
-    assert BGM.is_file(), f"仓库里没有 BGM：{BGM}"
 
     out = tmp_path / "ep-smoke.mp4"
-    compose_mod.compose(storyboard, tmp_path / "build", out, narration=narration, bgm=BGM)
+    compose_mod.compose(storyboard, tmp_path / "build", out, narration=narration, bgm=bgm)
 
     assert out.is_file(), f"成片没生成：{out}"
     assert out.stat().st_size > 0, "成片是空的"

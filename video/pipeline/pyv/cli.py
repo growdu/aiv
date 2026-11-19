@@ -2,12 +2,15 @@
 
 用法：
     python -m pyv.cli validate --storyboard ../storyboard.json
-    python -m pyv.cli align    --audio ../episodes/<slug>/narration.mp3 \
-        --script ../episodes/<slug>/口播稿.md
+    python -m pyv.cli align    --audio ../episodes/<期路径>/narration.mp3 \
+        --script ../episodes/<期路径>/口播稿.md
     python -m pyv.cli render   --storyboard ../storyboard.json --out ../build
     python -m pyv.cli compose  --storyboard ../storyboard.json --build ../build --out ../out
-    python -m pyv.cli persona check --script ../episodes/<slug>/口播稿.md
+    python -m pyv.cli persona check --script ../episodes/<期路径>/口播稿.md
     python -m pyv.cli bgm check --music ../music/tracks/motif.wav
+    python -m pyv.cli config bgm      # 读配置里的一个值（给脚本用）
+
+期路径 = `系列/合集/文档/档位`，相对 `video/episodes/`。
 """
 from __future__ import annotations
 
@@ -18,6 +21,27 @@ from pathlib import Path
 from pyv import contract
 from pyv import palette
 from pyv.timeline import Storyboard
+
+#: `pyv.cli config <key>` 能读的配置项 → 配置对象的属性名。
+#:
+#: `None` 表示「不是配置里的路径，而是配置本身」。
+#: **Makefile 不再自己抄一份素材路径**——它问配置要。
+CONFIG_KEYS = {
+    "path": None,
+    "brand_name": "brand_name",
+    "brand_token": "brand_token",
+    "brand_tagline": "brand_tagline",
+    "brand_site": "brand_site",
+    "mascot": "mascot",
+    "mascot_plain": "mascot_plain",
+    "avatar": "avatar",
+    "music_dir": "music_dir",
+    "bgm": "music_bed",
+    "music_library": "music_library",
+    "brand_clips": "brand_clips",
+    "brand_audio": "brand_audio",
+    "brand_windows": "brand_windows",
+}
 
 
 def _load_or_report(args: argparse.Namespace) -> Storyboard | None:
@@ -313,7 +337,7 @@ def cmd_publish(args: argparse.Namespace) -> int:
         from pyv import contract as contract_mod
         contract_episode = contract_mod.load_contract(contract_path).episode
 
-    video = epmeta.AIV_ROOT / "out" / f"{args.episode}.mp4"
+    video = epmeta.AIV_ROOT / "out" / f"{episodes.ep_id(args.episode)}.mp4"
     info = None
     duration = None
     if video.is_file():
@@ -345,14 +369,14 @@ def cmd_publish(args: argparse.Namespace) -> int:
 
 def cmd_review(args: argparse.Namespace) -> int:
     """视频审核：文本层 / 成片层 / 抽帧清单。"""
-    from pyv import review
+    from pyv import episodes, review
 
     if args.review_command == "text":
         report = review.check_text(args.episode)
     elif args.review_command == "video":
         report = review.check_video(args.episode)
     elif args.review_command == "frames":
-        out_dir = Path(args.out) if args.out else review.FRAMES_DIR / args.episode
+        out_dir = Path(args.out) if args.out else episodes.frames_dir(args.episode)
         frames, manifest = review.extract_and_manifest(args.episode, out_dir)
         if manifest is None:
             print(f"ERROR 成片不在本机，抽不了帧：{args.episode}", file=sys.stderr)
@@ -370,6 +394,26 @@ def cmd_review(args: argparse.Namespace) -> int:
         print(report.summary())
     # **信号不是门禁**：命中信号不返回非零退出码。
     # 一期历史问题不该永久卡住流水线——那是记录与进度表的事。
+    return 0
+
+
+def cmd_config(args: argparse.Namespace) -> int:
+    """读配置里的一个值。
+
+    **给脚本用的**：Makefile 要知道 BGM 在哪，就问配置，
+    而不是在 Makefile 里再抄一份路径——抄的那份迟早会跟配置漂移。
+
+    **没配就打印空行**：没配不是错，脚本据此「不传这个参数」。
+    """
+    from pyv import config as config_mod
+
+    cfg = config_mod.config()
+    attribute = CONFIG_KEYS[args.key]
+    if attribute is None:
+        print(cfg.path or "")
+        return 0
+    value = getattr(cfg, attribute)
+    print(value if value is not None else "")
     return 0
 
 
@@ -550,21 +594,27 @@ def main(argv: list[str] | None = None) -> int:
 
     p_review_text = review_sub.add_parser(
         "text", help="审成片背后的文本：口播稿、字幕表、画面契约")
-    p_review_text.add_argument("--episode", required=True, help="期号")
+    p_review_text.add_argument("--episode", required=True, help="期路径")
     p_review_text.add_argument("--json", action="store_true", help="输出 JSON")
     p_review_text.set_defaults(func=cmd_review)
 
     p_review_video = review_sub.add_parser(
         "video", help="审成片本身：抽帧、音轨、技术参数")
-    p_review_video.add_argument("--episode", required=True, help="期号")
+    p_review_video.add_argument("--episode", required=True, help="期路径")
     p_review_video.add_argument("--json", action="store_true", help="输出 JSON")
     p_review_video.set_defaults(func=cmd_review)
 
     p_review_frames = review_sub.add_parser(
         "frames", help="抽帧并写清单（给人/Agent 看画面用）")
-    p_review_frames.add_argument("--episode", required=True, help="期号")
+    p_review_frames.add_argument("--episode", required=True, help="期路径")
     p_review_frames.add_argument("--out", default=None, help="输出目录")
     p_review_frames.set_defaults(func=cmd_review)
+
+    p_config = sub.add_parser(
+        "config", help="读项目配置（video/config.toml）的某个值")
+    p_config.add_argument("key", choices=sorted(CONFIG_KEYS),
+                          help="要读的配置项")
+    p_config.set_defaults(func=cmd_config)
 
     args = parser.parse_args(argv)
     return args.func(args)

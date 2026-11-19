@@ -20,8 +20,9 @@ from pyv import episodes as episodes_mod
 
 AIV_ROOT = Path(__file__).resolve().parents[2]
 
-#: 夹具期的契约（`tests/fixtures/fixture/contract.json`）。
-FIXTURE_CONTRACT = Path(__file__).parent / "fixtures" / "fixture" / "contract.json"
+#: 夹具期的契约（`tests/fixtures/演示系列/演示合集/夹具文档/short/contract.json`）。
+FIXTURE_CONTRACT = (Path(__file__).parent / "fixtures" / "演示系列"
+                   / "演示合集" / "夹具文档" / "short" / "contract.json")
 
 
 def _ctx(w: int = 800, h: int = 600):

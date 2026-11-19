@@ -27,8 +27,9 @@ import scene_params
 #: 场景模块目录。
 SCENES_DIR = Path(contract_mod.__file__).parent / "scenes"
 
-#: 夹具期（`tests/fixtures/fixture/`）。
-FIXTURE_EPISODE_DIR = Path(__file__).parent / "fixtures" / "fixture"
+#: 夹具期（`tests/fixtures/演示系列/演示合集/夹具文档/short/`）。
+FIXTURE_EPISODE_DIR = (Path(__file__).parent / "fixtures" / "演示系列"
+                       / "演示合集" / "夹具文档" / "short")
 FIXTURE_CONTRACT = FIXTURE_EPISODE_DIR / "contract.json"
 FIXTURE_SCRIPT = FIXTURE_EPISODE_DIR / "口播稿.md"
 
@@ -104,20 +105,28 @@ def subtitle_text() -> str:
     return rows[0]
 
 
-def narration() -> Path:
-    """一份**已入库**的旁白音频。
+def narration() -> Path | None:
+    """一份旁白音频；**没有就返回 None**。
 
-    优先用期目录里的旁白；期目录里没有时退到仓库里已入库的那一份
-    （`video/ddl-voiceover.mp3`）——端到端要证明的是「clone 下来就能出片」，
-    输入必须入库。
+    旁白是**使用者自带的素材**：音色是他们的，授权也是他们的，
+    仓库不带着走（见 `tests/test_assets_are_tracked.py`）。
+
+    所以这里**不抛错**。抛错会把「这台机器没素材」说成「流水线坏了」——
+    端到端测试看到 None 就跳过，等有素材的机器上再证明「能出片」。
     """
     for slug in episodes_mod.known_eps():
         path = episodes_mod.narration_path(slug)
         if path.is_file():
             return path
-    fallback = episodes_mod.AIV_ROOT / "ddl-voiceover.mp3"
-    if fallback.is_file():
-        return fallback
-    raise AssertionError(
-        "仓库里一份旁白都没有——「出片必需的输入要入库」这条口径坏了"
-    )
+    return None
+
+
+def bgm() -> Path | None:
+    """正文铺底那首曲子；没配就返回 None。
+
+    位置在 `video/config.toml` 的 `[assets.music].bed`——曲库是使用者的，
+    曲子一首一首地授权。
+    """
+    from pyv import config as config_mod
+
+    return config_mod.config().music_bed

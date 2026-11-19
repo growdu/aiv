@@ -52,29 +52,16 @@ __pycache__/
 # 帧是产物（跟着本机的成片走）；清单是「这一期抽了哪些帧、每帧该有
 # 什么文案」的对照表——审核记录里的判断要能对着它复核，所以它入库。
 #
-# 清单在期目录里（episodes/<slug>/frames.md），帧在期目录的 frames/
-# 子目录里——frames/ 已经被上面的「渲染产物」规则拦住了。
-!episodes/*/frames.md
+# 清单在期目录里（episodes/<系列>/<合集>/<文档>/<档位>/frames.md），
+# 帧在期目录的 frames/ 子目录里——frames/ 已经被上面的「渲染产物」规则拦住了。
+!episodes/*/*/*/*/frames.md
 
-# 旁白。没有它就对齐不了、渲染不了。
-!episodes/*/narration.mp3
-
-# 定标参照稿：音色参数（pitch/speed）是相对它标定的。
-!ddl-voiceover.mp3
-
-# 形象原型（重新生成主形象的唯一来源）+ 透明底主形象（合成进画面用这个）。
-!growdu2.jpeg
-!character/growdu_character_2k_nobg.png
-# 无标牌形象：抖音这一档备用（胸口那枚 growdu 铭牌也是品牌标识）。
-# 由 `character/scripts/clear_badge.py` 从上面那份派生，可复现。
-!character/growdu_character_2k_nobg_nobadge.png
-
-# 品牌片头片尾与成品音轨（缺了也能出片，只是成片不带品牌片）。
-!brand/clips/growdu_intro_3s_1080p.mp4
-!brand/clips/growdu_outro_3s_1080p.mp4
-!brand/audio/intro_mix.wav
-!brand/audio/outro_mix.wav
-
-# 曲库（台账里登记的两首，授权 CC0-1.0）。bed 是正文铺底，motif 是片头片尾闭环。
-!music/tracks/series-bed-01.wav
-!music/tracks/series-motif-01.wav
+# 立绘、曲库、品牌片、品牌音轨、旁白、定标参照稿：**用户自带，不入库**。
+#
+# 它们的版权与授权是**用这套流水线的人**的，仓库要发给所有人——
+# 跟着别人入库等于替别人担保。位置写在 `video/config.toml` 里：
+# 没配不是错，配了但文件不在才是错（`make doctor` 报这个）。
+#
+# 所以这里**没有它们的放行条目**：上面那几条「媒体文件」的规则就是全部。
+# 入库的媒体文件只有规则级那些（内置字体），由
+# `pipeline/tests/test_assets_are_tracked.py` 盯着。

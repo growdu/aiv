@@ -11,7 +11,22 @@ from pyv import character
 def test_repo_paths_are_resolved_correctly():
     assert character.AIV_ROOT.name == "video"
     assert character.REPO_ROOT == character.AIV_ROOT.parents[0]
-    assert character.STATIC_IMAGE.is_relative_to(character.AIV_ROOT)
+
+
+def test_the_mascot_asset_comes_from_the_config():
+    """形象素材**由配置决定**——没配就是没有（不是错）。
+
+    形象是用户自带的：版权是他们的，口味是他们的。框架只认
+    「立绘在哪」——位置写在 `video/config.toml` 的 `[assets.mascot]` 里。
+    """
+    from pyv import config as config_mod
+
+    cfg = config_mod.config()
+    assert character.DEFAULT_STATIC_IMAGE == cfg.mascot
+    if cfg.mascot is None:
+        assert character.STATIC_IMAGE is None
+    else:
+        assert character.STATIC_IMAGE.is_relative_to(cfg.base)
 
 
 def test_video_sits_next_to_platforms_at_repo_root():
@@ -24,16 +39,21 @@ def test_video_sits_next_to_platforms_at_repo_root():
     assert (repo_root / "video").is_dir()
     assert (repo_root / "platforms").is_dir()
     assert character.AIV_ROOT == repo_root / "video"
-    # 旧位置只剩发布用的文档副本，工程内容（pipeline/ 等）必须已经搬走
-    legacy = repo_root / "docs" / "life" / "aiv"
-    assert legacy.is_dir()
-    assert not (legacy / "pipeline").exists(), "工程目录还留在旧位置"
+    # 发布面（docs/）里不许再留工程目录——旧位置只剩文档副本。
+    stray = [path for path in (repo_root / "docs").rglob("pipeline")
+             if path.is_dir()]
+    assert stray == [], f"工程目录还留在发布面里：{stray}"
 
 
-def test_avatar_asset_lives_in_repo():
-    """落版头像同样必须入库（原来的 growdu.jpg 从未入库、现已丢失）。"""
-    assert character.avatar_path() is not None
-    assert character.AVATAR_IMAGE.is_relative_to(character.REPO_ROOT)
+def test_the_avatar_asset_comes_from_the_config():
+    """落版头像同样是**用户自带**的素材：没配就不带。"""
+    from pyv import config as config_mod
+
+    cfg = config_mod.config()
+    if cfg.avatar is None:
+        assert character.avatar_path() is None
+    else:
+        assert character.avatar_path() == cfg.avatar
 
 
 def test_mascot_mode_is_known():

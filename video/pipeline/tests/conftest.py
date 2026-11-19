@@ -10,14 +10,18 @@ if PIPELINE_DIR not in sys.path:
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
-#: 夹具期的目录：口播稿 + 契约。格式与真的一期一样，只是内容不算数。
-#:
-#: **目录名就是 slug**（协议 §五）：期目录名是身份，front matter 的
-#: `episode` 跟它一致。
-FIXTURE_EPISODE_DIR = FIXTURES_DIR / "fixture"
+#: 夹具期的**期根**：夹具期就摆在这个根下面，形状跟真的一样——
+#: 四层（系列 / 合集 / 文档 / 档位）。
+FIXTURE_ROOT = FIXTURES_DIR
 
-#: 夹具期的 slug。
-FIXTURE_EPISODE = "fixture"
+#: 夹具期的期路径（相对期根，四层）。
+#:
+#: **目录就是身份**：front matter 的 `episode` 记的是**文档路径**
+#: （三层，去掉档位），`tier` 记的是档位，`episode_number` 才是期号。
+FIXTURE_EPISODE = "演示系列/演示合集/夹具文档/short"
+
+#: 夹具期的期目录。
+FIXTURE_EPISODE_DIR = FIXTURE_ROOT / FIXTURE_EPISODE
 
 
 @pytest.fixture

@@ -1,6 +1,7 @@
 """品牌片头/片尾（brand plate）接入。
 
-素材在 video/brand/ 下（品牌资源包），流水线只消费 brand/clips/*.mp4：
+**品牌片是用户自带的素材。** 位置写在 `video/config.toml` 的
+`[assets.brand]` 里，框架只消费 `clips/*.mp4`：
 - prepare_clips：把品牌片统一转成流水线规格
   （1920x1080 @24fps、时间基 1/24000、无音轨视频 + 48k 立体声 wav）
 - apply_plates：把品牌片作为 "clip" 场景插到契约首尾，正文整体后移
@@ -8,11 +9,11 @@
 品牌片是"现成素材"，不经过 cairo 渲染，所以时间基/帧率必须和 code 片段
 完全一致，否则 concat demuxer 拼接出来的时长会漂。
 
-片头/片尾的定稿是 3 秒内的版本（brand/scripts/render_brand.py 渲染）：
-  growdu_intro_3s_1080p.mp4 / growdu_outro_3s_1080p.mp4
-旧的 8 秒版本只在 3 秒版缺失时兜底使用，并会打印告警。
+**怎么挑片**：先看配置里指明的那张；没有就在 clips 目录里按名字找
+（文件名里含 `intro` / `outro`），取**最短**的那张——规格要求 ≤3 秒，
+短的那张通常是定稿版；超过上限会告警。
 
-媒体产物不入库（见 video/.gitignore），所以仓库里可能一张品牌片都没有；
+素材不入库，所以仓库里可能一张品牌片都没有；
 这时 prepare_clips 返回空字典，流水线照常出片，只是不带品牌片头片尾。
 """
 from __future__ import annotations
@@ -23,18 +24,20 @@ import subprocess
 import sys
 from pathlib import Path
 
+from pyv import config as config_mod
+
 # video/ 是 pipeline/ 的上一级：pyv/brand.py → pyv → pipeline → video
 AIV_ROOT = Path(__file__).resolve().parents[2]
-BRAND_ROOT = AIV_ROOT / "brand"
-CLIPS_DIR = BRAND_ROOT / "clips"
-INTRO_CLIP = CLIPS_DIR / "growdu_intro_3s_1080p.mp4"
-OUTRO_CLIP = CLIPS_DIR / "growdu_outro_3s_1080p.mp4"
-# 旧版 8 秒片：只在 3 秒版缺失时兜底（会告警，因为规格要求 ≤3 秒）
-LEGACY_INTRO_CLIP = CLIPS_DIR / "growdu_intro_8s_1080p.mp4"
-LEGACY_OUTRO_CLIP = CLIPS_DIR / "growdu_outro_8s_1080p.mp4"
 
-INTRO_SUBTITLE = "Growdu · 深入数据库"
-OUTRO_SUBTITLE = "Growdu.cn"
+_CONFIG = config_mod.config()
+BRAND_ROOT = _CONFIG.brand_audio.parent
+BRAND_AUDIO_DIR = _CONFIG.brand_audio
+CLIPS_DIR = _CONFIG.brand_clips
+INTRO_CLIP = CLIPS_DIR / "intro.mp4"
+OUTRO_CLIP = CLIPS_DIR / "outro.mp4"
+
+INTRO_SUBTITLE = _CONFIG.brand_tagline
+OUTRO_SUBTITLE = _CONFIG.brand_site
 
 CLIP_PREFIX = "brand_"
 BRAND_DIRNAME = "brand"
@@ -42,7 +45,7 @@ TIMESCALE_FACTOR = 1000
 MAX_BRAND_SECONDS = 3.0
 
 # 品牌词。画面里出现它，就说明有品牌标识。
-BRAND_TOKEN = "growdu"
+BRAND_TOKEN = _CONFIG.brand_token
 
 # 落版标签所在的参数名。**别的参数不碰。**
 #
@@ -112,32 +115,47 @@ def _resolve_audio_source(name: str, clip: Path) -> Path:
 
     `make_audio_brand.py` 产出的 `{intro,outro}_mix.wav` 才是音轨的正本。
     """
-    mix = BRAND_ROOT / "audio" / f"{name}_mix.wav"
+    mix = BRAND_AUDIO_DIR / f"{name}_mix.wav"
     if mix.is_file():
         return mix
     return clip
 
 
 def resolve_clip(name: str) -> Path | None:
-    """按优先级挑一张存在的品牌片。
+    """挑一张存在的品牌片。
 
-    优先定稿的 3 秒版；缺失时回退旧 8 秒版并告警（规格要求 ≤3 秒）。
-    一张都没有时返回 None —— 媒体产物不入库，流水线可以不带品牌片出片。
+    三步：
+
+    1. 配置里指明的那张（`clips/intro.mp4` 之类）——有就用它；
+    2. 没有就在 clips 目录里按名字找（文件名含 `intro` / `outro`），
+       取**最短**的那张——规格要求 ≤3 秒，短的那张通常是定稿版；
+       超过上限就告警；
+    3. 一张都没有时返回 None —— 素材是用户自带的，没有就是没有，
+       流水线可以不带品牌片出片。
     """
-    primary, legacy = {
-        "intro": (INTRO_CLIP, LEGACY_INTRO_CLIP),
-        "outro": (OUTRO_CLIP, LEGACY_OUTRO_CLIP),
-    }[name]
+    primary = {"intro": INTRO_CLIP, "outro": OUTRO_CLIP}[name]
     if primary.exists():
         return primary
-    if legacy.exists():
+    candidates = sorted(CLIPS_DIR.glob(f"*{name}*.mp4"))
+    if not candidates:
+        return None
+    shortest = min(candidates, key=lambda path: _duration_or_zero(path))
+    duration = _duration_or_zero(shortest)
+    if duration > MAX_BRAND_SECONDS:
         print(
-            f"告警 {name} 品牌片缺少定稿版 {primary.name}，"
-            f"回退到旧版 {legacy.name}（超过 {MAX_BRAND_SECONDS:.0f} 秒上限）",
+            f"告警 {name} 品牌片 {shortest.name} 有 {duration:.1f} 秒，"
+            f"超过 {MAX_BRAND_SECONDS:.0f} 秒上限",
             file=sys.stderr,
         )
-        return legacy
-    return None
+    return shortest
+
+
+def _duration_or_zero(path: Path) -> float:
+    """量片长；量不出来（文件坏了 / ffmpeg 缺失）当 0。"""
+    try:
+        return probe_duration(path)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return 0.0
 
 
 def prepare_clips(build_dir: str | Path, fps: int = 24,

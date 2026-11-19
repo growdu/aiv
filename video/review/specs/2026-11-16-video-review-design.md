@@ -1,7 +1,7 @@
 # 设计：视频审核（Video Review）落地机制
 
 - 日期：2026-11-16
-- 范围：`video/` 视频生产线（`video/pipeline/`）产出的六期成片
+- 范围：`video/` 视频生产线（`video/pipeline/`）产出的成片（一期 = 一个档位目录）
 - 规范来源：[../README.md](../README.md)（唯一权威，本文只描述「怎么落地」）
 - 状态：已批准
 
@@ -49,20 +49,24 @@
 ## 3. 架构
 
 ```
-video/字幕-<主题>.md ─────────┐
-video/contracts/<EP>.json ────┼──► [文本层 VT-*] ──┐
-video/选题库.md（母稿·出处）──┘                    │
+video/episodes/<期路径>/口播稿.md ────┐
+video/episodes/<期路径>/contract.json ┼──► [文本层 VT-*] ──┐
+video/选题库.md（母稿·出处）──────────┘                    │
                                                    ├──► 审核报告（信号 + 显式说明跳过了什么）
-video/out/<EP>.mp4 ──────────────► [成片层 VV-*] ──┘              │
+video/out/<期路径压平>.mp4 ──────────► [成片层 VV-*] ──┘              │
        └─ 抽帧 ───────────────────► [抽帧清单] ─► Agent/人看画面
                                                                   │
                                                                   ▼
-                                              video/review/episodes/<EP>.md
+                                    video/episodes/<期路径>/review.md
                                                                   │
                                                             [你确认]
                                                                   ▼
                                             改稿 / 改代码 → 重出片 → 状态推进
 ```
+
+**期路径**：一期 = 一个档位目录，期路径就是它相对 `video/episodes/` 的四段
+`系列/合集/文档/档位`；**期路径压平** = 把斜杠换成连字符后的一个片段，
+`video/out/` 与 `video/build/` 里的文件名用它。
 
 ### 3.1 为什么分两层，不做成「一个审核器出完整结论」
 
@@ -95,8 +99,8 @@ video/out/<EP>.mp4 ──────────────► [成片层 VV-*
 - 逐帧扫描不可行（35 秒 24fps = 840 帧，完整版 18 分钟 = 2.6 万帧）；
 - 段中点是最可能「画面已经画完、字幕已经烧上」的时刻；
 - 段尾帧补上「结论还在淡入」的时段——**各场景的结论都在段内 48%~84%
-  之间淡入**，只抽中点会把动画中间态当成「漏字」（实测 ep06 的 `s02`：
-  段中点 9.524 s 上结论框已经画出来了，框里的字还没显影；段尾 11.888 s 才完整）；
+  之间淡入**，只抽中点会把动画中间态当成「漏字」（实测：段中点上结论框
+  已经画出来了，框里的字还没显影；到段尾才完整——**段尾帧才是「结论淡完之后」的样子**）；
 - 关键帧是编码器的切分点，往往正好是段边界——**段边界是最容易出错的地方**
   （前一段的最后一帧没画完、后一段的第一帧没接上）。
 
@@ -104,7 +108,7 @@ video/out/<EP>.mp4 ──────────────► [成片层 VV-*
 浮点秒，成片却是按帧拼起来的（每段 `round(duration * fps)` 帧），真实切点
 比名义值早最多一帧（24fps 下 42 ms）且逐段累积；关键帧常常正好落在真实切点上。
 按名义秒归属，清单会把「下一段的画面」拿去核对「上一段的文案」，
-一整片假漏字（实测 ep04 有 5 个关键帧这么错）。
+一整片假漏字（实测这样错判的关键帧不止一处）。
 
 抽帧产物（PNG）不入库（`video/.gitignore` 已拦 `frames/`），入库的是**清单**：
 每帧对应哪一段、什么时间码、这段**应该**出现什么文案。清单是给人看的对照表。
@@ -124,14 +128,15 @@ video/out/<EP>.mp4 ──────────────► [成片层 VV-*
 ### 4.2 CLI
 
 ```bash
-python -m pyv.cli review text   --episode pg-parallel-decode
-python -m pyv.cli review text   --episode pg-parallel-decode --json
-python -m pyv.cli review video  --episode pg-parallel-decode --json
-python -m pyv.cli review frames --episode pg-parallel-decode --out /tmp/frames
+python -m pyv.cli review text   --episode <期路径>
+python -m pyv.cli review text   --episode <期路径> --json
+python -m pyv.cli review video  --episode <期路径> --json
+python -m pyv.cli review frames --episode <期路径> --out /tmp/frames
 ```
 
 - `--json`：输出 JSON；默认输出人读摘要。
-- `--episode`：期号（`pyv/episodes.py` 的登记表里的 id）。
+- `--episode`：期路径（`系列/合集/文档/档位`，相对 `video/episodes/`）。
+  走 Makefile 时是 `make review-text EP=<期路径>`（同 `review-video` / `review-frames`）。
 - 退出码：`0` 正常；`1` 参数或 IO 错误。**信号本身不导致非零退出。**
 
 ### 4.3 规则集
@@ -148,7 +153,7 @@ python -m pyv.cli review frames --episode pg-parallel-decode --out /tmp/frames
 | `VT-04` | **近似重复句**（difflib ≥ 0.85，长度与中文字数门槛同 `AIF-05`） | warn | `AIF-05` |
 | `VT-05` | 口播里的**数字在母稿与出处表里找不到** | warn | 视频独有 |
 | `VT-06` | 口播句里的数字**在对应字幕里丢了** | warn | 视频独有 |
-| `VT-07` | **源字幕表**（`video/字幕-<主题>.md`）里有禁止词或单行超宽 | error | `timeline.BANNED_SUBSTRINGS` / `MAX_SUBTITLE_LINE` |
+| `VT-07` | **源字幕表**（`video/episodes/<期路径>/口播稿.md` 的「字幕文本」节）里有禁止词或单行超宽 | error | `timeline.BANNED_SUBSTRINGS` / `MAX_SUBTITLE_LINE` |
 
 `VT-01`~`VT-04` 与文档侧规则**一一对应且口径相同**——词表与阈值是**同一份常量**
 （`pyv/review.py` 从 `tools/review-check.py` 借词表时必须抄同一份字面量，
@@ -160,9 +165,11 @@ python -m pyv.cli review frames --episode pg-parallel-decode --out /tmp/frames
 **为什么只搬 `AIF-01`/`02`/`04`/`05`，不搬 `STR-*`/`MET-*`/`DEP-*`**：
 后三组判的是**文章形态**——开头 5 段有没有说明问题、结尾有没有可带走的产物、
 有没有「编写人 / 编写内容 / 编写时间」信息表。短视频里没有这些形态。
-实测（`python tools/review-check.py video/字幕-*.md`）：六期口播稿上 `AIF-*`
-一条都没报（搬过来的四条确实不用报），而 `STR-02`/`STR-03`/`MET-01` 每期都报，
-全是误报。**能搬的是「话怎么说的」，不能搬的是「文怎么组织的」。**
+在口播稿上试过（`python tools/review-check.py video/episodes/<期路径>/口播稿.md`）：
+搬过来的 `AIF-*` 四条确实一条都不用报；而 `STR-02`「开头 5 段没有说明文章解决什么问题」、
+`STR-03`「结尾没有可带走的产物」、`MET-01`「缺少编写人信息表」条条都报——全是误报。
+**能搬的是「话怎么说的」，不能搬的是「文怎么组织的」。**
+（结论要在新语料上重新验一遍：语料清空之后，别拿旧语料的结论当依据。）
 
 **为什么 `VT-07` 查的是源字幕表而不是 storyboard**：`make validate` 查的是上一次
 `align` 出来的 storyboard。源字幕表改了但还没重跑 `align` 时，那个门禁看到的
@@ -189,10 +196,11 @@ python -m pyv.cli review frames --episode pg-parallel-decode --out /tmp/frames
 - **`VV-01`/`VV-02` 不判品牌片头/片尾的帧**。品牌片是共享素材，片头第一帧
   的黑场是淡入、不是漏画；每期都报一条假警，规则就成了噪声。跳过几帧，
   报告里写明。
-- **`VV-03` 的阈值是量出来的**：六期旁白共 74 处句间间隙，落在 0.25~0.748 s，
-  中位数 0.427 s。0.6 s 卡在自然分布的尾巴里（约两成正常换气会被误报），
-  因此取 **1.0 s**——比实测最大值高 34%，远小于一句口播的中位时长 2.17 s。
+- **`VV-03` 的阈值是量出来的**：语料里的句间间隙落在自然分布的一段区间里，
+  0.6 s 卡在尾巴上（约两成正常换气会被误报），因此取 **1.0 s**——远小于
+  一句口播的中位时长，只会在「少了一句」的时候响。阈值不许再往下压。
   一致性由 `test_narration_gaps_stay_below_the_silence_threshold` 钉住。
+  （语料清空之后阈值要**重新量一遍**：以新语料量出来的分布为准，别拿旧分布当依据。）
 
 ### 4.4 「跳过」必须显式
 
@@ -225,7 +233,7 @@ python -m pyv.cli review frames --episode pg-parallel-decode --out /tmp/frames
 
 ### 5.1 记录
 
-`video/review/episodes/<EP>.md`，一篇一期。状态机与文档侧同构：
+`video/episodes/<期路径>/review.md`，一篇一期。状态机与文档侧同构：
 
 | 状态 | 含义 |
 | --- | --- |
@@ -304,10 +312,10 @@ Agent 逐帧读 PNG，回答三个问题，写进记录：
 
 | 批次 | 内容 | 验收 |
 | --- | --- | --- |
-| 1 | 规范 + 设计 + 计划 + 进度表 + 六期初始记录 | 文件入库，状态都是「待审」 |
-| 2 | `pyv/review.py` 文本层 + CLI + Makefile + 测试 | 单测；`VT-*` 六条各有注入缺陷验证会红 |
+| 1 | 规范 + 设计 + 进度表 + 每一期的初始记录 | 文件入库，状态都是「待审」 |
+| 2 | `pyv/review.py` 文本层 + CLI + Makefile + 测试 | 单测；`VT-*` 七条各有注入缺陷验证会红 |
 | 3 | `pyv/review.py` 成片层 + 抽帧清单 + 测试 | 单测；`VV-*` 七条各有注入缺陷验证会红 |
-| 4 | 六期实跑 + Agent 看帧 + 记录落结论 | `video/review/INDEX.md` 六行状态推进 |
+| 4 | 实跑（文本层 + 抽帧 + Agent 看帧）+ 记录落结论 | `video/review/INDEX.md` 一行一期，状态推进 |
 
 ## 9. 风险
 

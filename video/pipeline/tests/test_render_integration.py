@@ -13,8 +13,9 @@ from pyv.timeline import Scene
 
 PACKAGE = Path(render.__file__).resolve().parent
 
-#: 夹具期的契约（`tests/fixtures/fixture/contract.json`）。
-FIXTURE_CONTRACT = Path(__file__).parent / "fixtures" / "fixture" / "contract.json"
+#: 夹具期的契约（`tests/fixtures/演示系列/演示合集/夹具文档/short/contract.json`）。
+FIXTURE_CONTRACT = (Path(__file__).parent / "fixtures" / "演示系列"
+                   / "演示合集" / "夹具文档" / "short" / "contract.json")
 
 
 def _probe(path):
@@ -73,7 +74,7 @@ def _contract_params(renderer: str) -> dict:
     场景的文案与数字全在契约里（见 `pyv/contract.py`），测试也照这个口径取，
     不要在测试里另抄一份——抄一份就等于又造了个真相来源。
 
-    磁盘上没有期时读**夹具期**的契约（`tests/fixtures/fixture/contract.json`），
+    磁盘上没有期时读**夹具期**的契约（`tests/fixtures/演示系列/演示合集/夹具文档/short/contract.json`），
     有期时先读期目录里的契约。
     """
     from pyv import contract as contract_mod

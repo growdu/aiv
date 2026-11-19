@@ -28,11 +28,19 @@ from pathlib import Path
 
 import numpy as np
 
+from pyv import config as config_mod
+
 # video/ 是 pipeline/ 的上一级：pyv/bgm.py → pyv → pipeline → video
 AIV_ROOT = Path(__file__).resolve().parents[2]
-MUSIC_ROOT = AIV_ROOT / "music"
-LIBRARY_PATH = MUSIC_ROOT / "library.json"
-TRACKS_DIR = MUSIC_ROOT / "tracks"
+
+# 曲库的位置**由配置决定**（`video/config.toml` 的 `[assets.music]`）：
+# 曲子不入库，它们属于用这套框架的人。
+#
+# 两者的分工：**台账入库**（授权事实要留档），**曲子不入库**（版权是作者的）。
+_CONFIG = config_mod.config()
+MUSIC_ROOT = _CONFIG.music_dir.parent
+LIBRARY_PATH = _CONFIG.music_library
+TRACKS_DIR = _CONFIG.music_dir
 
 # ---------------------------------------------------------------- 选曲与规格
 
@@ -466,7 +474,7 @@ def check_library(entries: list[TrackEntry] | None = None,
         if not entry.sha256:
             add("bgm.fingerprint", ERROR, "缺 sha256 指纹", target)
         elif verify_fingerprint:
-            local = AIV_ROOT / entry.local_path
+            local = _CONFIG.base / entry.local_path
             if local.exists() and sha256_of(local) != entry.sha256:
                 add("bgm.fingerprint", ERROR,
                     "本地文件与台账里的 sha256 对不上", target)
@@ -853,7 +861,7 @@ def check_mix(report: MixReport) -> list[Finding]:
 # 对不上」的原因。
 
 BRAND_WINDOW_SECONDS = 2.833      # 与 render_brand.py 的帧数一致
-BRAND_WINDOWS_PATH = AIV_ROOT / "brand" / "brand_windows.json"
+BRAND_WINDOWS_PATH = _CONFIG.brand_windows
 
 # 起音比 = 窗口开头 50 ms 的能量 ÷ 紧邻之前 200 ms 的能量。
 # 比值大 = 那里有个清楚的起音，片头才「起」得起来。

@@ -8,6 +8,7 @@ from pathlib import Path
 import cairo
 
 from pyv import character
+from pyv import config as config_mod
 from pyv.palette import COLORS, FPS, HEIGHT, WIDTH, hex_to_rgb
 from pyv.params import check_required
 from pyv.timeline import Scene, Storyboard
@@ -23,9 +24,9 @@ from pyv.timeline import Scene, Storyboard
 # `tests/test_render_integration.py` 现在独立扫一遍源码核对这份清单，
 # 漏了会红。
 RENDER_INPUT_MODULES = (
-    "character.py", "components.py", "draw.py", "easing.py", "fonts.py",
-    "layout.py", "palette.py", "params.py", "render.py", "scene_layout.py",
-    "subtitle.py", "timeline.py",
+    "character.py", "components.py", "config.py", "draw.py", "easing.py",
+    "fonts.py", "layout.py", "palette.py", "params.py", "render.py",
+    "scene_layout.py", "subtitle.py", "timeline.py",
 )
 
 
@@ -43,6 +44,11 @@ def newest_source_mtime(scene: Scene, extra_mtime: float | None = None) -> float
     # 形象素材也是渲染输入：换了小象的图（重新生成、戴眼镜……），
     # 已经渲染好的片段必须作废重渲，否则画面里还是旧形象。
     candidates.extend(character.asset_mtimes())
+    # **配置文件本身也是渲染输入**：它决定素材在哪。改了它却复用旧片段，
+    # 画面里就是上一份素材。
+    config_path = config_mod.config().path
+    if config_path is not None and config_path.is_file():
+        candidates.append(config_path.stat().st_mtime)
     if extra_mtime:
         candidates.append(extra_mtime)
     # 只看这个场景自己的源码：改一个场景不该作废其它场景的片段

@@ -1,17 +1,35 @@
 ---
-description: "曲库下载的背景音乐放这里，音频不入库（媒体产物留本机）， 授权台账入库（library.json）——台账是事实，不是产物。"
+title: "背景音乐库"
+date: 2026-11-11
+description: "曲库下载的背景音乐放这里，音频是使用者的素材不入库， 授权台账入库（library.json）——台账是事实，不是素材。"
 ---
 # Growdu 背景音乐库
 
 **规范见 [`../背景音乐规范.md`](../背景音乐规范.md)。**
 
-曲库下载的背景音乐放这里，**音频不入库**（媒体产物留本机），
-**授权台账入库**（`library.json`）——台账是事实，不是产物。
+曲库下载的背景音乐放这里，**音频不入库**（音频是使用者的素材），
+**授权台账入库**（`library.json`）——台账是事实，不是素材。
+
+## 素材在哪：问配置
+
+曲库目录与台账的位置写在 `video/config.toml`：
+
+```toml
+[assets.music]
+dir = "music/tracks"          # 曲库目录（音频在这）
+bed = ""                      # 正文铺底那首；空 = 不铺 BGM
+library = "music/library.json"   # 授权台账
+```
+
+相对路径按**配置文件所在目录**（`video/`）解析，绝对路径照用。
+
+**没配不是错误**：没配 `bed` 就不铺 BGM，流水线照样出片。
+**配了但文件不在才是错**：`make doctor` 会单独报出来。
 
 ```
 music/
-├── library.json            授权台账（入库）：逐首登记来源、授权、指纹、角色
-├── tracks/                 音频成品（不入库）
+├── library.json            授权台账（**入库**：它记的是授权事实）
+├── tracks/                 音频成品（**使用者的素材**，不入库）
 │   └── <id>.wav            已转规格、已归一化到 -20 LUFS
 └── scripts/
     └── fetch_music.py      按台账下载 → 转规格 → 归一化 → 校验指纹
@@ -57,7 +75,7 @@ python -m pyv.cli bgm library          # 台账自洽性（授权、指纹、角
 python -m pyv.cli bgm check --music <文件>   # 判单条曲子合不合格
 ```
 
-## 当前曲库
+## 当前台账
 
 | id | 曲名 | 艺人 | 角色 | 时长 | 授权 |
 | --- | --- | --- | --- | --- | --- |
@@ -66,6 +84,9 @@ python -m pyv.cli bgm check --music <文件>   # 判单条曲子合不合格
 
 两首都出自 [archive.org](https://archive.org/)（`connections-raw-wav`、
 `threads-raw-wav`，均为 vinyl rip，licenseurl 指向 CC0 1.0），免署名。
+
+**台账入库，音频不入库**：台账记的是「每首曲子从哪来、什么授权」这个事实；
+音频本身是使用者的素材，本机有才有。
 
 选曲过程：**机器判据是门槛，风格靠人听**。候选 12 轨里有 2 轨没过机器判据
 （1~4 kHz 超标、真峰值超标），其余按《背景音乐规范》§3.1 的人工清单挑——
@@ -100,16 +121,19 @@ python3 scripts/fetch_music.py --all
 
 ## 验收成片
 
-曲子入库只是第一步，混完之后还要量一遍成片：
+曲子到位只是第一步，混完之后还要量一遍成片：
 
 ```bash
 cd video/pipeline
 python -m pyv.cli bgm verify \
-    --video ../out/<slug>.mp4 \
-    --narration ../episodes/<slug>/narration.mp3 \
+    --video ../out/postgresql-getting-started-postgresql基操-short.mp4 \
+    --narration ../episodes/postgresql/getting-started/postgresql基操/short/narration.mp3 \
     --music ../music/tracks/series-bed-01.wav \
-    --storyboard ../episodes/<slug>/storyboard.json
+    --storyboard ../episodes/postgresql/getting-started/postgresql基操/short/storyboard.json
 ```
+
+（成片名是**压平后的期路径**；`--music` 给的是配置 `[assets.music].bed`
+声明的那首曲子。`make EP=<期路径> mix-verify` 会自动把这几项填好。）
 
 量四件事：稳态 duck 深度、旁白活跃段与 BGM 的电平差、成片真峰值、
 旁白在成片里的增益偏差。判据见《背景音乐规范》§5.7。

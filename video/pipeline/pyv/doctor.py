@@ -41,18 +41,21 @@ THIRD_PARTY = (
     ("scipy", "scipy"),
 )
 
-#: 出片必需的媒体素材：(相对 video/ 的路径, 说明, 缺了算多严重)
-REQUIRED_ASSETS = (
-    ("character/growdu_character_2k_nobg.png", "小象立绘（渲染必需）", ERROR),
-    ("music/tracks/series-bed-01.wav", "正文铺底 BGM（混音必需）", ERROR),
-)
-
-#: 缺了只是「成片不带品牌片」，不算致命
-OPTIONAL_ASSETS = (
-    ("brand/clips/growdu_intro_3s_1080p.mp4", "品牌片头", WARNING),
-    ("brand/clips/growdu_outro_3s_1080p.mp4", "品牌片尾", WARNING),
-    ("brand/audio/intro_mix.wav", "片头成品音轨", WARNING),
-    ("brand/audio/outro_mix.wav", "片尾成品音轨", WARNING),
+#: 出片必需的媒体素材：**由配置声明**。
+#:
+#: 素材是用户自带的（版权是他们的，口味是他们的），框架只认位置。
+#: 所以这里不再有硬编码的路径清单——位置在 `video/config.toml` 里。
+#:
+#: **没配不是错**（没有就是没有，流水线会降级）；
+#: **配了但文件不在才是错**（配错了，要指出来）。
+ASSET_KINDS = (
+    # (名字, 配置里的取法, 缺了算多严重)
+    ("形象立绘", "mascot", INFO),
+    ("无标牌立绘", "mascot_plain", INFO),
+    ("落版头像", "avatar", INFO),
+    ("正文铺底 BGM", "music_bed", ERROR),
+    ("品牌片目录", "brand_clips", WARNING),
+    ("品牌音轨目录", "brand_audio", WARNING),
 )
 
 
@@ -146,14 +149,31 @@ def _check_font() -> Check:
 
 
 def _check_assets() -> list[Check]:
+    """配置里声明的素材在不在。
+
+    **没配与配错要分开报**：
+    - 没配（路径为空）= 素材是用户自带的，没有就是没有 → 降级，不算错；
+    - 配了但文件不在 = 配错了 → 照配置的严重度报，并说清怎么改。
+    """
+    from pyv import config as config_mod
+
+    cfg = config_mod.config()
     checks: list[Check] = []
-    for relative, note, level in REQUIRED_ASSETS + OPTIONAL_ASSETS:
-        path = AIV_ROOT / relative
-        present = path.is_file()
+    for label, attribute, level in ASSET_KINDS:
+        path = getattr(cfg, attribute)
+        if path is None:
+            checks.append(Check(
+                "素材", label, INFO, True,
+                "没配（这一项不参与出片）", fix="",
+            ))
+            continue
+        present = path.is_dir() if attribute in ("brand_clips", "brand_audio") \
+            else path.is_file()
         checks.append(Check(
-            "素材", relative, INFO if present else level, present,
-            note if present else f"缺：{note}", fix="" if present else
-            f"从仓库取：git checkout -- {relative}（若刚 clone 就没取到）",
+            "素材", label, INFO if present else level, present,
+            str(path) if present else f"配了但找不到：{path}",
+            fix="" if present else
+            f"改 {cfg.path or '配置'} 里的 [assets.*]，或把素材放到位",
         ))
     return checks
 
@@ -195,7 +215,8 @@ def _check_episodes() -> list[Check]:
     if not eps:
         checks.append(Check(
             "素材", "video/episodes/", INFO, True,
-            "还没有期：新建 video/episodes/<slug>/ 就是一个新的一期",
+            "还没有期：新建 video/episodes/<系列>/<合集>/<文档>/<档位>/ "
+            "就是一个新的一期",
             fix="",
         ))
         return checks

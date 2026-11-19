@@ -1,4 +1,6 @@
 ---
+title: "品牌片脚本：渲染与配乐"
+date: 2026-11-11
 description: "需要 FFmpeg（7.x 或兼容版本）、Python 3（cairo / numpy / Pillow / scipy）。"
 ---
 需要 FFmpeg（7.x 或兼容版本）、Python 3（cairo / numpy / Pillow / scipy）。
@@ -13,14 +15,29 @@ python3 scripts/render_brand.py       # 渲染片头 + 片尾到 clips/
 `render_brand.py` 支持 `--intro` / `--outro` 单独渲染；渲染完会核对帧数，
 帧数不对直接报错。
 
+## 素材在哪：问配置
+
+品牌片是**使用者的素材**，仓库里不携带。位置写在 `video/config.toml`：
+
+```toml
+[assets.brand]
+clips = "brand/clips"                  # 渲染出来的片放这里
+audio = "brand/audio"                  # 成品音轨放这里
+windows = "brand/brand_windows.json"   # 配乐窗口决定
+```
+
+相对路径按**配置文件所在目录**（`video/`）解析。
+**没配不是错误**（流水线降级，不带品牌片出片），
+**配了但文件不在才是错**（`make doctor` 报出来）。
+
 ## 源素材的生成入口（消耗生成额度）
 
-`assets/` 不入库，素材没了要重新生成。依赖 `mcode-tools` CLI
-（先加载 `mcode-tools-master` skill），每一步都会消耗生成额度，
-重复执行前先确认是否真的需要重做：
+源素材（`assets/`）同样是使用者的东西，仓库里不携带，素材没了要重新生成。
+依赖 `mcode-tools` CLI（先加载 `mcode-tools-master` skill），
+每一步都会消耗生成额度，重复执行前先确认是否真的需要重做：
 
 ```bash
-python3 ../character/scripts/make_white.py   # 白底主形象（从入库的透明底**合成**，不耗额度）
+python3 ../character/scripts/make_white.py   # 白底主形象（从透明底**合成**，不耗额度）
 python3 scripts/generate_poses.py             # 点赞 / 挥手姿态（眼镜修补 + 抠底 + 盖章）
 python3 scripts/generate_backgrounds.py       # 两张 AI 背景（生成完过语义验收）
 ```

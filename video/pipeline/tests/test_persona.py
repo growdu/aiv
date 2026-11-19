@@ -26,7 +26,7 @@ BAD_SCRIPT = FIXTURES / "persona_script_bad.md"
 def _real_scripts() -> list[tuple[str, Path]]:
     """真正在用的口播稿（slug → 路径）。
 
-    **一期 = 一个目录**，稿子就在期目录里（`video/episodes/<slug>/口播稿.md`），
+    **一期 = 一个目录**，稿子就在期目录里（`video/episodes/<期路径>/口播稿.md`），
     没有登记表。磁盘上没有期时用**夹具期**。
 
     与 `persona_script_ok.md` / `persona_script_bad.md` 的区别：那两个是
@@ -39,7 +39,7 @@ def _real_scripts() -> list[tuple[str, Path]]:
         path = episodes_mod.script_path(slug)
         if path.is_file():
             out.append((slug, path))
-    return out or [("fixture", FIXTURES / "fixture" / "口播稿.md")]
+    return out or [("fixture", FIXTURES / "演示系列" / "演示合集" / "夹具文档" / "short" / "口播稿.md")]
 
 
 def _load(name: str, relative: str):

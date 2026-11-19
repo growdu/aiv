@@ -1,4 +1,6 @@
 ---
+title: "音色"
+date: 2026-11-11
 description: "后续视频旁白统一使用这套音色。规范见 ../形象与音色规范.md §2。"
 ---
 # Growdu 音色
@@ -17,10 +19,13 @@ description: "后续视频旁白统一使用这套音色。规范见 ../形象�
 }
 ```
 
-对标参照：`video/ddl-voiceover.mp3`。实测基频偏差 **+0.1 半音**、
+对标参照是一段**定标参照稿**（本机素材，不入库）。实测基频偏差 **+0.1 半音**、
 F2 偏差 +31 Hz、动态跨度 107 Hz vs 参照 102 Hz。
+参照稿的位置随使用者而定；量它的办法见下面的「这把尺子」。
 
 ## 试听样本
+
+试听样本是使用者的本机素材（音频不入库），参数与结论如下：
 
 | 文件 | 配置 | 说明 |
 | --- | --- | --- |
@@ -29,6 +34,9 @@ F2 偏差 +31 Hz、动态跨度 107 Hz vs 参照 102 Hz。
 | `voice_sample_southern_s150.mp3` | 南方小哥 / speed 1.5 | 备选二，F1 吻合但听感过于平直 |
 
 ## 合成
+
+每期的旁白是**本机产物**：TTS 合成的输出未必逐字节相同，
+不入库；口播稿与契约入库，缺了旁白可以按口播稿重新合成。
 
 ```bash
 cd video/voice
@@ -88,11 +96,11 @@ make -C pipeline pronunciation
 
 ```bash
 cd video/voice
-# 量参照稿
-python3 scripts/measure_voice.py --path ../ddl-voiceover.mp3 --chars 226
+# 量参照稿（路径随使用者而定）
+python3 scripts/measure_voice.py --path <参照稿>.mp3 --chars 226
 # 量候选稿，并与参照稿逐项比
 python3 scripts/measure_voice.py --path 候选.mp3 --chars 255 \
-    --ref ../ddl-voiceover.mp3 --ref-chars 226
+    --ref <参照稿>.mp3 --ref-chars 226
 ```
 
 **只认差值**：本脚本的测量定义与当初定标时未必一致，绝对值不能直接对规范

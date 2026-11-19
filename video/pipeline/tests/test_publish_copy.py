@@ -47,6 +47,11 @@ def test_publish_dir_contains_only_whitelisted_docs():
     工程内部产物（内部设计、实施计划、测试夹具）留在 video/ 里，
     不能被带进发布目录——`persona_script_bad.md` 是故意写坏的样本，
     发到公网上就是事故。
+
+    **例外是分类页 `_index.md`**：那一层不属于 `video/` 的副本，而是
+    `docs/` 自己的目录接口——`docs/` 的每一级都要有 `_index.md`，
+    编译器（`tools/build-content-units.py`）沿目录链读它拿分类与标签。
+    少了它，整条 `docs/life/aiv/` 的链就断了。
     """
     module = _module()
     allowed = set(module.PUBLISH_DOCS)
@@ -58,6 +63,8 @@ def test_publish_dir_contains_only_whitelisted_docs():
         if any(part.startswith('.') for part in path.relative_to(PUBLISH_ROOT).parts):
             continue
         rel = path.relative_to(PUBLISH_ROOT).as_posix()
+        if path.name == "_index.md":
+            continue
         assert rel in allowed, f"{rel} 不该出现在发布目录里"
 
 

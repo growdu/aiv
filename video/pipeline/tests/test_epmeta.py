@@ -272,7 +272,7 @@ def test_a_douyin_section_is_never_required_to_exist(tmp_path):
 
 # --- 入库的真实元数据 ------------------------------------------------------
 #
-# 元数据跟着期走：`video/episodes/<slug>/publish.json`。
+# 元数据跟着期走：`video/episodes/<期路径>/publish.json`。
 
 
 def test_every_stored_episode_passes_the_meta_check():
@@ -305,20 +305,27 @@ def test_published_episodes_are_found_by_their_publish_json(tmp_path, monkeypatc
     """有发布元数据的期，就是期目录里放着 `publish.json` 的那些期。"""
     root = tmp_path / "episodes"
     root.mkdir()
-    (root / "b-slug").mkdir()
-    (root / "b-slug" / epmeta.PUBLISH_NAME).write_text("{}", encoding="utf-8")
-    (root / "a-slug").mkdir()
-    (root / "a-slug" / epmeta.PUBLISH_NAME).write_text("{}", encoding="utf-8")
-    (root / "c-slug").mkdir()          # 没有 publish.json：不是发了的期
+    for ep, published in (("系列甲/合集甲/文档乙/short", True),
+                          ("系列甲/合集甲/文档甲/mid", True),
+                          ("系列甲/合集甲/文档丙/full", False)):
+        directory = root / ep
+        directory.mkdir(parents=True)
+        if published:
+            (directory / epmeta.PUBLISH_NAME).write_text("{}", encoding="utf-8")
     monkeypatch.setattr(epmeta, "EPISODES_DIR", root)
-    assert epmeta.published_episodes() == ["a-slug", "b-slug"]
+    assert epmeta.published_episodes() == [
+        "系列甲/合集甲/文档乙/short",
+        "系列甲/合集甲/文档甲/mid",
+    ]
 
 
 def test_meta_path_points_into_the_episode_dir(tmp_path):
     """默认位置是期目录里的 `publish.json`；给了 root 就是那个目录本身。"""
-    assert epmeta.meta_path("some-slug").name == epmeta.PUBLISH_NAME
-    assert epmeta.meta_path("some-slug").parent.name == "some-slug"
-    assert epmeta.meta_path("some-slug", root=tmp_path) == \
+    ep = "系列甲/合集甲/文档甲/short"
+    assert epmeta.meta_path(ep).name == epmeta.PUBLISH_NAME
+    assert epmeta.meta_path(ep).parent.name == "short"
+    assert epmeta.meta_path(ep).parent.parent.name == "文档甲"
+    assert epmeta.meta_path(ep, root=tmp_path) == \
         tmp_path / epmeta.PUBLISH_NAME
 
 

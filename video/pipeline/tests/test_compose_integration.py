@@ -288,7 +288,7 @@ def test_real_storyboard_matches_real_narration():
     必须仍然等于旁白时长。
 
     **一期 = 一个目录**：时间轴与旁白都在期目录里
-    （`video/episodes/<slug>/storyboard.json` 与 `narration.mp3`），
+    （`video/episodes/<期路径>/storyboard.json` 与 `narration.mp3`），
     没有期就跳过并说清楚——**不许静默跳过**。
 
     ⚠️ 这条曾经是**死的**：它指向的 `pa_decode_v2.mp3` 早已被
