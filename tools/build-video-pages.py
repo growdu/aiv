@@ -28,10 +28,9 @@
 
     content/units/video/<期号>.md    每期一个内容单元
 
-**合集页（``platforms/blog/site/source/videos/index.md``）不由这个脚本写**：它由
-``platforms/blog/site/tools/build-series-page.py`` 生成——那一页是**系列页**，按期号排，
-每期带钩子、时长与完整版（母稿页）的链接，数据来自期号索引
-（母稿是唯一真相）。一个文件一个写入者。
+**合集页不由这个脚本写，也不再有单独的脚本**：站点的视频页签
+（``platforms/blog/site/src/pages/videos/``）自己从视频内容单元 + 学习流的
+分组渲染出来——期挂在学习流的同一张阶梯上，没有第二份「系列页」。
 """
 
 import argparse
@@ -255,7 +254,7 @@ def main(argv=None) -> int:
     if not episodes:
         # **还没有期是合法状态**：一条期都没有，生成 0 个单元，不是错。
         print("还没有期：video/episodes/ 下没有期目录，生成 0 个视频内容单元")
-        print("合集页（系列页）由 platforms/blog/site/tools/build-series-page.py 生成")
+        print("合集页由站点自己渲染（platforms/blog/site/src/pages/videos/）")
         return 0
 
     # 先算出每期口播稿对应的站内地址：兄弟期之间的链接要指向这些地址。
@@ -292,7 +291,7 @@ def main(argv=None) -> int:
     print("生成视频内容单元 {} 个：{}".format(
         len(pages), "、".join(episode for episode, *_ in pages)
     ))
-    print("合集页（系列页）由 platforms/blog/site/tools/build-series-page.py 生成")
+    print("合集页由站点自己渲染（platforms/blog/site/src/pages/videos/）")
     return 0
 
 
