@@ -1,6 +1,6 @@
 # toutiao — 博客到头条号的切片与发布
 
-把 `source/_posts/` 下的博客文章裁成**头条版**（3K 精简稿 + 最多 3 张图，0 张也行），
+把 `content/units/` 下的博客文章裁成**头条版**（3K 精简稿 + 最多 3 张图，0 张也行），
 产出发布包交人工上传；账号拿到 API 权限后，同一套代码改为直接调接口。
 
 > **这个目录与 `platforms/wechat/` 平级、互不引用。** 两个平台的实现是分开做的，
@@ -48,7 +48,7 @@
   账号仍未认证，`automation` 那一栏维持 `manual`）
 - **实现状态**：切片、渲染、出包、幂等状态、通知、批量出包、命令行**都已实现**
   （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**396 条用例**。
-  其中 2 条是**语料级回归**——母稿 `source/_posts` 不入库，
+  其中 2 条是**语料级回归**——内容单元 `content/units` 不入库，
   干净检出里它们是 `skipped`（394 passed / 2 skipped），
   本地有母稿时才会真跑（396 passed）。
   逐条任务见 [docs/00-设计.md](docs/00-设计.md)
@@ -168,7 +168,7 @@ cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli status
 **语料里切不出内容的那几篇不算失败**（它们会被点名，但不会拖垮整批）；
 真的失败（写盘出错、状态文件坏过）才让退出码变成 3。
 
-`<slug>` 是文章相对 `source/_posts/` 的路径去掉 `.md`，
+`<slug>` 是文章相对 `content/units/` 的路径去掉 `.md`（就是内容单元 id），
 例如 `source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc`。
 
 每个命令都能把落盘位置指到别处，**但要把每一处都指走**，否则还是会写进仓库：

@@ -103,10 +103,15 @@ def is_remote(path: str) -> bool:
 def resolve_asset(path: str, posts_dir: Path) -> Path:
     """Resolve an asset path from a post to a real file.
 
-    ``platforms/blog/site/tools/sync-hexo.py`` rewrites every image reference to
-    ``images/<path relative to docs/>`` and copies the files to the site's
-    ``source/images/``.  So an asset path resolves against the ``source/``
-    root -- the parent of the posts directory.
+    站点的图片走 ``/images/<docs 相对路径>``：
+    ``platforms/blog/site/tools/sync-content.py`` 把 ``docs/`` 里的图片按
+    **docs 的相对路径**落进站点的 ``public/images/``。
+
+    ⚠️ **这个解析基准已经过时**：它按「文章目录的上一级」推，而文章目录现在
+    在 ``site/src/content/units/``，它的上一级不是图片所在。
+    这条接口缺口记在
+    ``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 3 条
+    （「adapter 读的是站点的副本，不是内容单元仓库」）。
 
     Three things are refused here, and each of them says what went wrong:
 

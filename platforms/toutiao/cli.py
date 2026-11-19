@@ -164,8 +164,9 @@ def _resolve_post(posts_dir: Path, slug: str):
     posts_dir = Path(posts_dir)
     if not posts_dir.is_dir():
         raise FileNotFoundError(
-            "找不到 {}。先跑 `python3 platforms/blog/site/tools/sync-hexo.py`"
-            "（约 3 分钟）。".format(posts_dir)
+            "找不到 {}。先跑 `python3 tools/build-content-units.py` 产出内容单元，"
+            "再跑 `python3 platforms/blog/site/tools/sync-content.py` 同步进站点。"
+            .format(posts_dir)
         )
     direct = posts_dir / (slug + ".md")
     if not _inside(direct, posts_dir):
@@ -202,7 +203,7 @@ def cmd_scan(args) -> int:
     try:
         posts = discover(args.posts_dir)
     except FileNotFoundError as error:
-        # 目录不存在：错误消息里已经带了「先跑 sync-hexo.py」的指引。
+        # 目录不存在：错误消息里已经带了「先产出内容单元再同步进站点」的指引。
         print("扫描失败：{}".format(error), file=sys.stderr)
         return EXIT_USAGE
     except ValueError as error:
@@ -359,7 +360,7 @@ def cmd_convert_all(args) -> int:
     try:
         posts = discover(args.posts_dir)
     except FileNotFoundError as error:
-        # 目录不存在：错误消息里已经带了「先跑 sync-hexo.py」的指引。
+        # 目录不存在：错误消息里已经带了「先产出内容单元再同步进站点」的指引。
         print("扫描失败：{}".format(error), file=sys.stderr)
         return EXIT_USAGE
     except ValueError as error:

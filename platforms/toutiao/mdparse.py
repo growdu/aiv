@@ -19,10 +19,10 @@ __all__ = [
 # The front matter block is opened and closed by a line holding ``---``.
 _DELIMITER = "---"
 
-# The escapes ``platforms/blog/site/tools/sync-hexo.py`` writes into a
-# double-quoted value.
-# ``yaml_escape`` doubles a backslash and escapes a double quote, so these
-# two are exactly what can come back out of a quoted title.
+# The escapes that can come back out of a double-quoted YAML scalar:
+# a doubled backslash and an escaped double quote.
+# The compiler (``tools/build-content-units.py``) dumps front matter with
+# ``yaml.safe_dump``, so these are the two escapes to undo.
 _ESCAPES = {"\\": "\\", '"': '"'}
 _ESCAPE_RE = re.compile(r"\\(.)")
 
@@ -41,13 +41,12 @@ class SourcePost:
 def _unquote(value: str) -> str:
     """Strip the surrounding quotes and undo the escapes inside them.
 
-    ``platforms/blog/site/tools/sync-hexo.py`` writes the title as a
-    double-quoted YAML scalar
-    and escapes what it has to (``yaml_escape``).  Hexo reads that back
-    with a real YAML parser, which turns ``\\"`` into ``"`` again -- so we
-    must undo the same escapes, otherwise the published title carries
-    stray backslashes.  Single-quoted scalars keep their content verbatim,
-    which is what YAML says.
+    The compiler (``tools/build-content-units.py``) dumps the front matter
+    with ``yaml.safe_dump``, which writes the title as a quoted YAML scalar
+    and escapes what it has to.  A YAML parser turns ``\\"`` back into ``"``
+    -- so we must undo the same escapes, otherwise the published title
+    carries stray backslashes.  Single-quoted scalars keep their content
+    verbatim, which is what YAML says.
     """
     value = value.strip()
     if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
@@ -106,8 +105,8 @@ def _split_front_matter(text: str) -> tuple[list[str], str] | None:
 def parse_front_matter(text: str) -> tuple[dict[str, object], str]:
     """Split front matter from the body.
 
-    ``platforms/blog/site/tools/sync-hexo.py`` generates the front matter
-    itself, so its shape is
+    The compiler (``tools/build-content-units.py``) generates the front
+    matter itself, so its shape is
     known and fixed: ``key: value`` scalars plus ``key:`` followed by
     ``  - item`` lists.  Unknown keys are kept as they are, so a future
     contract field cannot break the parser.
@@ -178,8 +177,9 @@ def discover(posts_dir: Path) -> list[SourcePost]:
     posts_dir = Path(posts_dir)
     if not posts_dir.is_dir():
         raise FileNotFoundError(
-            "找不到 {}。先跑 `python3 platforms/blog/site/tools/sync-hexo.py`"
-            "（约 3 分钟）。".format(posts_dir)
+            "找不到 {}。先跑 `python3 tools/build-content-units.py` 产出内容单元，"
+            "再跑 `python3 platforms/blog/site/tools/sync-content.py` 同步进站点。"
+            .format(posts_dir)
         )
     return [load_post(path, posts_dir) for path in sorted(posts_dir.rglob("*.md"))]
 
@@ -191,10 +191,9 @@ def discover_unsupported(posts_dir: Path) -> list[str]:
     返回相对 posts_dir 的路径字符串列表，排序后返回。
     目录不存在时返回空列表。
 
-    ``platforms/blog/site/tools/sync-hexo.py`` 也会把 ``docs/`` 下的 .html
-    博文写进站点的文章目录，而 ``discover()`` 只收 .md —— 这些母稿不会进头条号
-    的发布流程。把它们显式列出来，扫描方才能说清楚「哪些没发」而不是
-    静默少发几篇。
+    今天的编译器只产出 ``.md``，所以这份清单**当前是空的**。它保留下来是因为
+    「文章目录里可能有本适配器不认的东西」这件事本身没变——把显式列出来，
+    扫描方才能说清楚「哪些没发」而不是静默少发几篇。
 
     隐藏文件（``.DS_Store`` 之类）与隐藏目录不算：站点不会发布它们。
     """

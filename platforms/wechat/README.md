@@ -101,7 +101,7 @@ cd platforms && python3 -m wechat.cli convert <slug>
 | `reconcile` | 对账：草稿箱与账本对齐，清理「草稿已被手删」的记录（`--dry-run`） |
 | `status` | 查看所有文章的状态 |
 
-`<slug>` 是文章相对 `source/_posts/` 的路径去掉 `.md`，例如
+`<slug>` 是文章相对 `content/units/` 的路径去掉 `.md`（就是内容单元 id），例如
 `source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc`。
 
 全局选项（`--posts-dir` / `--out-dir` / `--source-url` / `--category-tag` /
