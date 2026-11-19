@@ -229,7 +229,11 @@ def build_unit(path: Path) -> Unit:
         if key not in fm:
             continue
         if key in BASE_FIELDS:
-            # 编译器自己推导的那几个字段，母稿写了也不算数——不搬。
+            # ⚠️ **防御性不变量**，不是过滤器：今天
+            # ``EPISODE_FIELDS ∩ BASE_FIELDS = ∅``，这一句**永不触发**。
+            # 它守的是「编译器自己推导的那几个字段，母稿写了也不算数」这条规则——
+            # 万一将来有人往两个元组里加了同一个名字，它会挡住。
+            # （不许删：删了将来就没人守这条了。）
             continue
         value = fm[key]
         if value is None:
@@ -260,8 +264,14 @@ def one_line(value: str) -> str:
     契约层的 front matter 解析器是**扁平**的：只读每个键的**首行**。
     编译器一旦产出多行标量（母稿写 ``description: |`` 时就是），契约层
     只读到第一行 → 描述被截成半句（跟 safe_dump 的 ``width`` 无关）。
+
+    ⚠️ 只折 **ASCII 空白**（空格 / 制表符 / 回车 / 换行）。Python 的 ``\\s``
+    对 str 模式匹配的是 **Unicode 空白**，会把中文稿里的全角空格（U+3000）
+    和 NBSP（U+00A0）换成半角空格——那是**字面失真**，中文稿里全角空格常用来
+    做缩进与对齐。折行的目的是「压成一行」，不是「改空白字符」。
+    首尾的 ``.strip()`` 保持不变（首尾空白本来就该剥）。
     """
-    return re.sub(r"\s+", " ", value).strip()
+    return re.sub(r"[ \t\r\n]+", " ", value).strip()
 
 
 def flatten(value):

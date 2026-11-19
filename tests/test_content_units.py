@@ -108,3 +108,17 @@ def test_a_multiline_description_survives_as_one_line(compiler):
     unit = compiler.build_unit(compiler.DOCS / "ep.md")
     fields, _ = parse_front_matter(compiler.render(unit))
     assert fields["description"] == "第一行描述 第二行描述"
+
+
+def test_a_full_width_space_inside_a_description_is_kept(compiler):
+    """中文稿里的全角空格是排版的一部分——折行不许把它换成半角。
+
+    折行的目的是把多行标量压成**一行**，不是为了改空白字符：
+    U+3000（全角空格）被换成 ASCII 空格，字面就变了。
+    """
+    (compiler.DOCS / "ep.md").write_text(
+        "---\ntitle: 一期\ndate: '2026-01-01'\ndescription: 第一行　第二行\n---\n\n正文。\n",
+        encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "ep.md")
+    fields, _ = parse_front_matter(compiler.render(unit))
+    assert fields["description"] == "第一行　第二行"
