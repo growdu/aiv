@@ -2,13 +2,15 @@
 /**
  * 单期视频。
  *
- * 页面结构：播放器 → 口播稿（全文）→ 平台分发 → 学习流位置。
+ * 页面结构：左栏目录树 → 播放器 → 口播稿（全文）→ 平台分发 → 右栏大纲。
  *
  * **成片托管在自有服务器**：站点引用 `/media/videos/<ep>.mp4`（master 文件）。
  * 文件还没上传之前，这里显示占位而不是坏掉的播放器。
  */
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import DocTree from '../../components/DocTree.astro';
+import Outline from '../../components/Outline.astro';
 import { allUnits } from '../../lib/units';
 import { assignmentOf, getTrack } from '../../lib/learning';
 import { stageUrl, trackUrl } from '../../lib/urls';
@@ -24,7 +26,9 @@ export async function getStaticPaths() {
 }
 
 const { unit } = Astro.props;
-const { Content } = await render(unit);
+const { Content, headings } = await render(unit);
+
+const units = await allUnits();
 
 const assignment = assignmentOf(unit.id);
 const track = assignment ? getTrack(assignment.track) : undefined;
@@ -50,64 +54,74 @@ const platformNames: Record<string, string> = {
       <a href="/">growdu</a> / <a href="/videos/">视频</a> / <b>{unit.data.title}</b>
     </div>
 
-    <section class="section">
-      <h1 class="ep-title">{unit.data.title}</h1>
-      <p class="ep-meta muted">
-        {dateText}
-        {unit.data.author && <> · {unit.data.author}</>}
-        {track && assignment && (
-          <>
-            {' · '}
-            <a href={trackUrl(track.id)}>{track.title}</a> {assignment.stage}
-            {stage && <> {stage.title}</>}
-          </>
+    <div class="doc-layout">
+      <aside class="side">
+        <DocTree units={units} currentId={unit.id} />
+      </aside>
+
+      <main>
+        <section class="section">
+          <h1 class="ep-title">{unit.data.title}</h1>
+          <p class="ep-meta muted">
+            {dateText}
+            {unit.data.author && <> · {unit.data.author}</>}
+            {track && assignment && (
+              <>
+                {' · '}
+                <a href={trackUrl(track.id)}>{track.title}</a> {assignment.stage}
+                {stage && <> {stage.title}</>}
+              </>
+            )}
+          </p>
+        </section>
+
+        <section class="section player-block">
+          <div class="player" data-media={media}>
+            <p class="player-note muted">
+              成片托管在自有服务器：<code>{media}</code>。
+              <br />
+              文件上传后这里会直接播放（HTML5 原生播放器，不引第三方）。
+            </p>
+          </div>
+        </section>
+
+        {unit.data.description && (
+          <div class="prose">
+            <div class="tldr"><b>TL;DR</b>{unit.data.description}</div>
+          </div>
         )}
-      </p>
-    </section>
 
-    <section class="section player-block">
-      <div class="player" data-media={media}>
-        <p class="player-note muted">
-          成片托管在自有服务器：<code>{media}</code>。
-          <br />
-          文件上传后这里会直接播放（HTML5 原生播放器，不引第三方）。
-        </p>
-      </div>
-    </section>
+        {unit.data.platforms && unit.data.platforms.length > 0 && (
+          <section class="section">
+            <h2>已分发到</h2>
+            <p class="small">
+              {unit.data.platforms.map((p) => (
+                <span class="badge accent" style="margin-right:6px">{platformNames[p] ?? p}</span>
+              ))}
+            </p>
+          </section>
+        )}
 
-    {unit.data.description && (
-      <div class="prose">
-        <div class="tldr"><b>TL;DR</b>{unit.data.description}</div>
-      </div>
-    )}
+        <section class="section">
+          <h2>口播稿</h2>
+          <p class="section-sub">视频的原始文本。下面这份就是发布用的稿子，一个字没改。</p>
+          <article class="prose">
+            <Content />
+          </article>
+        </section>
 
-    {unit.data.platforms && unit.data.platforms.length > 0 && (
-      <section class="section">
-        <h2>已分发到</h2>
-        <p class="small">
-          {unit.data.platforms.map((p) => (
-            <span class="badge accent" style="margin-right:6px">{platformNames[p] ?? p}</span>
-          ))}
-        </p>
-      </section>
-    )}
+        {track && assignment && (
+          <nav class="ep-nav">
+            <a class="btn ghost" href={stageUrl(track.id, assignment.stage)}>
+              ← 回到 {assignment.stage} {stage?.title}
+            </a>
+            <a class="btn ghost" href={trackUrl(track.id)}>{track.title} 全线 →</a>
+          </nav>
+        )}
+      </main>
 
-    <section class="section">
-      <h2>口播稿</h2>
-      <p class="section-sub">视频的原始文本。下面这份就是发布用的稿子，一个字没改。</p>
-      <article class="prose">
-        <Content />
-      </article>
-    </section>
-
-    {track && assignment && (
-      <nav class="ep-nav">
-        <a class="btn ghost" href={stageUrl(track.id, assignment.stage)}>
-          ← 回到 {assignment.stage} {stage?.title}
-        </a>
-        <a class="btn ghost" href={trackUrl(track.id)}>{track.title} 全线 →</a>
-      </nav>
-    )}
+      <Outline headings={headings} unit={unit} />
+    </div>
   </div>
 </Base>
 

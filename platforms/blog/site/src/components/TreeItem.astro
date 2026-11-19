@@ -1,0 +1,79 @@
+---
+/**
+ * 目录树的一个节点。
+ *
+ * 目录节点用 <details> 包住子树：当前文章所在那一支默认展开（open），
+ * 其余的折起来——560 篇全摊开的话左栏没法看。
+ * 叶子节点就是一个链接。
+ *
+ * 这个组件**自引用**（下面 import 自己）来做递归：
+ * 树的深度不固定，写死层数不如让组件自己走。
+ */
+import type { TreeNode } from '../lib/tree';
+import TreeItem from './TreeItem.astro';
+
+export interface StageInfo {
+  id: string;
+  text: string;
+}
+
+interface Props {
+  node: TreeNode;
+  /** 内容单元 id → 阶段（叶子节点用它） */
+  stageInfo: Map<string, StageInfo>;
+  /** 阶段 id → 「赛道 · 阶段名」（目录节点用它） */
+  stageText: Map<string, string>;
+}
+
+const { node, stageInfo, stageText } = Astro.props;
+
+/** 目录整支只有一个阶段时才标（标两个就等于没说）。 */
+const ownStage = node.unitId ? stageInfo.get(node.unitId) : undefined;
+const stage =
+  node.stages.length === 1 && !ownStage ? stageText.get(node.stages[0]) : undefined;
+const badgeId = ownStage?.id ?? (stage ? node.stages[0] : undefined);
+const badgeText = ownStage?.text ?? stage;
+---
+
+{
+  node.kind === 'dir' ? (
+    <details class="tree-dir" open={node.onPath}>
+      <summary class="tree-row">
+        <span class="tree-caret" aria-hidden="true" />
+        {node.href ? (
+          <a
+            href={node.href}
+            class:list={{ 'tree-link-on': node.current }}
+            title={node.title ?? node.name}
+          >
+            {node.name}
+          </a>
+        ) : (
+          <span class="tree-plain">{node.name}</span>
+        )}
+        {badgeId && <span class="tree-stage" title={badgeText}>{badgeId}</span>}
+      </summary>
+      {node.children.length > 0 && (
+        <ul class="tree-list">
+          {node.children.map((child) => (
+            <li>
+              <TreeItem node={child} stageInfo={stageInfo} stageText={stageText} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
+  ) : (
+    <div class="tree-row">
+      <span class="tree-caret tree-caret-leaf" aria-hidden="true" />
+      <a
+        href={node.href}
+        class:list={{ 'tree-link-on': node.current }}
+        title={node.name}
+      >
+        {node.name}
+      </a>
+      {badgeId && <span class="tree-stage" title={badgeText}>{badgeId}</span>}
+    </div>
+  )
+}

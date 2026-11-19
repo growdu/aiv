@@ -6,16 +6,18 @@
  *   kind=document → 一篇文章
  *   kind=category → 一个目录（列出它下面的文档与子目录）
  *
- * 三栏：左栏是**学习流坐标**（人在流程里的位置），中间是正文，
- * 右栏是**目录坐标**（这篇在仓库目录树里的位置）。两套坐标同时在场。
+ * 三栏：左栏是**目录树**（docs/ 的真实结构），中间是正文，
+ * 右栏是**文章大纲**（这篇的小标题）。
+ *
+ * 学习流不单独占栏——阶段本来就是目录（`…/getting-started/` 就是 L1），
+ * 所以它折在树上（节点上的 L1 / L2 标记）。
  */
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import TrackSide from '../../components/TrackSide.astro';
+import DocTree from '../../components/DocTree.astro';
+import Outline from '../../components/Outline.astro';
 import UnitRow from '../../components/UnitRow.astro';
 import { allUnits, categoryPath, isCategoryId } from '../../lib/units';
-import { assignmentOf, getTrack } from '../../lib/learning';
-import { unitUrl } from '../../lib/urls';
 
 export async function getStaticPaths() {
   const units = await allUnits();
@@ -28,11 +30,9 @@ export async function getStaticPaths() {
 }
 
 const { unit } = Astro.props;
-const { Content } = await render(unit);
+const { Content, headings } = await render(unit);
 
 const units = await allUnits();
-const byId = new Map(units.map((u) => [u.id, u]));
-
 const isCategory = unit.data.kind === 'category';
 const dir = categoryPath(unit.id);
 
@@ -49,11 +49,6 @@ const children = isCategory
     })
   : [];
 
-const assignment = assignmentOf(unit.id);
-const track = assignment ? getTrack(assignment.track) : undefined;
-const stage = track && assignment ? track.stages.find((s) => s.id === assignment.stage) : undefined;
-
-const dateText = typeof unit.data.date === 'string' ? unit.data.date : unit.data.date.toISOString().slice(0, 10);
 ---
 
 <Base
@@ -67,12 +62,10 @@ const dateText = typeof unit.data.date === 'string' ? unit.data.date : unit.data
       {unit.data.categories.length > 0 && <span> / {unit.data.categories.join(' / ')}</span>}
     </div>
 
-    <div class:list={['doc-layout', { 'no-left': !track }]}>
-      {track && assignment && (
-        <aside class="side">
-          <TrackSide track={track} stageId={assignment.stage} unitsById={byId} currentUnitId={unit.id} />
-        </aside>
-      )}
+    <div class="doc-layout">
+      <aside class="side">
+        <DocTree units={units} currentId={unit.id} />
+      </aside>
 
       <main>
         {isCategory ? (
@@ -107,46 +100,7 @@ const dateText = typeof unit.data.date === 'string' ? unit.data.date : unit.data
         )}
       </main>
 
-      <aside class="side">
-        <div class="side-group">
-          <h4>目录位置</h4>
-          <div class="side-item"><code>{unit.data.source_path ?? unit.id}</code></div>
-          <div class="side-item muted small">这是它在仓库目录树里的真实位置</div>
-        </div>
-
-        {track && assignment && (
-          <div class="side-group">
-            <h4>学习流位置</h4>
-            <div class="side-item">
-              <a href={`/learning/${track.id}/`}>{track.title}</a> · {assignment.stage} {stage?.title}
-            </div>
-          </div>
-        )}
-
-        {unit.data.categories.length > 0 && (
-          <div class="side-group">
-            <h4>分类</h4>
-            {unit.data.categories.map((c) => (
-              <div class="side-item">{c}</div>
-            ))}
-          </div>
-        )}
-
-        {unit.data.tags.length > 0 && (
-          <div class="side-group">
-            <h4>标签</h4>
-            <div class="side-item">
-              {unit.data.tags.map((t) => <span class="badge" style="margin-right:4px">{t}</span>)}
-            </div>
-          </div>
-        )}
-
-        <div class="side-group">
-          <h4>元信息</h4>
-          <div class="side-item">{dateText}</div>
-          {unit.data.author && <div class="side-item muted">作者 {unit.data.author}</div>}
-        </div>
-      </aside>
+      <Outline headings={headings} unit={unit} />
     </div>
   </div>
 </Base>
@@ -160,15 +114,5 @@ const dateText = typeof unit.data.date === 'string' ? unit.data.date : unit.data
     list-style: none;
     margin: 0;
     padding: 0;
-  }
-
-  .side code {
-    font-family: var(--font-mono);
-    font-size: 0.88em;
-    background: var(--bg-soft);
-    border: 1px solid var(--line-soft);
-    border-radius: 4px;
-    padding: 0.1em 0.3em;
-    overflow-wrap: anywhere;
   }
 </style>

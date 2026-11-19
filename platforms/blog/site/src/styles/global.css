@@ -499,8 +499,8 @@ h4 {
 
 .article-page .wrap {
   max-width: none;
-  padding-left: clamp(16px, 1.8vw, 28px);
-  padding-right: clamp(16px, 1.8vw, 28px);
+  padding-left: clamp(14px, 1.4vw, 22px);
+  padding-right: clamp(14px, 1.4vw, 22px);
 }
 
 .article-page .prose {
@@ -562,27 +562,13 @@ h4 {
 
 .doc-layout {
   display: grid;
-  grid-template-columns: clamp(150px, 11vw, 210px) minmax(0, 1fr) clamp(150px, 11vw, 200px);
+  grid-template-columns: clamp(175px, 13.5vw, 250px) minmax(0, 1fr) clamp(130px, 9.5vw, 200px);
   gap: clamp(18px, 1.6vw, 30px);
   align-items: start;
 }
 
-.doc-layout.no-left {
-  grid-template-columns: minmax(0, 1fr) clamp(150px, 11vw, 200px);
-}
-
-.doc-layout.no-right {
-  grid-template-columns: clamp(150px, 11vw, 210px) minmax(0, 1fr);
-}
-
-.doc-layout.no-left.no-right {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 @media (max-width: 1080px) {
-  .doc-layout,
-  .doc-layout.no-left,
-  .doc-layout.no-right {
+  .doc-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -638,6 +624,168 @@ h4 {
 
 .side .side-group {
   margin-bottom: 16px;
+}
+
+/* ── 左栏：目录树 ─────────────────────────────────────── */
+
+/*
+ * 树 = docs/ 的真实结构。层级靠缩进表示，折叠靠 <details>（不用 JS）。
+ * 当前文章所在那一支默认展开（open 由服务端按祖先链给），
+ * 其余折起来——几百篇全摊开的话左栏没法看。
+ */
+
+.tree-root {
+  font-size: 0.85em;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  padding: 0 0 4px;
+  font-family: var(--font-mono);
+}
+
+.tree-list {
+  list-style: none;
+  margin: 0;
+  padding-left: 11px;
+}
+
+.tree > .tree-list {
+  padding-left: 0;
+}
+
+.tree-dir > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.tree-dir > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  border-radius: 5px;
+  line-height: 1.5;
+}
+
+.tree-row a {
+  color: var(--muted);
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  /* 标题长的话折成两行，别截成「Postgre…」 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.tree-row a:hover {
+  color: var(--brand);
+}
+
+.tree-caret {
+  flex: 0 0 auto;
+  width: 10px;
+  color: var(--faint);
+  font-size: 0.85em;
+  transition: transform 0.12s ease;
+}
+
+.tree-caret::before {
+  content: '▸';
+}
+
+.tree-dir[open] > summary > .tree-caret {
+  transform: rotate(90deg);
+}
+
+.tree-caret-leaf::before {
+  content: '·';
+}
+
+.tree-plain {
+  color: var(--muted);
+}
+
+.tree-link-on,
+.tree-row a.tree-link-on {
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 600;
+  padding: 1px 4px;
+  margin: 0 -4px;
+  border-radius: 5px;
+}
+
+/* 阶段标记：阶段本来就是目录，标记挂在目录上 */
+.tree-stage {
+  flex: 0 0 auto;
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 0 5px;
+}
+
+/* ── 右栏：文章大纲 ───────────────────────────────────── */
+
+.outline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 1px solid var(--line-soft);
+}
+
+.outline-item a {
+  display: block;
+  padding: 2px 8px;
+  color: var(--muted);
+  text-decoration: none;
+  line-height: 1.5;
+  border-left: 2px solid transparent;
+  margin-left: -1px;
+}
+
+.outline-item a:hover {
+  color: var(--brand);
+  border-left-color: var(--brand-soft);
+}
+
+.outline-l1 a {
+  font-weight: 600;
+}
+
+.outline-l2 a {
+  padding-left: 18px;
+  font-size: 0.94em;
+}
+
+.outline-l3 a {
+  padding-left: 28px;
+  font-size: 0.9em;
+}
+
+.side-tag {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  padding: 0 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  font-size: 0.85em;
+}
+
+.side code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--bg-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+  overflow-wrap: anywhere;
 }
 
 .flowpos {
