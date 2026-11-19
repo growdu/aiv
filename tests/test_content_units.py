@@ -37,6 +37,26 @@ def compiler(tmp_path, monkeypatch):
     return module
 
 
+def _video_pages():
+    """按路径加载 tools/build-video-pages.py（文件名带连字符，import 不了）。"""
+    spec = importlib.util.spec_from_file_location(
+        "build_video_pages", REPO_ROOT / "tools" / "build-video-pages.py")
+    module = importlib.util.module_from_spec(spec)
+    # ⚠️ **先登记进 sys.modules 再执行**：这个脚本**今天**没有 dataclass
+    # （所以不登记也不会炸），但注册上更稳妥——将来它加了 dataclass，
+    # dataclass 的类型检查要去 sys.modules[cls.__module__] 取命名空间，
+    # 模块没登记就 AttributeError，用例会在夹具阶段就炸，证不了事。
+    sys.modules["build_video_pages"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_video_permalink_is_the_videos_url():
+    """视频页地址统一成 /videos/<id>/——站点现在就是这么发的。"""
+    module = _video_pages()
+    assert module.permalink("video/row-lock") == "/videos/row-lock/"
+
+
 def test_an_episode_field_reaches_the_content_unit(compiler):
     """期号字段今天被静默丢掉——页面照常渲染，期号区块却是空的。"""
     (compiler.DOCS / "ep.md").write_text(
