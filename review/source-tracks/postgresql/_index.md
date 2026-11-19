@@ -1,3 +1,8 @@
+---
+status: 已合入
+src: source-tracks/postgresql/_index.md
+---
+
 # 审校：PostgreSQL 源码主线（分类页）
 
 - 原文：drafts/source-tracks/postgresql/_index.md（**改动稿**）
@@ -6,7 +11,6 @@
 - 一句话定位：这个页面是 PostgreSQL 系列的**入口**，列出这条线下**已经过审**的
   系列与文章
 - 核心判断：分类页也是母稿——它列的文章必须都已过审，否则站内链接就是死链
-- 审校状态：已合入
 
 ## 优先修改
 

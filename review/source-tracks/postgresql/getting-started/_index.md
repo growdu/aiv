@@ -1,3 +1,8 @@
+---
+status: 已合入
+src: source-tracks/postgresql/getting-started/_index.md
+---
+
 # 审校：起步与全景（分类页）
 
 - 原文：drafts/source-tracks/postgresql/getting-started/_index.md（**改动稿**）
@@ -6,7 +11,6 @@
 - 一句话定位：这一站是 PostgreSQL 源码主线的第一站，
   列出这一站**已经过审**的文章
 - 核心判断：分类页也是母稿——它列的文章必须都已过审，否则站内链接就是死链
-- 审校状态：已合入
 
 ## 优先修改
 
