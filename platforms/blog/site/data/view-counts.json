@@ -1,8 +1,0 @@
-{
-  "_comment": "真实阅读量快照（GoatCounter 的 PV）。tools/fetch-view-counts.py 抓的，sync-hexo.py 复制到 source/_data/，hexo 挂到 site.data 上。counts 为空 = 还没抓过——侧栏不显示🔥，首页那个 tab 会改名成「编辑精选」。刷新：GOATCOUNTER_API_KEY=xxx python3 tools/fetch-view-counts.py",
-  "source": "goatcounter",
-  "generated_at": null,
-  "start": null,
-  "end": null,
-  "counts": {}
-}
