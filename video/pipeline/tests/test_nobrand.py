@@ -1,7 +1,7 @@
 """无品牌导流版：抖音这一档的成片。
 
 抖音禁「过度营销信息」与站外引流（规格 §6.6.4）。我们的片头是整屏
-「Growdu」字标、片尾是 `growdu.cn` / 订阅关注 / 点赞支持三胶囊——正好撞上。
+品牌字标、片尾是站点地址 / 订阅关注 / 点赞支持三胶囊——正好撞上。
 所以抖音这一档**不能**直接用带品牌的成片，要另出一版。
 
 这一层测两件事：
@@ -21,12 +21,17 @@ from pathlib import Path
 import pytest
 
 from pyv import brand
+from pyv.config import load as load_config
 from pyv.timeline import Storyboard
+
+_CONFIG = load_config()
+# 品牌片的文件名带角色 slug（见 `brand/scripts/render_brand.py`）
+_SLUG = _CONFIG.character_slug
 
 AIV_ROOT = Path(__file__).resolve().parents[2]
 CLIPS_DIR = AIV_ROOT / "brand" / "clips"
-INTRO_CLIP = CLIPS_DIR / "growdu_intro_3s_1080p.mp4"
-OUTRO_CLIP = CLIPS_DIR / "growdu_outro_3s_1080p.mp4"
+INTRO_CLIP = CLIPS_DIR / f"{_SLUG}_intro_3s_1080p.mp4"
+OUTRO_CLIP = CLIPS_DIR / f"{_SLUG}_outro_3s_1080p.mp4"
 
 #: 画面相似度阈值（0~255 的平均像素差）。
 #:
@@ -46,12 +51,14 @@ BODY_SAMPLE_TIMES = (0.5, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 34.0)
 
 
 def test_the_brand_word_is_dropped_from_the_signature():
-    """落版标签「独立开发者 · growdu」→「独立开发者」。"""
-    assert brand.strip_brand_word("独立开发者 · growdu") == "独立开发者"
+    """落版标签「独立开发者 · 品牌词」→「独立开发者」。"""
+    assert brand.strip_brand_word(
+        f"独立开发者 · {_CONFIG.brand_token}") == "独立开发者"
 
 
 def test_the_brand_word_is_dropped_case_insensitively():
-    assert brand.strip_brand_word("独立开发者 · Growdu") == "独立开发者"
+    assert brand.strip_brand_word(
+        f"独立开发者 · {_CONFIG.brand_token.capitalize()}") == "独立开发者"
 
 
 def test_a_text_without_the_brand_word_is_untouched():
@@ -60,13 +67,15 @@ def test_a_text_without_the_brand_word_is_untouched():
 
 def test_the_remaining_segments_keep_their_order():
     """分段丢掉含品牌词的那一段，**其余按原顺序**保留。"""
-    assert brand.strip_brand_word("Growdu · 深入数据库 · 分享技术之美") == \
-        "深入数据库 · 分享技术之美"
+    assert brand.strip_brand_word(
+        f"{_CONFIG.brand_token.capitalize()} · {_CONFIG.brand_tagline}"
+        " · 分享技术之美") == \
+        f"{_CONFIG.brand_tagline} · 分享技术之美"
 
 
 def test_a_text_that_is_only_the_brand_word_falls_back():
     """剥完空了不能留个空标签——用中性兜底。"""
-    assert brand.strip_brand_word("growdu") == brand.NEUTRAL_LABEL
+    assert brand.strip_brand_word(_CONFIG.brand_token) == brand.NEUTRAL_LABEL
 
 
 # --- storyboard 层 ----------------------------------------------------------
@@ -97,7 +106,7 @@ def test_the_nobrand_storyboard_drops_the_brand_word_from_the_signature(tmp_path
     for scene in result["scenes"]:
         badge = (scene.get("params") or {}).get("badge")
         if isinstance(badge, str):
-            assert "growdu" not in badge.lower(), scene["id"]
+            assert _CONFIG.brand_token.lower() not in badge.lower(), scene["id"]
 
 
 def test_the_nobrand_storyboard_still_validates(tmp_path):

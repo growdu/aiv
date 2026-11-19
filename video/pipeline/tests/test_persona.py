@@ -177,23 +177,75 @@ def _render_brand():
     return _load("render_brand", "brand/scripts/render_brand.py")
 
 
-def test_brand_copy_is_in_sync_with_the_specs():
-    """片头片尾的文案，三处（渲染脚本 / 形象规范 / 品牌 README）必须一致。
+#: 每份文档该点名哪些 `[brand]` 配置键——文档只对自己的那部分负责。
+#:
+#: 键名写在文档里的形式是 `[brand].<键名>`（`video/config.toml` 的 `[brand]` 段）。
+DOC_BRAND_KEYS = {
+    # 铭牌上写的是品牌词
+    "形象与音色规范": ("token",),
+    # 文案表归它管：站名、品牌词、标语、落版与片头片尾的各句
+    "人格规范": ("name", "token", "tagline", "site",
+                "intro_tagline", "outro_subtitle", "outro_narration"),
+}
 
-    文案散在三个地方最容易漂——改了渲染脚本忘了改文档，
-    下一次照文档重渲就又换回去了。
+#: 三份文档里的文案表都必须留占位符——**不许内联实例文案**。
+COPY_SLOT_PLACEHOLDERS = ("<片头标语>", "<片头副标题>", "<片尾副标题>", "<片尾旁白>")
+
+
+def test_brand_copy_comes_from_the_config_not_the_docs():
+    """片头片尾的文案由 `[brand]` 配置供给；规范与 README 指着配置。
+
+    **反向断言**：文案归配置管（`video/config.toml` 的 `[brand]` 段），
+    文档**不**再内联一份。于是「文案漂了」这件事只可能发生在配置里，
+    不可能发生在「脚本一份、规范一份、README 一份」三处打架。
+
+    钉住的是**关系**，不是某一串字：
+    1. 配置确实定义了这几项文案；
+    2. 渲染脚本的文案就是从这些键来的（脚本没自己写死一份）；
+    3. 文档点名自己那份配置键，文案表留占位符；
+    4. 规范里不许出现配置的取值（身份是使用者的，不是规范的）。
     """
+    from pyv import config as config_mod
+
     render = _render_brand()
+    cfg = config_mod.config()
     aiv = character.AIV_ROOT
+
+    # 1. 配置确实定义了这几项文案
+    for key in ("brand_intro_tagline", "brand_tagline", "brand_outro_subtitle",
+                "brand_outro_narration", "brand_token"):
+        assert getattr(cfg, key), f"配置里 {key} 是空的"
+
+    # 2. 渲染脚本的文案就是从这些键来的（脚本没自己写死一份）
+    assert render.INTRO_TAGLINE == cfg.brand_intro_tagline
+    assert render.OUTRO_SUBTITLE == cfg.brand_outro_subtitle
+    assert render.OUTRO_NARRATION == cfg.brand_outro_narration
+    assert render.INTRO_CAPTION.startswith(cfg.brand_tagline)
+    assert cfg.brand_token in render.INTRO_NARRATION
+    assert cfg.brand_tagline in render.INTRO_NARRATION
+
+    # 3. 文档指着配置
     docs = {
         "形象与音色规范": (aiv / "形象与音色规范.md").read_text(encoding="utf-8"),
         "人格规范": (aiv / "人格规范.md").read_text(encoding="utf-8"),
         "brand/readme": (aiv / "brand" / "readme.md").read_text(encoding="utf-8"),
     }
-    for text in (render.INTRO_TAGLINE, render.INTRO_CAPTION, render.OUTRO_SUBTITLE,
-                 render.INTRO_NARRATION, render.OUTRO_NARRATION):
+    for name, keys in DOC_BRAND_KEYS.items():
+        for key in keys:
+            assert f"[brand].{key}" in docs[name], (
+                f"{name} 里没有点名 [brand].{key}"
+            )
+    assert "[brand]" in docs["brand/readme"], "brand/readme 没指着 [brand] 配置段"
+    for name, doc in docs.items():
+        for placeholder in COPY_SLOT_PLACEHOLDERS:
+            assert placeholder in doc, f"{name} 的文案表里没有占位符 {placeholder}"
+
+    # 4. 规范里不许内联实例文案
+    for key in ("brand_name", "brand_token", "brand_tagline", "brand_site",
+                "brand_intro_tagline", "brand_outro_subtitle"):
+        value = getattr(cfg, key)
         for name, doc in docs.items():
-            assert text in doc, f"{name} 里没有这句文案：{text}"
+            assert value not in doc, f"{name} 里内联了 [{key}] 的取值：{value}"
 
 
 def test_brand_copy_passes_the_persona_check():

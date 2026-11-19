@@ -32,9 +32,9 @@ def _fake_episode(**overrides) -> topics.Episode:
             "状态": "待做",
             "适配理由": "这是测试用例，适配理由随便写点字数够长就好填充用的。",
         },
-        docs=[("docs/source-tracks/postgresql/logical-replication/逻辑复制解惑.md", "取什么")],
+        docs=[("docs/系列甲/合集甲/文档甲.md", "取什么")],
         sentences=[f"这是第 {i} 句，用来凑够十句用的测试文本。" for i in range(1, 11)],
-        evidence=[("陈述一句", "docs/source-tracks/postgresql/logical-replication/逻辑复制解惑.md", "口径")],
+        evidence=[("陈述一句", "docs/系列甲/合集甲/文档甲.md", "口径")],
         has_docs_section=True,
         has_script_section=True,
         has_evidence_section=True,
@@ -94,7 +94,7 @@ def test_parses_every_episode():
 
 
 #: 一份完整的样本库（一条期）。**只在库里没有期时用来验解析器**。
-SAMPLE_LIBRARY = """# Growdu 视频选题库
+SAMPLE_LIBRARY = """# 视频选题库
 
 ## EP01 · 示例期
 
@@ -112,7 +112,7 @@ SAMPLE_LIBRARY = """# Growdu 视频选题库
 
 | 文档 | 取什么 |
 | --- | --- |
-| `docs/source-tracks/postgresql/logical-replication/逻辑复制解惑.md` | 取什么 |
+| `docs/系列甲/合集甲/文档甲.md` | 取什么 |
 
 **口播骨架**
 
@@ -133,7 +133,7 @@ SAMPLE_LIBRARY = """# Growdu 视频选题库
 
 | 陈述 | 出处 | 口径 |
 | --- | --- | --- |
-| 陈述一句 | `docs/source-tracks/postgresql/logical-replication/逻辑复制解惑.md` | 口径 |
+| 陈述一句 | `docs/系列甲/合集甲/文档甲.md` | 口径 |
 """
 
 
@@ -217,7 +217,7 @@ def test_domain_rule_fires_outside_the_boundary():
     episode.fields["主钩子"] = "分布式训练与推理框架"
     episode.fields["适配理由"] = "量子计算元宇宙智能驾驶区块链芯片设计"
     episode.sentences = ["量子计算芯片设计区块链" for _ in range(10)]
-    episode.evidence = [("量子计算", "docs/source-tracks/postgresql/logical-replication/逻辑复制解惑.md", "口径")]
+    episode.evidence = [("量子计算", "docs/系列甲/合集甲/文档甲.md", "口径")]
     assert "topics.domain" in _rule_ids(topics.check_topics([episode]))
 
 

@@ -7,7 +7,10 @@ from pathlib import Path
 import pytest
 
 from pyv import brand, compose
+from pyv.config import load as load_config
 from pyv.timeline import Storyboard
+
+_CONFIG = load_config()
 
 ROOT = Path(__file__).resolve().parents[2]
 REAL_INTRO = brand.INTRO_CLIP
@@ -112,15 +115,15 @@ def test_resolve_clip_falls_back_to_the_shortest_in_the_clips_dir(tmp_path, monk
     """
     clips = tmp_path / "clips"
     clips.mkdir()
-    (clips / "growdu_intro_long.mp4").write_bytes(b"x")
-    (clips / "growdu_intro_short.mp4").write_bytes(b"x")
+    (clips / "intro_long.mp4").write_bytes(b"x")
+    (clips / "intro_short.mp4").write_bytes(b"x")
 
     monkeypatch.setattr(brand, "CLIPS_DIR", clips)
     monkeypatch.setattr(brand, "INTRO_CLIP", clips / "intro.mp4")
     # 两个候选的时长取不到（不是真视频）时，排序是稳定的：
     # 先按名字排，同名再比时长。
-    assert brand.resolve_clip("intro") in (clips / "growdu_intro_long.mp4",
-                                          clips / "growdu_intro_short.mp4")
+    assert brand.resolve_clip("intro") in (clips / "intro_long.mp4",
+                                          clips / "intro_short.mp4")
 
 
 def test_resolve_clip_returns_none_when_no_asset(tmp_path, monkeypatch):
@@ -282,7 +285,8 @@ def test_compose_includes_brand_clip_with_its_own_audio(tmp_path):
 
     scenes = [
         {"id": "brand_intro", "start": 0.0, "end": 1.0, "type": "clip",
-         "subtitle": "Growdu · 深入数据库", "renderer": None, "params": {},
+         "subtitle": f"{_CONFIG.brand_name} · {_CONFIG.brand_tagline}",
+         "renderer": None, "params": {},
          "h3": None, "clip": "brand/intro.mp4", "audio": "brand/intro.wav"},
         {"id": "s01", "start": 1.0, "end": 2.0, "type": "code",
          "renderer": "blank_scene", "subtitle": "正文一句"},

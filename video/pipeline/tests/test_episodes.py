@@ -15,9 +15,9 @@ import shutil
 from pyv import episodes as episodes_mod
 
 #: 一条典型的期路径。
-EP = "postgresql/getting-started/postgresql基操/short"
+EP = "系列甲/合集甲/文档甲/short"
 #: 它属于哪篇文档（去掉档位）。
-DOC = "postgresql/getting-started/postgresql基操"
+DOC = "系列甲/合集甲/文档甲"
 
 
 def _make_episode(root, ep: str, *, front_matter: str | None = None) -> None:
@@ -133,7 +133,7 @@ def test_skeleton_lives_in_the_document_dir(tmp_path, monkeypatch):
 
 def test_ep_id_flattens_the_coordinate_into_one_filename(tmp_path, monkeypatch):
     """期路径压平成一个文件名片段——`out/` 下面不留嵌套目录。"""
-    assert episodes_mod.ep_id(EP) == "postgresql-getting-started-postgresql基操-short"
+    assert episodes_mod.ep_id(EP) == "系列甲-合集甲-文档甲-short"
 
 
 def test_episode_at_accepts_any_root(fixture_episode_dir):

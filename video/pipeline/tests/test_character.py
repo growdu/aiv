@@ -6,6 +6,9 @@ import cairo
 import pytest
 
 from pyv import character
+from pyv.config import load as load_config
+
+_CONFIG = load_config()
 
 
 def test_repo_paths_are_resolved_correctly():
@@ -68,7 +71,8 @@ def test_no_2d_mascot_fallback_remains():
     """
     package = Path(character.__file__).parent
     assert not (package / "elephant.py").exists(), "2D 部件切分模块还在"
-    assert not (character.REPO_ROOT / "growdu.png").exists(), "2D 形象素材还在仓库里"
+    assert not (character.REPO_ROOT / f"{_CONFIG.character_slug}.png").exists(), \
+        "2D 形象素材还在仓库里"
     assert not hasattr(character, "LEGACY_IMAGE")
     assert not hasattr(character, "LEGACY_SOURCE_HEIGHT")
 
@@ -90,7 +94,7 @@ def test_draw_without_asset_does_not_raise(monkeypatch):
     """没有形象素材时不画、也不报错。
 
     2D 兜底移除后，缺素材只剩这一条路。媒体产物不入库，
-    新克隆的机器上就没有小象——流水线照样要跑得完。
+    新克隆的机器上就没有形象素材——流水线照样要跑得完。
     """
     monkeypatch.setattr(character, "STATIC_IMAGE",
                         character.REPO_ROOT / "__no_such_mascot__.png")
@@ -160,7 +164,7 @@ def test_subject_box_finds_the_real_foot():
 
 # --- 换素材 -----------------------------------------------------------------
 #
-# 抖音那一档备用：胸口那枚 growdu 铭牌也是品牌标识，被判「过度营销」
+# 抖音那一档备用：胸口那枚品牌词铭牌也是品牌标识，被判「过度营销」
 # 时要换成无铭牌那份。切换走 `use_image()`，命令行是 `render --character`。
 
 
@@ -185,7 +189,7 @@ def test_use_image_switches_to_the_given_asset(tmp_path):
 def test_use_image_refuses_a_missing_file(tmp_path):
     """指错了就报「指错了」，不能悄悄退回默认那份。
 
-    退回默认 = 拿带铭牌的形象出片，胸口那枚 growdu 还在，
+    退回默认 = 拿带铭牌的形象出片，胸口那枚品牌词铭牌还在，
     而片子发出去就收不回来了。
     """
     original = character.STATIC_IMAGE

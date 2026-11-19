@@ -96,7 +96,7 @@ def _contract_params(renderer: str) -> dict:
 def test_mascot_scenes_render_without_pose(module_name):
     """片头/片尾场景在移除 2D 部件动画后仍要能画出来。
 
-    这两个场景以前靠 `pose=Pose(...)` 让小象挥手/点头。2D 形象与部件切分移除后，
+    这两个场景以前靠 `pose=Pose(...)` 让角色挥手/点头。2D 形象与部件切分移除后，
     形象只剩静帧 + 位移/缩放/淡入——场景里的调用必须同步改掉，
     否则渲染时直接 TypeError。
     """
@@ -115,7 +115,7 @@ def test_mascot_scenes_render_without_pose(module_name):
 def test_clip_is_stale_when_the_character_asset_changes(tmp_path, monkeypatch):
     """换了形象素材，已经渲染好的片段必须作废重渲。
 
-    只看 Python 模块的修改时间发现不了素材换掉了——小象重新生成、
+    只看 Python 模块的修改时间发现不了素材换掉了——角色重新生成、
     戴眼镜、换配色，模块一个字节没动，片段却还是旧形象。
     """
     asset = tmp_path / "mascot.png"

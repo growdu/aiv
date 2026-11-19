@@ -15,13 +15,18 @@ from __future__ import annotations
 
 import copy
 
+from pyv.config import load as load_config
+
+_CONFIG = load_config()
+
 #: 造 params 用的中文词表。**每个字都得是当前字体里有字形的。**
 _WORDS = {
     "title": "第一期",
     "subtitle": "流程线的最小输入",
     "tagline": "格式对就行 · 内容占位",
     "caption": "只看输入格式",
-    "badge": "growdu",
+    # 品牌位画的就是配置里的品牌词（`[brand].token`），不是写死的一串字
+    "badge": _CONFIG.brand_token,
     "label": "示例",
     "note": "说明",
     "axis": "顺序",

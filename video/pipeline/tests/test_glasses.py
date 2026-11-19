@@ -4,7 +4,7 @@
 
 1. **规格与生成脚本同步**——规范里写的眼镜（深藏蓝 #2B4C7E 方形细边框、
    镜片透明），生成脚本的 prompt 里必须写的是同一件事。规范和 prompt
-   漂移了，下一次重生成就会得到一只没戴眼镜或戴错色的小象。
+   漂移了，下一次重生成就会得到一只没戴眼镜或戴错色的角色。
 
 2. **本机素材确实戴了眼镜**——不是看 prompt，是看像素：脸的区域里得有
    深藏蓝的方框眼镜。
@@ -16,6 +16,11 @@ import numpy as np
 import pytest
 
 from pyv import character
+from pyv.config import load as load_config
+
+_CONFIG = load_config()
+# 素材的文件名带角色 slug（见 `character/scripts/add_glasses.py`）
+_SLUG = _CONFIG.character_slug
 
 
 def _load(name: str, relative: str):
@@ -80,7 +85,7 @@ def test_cleanup_prompt_targets_the_glasses_nameplate():
 # ---------------------------------------------------------------- 像素验收
 
 # 镜框色 #2B4C7E = (43, 76, 126)。
-# 判据要卡得够死：小象的**虹膜也是蓝色**（约 #4A8FC0）、耳朵内壁与阴影是
+# 判据要卡得够死：角色的**虹膜也是蓝色**（约 #4A8FC0）、耳朵内壁与阴影是
 # 蓝灰色。只按「暗 + 偏蓝」去筛，虹膜和阴影会混进来，测不出眼镜。
 # 所以用「够暗 + 蓝红差够大」：虹膜亮、蓝红差也没这么大；阴影则是灰的，
 # 蓝红差不够。
@@ -135,7 +140,7 @@ def _glasses_measure(rgb: np.ndarray, alpha: np.ndarray | None):
 
     **为什么用「列跨度」而不是「最长水平段」。** 早先的判据是「镜框是
     横着走的长条」，量的是**最长水平连续段**。那只在头是正的时候成立：
-    点赞姿态的小象头是歪的，镜框上沿是**斜线**，任何一行都截不出长段
+    点赞姿态的角色头是歪的，镜框上沿是**斜线**，任何一行都截不出长段
     （实测只有主体宽的 2.8%，远低于门槛 6%）——可那张图的眼镜明明在。
 
     那是**判据的局限，不是素材的毛病**。列跨度对倾斜免疫：镜框横跨两只
@@ -155,12 +160,12 @@ def _glasses_measure(rgb: np.ndarray, alpha: np.ndarray | None):
 
 
 @pytest.mark.parametrize("relative", [
-    "character/growdu_character_2k_nobg.png",
-    "brand/assets/growdu_pose_thumbsup_nobg.png",
-    "brand/assets/growdu_pose_wave_nobg.png",
+    f"character/{_SLUG}_character_2k_nobg.png",
+    f"brand/assets/{_SLUG}_pose_thumbsup_nobg.png",
+    f"brand/assets/{_SLUG}_pose_wave_nobg.png",
 ])
 def test_real_assets_wear_navy_square_glasses(relative):
-    """本机素材：小象脸上得有深藏蓝的方框眼镜。
+    """本机素材：角色脸上得有深藏蓝的方框眼镜。
 
     判据是脸区里的**深藏蓝掩膜**：
     - **列跨度**要够宽——镜框横跨两只眼睛（实测 54%~61% 主体宽）；
@@ -197,7 +202,7 @@ def test_the_glasses_judgement_fails_when_the_frames_are_removed():
     """
     from PIL import Image
 
-    path = character.AIV_ROOT / "character/growdu_character_2k_nobg.png"
+    path = character.AIV_ROOT / "character" / f"{_SLUG}_character_2k_nobg.png"
     if not path.exists():
         pytest.skip("主形象不在本机，跳过")
 
@@ -216,7 +221,7 @@ def test_the_glasses_judgement_fails_when_the_frames_are_removed():
     frame[top:bottom] = _navy(rgb)[top:bottom]
     frame = ndimage.binary_dilation(frame, np.ones((7, 7)))
     stripped = rgb.copy()
-    stripped[frame] = (176, 196, 210)      # 小象皮肤的浅蓝灰
+    stripped[frame] = (176, 196, 210)      # 角色皮肤的浅蓝灰
 
     new_span, new_pixels, _, _ = _glasses_measure(stripped, alpha)
     assert new_span < subject_w * MIN_NAVY_SPAN_RATIO, (

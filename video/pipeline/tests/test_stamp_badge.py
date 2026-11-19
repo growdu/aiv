@@ -1,4 +1,10 @@
-"""胸口铭牌盖章测试（character/scripts/stamp_badge.py）。"""
+"""胸口铭牌盖章测试（character/scripts/stamp_badge.py）。
+
+**品牌词从配置来**：铭牌上该写哪串字，是 `video/config.toml` 里的
+`[brand].token` 说了算（生产脚本 `stamp_badge.py` 读的是同一个值）。
+这个文件里不写死任何一个字——所有候选都由那个词**派生**
+（下文的实测记录会写清当时测的是哪个词）。
+"""
 import importlib.util
 import sys
 
@@ -6,6 +12,11 @@ import numpy as np
 import pytest
 
 from pyv import character
+from pyv.config import load as load_config
+
+_CONFIG = load_config()
+#: 铭牌上该写的词（配置的 `[brand].token`）
+BRAND_TOKEN = _CONFIG.brand_token
 
 
 def _module():
@@ -29,7 +40,7 @@ HEAD_BOX = (560, 90, 976, 400)      # 头（皮肤色）——让主体上沿在
 
 
 def _fixture(with_text: bool = False):
-    """造一张「小象 + 深藏蓝马甲 + 白色铭牌」的图。
+    """造一张「角色 + 深藏蓝马甲 + 白色铭牌」的图。
 
     头部是必要的：铭牌定位有一条「铭牌在胸口，不在脸上」的位置约束
     （按主体高度判断），没有头的话主体就只有马甲，位置约束会误判。
@@ -69,43 +80,85 @@ def _iou(a: np.ndarray, b: np.ndarray) -> float:
     return float((a & b).sum()) / float(union)
 
 
+def _swap(text: str, i: int, j: int) -> str:
+    """把第 i、第 j 个字母对调。"""
+    chars = list(text)
+    chars[i], chars[j] = chars[j], chars[i]
+    return "".join(chars)
+
+
+def _garbles(token: str) -> list[str]:
+    """由品牌词派生的乱码候选：**对称换位**。
+
+    把词两端的字母一对一对调（i ↔ len-1-i）。拿「abcdef」举例：
+    换出 `fbcdea` / `acdbef` / `abdcef`——**同一个词的字母重排**，
+    视觉上跟原词极像（同样的字母、同样的长度、只差顺序），正是
+    「盖错字」最可能长得的样子。
+
+    为什么不用替换类候选（把 o 换成 0、把 i 换成 l 那种）：替换会
+    改变词的**长度或字母集合**，在 23px 的铭牌上正确词和错字的重叠
+    反而更高（实测差距只有 +0.046）。重排不动字母集合，差距更稳。
+    """
+    out: list[str] = []
+    for i in range(len(token) // 2):
+        candidate = _swap(token, i, len(token) - 1 - i)
+        if candidate != token and candidate not in out:
+            out.append(candidate)
+    return out
+
+
 #: 正确候选与次优候选之间的**绝对差**要超过这个数。
 #:
-#: **为什么用绝对差，不用比值**：比值会被笔画粗细牵着走。实测
-#: （2026-11-16，铭牌 23px）：
+#: **为什么用绝对差，不用比值**：比值会被笔画粗细牵着走。
 #:
-#: | 字体 | growdu | 次优(grawdu) | 比值 | 绝对差 |
+#: 实测（2026-11-19，铭牌 23px；测的词是配置里的 `[brand].token`，
+#: 当时是 `growdu`；乱码候选由 `_garbles()` 派生）：
+#:
+#: | 字体 | 正确词 | 次优候选 | 比值 | 绝对差 |
 #: | --- | --- | --- | --- | --- |
-#: | 合成粗体（只有 Regular 时 cairo 合成的那份） | 0.957 | 0.596 | 1.61 | 0.361 |
-#: | 真粗体（内置的 Bold 字形） | 0.937 | 0.807 | 1.16 | 0.130 |
+#: | 内置 AIV Sans CJK SC（CI 装的就是它） | 0.946 | 0.715 (grwodu) | 1.32 | +0.231 |
+#: | Noto Sans CJK SC / Source Han Sans SC | 0.949 | 0.717 (grwodu) | 1.32 | +0.232 |
+#: | Noto Sans Mono CJK SC | 0.901 | 0.728 (grwodu) | 1.24 | +0.173 |
+#: | Droid Sans Fallback | 0.888 | 0.679 (grwodu) | 1.31 | +0.209 |
+#: | Noto Serif CJK KR（fontconfig 兜底款） | 0.913 | 0.636 (grwodu) | 1.44 | +0.277 |
+#: | DejaVu Sans（测过的 11 款里最差的一款） | 0.972 | 0.840 (urowdg) | 1.16 | +0.133 |
 #:
-#: 真粗体笔画更粗，跟错字的重叠更多，次优分数被抬上去——**比值从 1.61
-#: 掉到 1.16**，但两个候选的**差距**仍有 0.130，而且真粗体肉眼更清楚
-#: （笔画实、字形正）。拿比值当判据，等于让「笔画粗细」决定守卫松紧。
+#: 拿比值当判据，等于让「笔画粗细」决定守卫松紧；真粗体笔画更粗，
+#: 跟错字的重叠更多，次优分数被抬上去——比值会跟着掉，差距却仍然在。
 #:
-#: 阈值取 0.10：实测 0.130 留约 23% 余量；而**盖错字**时这个差是
-#: **负的**（正确候选掉到 0.807、错字升到 0.937），差一大截。
+#: 阈值取 0.10：11 款字体里最差的绝对差是 **+0.133**（DejaVu Sans），
+#: 留约 33% 余量；而**盖错字**时这个差是**负的**（正确候选掉到次优
+#: 之下、错字升到最高），差一大截。
 READABILITY_GAP = 0.10
 
 
-def _assert_reads_growdu(scores: dict) -> None:
-    """铭牌上的字必须读作 growdu。
+def _assert_reads_the_brand_word(scores: dict) -> None:
+    """铭牌上的字必须读作配置里的品牌词。
 
     三条判据：
     1. **正确候选得分最高**——本质判据；
     2. **正确候选几乎完全吻合**（> 0.85）——说明就是这串字，不是碰巧像；
     3. **正确候选明显优于次优**（绝对差 > `READABILITY_GAP`）。
+
+    次优候选是 `_garbles()` 派生出来的全部乱码——**一个都不排除**：
+    它们都是同一个词的字母重排，没有「肉眼分不清的形近替换」
+    （那种在 23px 下只是噪声），所以全都能进差距比较。
     """
+    token = BRAND_TOKEN
+    garbles = _garbles(token)
     best = max(scores, key=scores.get)
-    assert best == "growdu", f"铭牌上写的不是 growdu：{scores}"
-    assert scores["growdu"] > 0.85, scores
-    # gr0wdu 不参与差距比较：o 和 0 在这个字号下肉眼就分不清，
-    # 拿它当判据只会让测试变成噪声。真正要排除的是字母顺序/字形错误。
-    runner_up = max(scores["grawdu"], scores["giowdu"])
-    gap = scores["growdu"] - runner_up
+    assert best == token, f"铭牌上写的不是品牌词 {token!r}：{scores}"
+    assert scores[token] > 0.85, scores
+    runner_up = max(scores[candidate] for candidate in garbles)
+    gap = scores[token] - runner_up
     assert gap > READABILITY_GAP, (
-        f"growdu 只比次优候选高 {gap:.3f}（阈值 {READABILITY_GAP}）：{scores}"
+        f"{token!r} 只比次优候选高 {gap:.3f}（阈值 {READABILITY_GAP}）：{scores}"
     )
+
+
+def _candidates() -> list[str]:
+    """判据要比较的全部候选：品牌词 + 由它派生的乱码。"""
+    return [BRAND_TOKEN] + _garbles(BRAND_TOKEN)
 
 
 def test_find_badge_locates_the_white_rectangle():
@@ -212,7 +265,7 @@ def test_badge_must_be_big_enough_to_be_the_badge():
 
 
 def test_cream_toes_are_not_the_badge():
-    """小象的脚趾是奶油色，不是铭牌。
+    """角色的脚趾是奶油色，不是铭牌。
 
     脚趾那块白在胸口下方，位置约束挡不住它；挡住它的是「纯白度」：
     铭牌是白塑料牌（三个通道都 ≥ 240 的像素占 85%+），脚趾是奶油色。
@@ -286,8 +339,8 @@ def test_stamp_replaces_model_text_with_our_own(tmp_path):
     assert np.array_equal(a, b), "模型写的字没有被完全替换"
 
 
-def test_stamp_writes_the_word_growdu(tmp_path):
-    """铭牌上写出来的必须是 growdu，不是 grawdu 之类的乱码。"""
+def test_stamp_writes_the_brand_word(tmp_path):
+    """铭牌上写出来的必须是配置里的品牌词，不是派生的乱码。"""
     module = _module()
     path = tmp_path / "character.png"
     _fixture().save(path)
@@ -304,20 +357,23 @@ def test_stamp_writes_the_word_growdu(tmp_path):
     assert ink.sum() > 0, "铭牌上应该有文字"
 
     scores = {}
-    for candidate in ("growdu", "grawdu", "giowdu", "gr0wdu"):
+    for candidate in _candidates():
         mask = module.render_text_mask(
             candidate, badge.size, badge.origin, x1 - x0, y1 - y0
         )
         scores[candidate] = _iou(ink, mask > 128)
-    _assert_reads_growdu(scores)
+    _assert_reads_the_brand_word(scores)
 
 
 def test_the_readability_guard_rejects_a_misstamped_badge(tmp_path):
-    """**守卫自己得会红**：盖成 grawdu 的时候，它必须报出来。
+    """**守卫自己得会红**：盖成乱码的时候，它必须报出来。
 
     守卫是「盖对了」才绿的——那它可能只是一段永远绿的代码。这里把
     **盖错字的墨迹**喂给判据，正确候选的分数掉到次优之下、差距变负，
     判据必须拒绝。
+
+    盖的是**最像的那个乱码**（由品牌词派生、跟正确词重叠最多的一个），
+    这样才是最难的情况。
     """
     module = _module()
     path = tmp_path / "character.png"
@@ -328,16 +384,28 @@ def test_the_readability_guard_rejects_a_misstamped_badge(tmp_path):
 
     width = badge.box[2] - badge.box[0]
     height = badge.box[3] - badge.box[1]
-    wrong = module.render_text_mask(
-        "grawdu", badge.size, badge.origin, width, height) > 128
+
+    # 先量出「最像原词的乱码」：拿正确盖出来的墨迹去比
+    from PIL import Image
+
+    image = np.array(Image.open(path).convert("RGBA"))
+    x0, y0, x1, y1 = badge.box
+    ink = _ink(image[y0:y1, x0:x1, :3])
+
+    def mask_of(candidate):
+        return module.render_text_mask(
+            candidate, badge.size, badge.origin, width, height) > 128
+
+    garbles = _garbles(BRAND_TOKEN)
+    closest = max(
+        garbles, key=lambda c: _iou(ink, mask_of(c)))
+    wrong = mask_of(closest)
 
     scores = {}
-    for candidate in ("growdu", "grawdu", "giowdu", "gr0wdu"):
-        mask = module.render_text_mask(
-            candidate, badge.size, badge.origin, width, height) > 128
-        scores[candidate] = _iou(wrong, mask)
+    for candidate in _candidates():
+        scores[candidate] = _iou(wrong, mask_of(candidate))
     with pytest.raises(AssertionError):
-        _assert_reads_growdu(scores)
+        _assert_reads_the_brand_word(scores)
 
 
 def test_stamp_is_idempotent(tmp_path):
@@ -372,12 +440,12 @@ def test_stamp_leaves_the_rest_of_the_image_untouched(tmp_path):
 
 
 @pytest.mark.parametrize("relative", [
-    "character/growdu_character_2k_nobg.png",
-    "brand/assets/growdu_pose_thumbsup_nobg.png",
-    "brand/assets/growdu_pose_wave_nobg.png",
+    f"character/{_CONFIG.character_slug}_character_2k_nobg.png",
+    f"brand/assets/{_CONFIG.character_slug}_pose_thumbsup_nobg.png",
+    f"brand/assets/{_CONFIG.character_slug}_pose_wave_nobg.png",
 ])
-def test_real_assets_carry_growdu_on_the_badge(relative):
-    """本机素材：铭牌上必须真的有 growdu。"""
+def test_real_assets_carry_the_brand_word_on_the_badge(relative):
+    """本机素材：铭牌上必须真的有那个品牌词。"""
     module = _module()
     path = character.AIV_ROOT / relative
     if not path.exists():

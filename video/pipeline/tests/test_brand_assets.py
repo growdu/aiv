@@ -22,12 +22,17 @@ import numpy as np
 import pytest
 
 from pyv import fonts
+from pyv.config import load as load_config
+
+_CONFIG = load_config()
 
 AIV_ROOT = Path(__file__).resolve().parents[2]
 BRAND = AIV_ROOT / "brand"
 BRAND_SCRIPTS = BRAND / "scripts"
-INTRO_CLIP = BRAND / "clips" / "growdu_intro_3s_1080p.mp4"
-OUTRO_CLIP = BRAND / "clips" / "growdu_outro_3s_1080p.mp4"
+# 品牌片的文件名带角色 slug（见 `brand/scripts/render_brand.py`）
+_SLUG = _CONFIG.character_slug
+INTRO_CLIP = BRAND / "clips" / f"{_SLUG}_intro_3s_1080p.mp4"
+OUTRO_CLIP = BRAND / "clips" / f"{_SLUG}_outro_3s_1080p.mp4"
 
 #: 入库的品牌片规格（与 `render_brand.py` 顶部的常量对得上）。
 #:
@@ -168,8 +173,8 @@ def test_the_committed_intro_uses_the_real_bold_face(tmp_path):
     assert columns.size, "没在片头里找到字标——判据失效"
     measured = int(columns[-1] - columns[0] + 1)
 
-    bold = _probe_ink_width("Growdu", 142, bold=True)
-    regular = _probe_ink_width("Growdu", 142, bold=False)
+    bold = _probe_ink_width(_CONFIG.brand_name, 142, bold=True)
+    regular = _probe_ink_width(_CONFIG.brand_name, 142, bold=False)
 
     assert abs(measured - bold) <= INK_TOLERANCE, (
         f"成片里字标的墨迹宽 {measured}px，真粗体探针 {bold}px——"
@@ -192,7 +197,7 @@ def test_the_pose_script_repairs_the_glasses_badge():
     """姿态素材必须走一次镜框局部修补。
 
     模型戴上方形眼镜后有个固定毛病：会在镜框或镜腿上贴一小块白色小
-    铭牌（实测写着 growdu）。prompt 里禁了也不听，所以图生图之后必须
+    铭牌（实测写着品牌词）。prompt 里禁了也不听，所以图生图之后必须
     再补一次局部修补。
     """
     tree = ast.parse(

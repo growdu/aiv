@@ -364,7 +364,7 @@ def test_a_reprint_without_a_source_is_an_error(tmp_path):
 def test_a_reprint_with_a_source_is_fine(tmp_path):
     payload = dict(BASE)
     payload["bilibili"] = dict(
-        BASE["bilibili"], copyright=2, no_reprint=0, source="https://growdu.cn/x")
+        BASE["bilibili"], copyright=2, no_reprint=0, source="https://example.com/x")
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     assert _errors(epmeta.check_meta(meta)) == []

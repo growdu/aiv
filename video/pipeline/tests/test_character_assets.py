@@ -16,8 +16,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pyv.config import load as load_config
+
+_CONFIG = load_config()
+
 AIV_ROOT = Path(__file__).resolve().parents[2]
 CHARACTER_SCRIPTS = AIV_ROOT / "character" / "scripts"
+# 素材的文件名带角色 slug（见 `character/scripts/*.py`）
+_SLUG = _CONFIG.character_slug
 
 
 def _load(name: str, path: Path):
@@ -42,7 +48,7 @@ def test_make_white_keeps_the_subject_pixels_untouched(tmp_path):
     """
     from PIL import Image
 
-    source = AIV_ROOT / "character" / "growdu_character_2k_nobg.png"
+    source = AIV_ROOT / "character" / f"{_SLUG}_character_2k_nobg.png"
     if not source.exists():
         pytest.skip("主形象不在本机，跳过")
     module = _load("make_white", CHARACTER_SCRIPTS / "make_white.py")
@@ -68,7 +74,7 @@ def test_make_white_keeps_the_subject_pixels_untouched(tmp_path):
 
 def test_make_white_is_reproducible(tmp_path):
     """同一份素材合成两次，结果逐字节相同——路线要可复现。"""
-    source = AIV_ROOT / "character" / "growdu_character_2k_nobg.png"
+    source = AIV_ROOT / "character" / f"{_SLUG}_character_2k_nobg.png"
     if not source.exists():
         pytest.skip("主形象不在本机，跳过")
     module = _load("make_white", CHARACTER_SCRIPTS / "make_white.py")
@@ -126,9 +132,9 @@ def test_a_narrow_ring_would_miss_the_plate_rim(monkeypatch):
 
 
 @pytest.mark.parametrize("relative", [
-    "character/growdu_character_2k_nobg.png",
-    "brand/assets/growdu_pose_thumbsup_nobg.png",
-    "brand/assets/growdu_pose_wave_nobg.png",
+    f"character/{_SLUG}_character_2k_nobg.png",
+    f"brand/assets/{_SLUG}_pose_thumbsup_nobg.png",
+    f"brand/assets/{_SLUG}_pose_wave_nobg.png",
 ])
 def test_the_real_assets_still_have_a_findable_badge(relative):
     """本机素材的铭牌必须找得到——找得到才盖得上字。"""

@@ -17,6 +17,9 @@ import numpy as np
 import pytest
 
 from pyv import character
+from pyv.config import load as load_config
+
+_CONFIG = load_config()
 
 
 def _module():
@@ -30,8 +33,11 @@ def _module():
     return module
 
 
-BADGED = character.AIV_ROOT / "character" / "growdu_character_2k_nobg.png"
-CLEARED = character.AIV_ROOT / "character" / "growdu_character_2k_nobg_nobadge.png"
+# 素材的文件名带角色 slug（见 `character/scripts/clear_badge.py`）
+_SLUG = _CONFIG.character_slug
+BADGED = character.AIV_ROOT / "character" / f"{_SLUG}_character_2k_nobg.png"
+CLEARED = (character.AIV_ROOT / "character"
+           / f"{_SLUG}_character_2k_nobg_nobadge.png")
 
 
 def _badge_box():
