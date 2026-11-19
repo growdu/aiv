@@ -52,7 +52,7 @@ bash scripts/make_audio.sh       # macOS `say` 童声旁白 + 配乐（音色与
 bash scripts/render.sh           # Ken Burns 渲染并封装 video/ 下的片头/片尾
 ```
 
-这三个脚本服务的是旧的 8 秒品牌片（`growdu_intro_8s_1080p.mp4` 等）。
+这三个脚本服务的是旧的 8 秒品牌片（`<slug>_intro_8s_1080p.mp4` 等）。
 `pipeline/pyv/brand.py` 只在定稿的 3 秒片缺失时才会回退到它们。
 新片一律用上面的 `make_audio_brand.py` + `render_brand.py`。
 

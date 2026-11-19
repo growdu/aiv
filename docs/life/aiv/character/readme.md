@@ -1,9 +1,9 @@
 ---
-title: "模型形象（3D 卡通小象）"
+title: "模型形象（3D 卡通角色）"
 date: 2026-11-11
 description: "后续视频统一使用的讲解者形象。规范见 ../形象与音色规范.md。"
 ---
-# Growdu 模型形象（3D 卡通小象）
+# 模型形象（3D 卡通角色）
 
 后续视频统一使用的讲解者形象。**规范见 [`../形象与音色规范.md`](../形象与音色规范.md)**。
 
@@ -24,24 +24,25 @@ image = ""                  # 落版头像（可选）
 **没配不是错误**：流水线降级成「不画形象」，照样出片。
 **配了但文件不在才是错**：`make doctor` 会单独报出来。
 
-这个目录里通常放这些东西（**使用者的素材**）：
+这个目录里通常放这些东西（**使用者的素材**）。文件名里的 `<slug>`
+是**角色产物的文件名前缀**，取值见 `video/config.toml` 的 `[character].slug`：
 
 | 文件 | 尺寸 | 说明 |
 | --- | --- | --- |
-| `growdu_character_2k.png` | 2048×2048 | 主形象，白底。通用素材源 |
-| `growdu_character_2k_nobg.png` | 2048×2048 RGBA | 透明底版。**合成进视频用这个** |
-| `growdu_character_2k_nobg_nobadge.png` | 2048×2048 RGBA | 透明底**无铭牌**版。抖音这一档备用 |
-| `growdu_pose_sheet.png` | 2720×1536 | 6 姿态设定表：中性 / 指示 / 思考 / 数字 2 / 低头 / 收束 |
+| `<slug>_character_2k.png` | 2048×2048 | 主形象，白底。通用素材源 |
+| `<slug>_character_2k_nobg.png` | 2048×2048 RGBA | 透明底版。**合成进视频用这个** |
+| `<slug>_character_2k_nobg_nobadge.png` | 2048×2048 RGBA | 透明底**无铭牌**版。抖音这一档备用 |
+| `<slug>_pose_sheet.png` | 2720×1536 | 6 姿态设定表：中性 / 指示 / 思考 / 数字 2 / 低头 / 收束 |
 | `scripts/generate_character.py` | — | 生成脚本（prompt + 参数都在里面，可复现） |
 | `scripts/add_glasses.py` | — | 戴眼镜化：图生图加眼镜 + 擦镜框杂物 + 抠底 + 盖章 |
-| `scripts/stamp_badge.py` | — | 铭牌盖章：刷白铭牌 + 用真实字体印上 growdu |
+| `scripts/stamp_badge.py` | — | 铭牌盖章：刷白铭牌 + 用真实字体印上品牌词 |
 | `scripts/clear_badge.py` | — | 抹掉胸口铭牌：产出无标牌素材（抖音这档备用） |
 | `scripts/make_white.py` | — | 从透明底主形象**合成**白底版（姿态生成的参考图） |
 | `scripts/_mcode.py` | — | mcode-tools CLI 封装（上传 / 调用 / 下载 / 临时故障重试） |
 
 白底原图与姿态表是源素材，需要时跑脚本重新生成。
 **白底原图是「合成」出来的**（`scripts/make_white.py`），不是重新生成的——
-重新生成会让吉祥物形象漂移，跟已有的透明底版对不上。
+重新生成会让形象漂移，跟已有的透明底版对不上。
 
 ## 形象原型
 
@@ -49,11 +50,11 @@ image = ""                  # 落版头像（可选）
 
 ## 形象设定速记
 
-- 3D 卡通小象，浅蓝灰皮肤、圆大眼、粉色面颊、小巧象牙、头顶呆毛
-- 深藏蓝 `#2B4C7E` 工装马甲，胸口琥珀黄 `#F5A623` 圆柱数据库图标
+- 3D 卡通风格（渲染风格是规则，见《形象与音色规范》§1.1）
+- 形象与配色由使用者的素材定：外观描述写在 `video/config.toml` 的 `[character].look`
 - 黑色头戴式耳机 + 麦克风臂
 - **深藏蓝 `#2B4C7E` 方形细边框眼镜，镜片透明**（§1.5）
-- 胸口白色铭牌，必须显示 `growdu`
+- 胸口白色铭牌，必须显示品牌词（`[brand].token`）
 
 ## 重新生成
 
@@ -65,15 +66,15 @@ python3 scripts/generate_character.py   # 生成 → 抠透明底 → 姿态表 
 ### 合成白底主形象
 
 姿态生成（`brand/scripts/generate_poses.py`）拿主形象当参考图，模型在图生图时
-会连着参考图的**背景**一起学——参考图是白底，生成出来的小象才是白底。
+会连着参考图的**背景**一起学——参考图是白底，生成出来的角色才是白底。
 
 ```bash
 cd video/character
-python3 scripts/make_white.py           # 从 growdu_character_2k_nobg.png 合成白底版
+python3 scripts/make_white.py           # 从 <slug>_character_2k_nobg.png 合成白底版
 ```
 
-**合成而不是重新生成**：重新生成会让吉祥物形象漂移（皮肤色、马甲色、数据库
-图标、耳机、眼镜全都要重新赌一次），跟已有的透明底版对不上。合成是**无损**
+**合成而不是重新生成**：重新生成会让形象漂移（配色、服装、图标、耳机、眼镜
+全都要重新赌一次），跟已有的透明底版对不上。合成是**无损**
 的：像素照抄，只把透明的地方填成白。
 
 ### 给已有素材戴上眼镜
@@ -104,12 +105,12 @@ python3 scripts/stamp_badge.py <png> ...  # 处理指定文件
 
 ### 换成无铭牌形象（抖音这一档备用）
 
-胸口那枚 `growdu` 铭牌也是品牌标识。抖音判「过度营销信息」时要换成
+胸口那枚品牌词铭牌也是品牌标识。抖音判「过度营销信息」时要换成
 无铭牌那份：
 
 ```bash
 cd video/character
-python3 scripts/clear_badge.py            # 产出 growdu_character_2k_nobg_nobadge.png
+python3 scripts/clear_badge.py            # 产出 <slug>_character_2k_nobg_nobadge.png
 cd ../pipeline
 make EP=<期路径> nobrand NOBADGE=1         # 用无标牌素材重出片
 ```
@@ -126,10 +127,10 @@ make EP=<期路径> nobrand NOBADGE=1         # 用无标牌素材重出片
 
 ## 三条硬规矩
 
-1. **铭牌必须显示 `growdu`，但文字不能由模型生成。** 模型生成的中英文会乱码
-   （`growdu` 可能变成 `giowdu`、`grawdu`），所以生成后统一跑一遍
+1. **铭牌必须显示品牌词，但文字不能由模型生成。** 模型生成的中英文会乱码
+   （品牌词可能变成字母错位、拼错的变形），所以生成后统一跑一遍
    `stamp_badge.py`：自动定位铭牌（按「被深藏蓝马甲围住的那块白」，
-   不硬编码坐标）→ 刷成纯白 → 用当前字体写上 `growdu`（字体族名由
+   不硬编码坐标）→ 刷成纯白 → 用当前字体写上品牌词（字体族名由
    `pipeline/pyv/fonts.py` 跨平台解析：默认是仓库内置的 `AIV Sans CJK SC`，
    粗体用**真的 Bold 字形**——只装常规字重的话各后端会各自合成粗体，
    两台机器合出来的不一样）。
@@ -140,7 +141,7 @@ make EP=<期路径> nobrand NOBADGE=1         # 用无标牌素材重出片
 
 2. **眼镜只能靠图生图加，不能贴图贴。** 贴上去是平色块，一眼假。
    而且模型戴上方形眼镜后有个固定毛病：会在镜框或镜腿上贴一小块白色铭牌
-   （实测写着 `growdu`）——所以 `add_glasses.py` 额外走一次局部修补把它擦掉。
+   （实测上面写着品牌词）——所以 `add_glasses.py` 额外走一次局部修补把它擦掉。
    这块白牌还会被铭牌检测当成真铭牌（它四周全是镜框色），所以铭牌检测
    同时加了尺寸下限，见 `scripts/stamp_badge.py` 里的
    `MIN_WIDTH_RATIO` / `MIN_HEIGHT_RATIO`。
