@@ -480,10 +480,22 @@ h4 {
  * 所以文章页单独一套尺寸：
  *   - 版心跟着视口走（不满 1180px 的限制）；
  *   - 正文撑满中间那一栏，不受 --measure 限制；
- *   - 字号跟着视口放大（clamp），好让「占 70% 以上」
+ *   - 字号跟着视口轻微放大（clamp），好让「占 70% 以上」
  *     与「一行 50 来个字」两件事同时成立——
  *     不放大字号，宽屏上就是一行一百多字，没法读。
+ *
+ * 正文与两条侧栏**共用一把尺子**：--article-size 是正文字号，
+ * 侧栏按固定比例从它派生（侧栏 = 0.86 × 正文）。
+ * 之前两把尺子各走各的（正文涨到 20px，侧栏还是 13px），
+ * 同一页上两种尺度看着像两个站点拼的——现在合成一套。
  */
+
+.article-page {
+  /* 正文 16px（1280 屏）～ 20px（2200 屏以上），宽屏上跟着长一点 */
+  --article-size: clamp(16px, 0.45vw + 10.5px, 20px);
+  /* 侧栏比正文小一档，但不缩到「小小的一号字」 */
+  --side-size: calc(var(--article-size) * 0.86);
+}
 
 .article-page .wrap {
   max-width: none;
@@ -493,7 +505,7 @@ h4 {
 
 .article-page .prose {
   max-width: none;
-  font-size: clamp(16px, 1.4vw, 26px);
+  font-size: var(--article-size);
 }
 
 /* 标题、代码块、表格跟着正文字号一起缩放（em 是跟着父级的） */
@@ -517,9 +529,22 @@ h4 {
   font-size: 0.92em;
 }
 
-/* 侧栏也一起缩放，免得正文变大、坐标还是小小的一号字 */
+/* 侧栏跟着正文的尺子走 */
 .article-page .side {
-  font-size: clamp(13px, 0.85vw, 17px);
+  font-size: var(--side-size);
+}
+
+/* 侧栏里的小字一档（分组标题、标签、说明） */
+.article-page .side h4 {
+  font-size: 0.82em;
+}
+
+.article-page .side .small {
+  font-size: 0.88em;
+}
+
+.article-page .side .badge {
+  font-size: 0.82em;
 }
 
 /* ── 文档页三栏 ───────────────────────────────────────── */
