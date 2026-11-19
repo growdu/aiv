@@ -1,8 +1,9 @@
 # Mermaid 图表语法错误清单
 
 > 由 `mermaid@10.9.8` 的解析器实测生成：把 `docs/` 下每个 ` ```mermaid ` 块喂给
-> `mermaid.parse()`，记录抛错的那些块。`source/_posts/` 由 `tools/sync-hexo.py` 从
-> `docs/` 生成，因此本清单的**行号以 `docs/` 下的源文件为准**。
+> `mermaid.parse()`，记录抛错的那些块。`content/units/` 由
+> `tools/build-content-units.py` 从 `docs/` 生成，因此本清单的**行号以
+> `docs/` 下的源文件为准**。
 
 - 总图表数：**1239**
 - 解析失败：**102**（8.2%）

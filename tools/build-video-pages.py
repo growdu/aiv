@@ -17,8 +17,8 @@
 
 **还没有期是合法状态**：一条期都没有时生成 0 个内容单元，不是错。
 
-生成物是派生产物：``content/units/video/`` 每次构建现生成（与 ``sync-hexo.py``
-的产物一个待遇）。
+生成物是派生产物：``content/units/video/`` 每次构建现生成（与
+``tools/build-content-units.py`` 的产物一个待遇）。
 
 用法：
 
@@ -104,7 +104,8 @@ def read_episodes():
 def parse_front_matter(text):
     """Split the flat ``key: value`` front matter a script file carries.
 
-    The format is the same one ``sync-hexo.py`` writes: flat scalars only.
+    The format is the same one ``tools/build-content-units.py`` writes:
+    flat scalars only.
     """
     match = re.match(r"^---\n(.*?)\n---\n?(.*)$", text, re.DOTALL)
     if not match:
@@ -148,7 +149,13 @@ def permalink(date_text, slug):
 
     Mirrors the site's permalink rule (``:year/:month/:day/:title/``): the
     date comes from the front matter, the title part is the path under
-    ``source/_posts``.
+    ``content/units``.
+
+    ⚠️ **这个形状已经过时**：站点 2026-11-18 换成了 Astro，URL 规则现在在
+    ``platforms/blog/site/src/lib/urls.ts``（视频页是 ``/videos/<slug>/``），
+    站点**没有重定向**——所以这里拼出来的链接在站上是死的。
+    这条接口缺口记在
+    ``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 10 条。
     """
     match = re.match(r"(\d{4})-(\d{2})-(\d{2})", date_text or "")
     if not match:

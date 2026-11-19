@@ -426,10 +426,10 @@ def rule_str_03(doc: Doc) -> list[Signal]:
 def _link_target_exists(target: str, post_dir: Path) -> bool:
     """Whether a relative article link points at something that exists.
 
-    The resolution rule mirrors ``tools/sync-hexo.py:rewrite_links``:
-    resolve the link as written against the post's own directory, and if
-    that misses, fall back to the sibling directory one level up -- the
-    publisher does the same, so ``./b/index.html`` inside
+    The rule is the one the old publisher used, and it is still how a
+    reader reads a relative link: resolve the link as written against the
+    post's own directory, and if that misses, fall back to the sibling
+    directory one level up -- so ``./b/index.html`` inside
     ``docs/database/a/index.md`` means ``docs/database/b/``.
 
     Only existence is checked here; producing the permalink would need

@@ -22,7 +22,7 @@ CI 里，违规的标题能一路走到线上。
 
 用法
 ----
-    python3 platforms/blog/site/tools/sync-hexo.py   # 先产出内容单元
+    python3 tools/build-content-units.py             # 先产出内容单元
     python3 tools/check-content-contract.py          # 校验 content/units
     python3 tools/check-content-contract.py docs/    # 校验母稿
 
@@ -90,7 +90,7 @@ def main(argv=None) -> int:
     root = Path(args.root)
     if not root.exists():
         print(
-            f"找不到 {root}：先跑 python3 platforms/blog/site/tools/sync-hexo.py "
+            f"找不到 {root}：先跑 python3 tools/build-content-units.py "
             "产出内容单元。",
             file=sys.stderr,
         )
