@@ -87,7 +87,7 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 394 passed / 2 skipped | 394 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 504 passed / 1 skipped | 504 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 115 passed | 115 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1050 passed / 60 skipped / 1 failed | 1050 passed / 60 skipped / 1 failed |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1052 passed / 60 skipped | 1052 passed / 60 skipped |
 | 8 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 99 passed / 64 skipped / 1 failed | 99 passed / 64 skipped / 1 failed |
 
 ### 数字为什么变过（别拿旧基线来对账）
@@ -95,7 +95,7 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 | 时间 | 根 | 站点 | publish | toutiao | wechat | douyin | video |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-18（归位那轮） | 196 / 3 skip | 26 | 411 / 1 skip | 394 / 2 skip | 504 / 1 skip | 119 / 12 skip | 1269 / 23 skip / 3 red |
-| 2026-11-19（清库那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip / 1 red |
+| 2026-11-19（清库那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1052 / 60 skip |
 
 变红的是**被测对象没了**，不是逻辑坏了：
 
@@ -105,7 +105,10 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 - publish 411 → 338：删掉的是测 hexo 时代 `sync-hexo.py` 的集成用例；
   母稿相关的用例改成在临时目录里造稿子，不再依赖仓库里曾经有过的内容。
 - 站点 26 → 51：站点重做之后补的守卫（学习流归属、围栏、死链）。
-- video 1269 → 1050：视频线清空重来，期目录的用例随内容一起少了。
+- video 1269 → 1052：视频线清空重来，期目录的用例随内容一起少了；
+  清库那轮剩的 1 条红（品牌文案与文档不同步）也补掉了——文案搬进
+  `video/config.toml` 之后，那条用例改成钉「文案来自配置键」这条**关系**，
+  不再逐字比对文档里的一份副本。
 - douyin 131 → 115（原先 19 条红）：视频线清空后，「入库的六期」这个对象没了，
   依赖它的用例改成在 `tmp_path` 里现造四层坐标的期；测「真实成片」的那
   12 条（永远 skip）并进了合成成片的端到端用例。
