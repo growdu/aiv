@@ -78,19 +78,16 @@ front matter 的格式规则（契约一 §4.2）只允许扁平的 ``key: value
 ⚠️ 2026-11-18 的站点重做撤掉了整条 Hexo 链路，``source/_data/`` 已经不存在，
 期号页的平台链接**现在还没有数据源**。
 
-为什么不 import ``tools/site_root.py``
--------------------------------------
-``tools/`` 是站点构建层，``publishkit/`` 是契约层，两层之间不互相 import
-（契约一 §11.1 的接缝原则）。所以 permalink 的推导在这里**重写一遍**，
-与 ``tools/site_root.py`` 的等价性由 ``publish/tests/test_episode.py`` 的一条
-兼容性测试钉住——**靠测试锁住，不靠 import**。
+为什么不需要一条「兼容性锁」
+---------------------------
+站点的 URL 形状与这里的落地地址读的是**同一份共享规则**——仓库根的
+``rules/urls.json``（契约层的读取器是 ``publish/publishkit/urls.py``，
+站点的是 ``urls.ts``）。规则是**数据**不是代码，两层之间不互相 import
+（契约一 §11.1 的接缝原则），接缝是那份文件。
 
-（``tools/site_root.py`` 本身是 Hexo 时代的遗留模块：它读的 ``_config.yml``
-已经不在了，挂载点现在退化成空串。见
-``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 4 条。）
-
-这与契约一为什么不 import ``platforms/wechat/posts.py`` 的理由完全一样：
-两边各自演进，靠一条测试断言它们不漂移。
+既然是同一份规则，就不必再靠一条测试盯住两边不漂移：改规则就一起改。
+（Hexo 时代那条锁盯的是 ``tools/site_root.py`` 拼出来的字符串——那个
+模块已经退役。）
 """
 
 from __future__ import annotations
@@ -99,13 +96,12 @@ import re
 from dataclasses import dataclass
 from datetime import date as date_cls
 from pathlib import Path
-from urllib.parse import quote
 
 from . import PublishKitError
+from . import urls
 from .contract import (
     EPISODE_LIST_FIELDS,
     EPISODE_SCALAR_FIELDS,
-    parse_content_date,
 )
 from .schedule import content_id_for
 
@@ -198,22 +194,15 @@ class Episode:
         """A master draft joins the episode line by carrying ``episode``."""
         return bool(self.episode)
 
-    def landing_url(self, root: str = "") -> str:
+    def landing_url(self) -> str:
         """This episode's landing URL, derived from its content id.
 
-        Requires ``content_id`` **and** ``date``: the permalink carries the
-        year / month / day, and without them there is no honest answer.
+        地址的**形状**不再由这一层决定——它读共享规则
+        （``rules/urls.json``），与站点逐字相同。
 
-        ``date`` must be the **content unit's** date (the one
-        ``tools/build-content-units.py`` writes into
-        ``content/units/``), not the
-        master draft's ``date:`` field.  The compiler takes the draft's
-        explicit ``date:`` when it has one and falls back to the earliest
-        git commit date otherwise — and four of the six episode
-        drafts carry no ``date:`` at all — so a URL derived from the draft
-        would point at a different day than the content unit does.
-        Reading a draft therefore leaves ``date`` empty, and this method
-        refuses to guess.
+        但 ``date`` 仍是「**已编译成内容单元**」的标记：母稿读出来的期号
+        没有 ``date``（编译器还没跑过），这一期的落地地址**还不存在**——
+        所以这时响亮地拒绝，而不是给一条指向别处的地址。
         """
         if not self.content_id:
             raise EpisodeFieldError(
@@ -221,10 +210,9 @@ class Episode:
             )
         if not self.date:
             raise EpisodeFieldError(
-                "期号 {!r} 还没有 date，算不出落地 URL"
-                "（date 要取内容单元的，别取母稿的）".format(self.episode)
+                "期号 {!r} 还没编译成内容单元，算不出落地 URL".format(self.episode)
             )
-        return landing_url(self.content_id, self.date, root=root)
+        return landing_url(self.content_id)
 
 
 # --- 字段校验 ---------------------------------------------------------------
@@ -397,32 +385,24 @@ def validate_episode_series(episodes) -> list:
 # --- 落地 URL 派生 ----------------------------------------------------------
 
 
-def landing_url(content_id: str, date: str, root: str = "") -> str:
+def landing_url(content_id: str) -> str:
     """The landing URL of an episode, derived -- never hand-written.
 
-    ``= SITE_ROOT + "/" + <年/月/日 + content_id>``。**当前**拼出来的是
-    ``/YYYY/MM/DD/<content_id>/``（月、日补零）：
+    ``= <共享规则的 doc_prefix> + <content_id>``——形状由仓库根的
+    ``rules/urls.json`` 决定，契约层的读取器是 :mod:`publishkit.urls`：
 
-    >>> landing_url("source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive", "2026-10-15")
-    '/2026/10/15/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/'
+    >>> landing_url("source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive")
+    '/docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/'
 
-    ``root`` 是部署挂载点：主站 ``""``，GitHub Pages 镜像 ``"/blog"``。
+    **日期不进地址**：地址的形状只有一份规则说了算，站点与契约层读的是
+    同一份 ``rules/urls.json``，逐字相同。
 
-    TODO：站点的 URL 规则现在只写在 ``platforms/blog/site/src/lib/urls.ts``
-    （文档 ``/docs/<id>/``、视频 ``/videos/<slug>/``），与这里拼的**不是同一个**。
-    这条缝还没合——见 ``review/specs/2026-11-19-整体架构与模块边界.md``
-    §五 第 10 条（形状待拍板，别在这两处各抄一遍）。
+    这里**只拼地址，不检查日期**——它没有 date 可查。「这一期到底编译
+    出来没有」是 :meth:`Episode.landing_url` 管的（``date`` 是那个标记）。
     """
     if not isinstance(content_id, str) or not content_id.strip():
         raise EpisodeFieldError("content_id 不能为空")
-    day = parse_content_date(date)
-    # 月 / 日**补零**：这里拼的是 ``{:04d}/{:02d}/{:02d}``，
-    # 渲染成 ``08`` / ``24``。不补零的话 8 月的文章会得到 ``/2026/8/24/``
-    # ——一个跟别的拼法不一样的链接。
-    prefix = "{}/{:04d}/{:02d}/{:02d}/{}".format(
-        root.rstrip("/"), day.year, day.month, day.day, quote(content_id.strip())
-    )
-    return "{}/".format(prefix)
+    return urls.doc_url(content_id.strip())
 
 
 # --- 母稿 → content_id -----------------------------------------------------

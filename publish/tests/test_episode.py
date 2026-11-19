@@ -23,7 +23,6 @@
 """
 
 import re
-import sys
 from pathlib import Path
 
 import pytest
@@ -104,75 +103,29 @@ def write_draft(root: Path, rel: str, text: str) -> Path:
 
 
 def test_landing_url_derives_the_permalink():
+    """落地地址统一成 /docs/<id>/——日期不再进地址。"""
     assert (
-        landing_url("source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive", "2026-10-15")
-        == "/2026/10/15/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/"
+        landing_url("source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive")
+        == "/docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/"
     )
+    assert "2026" not in landing_url("database/x")   # 日期不进地址
 
 
-def test_landing_url_accepts_a_full_timestamp():
-    """内容单元的 date 带时刻（现行编译器 ``tools/build-content-units.py`` 写的就是这个形状）。"""
-    assert (
-        landing_url("database/x", "2026-10-15 11:30:25")
-        == "/2026/10/15/database/x/"
-    )
-
-
-def test_landing_url_quotes_a_non_ascii_content_id():
-    """中文路径要百分号编码——和站点实际发出的 URL 形态一致。"""
-    assert (
-        landing_url("life/aiv/人格规范", "2026-11-11 12:30:58")
-        == "/2026/11/11/life/aiv/%E4%BA%BA%E6%A0%BC%E8%A7%84%E8%8C%83/"
-    )
-
-
-def test_landing_url_carries_the_mount_point():
-    """镜像站挂在 ``/blog`` 下（``tools/site_root.py`` 的存在理由）。"""
-    assert (
-        landing_url("database/x", "2026-10-15", root="/blog")
-        == "/blog/2026/10/15/database/x/"
-    )
+def test_landing_url_is_the_docs_url():
+    """落地地址统一成 ``/docs/<id>/``——与站点 ``urls.ts`` 逐字相同。"""
+    assert landing_url("life/aiv/人格规范") == "/docs/life/aiv/人格规范/"
 
 
 def test_landing_url_rejects_an_empty_content_id():
     """content_id 猜不出来时要**响亮地拒绝**，而不是给一条错的 URL。"""
     with pytest.raises(EpisodeFieldError):
-        landing_url("", "2026-10-15")
+        landing_url("")
 
 
-def test_landing_url_rejects_a_malformed_date():
-    """坏日期必须指名道姓地报出来，不能漏出裸 ValueError。"""
-    with pytest.raises(Exception) as excinfo:
-        landing_url("database/x", "不是日期")
-    assert "date" in str(excinfo.value)
-
-
-def test_landing_url_matches_the_site_build_layers_permalink():
-    """**兼容性锁**：契约层与站点构建层各自算一遍，结果必须逐字相同。
-
-    契约层不许 import ``tools/site_root.py``（两层之间不互相依赖，
-    契约一 §11.1），所以等价性靠**这条测试**钉住——两边各自演进，
-    漂了这里就红。
-
-    ``site_root.permalink`` 收的是「日期 + 内容单元路径」，
-    ``landing_url`` 收的是「内容单元 id + 日期」，两者参数顺序不同，
-    拼出来的字符串必须一样。
-    """
-    sys.path.insert(0, str(REPO_ROOT / "tools"))
-    try:
-        import site_root
-    finally:
-        sys.path.pop(0)
-
-    cases = [
-        ("2026-10-15 11:30:25", "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"),
-        ("2026-11-11 12:30:58", "life/aiv/人格规范"),
-        ("2026-08-24 14:22:40", "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model"),
-    ]
-    for date, content_id in cases:
-        assert landing_url(content_id, date) == site_root.permalink(
-            date, content_id, root=""
-        ), "契约层与站点构建层算出的落地 URL 不一致：{}".format(content_id)
+def test_landing_url_agrees_with_the_shared_rule():
+    """契约层与共享规则算出的地址必须逐字相同。"""
+    from publishkit import urls
+    assert landing_url("source-tracks/postgresql/x") == urls.doc_url("source-tracks/postgresql/x")
 
 
 # --- content_id 派生（单元） ------------------------------------------------
