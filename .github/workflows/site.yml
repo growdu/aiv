@@ -94,11 +94,18 @@ jobs:
         # 仍然扫 docs/ + drafts/——开发者自查草稿用那条。
         run: python3 platforms/blog/site/tools/check-markdown.py docs/
 
-      - name: 学习流数据是最新的
+      - name: 学习流编译（漏归类即失败）
         # 规则表 + 内容单元 → data/learning-path.compiled.json。
-        # 漏归类是**构建失败**，不许静默——所以编译结果入库，
-        # CI 里比对着查。
-        run: python3 platforms/blog/site/tools/build-learning-path.py --check
+        # **漏归类是构建失败，不许静默**——一篇文档或一期视频没落到任何赛道，
+        # 这一步就断，站点构建不起来。
+        #
+        # 注意这里是**编译**，不是 `--check`：
+        # 编译结果 `learning-path.compiled.json` 是**构建产物，不入库**
+        # （.gitignore 第 10 行），CI 的全新 checkout 里它根本不存在——
+        # `--check` 在那儿必然报「学习流数据不存在」，每次 push 都红。
+        # 真正的闸门是**编译本身**：漏归类在两种模式下都失败。
+        # `--check` 是给本地用的（改了规则表忘了重编，它会提醒你）。
+        run: python3 platforms/blog/site/tools/build-learning-path.py
 
   build:
     name: 构建

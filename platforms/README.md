@@ -158,7 +158,7 @@ image_bytes = 20971520
 | --- | --- | --- |
 | **适配** | 按 `capability.toml` 的限额裁标题、压正文、配图、转换格式 | 根编译器 `tools/build-content-units.py`（母稿 → 内容单元） |
 | **生成** | 渲染成平台要的形态（HTML / 竖版切片 / 投稿包 / 静态站） | Astro：`platforms/blog/site/` 的 `astro build` |
-| **review** | 按这个平台自己的规矩过一遍（封面尺寸、栏目、口径） | `platforms/blog/site/tools/check-markdown.py` + `build-learning-path.py --check` + `platforms/blog/site/tests/` |
+| **review** | 按这个平台自己的规矩过一遍（封面尺寸、栏目、口径） | `platforms/blog/site/tools/check-markdown.py docs/` + `build-learning-path.py`（漏归类即失败）+ `platforms/blog/site/tests/` |
 | **output** | 出一个可发布的东西（包 / manifest / 整站） | `platforms/blog/site/dist/` |
 | **upload** | 送出去（调平台 API / 浏览器自动化 / CI 部署） | **还没做**——归上线那一轮 |
 
