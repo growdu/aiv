@@ -53,11 +53,11 @@ from .state import PublishState, StateStore, needs_submit
 # 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
-from paths import REPO_ROOT, SITE_POSTS, SITE_TOOLS  # noqa: E402
+from paths import REPO_ROOT, ROOT_TOOLS, SITE_POSTS, SITE_TOOLS  # noqa: E402
 
-# 文章目录：站点拿到的那份内容单元副本（`platforms/blog/site/source/_posts/`）。
-# **不是** `content/units/`——图片按「文章目录的上一级」解析，
-# 图片还住在站点的 `source/images/` 里（它们进内容单元仓库是下一个模块的事）。
+# 文章目录：站点拿到的那份内容单元副本
+# （`platforms/blog/site/src/content/units/`）——**不是** `content/units/`。
+# 它是构建产物，由 `platforms/blog/site/tools/sync-content.py` 同步进来。
 DEFAULT_POSTS_DIR = SITE_POSTS
 DEFAULT_OUT_DIR = Path(__file__).resolve().parents[0] / "out"
 DEFAULT_SOURCE_URL = "https://growdu.cn"
@@ -67,6 +67,8 @@ DEFAULT_REPO_DIR = REPO_ROOT
 # 站点工具目录相对仓库根的那一段（``platforms/blog/site/tools``）。
 # ``--repo-dir`` 指到别的检出时，编译器跟着走。
 SITE_TOOLS_REL = SITE_TOOLS.relative_to(REPO_ROOT)
+# 根工具目录相对仓库根的那一段（``tools``）。同上：跟着 ``--repo-dir`` 走。
+ROOT_TOOLS_REL = ROOT_TOOLS.relative_to(REPO_ROOT)
 DEFAULT_STAMP_FILE = Path(__file__).resolve().parents[0] / "out" / ".auto-draft-stamp"
 # The cover used when an article has no picture of its own.  Most of
 # this corpus has none, and a draft with no cover is not something
@@ -372,10 +374,16 @@ class CoverRequired(RuntimeError):
 def _resolve_asset(path: str, posts_dir: Path) -> Path:
     """Resolve an asset path from the article to a real file.
 
-    ``platforms/blog/site/tools/sync-hexo.py`` rewrites every image reference to
-    ``images/<path relative to docs/>``, and those files are copied to
-    ``source/images/`` by the same script.  So an asset path is resolved
-    against the ``source/`` root, which is the parent of the posts directory.
+    The content units keep the body verbatim, so an image reference still
+    points at ``images/<path relative to docs/>``.  Those files live in the
+    site's ``public/images/`` now -- ``platforms/blog/site/tools/sync-content.py``
+    copies them there.
+
+    ⚠️ TODO: the site moved, so "the parent of the posts directory" -- what
+    this function looks in -- is no longer where the images are.  Fixing it
+    means deciding where the adapter reads images from (the site's
+    ``public/images/``, or the ``docs/`` tree itself); that is a cross-module
+    decision, not a one-line change.  The rule below is unchanged for now.
     """
     candidate = Path(path)
     if candidate.is_absolute():
@@ -1214,28 +1222,35 @@ def _docs_changed(repo_dir: Path, stamp_path: Path) -> bool:
 def _run_sync(repo_dir: Path) -> int:
     """Rebuild the content units from ``docs/``.
 
-    Returns the exit code of ``sync-hexo.py``.  It takes about three
-    minutes and rebuilds everything from scratch, which is why it only
-    runs when ``docs/`` actually changed.
+    The site moved into ``platforms/blog/site/``, and the compile is two
+    steps now:
 
-    站点搬进 ``platforms/blog/site/`` 之后，编译分两步：
-    ``sync-hexo.py`` 编出内容单元（``content/units/``），
-    ``adapt-units.py`` 把它们接到站点的文章目录（``source/_posts/``）。
-    **本模块读的是站点的文章目录**——所以两步都得跑。
+    1. ``tools/build-content-units.py`` -- the platform-agnostic
+       compiler: ``docs/`` becomes ``content/units/``.
+    2. ``platforms/blog/site/tools/sync-content.py`` -- copies the
+       content units into the Astro project
+       (``platforms/blog/site/src/content/units/``) and refreshes the
+       static assets.
+
+    **This module reads the site's copy** (``SITE_POSTS``), so both steps
+    have to run.
+
+    Returns the exit code of the first step that failed.
     """
-    script = repo_dir / SITE_TOOLS_REL / "sync-hexo.py"
-    if not script.is_file():
-        print("找不到 {}".format(script), file=sys.stderr)
-        return EXIT_NOT_FOUND
-    result = subprocess.run([sys.executable, str(script)], cwd=str(repo_dir))
-    if result.returncode != 0:
-        return result.returncode
-    adapt = repo_dir / SITE_TOOLS_REL / "adapt-units.py"
-    if not adapt.is_file():
-        print("找不到 {}".format(adapt), file=sys.stderr)
-        return EXIT_NOT_FOUND
-    adapted = subprocess.run([sys.executable, str(adapt)], cwd=str(repo_dir))
-    return adapted.returncode
+    steps = (
+        (repo_dir / ROOT_TOOLS_REL / "build-content-units.py", "编译内容单元"),
+        (repo_dir / SITE_TOOLS_REL / "sync-content.py", "同步内容单元进站点"),
+    )
+    for script, what in steps:
+        if not script.is_file():
+            print("找不到 {}".format(script), file=sys.stderr)
+            return EXIT_NOT_FOUND
+        result = subprocess.run([sys.executable, str(script)], cwd=str(repo_dir))
+        if result.returncode != 0:
+            print("{} 失败（{}），退出码 {}".format(
+                what, script.name, result.returncode), file=sys.stderr)
+            return result.returncode
+    return EXIT_OK
 
 
 def cmd_auto_draft(args) -> int:
@@ -1245,10 +1260,10 @@ def cmd_auto_draft(args) -> int:
     credentials: WeChat's API requires the caller's IP in the
     account's allowlist, and a hosted CI runner has a changing one.
 
-    ``sync-hexo.py`` takes three minutes and rebuilds everything, so
-    the job only runs it when ``docs/`` changed.  The batch always
-    runs: it is free when there is nothing to do, and it is what
-    picks up whatever a previous run left half-finished.
+    The content compile takes about three minutes and rebuilds
+    everything, so the job only runs it when ``docs/`` changed.  The
+    batch always runs: it is free when there is nothing to do, and it is
+    what picks up whatever a previous run left half-finished.
     """
     repo_dir = Path(args.repo_dir)
     stamp_path = Path(args.stamp_file)
@@ -1258,7 +1273,7 @@ def cmd_auto_draft(args) -> int:
         print("docs/ 有变化，重新生成文章目录 ...")
         code = _run_sync(repo_dir)
         if code != 0:
-            print("sync-hexo.py 失败，退出码 {}".format(code), file=sys.stderr)
+            print("内容单元重新生成失败，退出码 {}".format(code), file=sys.stderr)
             return EXIT_REJECTED
         stamp_path.parent.mkdir(parents=True, exist_ok=True)
         _, head = _git("rev-parse", "HEAD", cwd=repo_dir)
@@ -1916,7 +1931,7 @@ def _add_common_options(parser, *, suppress: bool) -> None:
         return argparse.SUPPRESS if suppress else value
 
     parser.add_argument("--posts-dir", type=Path, default=default(DEFAULT_POSTS_DIR),
-                        help="站点文章目录，默认 platforms/blog/site/source/_posts")
+                        help="站点文章目录，默认 platforms/blog/site/src/content/units")
     parser.add_argument("--out-dir", type=Path, default=default(DEFAULT_OUT_DIR),
                         help="产物目录，默认 out")
     parser.add_argument("--source-url", default=default(DEFAULT_SOURCE_URL),

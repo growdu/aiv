@@ -1,11 +1,12 @@
 """Discover blog posts and validate them against WeChat's hard limits.
 
-Input is the site's posts directory, the output of
-``platforms/blog/site/tools/sync-hexo.py``.  That
-step already rewrote image paths, rewrote relative links into absolute
-permalinks, stripped the leading H1 and rebuilt the front-matter, so this
-module never re-implements any of that.  It only reads what sync produced
-and adds the metadata WeChat needs: digest, permalink and eligibility.
+Input is the site's posts directory: the copy of the content units the
+site keeps (``platforms/blog/site/src/content/units/``).  That copy is
+produced by ``tools/build-content-units.py`` (the platform-agnostic
+compiler, ``docs/`` → ``content/units/``) and copied in by
+``platforms/blog/site/tools/sync-content.py``.  This module only reads
+what the compile produced and adds the metadata WeChat needs: digest,
+permalink and eligibility.
 """
 
 from __future__ import annotations
@@ -124,10 +125,10 @@ def _unquote(value: str) -> str:
 def parse_front_matter(text: str):
     """Split YAML-ish front-matter from the body.
 
-    ``platforms/blog/site/tools/sync-hexo.py`` generates the front-matter
+    ``tools/build-content-units.py`` generates the front-matter
     itself, so the shape is known and fixed: ``key: value`` scalars plus
     ``key:`` followed by
-    ``  - item`` lists.  A tiny hand-written parser avoids adding a YAML
+    ``- item`` list lines.  A tiny hand-written parser avoids adding a YAML
     dependency for a format we control.
 
     Returns ``(fields, body)``.  A list field maps to a list of strings;
@@ -217,8 +218,9 @@ def discover(posts_dir: Path) -> list:
     if not posts_dir.is_dir():
         raise FileNotFoundError(
             "posts directory not found at {}. Run "
-            "`python3 platforms/blog/site/tools/sync-hexo.py` first "
-            "(it takes about three minutes).".format(posts_dir)
+            "`python3 tools/build-content-units.py` and then "
+            "`python3 platforms/blog/site/tools/sync-content.py` first "
+            "(the compile takes about three minutes).".format(posts_dir)
         )
     return [load_post(path, posts_dir) for path in sorted(posts_dir.rglob("*.md"))]
 

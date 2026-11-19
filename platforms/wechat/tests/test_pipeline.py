@@ -1216,7 +1216,10 @@ def _git_repo(tmp_path):
     (repo / "docs").mkdir(parents=True)
     (repo / "docs" / "a.md").write_text("第一篇\n", encoding="utf-8")
     (repo / "tools").mkdir()
-    (repo / "tools" / "sync-hexo.py").write_text("# stub\n", encoding="utf-8")
+    (repo / "tools" / "build-content-units.py").write_text("# stub\n", encoding="utf-8")
+    site_tools = repo / "platforms" / "blog" / "site" / "tools"
+    site_tools.mkdir(parents=True)
+    (site_tools / "sync-content.py").write_text("# stub\n", encoding="utf-8")
 
     def git(*args):
         subprocess.run(["git"] + list(args), cwd=str(repo), check=True,
@@ -1295,7 +1298,7 @@ def test_docs_changed_ignores_changes_outside_docs(tmp_path):
 
 
 def test_auto_draft_skips_the_sync_when_nothing_changed(tmp_path, server, monkeypatch, capsys):
-    """``sync-hexo.py`` takes three minutes; it must not run for nothing."""
+    """The content compile takes three minutes; it must not run for nothing."""
     repo = _git_repo(tmp_path)
     stamp = tmp_path / "stamp"
     stamp.write_text(subprocess.run(

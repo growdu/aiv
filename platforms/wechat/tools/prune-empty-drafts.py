@@ -26,6 +26,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "platforms"))
+sys.path.insert(0, str(ROOT / "tools"))
+
+from paths import SITE_POSTS  # noqa: E402
 
 from wechat.posts import discover, is_empty, is_empty_shell  # noqa: E402
 from wechat.publish import WeChatClient  # noqa: E402
@@ -37,8 +40,8 @@ def main(argv=None) -> int:
     parser.add_argument("--dry-run", action="store_true",
                         help="只报告，不删也不改账本")
     parser.add_argument("--posts-dir", type=Path,
-                        default=ROOT / "source" / "_posts",
-                        help="文章目录，默认 source/_posts")
+                        default=SITE_POSTS,
+                        help="文章目录，默认 platforms/blog/site/src/content/units")
     parser.add_argument("--out-dir", type=Path, default=ROOT / "platforms" / "wechat" / "out",
                         help="产物目录，默认 platforms/wechat/out")
     parser.add_argument("--secrets-file", type=Path,

@@ -25,6 +25,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "platforms"))
+sys.path.insert(0, str(ROOT / "tools"))
+
+from paths import SITE_POSTS  # noqa: E402
 
 from wechat.audit import _measure  # noqa: E402
 from wechat.collection import render_category_tag  # noqa: E402
@@ -40,9 +43,11 @@ _TAG = re.compile(r"<[^>]+>")
 
 
 def main() -> int:
-    posts_dir = ROOT / "source" / "_posts"
+    posts_dir = SITE_POSTS
     if not posts_dir.is_dir():
-        print("找不到 source/_posts，请先跑 tools/sync-hexo.py", file=sys.stderr)
+        print("找不到 {}，请先跑 tools/build-content-units.py 与 "
+              "platforms/blog/site/tools/sync-content.py".format(posts_dir),
+              file=sys.stderr)
         return 1
 
     posts = [post for post in discover(posts_dir) if not is_empty(post)]

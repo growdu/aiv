@@ -128,7 +128,8 @@ def test_discover_raises_with_actionable_message(tmp_path):
     try:
         discover(missing)
     except FileNotFoundError as error:
-        assert "sync-hexo.py" in str(error)
+        assert "build-content-units.py" in str(error)
+        assert "sync-content.py" in str(error)
     else:
         raise AssertionError("expected FileNotFoundError")
 

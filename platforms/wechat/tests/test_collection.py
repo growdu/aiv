@@ -9,7 +9,7 @@ from wechat.collection import (ArticleRef, Collection, build_categories,
                                load_spec, render_category_tag,
                                render_collection_index, render_collection_plan,
                                safe_name)
-from wechat.hexo import slugize
+from wechat.slugs import slugize
 from wechat.posts import Post, build_permalink
 
 
@@ -85,8 +85,8 @@ def test_category_archive_url_falls_back_to_the_slug_of_the_name():
         "https://growdu.cn/categories/Go-Web/"
 
 
-def test_slugize_replaces_spaces_with_dashes_like_the_site_build():
-    """The site serves /categories/Go-Web/, not /categories/Go%20Web/."""
+def test_slugize_replaces_spaces_with_dashes():
+    """The adapter's own slug rule: spaces become dashes, Chinese is kept."""
     assert slugize("Go Web") == "Go-Web"
     assert slugize("PostgreSQL 源码修炼之路") == "PostgreSQL-源码修炼之路"
 

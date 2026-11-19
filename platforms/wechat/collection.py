@@ -19,6 +19,26 @@ So the platform-side relation is a human step, and this module
 automates the content around it: the category tag printed on an
 article, the ordered plan of articles that belong to a collection, and
 the index article that leads into one.
+
+⚠️ **TODO —— 分类归档页的地址在现在的站点上不存在。**
+
+``category_archive_url()`` 拼出来的是 ``{站点}/categories/{slug}/``，
+那是 hexo 时代的规则。站点换成 Astro 之后**没有 ``/categories/`` 这条路由**
+（站点自己的 URL 规则只有一处，在
+``platforms/blog/site/src/lib/urls.ts``）：文档与分类页都走
+``/docs/<内容单元 id>/``，分类页的 id 是那个目录的 ``_index``（尾巴被抹掉）。
+
+也就是说，公众号文章里印出来的那个归档链接，现在点进去是 404。
+
+**可能的修法**：做一张「分类名 → 分类内容单元 id」的映射表，分类名取自
+目录链上 ``_index.md`` 的 ``cascade.categories``（这正是
+``tools/build-content-units.py`` 推导出来的东西），于是归档地址变成
+``{站点}/docs/<id>/``。
+
+**为什么现在不动**：那张映射表归谁、放在哪一层（内容编译器？平台层？站点
+的 ``data/``？），是一次**跨模块的接口决定**，不是本模块能自己定的。而且
+``category_archive_url()`` 的输出形状有测试守着，改它就是改契约——所以
+这里只把缺口记下来，不偷偷改形状。
 """
 
 from __future__ import annotations
@@ -30,7 +50,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 
-from .hexo import slugize
+from .slugs import slugize
 from .render import BODY_FONT, H2_STYLE, MUTED_STYLE, css
 
 __all__ = [
@@ -151,6 +171,10 @@ def category_archive_url(source_url: str, category: str, path: str | None = None
     page lists every article of that category.  It is the one clickable
     target a WeChat reader can reach from an article, because
     「阅读原文」 is the only link WeChat keeps in the body.
+
+    ⚠️ The site has no ``/categories/`` route any more -- see the TODO
+    in the module docstring.  The shape is kept as it is until the
+    cross-module decision is made.
     """
     if path is None:
         path = slugize(category)

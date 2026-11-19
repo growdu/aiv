@@ -17,6 +17,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "platforms"))
+sys.path.insert(0, str(ROOT / "tools"))
+
+from paths import SITE_POSTS  # noqa: E402
 
 from wechat.brand import (byline_html, series_note_of, strip_title_page,  # noqa: E402
                           title_page_of)
@@ -31,9 +34,11 @@ JUDGEMENT = re.compile(
 
 
 def main() -> int:
-    posts_dir = ROOT / "source" / "_posts"
+    posts_dir = SITE_POSTS
     if not posts_dir.is_dir():
-        print("找不到 source/_posts，请先跑 tools/sync-hexo.py", file=sys.stderr)
+        print("找不到 {}，请先跑 tools/build-content-units.py 与 "
+              "platforms/blog/site/tools/sync-content.py".format(posts_dir),
+              file=sys.stderr)
         return 1
 
     posts = [load_post(path, posts_dir)
