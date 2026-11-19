@@ -19,13 +19,15 @@
 
 | 模块 | 住在哪 | 验收命令 | 它只该证明 |
 | --- | --- | --- | --- |
-| 母稿 / review | `docs/` `tools/review-*.py` | `python3 -m pytest tests/ -q` | 母稿层自己的规矩（审校信号、审校记录、摘要起草） |
+| 母稿 / review | `docs/` `tools/review-*.py` | `python3 -m pytest tests/ -q` | 母稿层自己的规矩（审校信号、审校记录） |
 | 内容单元仓库 | `content/units/` | ——（见下方「内容单元仓库没有自己的套件」） | 单元齐、id 唯一、front matter 合契约 |
 | 站点 | `platforms/blog/site/` | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点自己构建得出来 |
 | publish 契约层 | `publish/` | `cd publish && python3 -m pytest tests/ -q` | 读得懂内容单元 |
 | 头条 adapter | `platforms/toutiao/` | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 读得懂内容单元、出包不丢图 |
 | 微信 adapter | `platforms/wechat/` | `cd platforms/wechat && python3 -m pytest tests/ -q` | 同上 |
+| 抖音 adapter | `platforms/douyin/` | `cd platforms/douyin && python3 -m pytest tests/ -q` | 同上 |
 | 视频流水线 | `video/pipeline/` | `cd video/pipeline && python3 -m pytest tests/ -q` | 自己的套件 |
+| 发布执行器 | `browser/` | `cd browser && python3 -m pytest tests/ -q` | 浏览器流程的形状（真发不发） |
 
 **每条命令都在模块目录里跑。** 这件事是靠两个约定成立的：
 
@@ -37,14 +39,18 @@
 ### 内容单元仓库没有自己的套件
 
 `content/units/` 是**构建产物**（`.gitignore` 里的 `/content/units/`），不入库，
-因此没有「自己的测试目录」可跑。它的契约由下面两条守住：
+因此没有「自己的测试目录」可跑。它的契约由下面三条守住：
 
 - **I1**——站点拿到的那份是逐字节副本（`diff -r`）；
-- **I2**——契约层从 `content/units/` 读出的 `content_id` 集合与单元 id 集合相等
-  （`publish/tests/test_episode.py` 的集成用例钉着）。
+- **I2**——契约层从 `content/units/` 读出的 `content_id` 集合与单元 id 集合相等；
+- **I3**——两个 adapter 默认的文章目录 == 内容单元仓库。
 
-> 计划里曾写「`python3 -m pytest tests/test_content_units.py -q`」——
-> **那个文件不存在**，本仓库从来没有内容单元的独立套件。别拿它当基线。
+> ⚠️ **I2 现在没有测试钉着。** 原来钉它的是
+> `publish/tests/test_episode.py` 的一条集成用例（真跑一遍 hexo 时代的
+> `sync-hexo.py`），那个脚本随站点重做一起删了，用例也一并删掉了
+> （`d90fba7e`）。**这条接口现在靠约定，没有靠机器。** 重做它的时候，
+> 照着现在的编译器写一条新的：真跑一遍 `tools/build-content-units.py`，
+> 比对契约层读出的 `content_id` 集合与产物里的单元 id 集合。
 
 ---
 
@@ -56,61 +62,65 @@
 | I2 内容单元 → publish 契约层 | `content/units/` → `publish/` | 契约层从 `content/units/` 读出的 `content_id` 集合 == 单元 id 集合 | 集合相等 |
 | I3 内容单元 → toutiao / wechat | `content/units/` → 两个 adapter | 两个 adapter 默认的文章目录 == 内容单元仓库 | 相等 |
 
-I2 已经有测试钉着：`publish/tests/test_episode.py` 的集成用例
-（真跑一遍 sync，比对母稿派生值与产物里的内容单元 id）。
-
 **I3 现在是欠账**——两个 adapter 读的是**站点的副本**，
 不是 `content/units/`（Ruling 14：图片还住在站点的 `source/images/`，
 解析基准是「文章目录的上一级」，一换就丢图）。
-这笔账归**编译器抽取**那个模块（24 任务计划的 Task 1）：
-图片落成 `content/units/images/`，同时把解析基准从「文章目录的上一级」
-改成显式的图片根。**在那之前，I3 只能验「副本与内容单元逐字节相同」**
-（等于 I1），不能验「adapter 直接读内容单元」。
+这笔账归**编译器抽取**那个模块：图片落成 `content/units/images/`，
+同时把解析基准从「文章目录的上一级」改成显式的图片根。**在那之前，
+I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能验
+「adapter 直接读内容单元」。**
 ——**这条欠账要写明，不能装作没有。**
 
 ---
 
 ## 三、每条命令跑什么、Expected 是什么
 
-数字是 2026-11-18 在 `feature/coordinates` 分支上**逐条单独跑**量出来的。
+数字是 **2026-11-19** 在 `main` 上**逐条单独跑**量出来的。
 **归位之后，总数必须与合并跑时一致**——少一条就是某条用例消失了，
 多一条就是某个目录被收集了两次。
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
-| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、摘要起草 | 196 passed / 3 skipped | 196 passed / 3 skipped |
-| 2 | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点：学习流归属、死链、页面齐全（2026-11-18 站点重做后） | 26 passed | 26 passed |
-| 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度 | 411 passed / 1 skipped | 411 passed / 1 skipped |
+| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录 | 81 passed | 81 passed |
+| 2 | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点：学习流归属、死链、页面齐全 | 51 passed / 1 skipped | 51 passed / 1 skipped |
+| 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度 | 338 passed / 1 skipped | 338 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 394 passed / 2 skipped | 394 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 504 passed / 1 skipped | 504 passed / 1 skipped |
-| 6 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1269 passed / 23 skipped / **3 failed** | 1269 passed / 23 skipped / 3 failed |
+| 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 115 passed | 115 passed |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1050 passed / 60 skipped / 1 failed | 1050 passed / 60 skipped / 1 failed |
+| 8 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 99 passed / 64 skipped / 1 failed | 99 passed / 64 skipped / 1 failed |
 
-### 对账
+### 数字为什么变过（别拿旧基线来对账）
 
-- **站点那 26 个文件**（Task 10 归位的）= **332 条**。
-- 归位前它们住在根 `tests/` 里，根 `tests/` 一共 **531 条**（528 passed + 3 skipped）。
-- 归位后根 `tests/` 剩 **199 条**（5 个母稿/review 文件：196 passed + 3 skipped），
-  站点 `tests/` **332 条**。**199 + 332 = 531**——一条不多、一条不少。
-- 计划里写的基线「`tests/` + `publish/tests/` = 939 passed / 4 skipped」也仍然成立：
-  归位前 528 + 411 = 939；归位后 (196 + 332) + 411 = 939。
+| 时间 | 根 | 站点 | publish | toutiao | wechat | douyin | video |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-18（归位那轮） | 196 / 3 skip | 26 | 411 / 1 skip | 394 / 2 skip | 504 / 1 skip | 119 / 12 skip | 1269 / 23 skip / 3 red |
+| 2026-11-19（清库那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip / 1 red |
 
-> ⚠️ **站点重做（2026-11-18，hexo → Astro）推翻了上面这组账里的站点那一半。**
-> 站点那一套 332 条是 hexo 时代的（渲染、构建、主题、部署工作流的形状），
-> 随旧站点一起撤掉了；新的站点套件是 **26 条**（学习流归属、死链、页面齐全）。
-> 所以「199 + 332 = 531」这条对账**只对归位那一轮成立**，
-> 不是今天的基线——今天的站点基线是表里第 2 行的 **26 passed**。
+变红的是**被测对象没了**，不是逻辑坏了：
 
-### 视频流水线那 3 个红（**既有的，不是这次改动造成的**）
+- 根套件 196 → 81：站点那一套 332 条早已归位；这轮又删掉了
+  几批**测已删脚本**的用例（`tools/draft-descriptions.py` 等），
+  并把**依赖仓库内容**的用例改成在 `tmp_path` 里造语料。
+- publish 411 → 338：删掉的是测 hexo 时代 `sync-hexo.py` 的集成用例；
+  母稿相关的用例改成在临时目录里造稿子，不再依赖仓库里曾经有过的内容。
+- 站点 26 → 51：站点重做之后补的守卫（学习流归属、围栏、死链）。
+- video 1269 → 1050：视频线清空重来，期目录的用例随内容一起少了。
+- douyin 131 → 115（原先 19 条红）：视频线清空后，「入库的六期」这个对象没了，
+  依赖它的用例改成在 `tmp_path` 里现造四层坐标的期；测「真实成片」的那
+  12 条（永远 skip）并进了合成成片的端到端用例。
+- wechat 505 → 505（原先 22 条红）：adapter 之前 import 一个已删的 hexo 脚本、
+  又 shell out 调两个同样已删的脚本做 sync，读不到任何文章。改成接今天的两条
+  （`tools/build-content-units.py` + `platforms/blog/site/tools/sync-content.py`）。
 
-| 用例 | 为什么红 |
-| --- | --- |
-| `video/pipeline/tests/test_publish_copy.py::test_publish_copies_match_the_canonical_docs` | `video/` 正本与 `docs/life/aiv/` 发布副本漂移。**已知**，本轮之前就是红的 |
-| `video/pipeline/tests/test_character.py::test_avatar_asset_lives_in_repo` | `video/pipeline/pyv/character.py` 的 `AVATAR_IMAGE` 还指着**搬家前的** `themes/matery/source/medias/avatar.jpg`；主题搬进 `platforms/blog/site/themes/` 之后那个路径没了 |
-| `video/pipeline/tests/test_scenes.py::test_s06_uses_personal_avatar_and_no_banned_words` | 同上（`avatar_path()` 返回 `None`） |
+> **规律：一条用例如果依赖「仓库里曾经有过的内容」，它迟早会因为
+> 内容被清掉而变成假红。** 新的用例一律在自己造语料。
 
-后两条是**站点搬家（`bc876e42`）留下的陈旧路径**，不是测试归位造成的。
-它们的修法有两条路——把常量改指新路径，或者把头像**搬进视频模块自己的素材目录**
-（后者才真正解耦：视频线不该依赖站点的主题）。**这是个设计决定，留给人来定。**
+### 那 1 个红（`browser/`）
+
+`browser/tests/test_session.py::test_a_script_can_attach_to_a_browser_that_is_already_running`
+—— 需要一台**真的装好浏览器的机器**，容器里没有就 `BrowserUnavailable`。
+**这是环境红，不是逻辑红。** 它的其余 99 条（形状验证）全绿。
 
 ---
 
@@ -130,10 +140,19 @@ I2 已经有测试钉着：`publish/tests/test_episode.py` 的集成用例
 
 | 工作流 | 跑哪几个模块 |
 | --- | --- |
-| `.github/workflows/contracts.yml` | 母稿 / review 层、publish 契约层、头条 adapter、微信 adapter——**每个模块一条 step**，每条带 `if: ${{ !cancelled() }}`，一个模块红不挡住别的模块 |
+| `.github/workflows/contracts.yml` | 母稿 / review 层、publish 契约层、头条 adapter、微信 adapter、抖音 adapter——**每个模块一条 step**，每条带 `if: ${{ !cancelled() }}`，一个模块红不挡住别的模块 |
 | `.github/workflows/site.yml` | 站点模块：`verify` job 守约束（内容单元 / 围栏 / 学习流数据），`build` job 出产物 + 跑站点守卫测试（带 `::error::` 注解，不登录也能看到是哪条挂了） |
 | `.github/workflows/video-pipeline.yml` | 视频流水线 |
 
 **每个模块只在一个地方跑一次**——不重复收集，也就不会「多出一条用例」。
 
 **验收的粒度 = 模块的粒度。** 谁改了什么，就只有谁的套件会红。
+
+> ⚠️ **`browser/` 还没进 CI。** 它的套件要 playwright 与一台装好浏览器的
+> 机器（那条红就是环境红）。它不进 CI 的后果是**跟抖音一样**：没人知道
+> 它的红是存量红还是新红。补它需要给仓库加一份 `requirements/browser.txt`
+> 与一条装浏览器的步骤——**这是上线那一轮的事**，先记在这儿。
+
+> ⚠️ 两条工作流（`contracts.yml`、`site.yml`）在 2026-11-19 之前一直
+> 监听 `master`，而这个仓库的默认分支是 `main`——**闸门从来没跑过**。
+> 已修（`d1da8f2d`）。
