@@ -16,9 +16,14 @@ from pyv import epmeta
 
 
 def _write(tmp_path, payload):
-    root = tmp_path / "publish"
+    """造一期的目录，把发布元数据写进去。
+
+    **`root` 就是期目录本身**（`epmeta.meta_path` 的新语义）：
+    元数据落在 `期目录/publish.json`，不再是一堆平铺的 `<期号>.json`。
+    """
+    root = tmp_path / "episode"
     root.mkdir(parents=True, exist_ok=True)
-    path = root / "ep01.json"
+    path = root / epmeta.PUBLISH_NAME
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     return root
 
@@ -266,32 +271,55 @@ def test_a_douyin_section_is_never_required_to_exist(tmp_path):
 
 
 # --- 入库的真实元数据 ------------------------------------------------------
+#
+# 元数据跟着期走：`video/episodes/<slug>/publish.json`。
 
 
 def test_every_stored_episode_passes_the_meta_check():
-    """`video/publish/*.json` 是**入库的事实**——坏了要在测试里红。
+    """期目录里的 `publish.json` 是**入库的事实**——坏了要在测试里红。
 
     不是等到出包那天才发现某一期的文案超了限额。
     """
-    for path in sorted(epmeta.PUBLISH_DIR.glob("*.json")):
-        meta = epmeta.load_meta(path.stem)
+    for slug in epmeta.published_episodes():
+        meta = epmeta.load_meta(slug)
         errors = _errors(epmeta.check_meta(meta))
         assert errors == [], (
-            f"{path.name} 有校验错误：" + "；".join(str(f) for f in errors)
+            f"{slug} 有校验错误：" + "；".join(str(f) for f in errors)
         )
 
 
 def test_every_stored_episode_carries_a_douyin_section():
-    """这六期都发抖音，所以六期都得有抖音文案段。
+    """发了抖音的期都得有抖音文案段。
 
     「某一期不发抖音」是合法状态，但那是**在事实里记下来的**——
     要跳过某一期，就改这一处并说明，别让「忘了写」混过去。
     """
-    for path in sorted(epmeta.PUBLISH_DIR.glob("*.json")):
-        meta = epmeta.load_meta(path.stem)
+    for slug in epmeta.published_episodes():
+        meta = epmeta.load_meta(slug)
         assert meta.platform("douyin") is not None, (
-            f"{path.name} 没有 douyin 段——这一期不发抖音的话，在这里明确排除它"
+            f"{slug} 没有 douyin 段——这一期不发抖音的话，在这里明确排除它"
         )
+
+
+def test_published_episodes_are_found_by_their_publish_json(tmp_path, monkeypatch):
+    """有发布元数据的期，就是期目录里放着 `publish.json` 的那些期。"""
+    root = tmp_path / "episodes"
+    root.mkdir()
+    (root / "b-slug").mkdir()
+    (root / "b-slug" / epmeta.PUBLISH_NAME).write_text("{}", encoding="utf-8")
+    (root / "a-slug").mkdir()
+    (root / "a-slug" / epmeta.PUBLISH_NAME).write_text("{}", encoding="utf-8")
+    (root / "c-slug").mkdir()          # 没有 publish.json：不是发了的期
+    monkeypatch.setattr(epmeta, "EPISODES_DIR", root)
+    assert epmeta.published_episodes() == ["a-slug", "b-slug"]
+
+
+def test_meta_path_points_into_the_episode_dir(tmp_path):
+    """默认位置是期目录里的 `publish.json`；给了 root 就是那个目录本身。"""
+    assert epmeta.meta_path("some-slug").name == epmeta.PUBLISH_NAME
+    assert epmeta.meta_path("some-slug").parent.name == "some-slug"
+    assert epmeta.meta_path("some-slug", root=tmp_path) == \
+        tmp_path / epmeta.PUBLISH_NAME
 
 
 # --- 整数字段的取值域 ------------------------------------------------------
@@ -354,8 +382,8 @@ def test_a_non_numeric_cover_at_raises_a_meta_error(tmp_path):
 
 
 def test_broken_json_raises_a_meta_error(tmp_path):
-    root = tmp_path / "publish"
+    root = tmp_path / "episode"
     root.mkdir(parents=True, exist_ok=True)
-    (root / "ep01.json").write_text("{不是 JSON", encoding="utf-8")
+    (root / epmeta.PUBLISH_NAME).write_text("{不是 JSON", encoding="utf-8")
     with pytest.raises(epmeta.MetaError):
         epmeta.load_meta("ep01", root=root)

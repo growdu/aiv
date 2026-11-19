@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from pyv import compose
+from pyv import episodes as episodes_mod
 from pyv.timeline import Storyboard
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -286,21 +287,28 @@ def test_real_storyboard_matches_real_narration():
     套上品牌片头/片尾后，契约总时长会变长，但正文（品牌片之外的部分）
     必须仍然等于旁白时长。
 
+    **一期 = 一个目录**：时间轴与旁白都在期目录里
+    （`video/episodes/<slug>/storyboard.json` 与 `narration.mp3`），
+    没有期就跳过并说清楚——**不许静默跳过**。
+
     ⚠️ 这条曾经是**死的**：它指向的 `pa_decode_v2.mp3` 早已被
     `narration_pg-parallel-decode.mp3` 取代，文件不存在 → 一直静默 skip。
-    旁白换稿后要跟着改这里，否则这条守卫等于没有。
+    现在改成按期目录找，期建出来就自动生效。
     """
-    storyboard_path = ROOT / "storyboard_pg-parallel-decode.json"
-    narration_path = ROOT / "narration_pg-parallel-decode.mp3"
-    if not storyboard_path.exists() or not narration_path.exists():
-        pytest.skip("真实资产不在仓库中，跳过")
-
-    sb = Storyboard.load(storyboard_path)
-    assert sb.validate() == []
-    body = [s for s in sb.scenes if not s.id.startswith("brand_")]
-    body_duration = max(s.end for s in body) - min(s.start for s in body)
-    info = _probe(narration_path)
-    assert float(info["format"]["duration"]) == pytest.approx(
-        body_duration, abs=0.05
-    )
-    assert body_duration == pytest.approx(32.436, abs=0.001)
+    checked = 0
+    for slug in episodes_mod.known_eps():
+        storyboard_path = episodes_mod.storyboard_path(slug)
+        narration_path = episodes_mod.narration_path(slug)
+        if not storyboard_path.exists() or not narration_path.exists():
+            continue
+        checked += 1
+        sb = Storyboard.load(storyboard_path)
+        assert sb.validate() == []
+        body = [s for s in sb.scenes if not s.id.startswith("brand_")]
+        body_duration = max(s.end for s in body) - min(s.start for s in body)
+        info = _probe(narration_path)
+        assert float(info["format"]["duration"]) == pytest.approx(
+            body_duration, abs=0.05
+        ), f"{slug} 的正文时长与旁白时长对不上"
+    if not checked:
+        pytest.skip("磁盘上没有带时间轴与旁白的期，没有真实资产可对")

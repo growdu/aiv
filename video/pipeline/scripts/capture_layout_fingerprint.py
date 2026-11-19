@@ -36,10 +36,10 @@ FIXTURE = PIPELINE_ROOT / "tests" / "fixtures" / "layout_fingerprint.json"
 
 
 def _segments():
-    """六期契约里的全部视觉段。"""
-    for episode in episodes_mod.EPISODE_ORDER:
+    """所有期契约里的全部视觉段。"""
+    for episode in episodes_mod.known_eps():
         contract = contract_mod.load_contract(
-            AIV_ROOT / "contracts" / f"{episode}.json")
+            episodes_mod.contract_path(episode))
         for segment in contract.segments:
             yield episode, segment
 

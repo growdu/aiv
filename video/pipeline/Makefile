@@ -13,7 +13,7 @@
 #   make mix-verify 成片级混音验收（规范 §5.7）
 #   make all       validate → brand → render → compose
 #   make nobrand   无品牌导流版（抖音这一档用）：nobrand → render → compose
-#                  胸口铭牌也是品牌标识：make EP=<期号> nobrand NOBADGE=1
+#                  胸口铭牌也是品牌标识：make EP=<slug> nobrand NOBADGE=1
 #                  换成无标牌形象（默认保留铭牌，等实投结果再定）
 #   make vertical  竖版 9:16（抖音那一档）：align --canvas vertical → nobrand
 #                  → render → compose
@@ -21,39 +21,24 @@
 # align 是手工步骤，需要在 all 之前单独跑。
 # 片段是增量渲染的：build/ 里未过期的片段会被直接复用。
 #
-# 换一期：make EP=<期号> ...，例如
-#   make EP=csn-total-ordering align
+# 换一期：make EP=<slug> ...，例如
+#   make EP=postgresql-basics align
 #
-# 一期 = 一个 EP 号，它决定契约 / 旁白 / 时间轴 / 片段目录 / 成片的文件名。
-# **口播稿按主题命名，不按 EP 号**——所以在下面按 EP 显式登记，
-# 换期时忘了换稿会当场报错，而不是静悄悄地拿上一期的稿子出片。
+# 一期 = video/episodes/<slug>/ 一个目录，它决定契约 / 旁白 / 时间轴 /
+# 片段目录 / 成片的文件名。**这里没有登记表**：建目录、放文件，就是新一期。
+# EP 收的是 **slug**（身份），不是期号。
 
 ROOT := ..
 # Python 解释器：Linux 上常常只有 python3，没有 python。
 # 想指定别的解释器就 `make PY=/path/to/python3 ...`。
 PY ?= $(shell command -v python3 >/dev/null 2>&1 && echo python3 || echo python)
 
-EP ?= pg-parallel-decode
-
-ifeq ($(EP),pg-parallel-decode)
-SCRIPT := $(ROOT)/字幕-并行解码.md
-else ifeq ($(EP),csn-total-ordering)
-SCRIPT := $(ROOT)/字幕-CSN全序.md
-else ifeq ($(EP),wal-interleave)
-SCRIPT := $(ROOT)/字幕-WAL顺序.md
-else ifeq ($(EP),parallel-apply)
-SCRIPT := $(ROOT)/字幕-并行apply.md
-else ifeq ($(EP),structured-ddl)
-SCRIPT := $(ROOT)/字幕-结构化DDL.md
-else ifeq ($(EP),row-lock)
-SCRIPT := $(ROOT)/字幕-行锁.md
-else
-$(error 未知 EP「$(EP)」：在 Makefile 里登记这一期的口播稿路径)
-endif
-
-STORYBOARD := $(ROOT)/storyboard_$(EP).json
-NARRATION := $(ROOT)/narration_$(EP).mp3
-CONTRACT := $(ROOT)/contracts/$(EP).json
+EP ?=
+EPISODE_DIR := $(if $(strip $(EP)),$(ROOT)/episodes/$(EP))
+SCRIPT := $(EPISODE_DIR)/口播稿.md
+CONTRACT := $(EPISODE_DIR)/contract.json
+NARRATION := $(EPISODE_DIR)/narration.mp3
+STORYBOARD := $(EPISODE_DIR)/storyboard.json
 # 正文铺底（曲库台账里 series_role=bed 的那首）
 BGM := $(ROOT)/music/tracks/series-bed-01.wav
 # 片段目录按期分开：各期的段 id 会重名（s01…），共用一个目录会互相覆盖。
@@ -66,7 +51,7 @@ OUT := $(ROOT)/out/$(EP).mp4
 #
 # **片段目录与成片都另起一份**：不跟带品牌的版本共用，否则增量渲染会把
 # 带品牌片的片段当成可复用的（成片的 sha256 变了才发现，已经晚了）。
-NOBRAND_STORYBOARD := $(ROOT)/storyboard_$(EP)__nobrand.json
+NOBRAND_STORYBOARD := $(EPISODE_DIR)/storyboard__nobrand.json
 NOBRAND_BUILD := $(ROOT)/build/$(EP)__nobrand
 NOBRAND_OUT := $(ROOT)/out/$(EP)__nobrand.mp4
 
@@ -74,21 +59,29 @@ NOBRAND_OUT := $(ROOT)/out/$(EP)__nobrand.mp4
 # 被判「过度营销信息」时用它重出片。**默认不换**——铭牌占比极小，
 # 先按保留投一条看审核结果（规格 §十四 第 16 条）。
 #
-#   make EP=row-lock nobrand NOBADGE=1
+#   make EP=<slug> nobrand NOBADGE=1
 NOBADGE_CHAR := $(ROOT)/character/growdu_character_2k_nobg_nobadge.png
 CHARACTER_FLAG := $(if $(NOBADGE),--character $(NOBADGE_CHAR))
 
 # 竖版画布（抖音那一档）：9:16。**不套品牌片**——品牌片素材是横版的，
 # 贴到竖版画布上会被拉变形（`pyv.cli brand` 会直接拒绝）。
 # 竖版这一档同时也是无品牌版：片头片尾本来就不该有。
-VERTICAL_ALIGNED := $(ROOT)/storyboard_$(EP)__vertical_aligned.json
-VERTICAL_STORYBOARD := $(ROOT)/storyboard_$(EP)__vertical.json
+VERTICAL_ALIGNED := $(EPISODE_DIR)/storyboard__vertical_aligned.json
+VERTICAL_STORYBOARD := $(EPISODE_DIR)/storyboard__vertical.json
 VERTICAL_BUILD := $(ROOT)/build/$(EP)__vertical
 VERTICAL_OUT := $(ROOT)/out/$(EP)__vertical.mp4
 
-.PHONY: all test doctor validate align brand render compose nobrand vertical probe persona bgm mix-verify topics pronunciation review review-text review-video review-frames clean
+.PHONY: all test doctor validate align brand render compose nobrand vertical probe persona bgm mix-verify topics pronunciation review review-text review-video review-frames clean require-EP
 
 all: validate brand render compose
+
+# 下面这些 target 要指定期号（EP 收的是 slug）。没给就当场说清楚，别拿空路径去跑。
+require-EP:
+	@if [ -z "$(strip $(EP))" ]; then \
+		echo "缺少 EP=<slug>：一期 = video/episodes/<slug>/ 一个目录"; \
+		echo "  ls video/episodes/ 看有哪些期"; \
+		exit 2; \
+	fi
 
 test:
 	$(PY) -m pytest tests/ -q
@@ -97,26 +90,26 @@ test:
 doctor:
 	$(PY) -m pyv.cli doctor
 
-validate:
+validate: require-EP
 	$(PY) -m pyv.cli validate --storyboard $(STORYBOARD)
 
-align:
+align: require-EP
 	$(PY) -m pyv.cli align --audio $(NARRATION) --script $(SCRIPT) \
 		--scenes $(CONTRACT) --out $(STORYBOARD)
 
-brand:
+brand: require-EP
 	$(PY) -m pyv.cli brand --storyboard $(STORYBOARD) --out $(STORYBOARD) \
 		--build $(BUILD)
 
-render:
+render: require-EP
 	$(PY) -m pyv.cli render --storyboard $(STORYBOARD) --out $(BUILD)
 
-compose:
+compose: require-EP
 	$(PY) -m pyv.cli compose --storyboard $(STORYBOARD) --build $(BUILD) \
 		--out $(OUT) --narration $(NARRATION) --bgm $(BGM)
 
 # 无品牌导流版（抖音这一档用）
-nobrand:
+nobrand: require-EP
 	$(PY) -m pyv.cli nobrand --storyboard $(STORYBOARD) \
 		--out $(NOBRAND_STORYBOARD)
 	$(PY) -m pyv.cli render --storyboard $(NOBRAND_STORYBOARD) \
@@ -128,7 +121,7 @@ nobrand:
 # 竖版（抖音那一档）：9:16
 # align 直接产出竖版画布的 storyboard，再走 nobrand（竖版不要品牌片，
 # 也不要落版上的品牌名）。
-vertical:
+vertical: require-EP
 	$(PY) -m pyv.cli align --audio $(NARRATION) --script $(SCRIPT) \
 		--scenes $(CONTRACT) --canvas vertical --out $(VERTICAL_ALIGNED)
 	$(PY) -m pyv.cli nobrand --storyboard $(VERTICAL_ALIGNED) \
@@ -139,7 +132,7 @@ vertical:
 		--build $(VERTICAL_BUILD) --out $(VERTICAL_OUT) \
 		--narration $(NARRATION) --bgm $(BGM)
 
-persona:
+persona: require-EP
 	$(PY) -m pyv.cli persona check --script $(SCRIPT)
 
 bgm:
@@ -155,11 +148,11 @@ pronunciation:
 	$(PY) ../voice/scripts/check_pronunciation.py --calibrate
 
 # 成片级验收：稳态 duck 深度、旁白/BGM 电平差、真峰值、旁白增益（规范 §5.7）
-mix-verify:
+mix-verify: require-EP
 	$(PY) -m pyv.cli bgm verify --video $(OUT) --narration $(NARRATION) \
 		--music $(BGM) --storyboard $(STORYBOARD)
 
-probe:
+probe: require-EP
 	ffprobe -v error -show_entries format=duration \
 		-show_entries stream=width,height,codec_type,codec_name,pix_fmt \
 		-of default=noprint_wrappers=1 $(OUT)
@@ -169,15 +162,15 @@ probe:
 # 两层分开：文本层审「要讲什么」，成片层审「做出来是什么样」。
 # **信号不是门禁**：命中信号不会让命令失败——一期历史问题不该
 # 永久卡住流水线。记录与状态在 video/review/episodes/<EP>.md。
-review-text:
+review-text: require-EP
 	$(PY) -m pyv.cli review text --episode $(EP)
 
-review-video:
+review-video: require-EP
 	$(PY) -m pyv.cli review video --episode $(EP)
 
 # 抽帧 + 清单：给人和 Agent 看画面用。帧不入库（video/.gitignore 拦 frames/），
 # 入库的是清单与结论。
-review-frames:
+review-frames: require-EP
 	$(PY) -m pyv.cli review frames --episode $(EP)
 
 clean:

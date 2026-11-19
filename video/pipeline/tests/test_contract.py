@@ -2,8 +2,8 @@
 
 **分工原则**：本期内容进契约，版式常量留代码。
 
-这一期（以及以后每一期）的文案、数字、标签都写在 `video/contracts/*.json` 里，
-场景渲染器不许再写死它们。这组测试盯着三件事：
+这一期（以及以后每一期）的文案、数字、标签都写在期目录里的
+`contract.json` 里，场景渲染器不许再写死它们。这组测试盯着三件事：
 
 1. 契约本身是完整的——句子恰好被覆盖一次，每段参数齐全，渲染器都存在；
 2. 文案没有回流到代码——场景源码里不再出现契约中的文案；
@@ -11,6 +11,16 @@
 
 第 3 条是关键：把文案搬进契约最容易出的事故是「顺手把画面也改了」，
 而画面变了不会有任何报错，只有逐像素比对能发现。
+
+**契约从哪来。** 一期 = 一个目录：磁盘上有期就读期目录里的契约，
+没有期就读**夹具期**（`tests/fixtures/fixture/contract.json`）。
+结构守卫不依赖磁盘上有没有期。
+
+**逐像素基准的处境**（见 `tests/fixtures/scene_baseline.json`）：
+基准是**已删的六期**抓的，那六期的契约不在了，画面没法复现。
+所以逐像素那条在「当前契约与基准没有交集」时**跳过并说清楚为什么**，
+而不是假装比过了；基准本身的形状（覆盖了哪些场景模块、键的格式）
+仍然由测试钉住——新加一个场景模块却没重抓基准，那两条会红。
 """
 
 import ast
@@ -23,15 +33,30 @@ import cairo
 import pytest
 
 from pyv import contract as contract_mod
+from pyv import episodes as episodes_mod
 from pyv.params import MissingParam, Params
 
 FIXTURES = Path(__file__).parent / "fixtures"
 BASELINE = FIXTURES / "scene_baseline.json"
 
-# 仓库里每一期的契约。结构与文案守卫生效在**每一期**上，
-# 逐像素基准也覆盖**每一期的每一段**（基准按段抓，不是按模块抓）。
-ALL_CONTRACT_PATHS = sorted(contract_mod.CONTRACTS_DIR.glob("*.json"))
-EPISODES = [path.stem for path in ALL_CONTRACT_PATHS]
+#: 夹具期的契约（磁盘上没有期时读它）。
+FIXTURE_CONTRACT = FIXTURES / "fixture" / "contract.json"
+
+
+def _contract_sources() -> list[tuple[str, Path]]:
+    """（标签, 契约路径）列表。
+
+    有期读期目录里的；没有期读夹具期。
+    """
+    sources = [(slug, episodes_mod.contract_path(slug))
+               for slug in episodes_mod.known_eps()]
+    sources = [(slug, path) for slug, path in sources if path.is_file()]
+    return sources or [("fixture", FIXTURE_CONTRACT)]
+
+
+#: 每一期的契约。结构与文案守卫生效在**每一期**上。
+ALL_CONTRACT_PATHS = [path for _, path in _contract_sources()]
+EPISODES = [label for label, _ in _contract_sources()]
 
 # 短于 3 个字符的文案不判：两个汉字的词（"输出"、"并行"）到处都是，
 # 拿它当判据只会天天误报。3 个字起才算「一句具体的文案」。
@@ -44,32 +69,34 @@ BASELINE_TIMES = (0.0, 0.45, 0.9)
 def _baseline_key(episode: str, segment, t: float) -> str:
     """基准的键：期号 + 段 id + 渲染器 + 时刻。
 
-    **必须带期号**：`s01_intro` 与 `s06_outro` 六期都在用，而每期的
+    **必须带期号**：`s01_intro` 与 `s06_outro` 多期都在用，而每期的
     `params` 不同（标题文案各不一样）→ 画面不同 → 哈希不同。只按渲染器
-    存一份，后五期的画面就永远比不到。
+    存一份，后面的期就永远比不到。
     """
     return f"{episode}/{segment.id}/{segment.renderer}@{t}"
 
 
-def _expected_baseline_keys(all_contracts) -> set[str]:
-    """六期契约里的每一段 × 每个时刻。"""
-    return {
-        _baseline_key(episode, segment, t)
-        for episode, contract in all_contracts.items()
-        for segment in contract.segments
-        for t in BASELINE_TIMES
-    }
-
-
 @pytest.fixture(scope="module")
 def contract():
-    return contract_mod.load_contract()
+    """当前那一期的契约（第一期；没有期就是夹具期）。"""
+    return contract_mod.load_contract(ALL_CONTRACT_PATHS[0])
 
 
 @pytest.fixture(scope="module")
 def all_contracts():
-    """每一期的契约，按期号索引。"""
-    return {path.stem: contract_mod.load_contract(path) for path in ALL_CONTRACT_PATHS}
+    """每一期的契约，按标签索引。"""
+    return {label: contract_mod.load_contract(path)
+            for label, path in _contract_sources()}
+
+
+def _baseline_data() -> dict:
+    return json.loads(BASELINE.read_text(encoding="utf-8"))
+
+
+def _baseline_renderers() -> set[str]:
+    """基准里出现过的场景模块名。"""
+    return {key.split("/")[2].split("@")[0].rsplit(".", 1)[-1]
+            for key in _baseline_data()["frames"]}
 
 
 # ---------------------------------------------------------------- 契约完整性
@@ -81,17 +108,23 @@ def test_contract_loads_and_has_segments(all_contracts, episode):
     assert contract.version == 1
     assert contract.episode
     assert contract.title
-    assert len(contract.segments) == 6
+    assert contract.segments
 
 
 @pytest.mark.parametrize("episode", EPISODES)
 def test_contract_covers_every_sentence_exactly_once(all_contracts, episode):
+    """句子恰好被覆盖一次——漏一句、重一句都不行。
+
+    **「恰好一次」是判据，不是巧合**：漏掉的句子在成片里没有画面，
+    重复分配的句子会让同一句配两张图。
+    """
     contract = all_contracts[episode]
     seen: list[int] = []
     for segment in contract.segments:
         seen.extend(segment.sentences)
-    assert sorted(seen) == list(range(contract.sentence_count))
-    assert contract.sentence_count == 10
+    assert sorted(seen) == list(range(contract.sentence_count)), (
+        f"{episode} 的句子没被恰好覆盖一次：{sorted(seen)}"
+    )
 
 
 @pytest.mark.parametrize("episode", EPISODES)
@@ -204,7 +237,7 @@ def test_copy_guard_actually_catches_a_leak(contract):
 
 @pytest.mark.parametrize("episode", EPISODES)
 def test_copy_guard_works_for_every_episode(all_contracts, episode):
-    """守卫对每一期都要有效，不只是默认那一期。"""
+    """守卫对每一期都要有效，不只是第一期。"""
     contract = all_contracts[episode]
     keys = _param_keys(contract)
     segment = contract.segments[0]
@@ -300,7 +333,7 @@ def baseline_frames():
     """
     import platform
 
-    data = json.loads(BASELINE.read_text(encoding="utf-8"))
+    data = _baseline_data()
     from pyv import fonts
 
     baseline_font = data["capture"].get("font", "")
@@ -321,54 +354,32 @@ def baseline_frames():
     return data["frames"]
 
 
-def test_contract_driven_rendering_is_pixel_identical(all_contracts, monkeypatch,
-                                                      baseline_frames):
-    """契约化之后，画面必须与改造前一模一样。
+def test_the_baseline_keys_are_well_formed():
+    """基准的键必须是 `期/段/渲染器@时刻`。
 
-    基准指纹是「文案还写死在场景代码里」时抓的。把文案搬进契约最容易出的
-    事故就是顺手把画面也改了——而画面变了不会有任何报错，只有逐像素比对能发现。
-
-    **覆盖六期每一段**：基准按段抓，键带期号与段 id。
+    **键写错了，比对时一条都匹配不上**——守卫看着绿，实际什么都没比。
     """
-    _without_mascot(monkeypatch)
-    baseline = baseline_frames
-    for episode, contract in all_contracts.items():
-        for segment in contract.segments:
-            for t in BASELINE_TIMES:
-                key = _baseline_key(episode, segment, t)
-                assert key in baseline, f"基准里没有 {key}"
-                actual = _scene_frame_hash(segment.renderer, segment.params, t)
-                assert actual == baseline[key], f"{key} 的画面变了：文案搬进契约不该动到画面"
+    data = _baseline_data()
+    for key in data["frames"]:
+        parts = key.split("/")
+        assert len(parts) == 3, f"基准的键不是三段：{key}"
+        episode, segment, tail = parts
+        assert episode and segment, key
+        renderer, _, moment = tail.partition("@")
+        assert renderer.startswith("pyv.scenes."), key
+        assert float(moment) in BASELINE_TIMES, (
+            f"{key} 的时刻不在基准抓取的时刻里：{BASELINE_TIMES}"
+        )
 
 
-def test_the_baseline_covers_every_segment(all_contracts):
-    """基准必须覆盖六期契约里的每一段——少一段就有一段画面没人守。
-
-    这条**不依赖字体**：基准里有没有某一段是文件内容的事，与当前机器
-    用哪款字体无关。所以它直接读 fixture，不走会 skip 的 `baseline_frames`。
-    """
-    data = json.loads(BASELINE.read_text(encoding="utf-8"))
-    actual = set(data["frames"])
-    expected = _expected_baseline_keys(all_contracts)
-    assert actual == expected, (
-        f"基准覆盖对不上：缺 {sorted(expected - actual)[:5]}；"
-        f"多 {sorted(actual - expected)[:5]}"
-    )
-
-
-def test_the_baseline_covers_every_scene_module(all_contracts):
+def test_the_baseline_covers_every_scene_module():
     """基准里的渲染器集合必须等于目录里的场景模块集合。
 
     照 `tests/test_scene_overlap.py::test_every_scene_module_is_covered`
     的写法：集合相等，不是子集。新加一个模块却没进任何一期契约，
     基准就扫不到它——守卫覆盖不到的那部分，坏了也不会红。
     """
-    data = json.loads(BASELINE.read_text(encoding="utf-8"))
-    # 基准里的渲染器是 `pyv.scenes.s01_intro`，目录侧是文件名 `s01_intro`
-    # ——取最后一段对齐。
-    in_baseline = {
-        key.split("/")[2].split("@")[0].rsplit(".", 1)[-1] for key in data["frames"]
-    }
+    in_baseline = _baseline_renderers()
     scenes_dir = Path(contract_mod.__file__).parent / "scenes"
     on_disk = {
         path.stem for path in scenes_dir.glob("*.py")
@@ -378,6 +389,56 @@ def test_the_baseline_covers_every_scene_module(all_contracts):
         f"基准没盖住全部场景模块：目录有基准没有 {sorted(on_disk - in_baseline)}；"
         f"基准有目录没有 {sorted(in_baseline - on_disk)}"
     )
+
+
+def test_the_baseline_covers_every_renderer_in_use(all_contracts):
+    """当前契约用到的每个场景模块都要在基准里。
+
+    **这是「重抓基准」的信号**：新加一期、契约里用了新场景模块，
+    而基准还没重抓——这条就红。
+    """
+    used = {segment.renderer.split(".")[-1]
+            for contract in all_contracts.values()
+            for segment in contract.segments}
+    missing = used - _baseline_renderers()
+    assert not missing, (
+        f"基准里没有这些场景模块的帧：{sorted(missing)}——"
+        f"重抓：python3 scripts/capture_scene_baseline.py"
+    )
+
+
+def test_contract_driven_rendering_is_pixel_identical(all_contracts, monkeypatch,
+                                                      baseline_frames):
+    """契约化之后，画面必须与改造前一模一样。
+
+    基准指纹是「文案还写死在场景代码里」时抓的。把文案搬进契约最容易出的
+    事故就是顺手把画面也改了——而画面变了不会有任何报错，只有逐像素比对能发现。
+
+    **覆盖当前每一期的每一段**：基准按段抓，键带期号与段 id。
+
+    **基准里没有当前这一期时跳过并说清楚**：基准是**已删的六期**抓的，
+    那六期的契约不在了，画面复现不出来。没有交集就不是「比过了」，
+    是「比不了」——这里明说，不装作绿。
+    """
+    _without_mascot(monkeypatch)
+    baseline = baseline_frames
+    compared = 0
+    for episode, contract in all_contracts.items():
+        for segment in contract.segments:
+            for t in BASELINE_TIMES:
+                key = _baseline_key(episode, segment, t)
+                if key not in baseline:
+                    continue
+                compared += 1
+                actual = _scene_frame_hash(segment.renderer, segment.params, t)
+                assert actual == baseline[key], f"{key} 的画面变了：文案搬进契约不该动到画面"
+    if not compared:
+        pytest.skip(
+            "逐像素基准里没有当前任何一期的帧：基准是已删的六期抓的，"
+            "那些契约不在了，画面复现不出来。"
+            "重抓（先修脚本：它还指着旧路径 video/contracts/）："
+            "python3 scripts/capture_scene_baseline.py"
+        )
 
 
 def test_pixel_baseline_excludes_local_mascot_asset(contract, all_contracts,
@@ -390,20 +451,30 @@ def test_pixel_baseline_excludes_local_mascot_asset(contract, all_contracts,
     """
     from pyv import character
 
-    baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
-    assert baseline["capture"]["mascot"] == "none", "基准必须是在不画形象时抓的"
-    assert baseline["capture"]["times"] == list(BASELINE_TIMES)
-    # 条数由契约推导：加期不用改这里，但漏抓会红。
-    assert len(baseline["frames"]) == len(_expected_baseline_keys(all_contracts)), (
-        "基准的帧数必须等于六期契约的段数 × 时刻数"
+    data = _baseline_data()
+    assert data["capture"]["mascot"] == "none", "基准必须是在不画形象时抓的"
+    assert data["capture"]["times"] == list(BASELINE_TIMES)
+
+    # 帧数由基准自己的键推出来：每个（期, 段, 时刻）一条。
+    triples = {
+        (key.split("/")[0], key.split("/")[1], key.split("/")[2].partition("@")[2])
+        for key in data["frames"]
+    }
+    assert len(data["frames"]) == len(triples), (
+        "基准里有重复的键——同一段同一时刻存了两份"
     )
 
     # 主工作区里形象素材是在的：有它也必须对得上「不画形象」的基准，
     # 说明素材确实没进比较。
     if not character.STATIC_IMAGE.is_file():
         pytest.skip("本机没有形象素材，这条前提无从验证")
-    _without_mascot(monkeypatch)
     segment = next(s for s in contract.segments
                    if s.renderer == "pyv.scenes.s01_intro")
     key = _baseline_key(contract.episode, segment, 0.45)
+    if key not in baseline_frames:
+        pytest.skip(
+            f"基准里没有 {key}（基准是已删的六期抓的）——"
+            f"这条前提要等基准重抓才能验"
+        )
+    _without_mascot(monkeypatch)
     assert _scene_frame_hash("pyv.scenes.s01_intro", segment.params, 0.45) == baseline_frames[key]

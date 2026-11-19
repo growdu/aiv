@@ -77,9 +77,13 @@ def test_topic_library_passes_its_own_checks():
 
 
 def test_parses_every_episode():
-    """每一期都要解析出：10 句骨架、至少一篇关联文档、至少一条出处。"""
+    """库里每一期都要解析出：10 句骨架、至少一篇关联文档、至少一条出处。
+
+    **库里可以一期都没有**：《选题库》是「模板 + 规则」，不预先囤选题——
+    空库是合法状态（`pyv/topics.py::check_topics` 也是这么判的）。
+    所以「有几期」不是判据，**「解析出来的那一期对不对」才是**。
+    """
     episodes = _episodes()
-    assert len(episodes) >= 3, f"只解析出 {len(episodes)} 期"
     for episode in episodes:
         assert episode.id, f"{episode.heading} 没有 id"
         assert len(episode.sentences) == topics.SENTENCE_COUNT, (
@@ -87,6 +91,69 @@ def test_parses_every_episode():
         )
         assert episode.docs, f"{episode.id} 没有关联文档"
         assert episode.evidence, f"{episode.id} 没有数字与出处"
+
+
+#: 一份完整的样本库（一条期）。**只在库里没有期时用来验解析器**。
+SAMPLE_LIBRARY = """# Growdu 视频选题库
+
+## EP01 · 示例期
+
+| 字段 | 值 |
+| --- | --- |
+| id | ep01 |
+| 标题 | 一个示例标题 |
+| 主钩子 | 一个示例钩子，讲的是 WAL 与事务。 |
+| 主线 | 机制族 |
+| 能力域 | PostgreSQL 内核机制 |
+| 状态 | 待做 |
+| 适配理由 | 这是测试用的样本期，适配理由随便写点字数够长就好填充用的。 |
+
+**关联文档**
+
+| 文档 | 取什么 |
+| --- | --- |
+| `docs/source-tracks/postgresql/logical-replication/逻辑复制解惑.md` | 取什么 |
+
+**口播骨架**
+
+```
+这是第 1 句，用来凑够十句用的测试文本。
+这是第 2 句，用来凑够十句用的测试文本。
+这是第 3 句，用来凑够十句用的测试文本。
+这是第 4 句，用来凑够十句用的测试文本。
+这是第 5 句，用来凑够十句用的测试文本。
+这是第 6 句，用来凑够十句用的测试文本。
+这是第 7 句，用来凑够十句用的测试文本。
+这是第 8 句，用来凑够十句用的测试文本。
+这是第 9 句，用来凑够十句用的测试文本。
+这是第 10 句，用来凑够十句用的测试文本。
+```
+
+**数字与出处**
+
+| 陈述 | 出处 | 口径 |
+| --- | --- | --- |
+| 陈述一句 | `docs/source-tracks/postgresql/logical-replication/逻辑复制解惑.md` | 口径 |
+"""
+
+
+def test_the_parser_reads_a_complete_entry(tmp_path):
+    """解析器要能从一份完整的库里读出一期。
+
+    **库里没有期的时候，这条才是解析器唯一的活样本**——
+    没有它，「解析器坏了」与「库里就是空的」长得一模一样。
+    """
+    path = tmp_path / "选题库.md"
+    path.write_text(SAMPLE_LIBRARY, encoding="utf-8")
+    episodes = topics.parse_topics(path)
+    assert len(episodes) == 1, f"样本库解析出 {len(episodes)} 期"
+    episode = episodes[0]
+    assert episode.id == "ep01"
+    assert len(episode.sentences) == topics.SENTENCE_COUNT, (
+        f"口播骨架是 {len(episode.sentences)} 句"
+    )
+    assert episode.docs, "没有关联文档"
+    assert episode.evidence, "没有数字与出处"
 
 
 def test_every_episode_stays_in_a_capability_domain():

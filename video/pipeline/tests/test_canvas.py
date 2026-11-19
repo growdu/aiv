@@ -148,18 +148,30 @@ def test_the_vertical_subtitle_uses_the_same_font_size_as_the_horizontal():
 # --- align 能写竖版 ---------------------------------------------------------
 
 
+def _first_episode_with_narration():
+    """磁盘上第一期（旁白在的）：`(slug, 口播稿, 契约, 旁白)`。
+
+    旁白是**产物**，不入库——所以本机没有旁白时这条用例跳过，
+    **不伪造音频**：造出来的音频测不出真东西。
+    """
+    for slug in episodes_mod.known_eps():
+        narration = episodes_mod.narration_path(slug)
+        if narration.is_file():
+            return (slug, episodes_mod.script_path(slug),
+                    episodes_mod.contract_path(slug), narration)
+    return None
+
+
 def test_align_can_write_a_vertical_storyboard(tmp_path):
     """`align --canvas vertical` 产出的 storyboard 是竖版的，且能过校验。"""
-    episode = episodes_mod.EPISODE_ORDER[0]
-    script = episodes_mod.EPISODES[episode]
-    contract_name = f"{episode}.json"
-    narration = ROOT / f"narration_{episode}.mp3"
-    if not narration.is_file():
-        pytest.skip(f"本机没有旁白 {narration}")
+    episode = _first_episode_with_narration()
+    if episode is None:
+        pytest.skip("磁盘上没有带旁白的期，跳过")
+    _, script, contract, narration = episode
     out = tmp_path / "sb.json"
     storyboard = align.build_storyboard(
-        narration, ROOT / script, out,
-        contract_path=ROOT / "contracts" / contract_name,
+        narration, script, out,
+        contract_path=contract,
         canvas="vertical",
     )
     assert (storyboard.video.width, storyboard.video.height) == (1080, 1920)
@@ -171,15 +183,13 @@ def test_align_can_write_a_vertical_storyboard(tmp_path):
 
 def test_align_defaults_to_the_horizontal_canvas(tmp_path):
     """默认档是横版——竖版是显式要的，不是默认换掉的。"""
-    episode = episodes_mod.EPISODE_ORDER[0]
-    script = episodes_mod.EPISODES[episode]
-    contract_name = f"{episode}.json"
-    narration = ROOT / f"narration_{episode}.mp3"
-    if not narration.is_file():
-        pytest.skip(f"本机没有旁白 {narration}")
+    episode = _first_episode_with_narration()
+    if episode is None:
+        pytest.skip("磁盘上没有带旁白的期，跳过")
+    _, script, contract, narration = episode
     storyboard = align.build_storyboard(
-        narration, ROOT / script, tmp_path / "sb.json",
-        contract_path=ROOT / "contracts" / contract_name,
+        narration, script, tmp_path / "sb.json",
+        contract_path=contract,
     )
     assert (storyboard.video.width, storyboard.video.height) == (1920, 1080)
 

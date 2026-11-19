@@ -6,9 +6,21 @@ import pytest
 
 from pyv import align
 
-# 真实口播稿在 video/ 根目录（属于契约素材，不随媒体产物一起入库）
+# 真实口播稿在期目录里（`video/episodes/<slug>/口播稿.md`）。
+# 视频线清空重来之后磁盘上没有期——下面那两条「真实契约」的用例
+# 在没有期时跳过，有期时自动盯上那一期。
 AIV_ROOT = Path(__file__).resolve().parents[2]
-REAL_MD = AIV_ROOT / "字幕-并行解码.md"
+
+
+def _real_episode():
+    """磁盘上的第一期：`(slug, 口播稿路径, 契约路径)`。没有期就返回 None。"""
+    from pyv import episodes
+
+    slugs = episodes.known_eps()
+    if not slugs:
+        return None
+    slug = slugs[0]
+    return slug, episodes.script_path(slug), episodes.contract_path(slug)
 
 
 def _make_audio(tmp_path, segments, sr=32000):
@@ -83,31 +95,36 @@ def test_parse_script_requires_section(tmp_path):
         align.parse_script(md)
 
 
-def test_build_storyboard_rejects_mismatched_counts(tmp_path):
+def test_build_storyboard_rejects_mismatched_counts(tmp_path, fixture_episode):
     md = tmp_path / "脚本.md"
     md.write_text(SAMPLE_MD.replace("第二句内容。", "第二句内容。\n第三句内容。"),
                   encoding="utf-8")
     with pytest.raises(ValueError, match="不一致"):
-        align.build_storyboard(tmp_path / "nope.wav", md, tmp_path / "out.json")
+        align.build_storyboard(tmp_path / "nope.wav", md, tmp_path / "out.json",
+                               contract_path=fixture_episode.contract)
 
 
 def test_real_contract_has_matching_counts():
-    """真实契约：口播 10 句、字幕 10 行、视觉分镜契约也期望 10 句。"""
+    """真实契约：口播句数、字幕行数、视觉分镜契约期望的句数三者一致。"""
     from pyv.contract import load_contract
-    if not REAL_MD.exists():
-        pytest.skip("口播稿不在仓库中，跳过")
-    sentences = align.parse_script(REAL_MD)
-    subtitles = align.parse_subtitle_table(REAL_MD)
-    contract = load_contract()
-    assert len(sentences) == len(subtitles) == contract.sentence_count == 10
+    episode = _real_episode()
+    if episode is None:
+        pytest.skip("磁盘上没有期，跳过")
+    _, script, contract_path = episode
+    sentences = align.parse_script(script)
+    subtitles = align.parse_subtitle_table(script)
+    contract = load_contract(contract_path)
+    assert len(sentences) == len(subtitles) == contract.sentence_count
 
 
 def test_real_contract_subtitles_fit_width():
     """真实契约：每条字幕的视觉宽度都不超过 14。"""
     from pyv.timeline import display_width, MAX_SUBTITLE_LINE
-    if not REAL_MD.exists():
-        pytest.skip("口播稿不在仓库中，跳过")
-    for text in align.parse_subtitle_table(REAL_MD):
+    episode = _real_episode()
+    if episode is None:
+        pytest.skip("磁盘上没有期，跳过")
+    _, script, _ = episode
+    for text in align.parse_subtitle_table(script):
         assert display_width(text) <= MAX_SUBTITLE_LINE, text
 
 

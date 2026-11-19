@@ -51,7 +51,7 @@ BRAND_TOKEN = "growdu"
 BRAND_COPY_PARAMS = ("badge",)
 
 # 剥掉品牌名之后空了，用这句兜底。
-# 六期的落版标签都是「独立开发者 · growdu」，剥完剩下的就是「独立开发者」；
+# 落版标签通常是「独立开发者 · growdu」，剥完剩下的就是「独立开发者」；
 # 这一句只是「万一剥空了」的兜底。
 NEUTRAL_LABEL = "独立开发者"
 

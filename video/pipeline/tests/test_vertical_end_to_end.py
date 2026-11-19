@@ -27,11 +27,12 @@ from pathlib import Path
 
 import numpy as np
 
-from pyv import align
 from pyv import compose as compose_mod
 from pyv import episodes
 from pyv import fonts
 from pyv import palette
+
+import scene_segments
 from pyv.timeline import (
     Audio,
     Scene,
@@ -59,8 +60,10 @@ SUBTITLE_FILL = "#FF00FF"
 #: **不用测试自造的文案**（「竖版端到端冒烟」那种）：那些字不在生产
 #: 字符集里，内置字体的字形守卫（`tests/test_font_subset.py`）管不到
 #: 生产上真正会出现的字——守卫看着绿，缺字照样漏过去。
-SUBTITLE_TEXT = align.parse_subtitle_table(
-    AIV_ROOT / "字幕-并行解码.md")[0]
+#
+# 口播稿从哪来：磁盘上有期就读期目录里的，没有期就读**夹具期**
+# （见 `tests/scene_segments.py`）。
+SUBTITLE_TEXT = scene_segments.subtitle_text()
 
 #: 平台 UI 区的高度（画面下缘这一段会被抖音自己的控件盖住）。
 #: 字幕的墨迹一个像素都不许掉进去。
@@ -87,14 +90,8 @@ def _probe(path: Path) -> dict:
 
 
 def _narration() -> Path:
-    """一期**已入库**的旁白音频。"""
-    for ep in episodes.EPISODE_ORDER:
-        path = episodes.narration_path(ep)
-        if path.is_file():
-            return path
-    raise AssertionError(
-        "仓库里一期旁白都没有——「出片必需的输入要入库」这条口径坏了"
-    )
+    """一份**已入库**的旁白音频（期目录里的，没有就退到仓库里那份）。"""
+    return scene_segments.narration()
 
 
 def _storyboard(narration: Path) -> Storyboard:

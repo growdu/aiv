@@ -1,67 +1,35 @@
+"""场景模块的守卫。
+
+**分工原则**：本期内容进契约，版式常量留代码。
+
+视频线清空重来之后，磁盘上没有期可读，于是这些用例自己造输入：
+形状照场景代码要的来（`tests/scene_params.py`），内容不算数。
+守住的是**场景模块自己的逻辑**——画几样东西、什么时候画、
+名字从哪儿来、几份数据之间对不对得上。
+"""
 import importlib
+from pathlib import Path
 
 import cairo
 import pytest
 
 from pyv import fonts
+from scene_params import params_for
 
-SCENE_MODULES = [
-    "pyv.scenes.s01_intro",
-    "pyv.scenes.s02_serial",
-    "pyv.scenes.s03_cores",
-    "pyv.scenes.s04_parallel",
-    "pyv.scenes.s05_bench",
-    "pyv.scenes.s06_outro",
-    # EP02（CSN 全序）新增的四个场景
-    "pyv.scenes.s02_mixed",
-    "pyv.scenes.s03_counter",
-    "pyv.scenes.s04_propagate",
-    "pyv.scenes.s05_layers",
-    # EP03（WAL 顺序与事务顺序）新增的四个场景
-    "pyv.scenes.s02_wal_interleave",
-    "pyv.scenes.s03_reorder_buffer",
-    "pyv.scenes.s04_spill",
-    "pyv.scenes.s05_emit",
-    # EP04（订阅端并行 apply）新增的四个场景
-    "pyv.scenes.s02_apply_queue",
-    "pyv.scenes.s03_conflict_key",
-    "pyv.scenes.s04_dependency_dag",
-    "pyv.scenes.s05_scheduler",
-    # EP05（结构化 DDL）新增的四个场景
-    "pyv.scenes.s02_raw_sql",
-    "pyv.scenes.s03_shortfalls",
-    "pyv.scenes.s04_ddl_pipeline",
-    "pyv.scenes.s05_ddl_benefit",
-    # EP06（行锁）新增的四个场景
-    "pyv.scenes.s02_write_conflict",
-    "pyv.scenes.s03_lock_modes",
-    "pyv.scenes.s04_lock_matrix",
-    "pyv.scenes.s05_tuple_lock",
-]
+SCENES_DIR = Path(__file__).resolve().parents[1] / "pyv" / "scenes"
 
-
-def _all_contracts():
-    """仓库里每一期的契约，默认那一期排在最前面。"""
-    from pyv import contract as contract_mod
-
-    paths = [contract_mod.DEFAULT_CONTRACT]
-    paths.extend(
-        p for p in sorted(contract_mod.CONTRACTS_DIR.glob("*.json"))
-        if p != contract_mod.DEFAULT_CONTRACT
-    )
-    return [contract_mod.load_contract(p) for p in paths]
+#: 目录里有的场景模块。**按目录扫**：加一个场景不用改测试，
+#: 少一个场景测试立刻发现（下面那条「基准盖住每个模块」也盯这件事）。
+SCENE_MODULES = sorted(
+    f"pyv.scenes.{path.stem}"
+    for path in SCENES_DIR.glob("*.py")
+    if path.stem != "__init__"
+)
 
 
 def _params_for(module_name: str) -> dict:
-    """这一期的画面内容来自视觉分镜契约，不是场景代码。
-
-    一个场景可能被多期复用（片头片尾就是），取第一个用到它的契约即可。
-    """
-    for contract in _all_contracts():
-        for segment in contract.segments:
-            if segment.renderer == module_name:
-                return segment.params
-    raise AssertionError(f"契约里没有 {module_name}")
+    """这个场景的最小 params（见 `tests/scene_params.py`）。"""
+    return params_for(module_name)
 
 
 @pytest.mark.parametrize("name", SCENE_MODULES)
@@ -91,14 +59,19 @@ def test_scene_render_handles_endpoints(name):
 
 def test_s03_highlights_exactly_one_core():
     import pyv.scenes.s03_cores as s03
-    highlighted = s03.highlighted_cores(_params_for("pyv.scenes.s03_cores"))
+
+    params = _params_for("pyv.scenes.s03_cores")
+    highlighted = s03.highlighted_cores(params)
     assert len(highlighted) == 1
-    assert 0 <= highlighted[0] < 32
+    assert 0 <= highlighted[0] < int(params["core_count"])
 
 
-def test_s04_exposes_four_workers():
+def test_s04_exposes_the_workers_the_contract_asks_for():
     import pyv.scenes.s04_parallel as s04
-    assert s04.worker_count(_params_for("pyv.scenes.s04_parallel")) == 4
+
+    params = _params_for("pyv.scenes.s04_parallel")
+    assert s04.worker_count(params) == int(params["worker_count"])
+    assert s04.worker_count(params) > 0, "画面上至少要有一个 worker"
 
 
 def test_s05_bench_draws_a_range_not_a_single_precise_value():
@@ -116,7 +89,27 @@ def test_s05_bench_draws_a_range_not_a_single_precise_value():
     assert marks["range_x"] - marks["x0"] == pytest.approx(unit * 2)
     assert marks["range_end"] - marks["x0"] == pytest.approx(unit * 5)
     assert marks["range_x"] > marks["serial_end"], "区间必须整体落在串行基线之外"
-    assert params["callout"] == "2–5 倍", "画面上的倍数必须与口播一致"
+
+
+def test_s05_bench_callout_matches_the_range_it_draws():
+    """画面上写的倍数必须与画出来的区间一致。
+
+    区间是场景代码里画死的（2 到 5 倍），倍数是契约给的——
+    两边对不上，图和字就各说各话。
+    """
+    import pyv.scenes.s05_bench as s05
+
+    params = _params_for("pyv.scenes.s05_bench")
+    marks = s05.scale(1000.0, 120.0)
+    unit = marks["unit"]
+    low = (marks["range_x"] - marks["x0"]) / unit
+    high = (marks["range_end"] - marks["x0"]) / unit
+    assert f"{low:g}" in params["callout"], (
+        f"画面上写的 {params['callout']!r} 与画出来的区间 {low:g} 倍对不上"
+    )
+    assert f"{high:g}" in params["callout"], (
+        f"画面上写的 {params['callout']!r} 与画出来的区间 {high:g} 倍对不上"
+    )
 
 
 def test_s05_bench_starts_on_the_same_left_margin_as_its_title():
@@ -160,16 +153,23 @@ def test_s05_bench_starts_on_the_same_left_margin_as_its_title():
     assert label_x > 40, "标签几乎贴死画幅左边，左边距没有留出来"
 
 
-def test_s04_separates_reader_from_walsender():
+def test_s04_source_and_target_labels_come_from_the_contract():
     """openGauss 的 reader 是独立线程，walsender 单独收口，不能画成一个。
 
     上一版把来源方标成 `Reader (WALSender)`，与源码拓扑不符。
+    **名字是数据，不是代码**：来源方与目标方叫什么，只能由契约给，
+    场景源码里不许再写死一个名字。
     """
+    import pyv.scenes.s04_parallel as s04
+
+    source = open(s04.__file__, encoding="utf-8").read()
+    assert "reader" not in source.lower(), "来源方的名字写死在场景里了"
+    assert "walsender" not in source.lower(), "目标方的名字写死在场景里了"
+
     params = _params_for("pyv.scenes.s04_parallel")
-    assert params["source_label"] == "reader"
-    assert params["target_label"] == "walsender"
-    assert "WALSender" not in params["source_sub"], \
-        "来源方不是 WALSender——reader 与 walsender 是两个线程"
+    assert params["source_label"] != params["target_label"], (
+        "来源方与目标方不是同一个线程"
+    )
 
 
 def test_s06_uses_personal_avatar_and_no_banned_words():
@@ -207,7 +207,7 @@ def _glyph_pixels(ch: str, size: int = 40) -> bytes:
 
 def _is_missing_glyph(ch: str) -> bool:
     """字体没有该字形时会画成同一个豆腐块，可据此比对。"""
-    return _glyph_pixels(ch) == _glyph_pixels("\ue000")
+    return _glyph_pixels(ch) == _glyph_pixels("")
 
 
 @pytest.mark.parametrize("name", SCENE_MODULES)
@@ -236,25 +236,14 @@ def test_every_character_in_scene_source_is_renderable(name, monkeypatch):
             )
 
 
-# ------------------------------------------------------ EP02 · CSN 全序的场景
-
-
-def _ep02_params(renderer: str) -> dict:
-    """EP02 契约里某个场景的画面内容。"""
-    from pyv import contract as contract_mod
-
-    path = contract_mod.CONTRACTS_DIR / "csn-total-ordering.json"
-    for segment in contract_mod.load_contract(path).segments:
-        if segment.renderer == renderer:
-            return segment.params
-    raise AssertionError(f"EP02 契约里没有 {renderer}")
+# ------------------------------------------------------ 提交顺序那一段的两幕
 
 
 def test_s02_mixed_ranks_follow_the_commit_order():
     """时间轴上的名次由契约里的提交顺序决定，不由编号决定。"""
     import pyv.scenes.s02_mixed as s02
 
-    params = _ep02_params("pyv.scenes.s02_mixed")
+    params = _params_for("pyv.scenes.s02_mixed")
     ranks = s02.commit_ranks(params)
     ids = [str(x) for x in params["txn_ids"]]
     order = [str(x) for x in params["commit_order"]]
@@ -264,8 +253,8 @@ def test_s02_mixed_ranks_follow_the_commit_order():
 
 
 def test_s02_mixed_commit_order_is_not_the_id_order():
-    """这期讲的就是「先后是乱的」——提交顺序必须真的和编号顺序不同。"""
-    params = _ep02_params("pyv.scenes.s02_mixed")
+    """这一段讲的就是「先后是乱的」——提交顺序必须真的和编号顺序不同。"""
+    params = _params_for("pyv.scenes.s02_mixed")
     assert [str(x) for x in params["commit_order"]] != [
         str(x) for x in params["txn_ids"]
     ]
@@ -274,7 +263,7 @@ def test_s02_mixed_commit_order_is_not_the_id_order():
 def test_s03_counter_numbers_strictly_increase():
     import pyv.scenes.s03_counter as s03
 
-    params = _ep02_params("pyv.scenes.s03_counter")
+    params = _params_for("pyv.scenes.s03_counter")
     values = [int(v) for v in s03.csn_sequence(params)]
     assert values == sorted(values)
     assert len(set(values)) == len(values)
@@ -284,7 +273,7 @@ def test_s03_counter_reading_starts_before_the_first_number():
     """计数器先显示起始值，发一个号才跳一次。"""
     import pyv.scenes.s03_counter as s03
 
-    params = _ep02_params("pyv.scenes.s03_counter")
+    params = _params_for("pyv.scenes.s03_counter")
     readings = s03.counter_reading(params)
     assert readings[0] == str(params["counter_value"])
     assert readings[1:] == [str(v) for v in params["csn_values"]]
@@ -329,7 +318,7 @@ def test_s03_counter_shows_the_initial_reading_before_the_first_claim(
     """
     import pyv.scenes.s03_counter as s03
 
-    params = _ep02_params("pyv.scenes.s03_counter")
+    params = _params_for("pyv.scenes.s03_counter")
     width, height = canvas
     initial = str(params["counter_value"])
     first = str(params["csn_values"][0])
@@ -367,13 +356,19 @@ def test_s03_counter_claims_do_not_start_at_zero():
     assert s03.issued_count(moments[-1], 3) == 3
 
 
-def test_s05_layers_has_six_layers():
+def test_s05_layers_reads_the_count_from_the_contract():
+    """层数是契约给的；层号、层名、层角色三份必须一样长。
+
+    三份长短不一的话，画面上会出现「有层号没层名」的半截层——
+    数字对不上，画就散了。
+    """
     import pyv.scenes.s05_layers as s05
 
-    params = _ep02_params("pyv.scenes.s05_layers")
-    assert s05.layer_count(params) == 6
+    params = _params_for("pyv.scenes.s05_layers")
+    assert s05.layer_count(params) == len(params["layer_ids"])
     assert len(params["layer_ids"]) == len(params["layer_names"]) \
-        == len(params["layer_roles"]) == 6
+        == len(params["layer_roles"])
+    assert s05.layer_count(params) > 0
 
 
 def test_s02_and_s03_tell_the_same_story():
@@ -382,40 +377,29 @@ def test_s02_and_s03_tell_the_same_story():
     两段画面用的是同一组事务：如果 s03 的发号顺序跟 s02 的提交顺序对不上，
     观众会看到「最后 commit 的事务拿到了最小的号」这种自相矛盾的画面。
     """
-    mixed = _ep02_params("pyv.scenes.s02_mixed")
-    counter = _ep02_params("pyv.scenes.s03_counter")
+    mixed = _params_for("pyv.scenes.s02_mixed")
+    counter = _params_for("pyv.scenes.s03_counter")
     assert [str(x) for x in counter["txn_ids"]] == [
         str(x) for x in mixed["commit_order"]
     ]
 
 
-# ------------------------------------------------------ EP03~EP05 的场景
+# ------------------------------------------------------ 其余几期的场景
 
 
-def _ep_params(contract_name: str, renderer: str) -> dict:
-    """某一期契约里某个场景的画面内容。"""
-    from pyv import contract as contract_mod
-
-    path = contract_mod.CONTRACTS_DIR / contract_name
-    for segment in contract_mod.load_contract(path).segments:
-        if segment.renderer == renderer:
-            return segment.params
-    raise AssertionError(f"{contract_name} 契约里没有 {renderer}")
-
-
-def test_ep03_two_scenes_tell_the_same_story():
+def test_wal_interleave_and_reorder_buffer_tell_the_same_story():
     """s02 画的交错与 s03 画的归并必须是同一组 WAL 记录。
 
     两段画的是同一个举例：s02 里 T1 的记录被别的事务隔开，
-    s03 里就要按同一组记录落进三个槽。换了记录，观众会看到对不上的画面。
+    s03 里就要按同一组记录落进槽里。换了记录，观众会看到对不上的画面。
     """
-    interleave = _ep_params("wal-interleave.json", "pyv.scenes.s02_wal_interleave")
-    buffer = _ep_params("wal-interleave.json", "pyv.scenes.s03_reorder_buffer")
+    interleave = _params_for("pyv.scenes.s02_wal_interleave")
+    buffer = _params_for("pyv.scenes.s03_reorder_buffer")
     assert buffer["records"] == interleave["records"]
     assert buffer["txn_ids"] == interleave["txn_ids"]
 
 
-def test_ep03_every_transaction_ends_with_a_commit():
+def test_emit_ends_with_a_commit():
     """s05 发出去的那一组，必须以提交记录收尾。
 
     整组发出的触发条件就是「攒到该事务的提交记录出现」——
@@ -423,27 +407,27 @@ def test_ep03_every_transaction_ends_with_a_commit():
     """
     import pyv.scenes.s05_emit as s05
 
-    params = _ep_params("wal-interleave.json", "pyv.scenes.s05_emit")
+    params = _params_for("pyv.scenes.s05_emit")
     ops = s05.emit_slot(params)
     assert ops, "契约里必须指定要发出去的那一组"
     assert ops[-1] == params["commit_op"], "整组的最后一块必须是提交记录"
 
 
-def test_ep03_spill_keeps_some_changes_in_memory():
+def test_spill_keeps_some_changes_in_memory():
     """落盘不能把内存清空——画面要看出「一部分落了盘，一部分还在内存」。"""
-    params = _ep_params("wal-interleave.json", "pyv.scenes.s04_spill")
+    params = _params_for("pyv.scenes.s04_spill")
     assert 0 < int(params["spill_count"]) < len(params["chips"]), \
         "既要画出搬走的，也要画出留在内存里的"
 
 
-def test_ep04_scheduler_respects_the_dependency_edges():
+def test_scheduler_respects_the_dependency_edges():
     """分发顺序与提交顺序都必须满足依赖图。
 
     s04 画了 T1 → T2 的依赖，s05 就不能先分发 T2 再分发 T1。
     顺序错了的图比没有图更糟。
     """
-    dag = _ep_params("parallel-apply.json", "pyv.scenes.s04_dependency_dag")
-    scheduler = _ep_params("parallel-apply.json", "pyv.scenes.s05_scheduler")
+    dag = _params_for("pyv.scenes.s04_dependency_dag")
+    scheduler = _params_for("pyv.scenes.s05_scheduler")
     edges = [(str(row[0]), str(row[1])) for row in dag["edges"]]
     dispatch = [str(row[0]) for row in scheduler["dispatch"]]
     commit = [str(x) for x in scheduler["commit_order"]]
@@ -460,32 +444,32 @@ def test_ep04_scheduler_respects_the_dependency_edges():
             f"{src} 必须先提交，{dst} 才能提交"
 
 
-def test_ep04_conflict_key_has_all_three_parts():
+def test_conflict_key_has_all_three_parts():
     """冲突判据是三要素：表、索引、键值。少一个就判不准。"""
-    params = _ep_params("parallel-apply.json", "pyv.scenes.s03_conflict_key")
+    params = _params_for("pyv.scenes.s03_conflict_key")
     assert len(params["key_parts"]) == len(params["key_values"]) == 3
     assert params["hot_index"] >= 0
 
 
-def test_ep04_conflicting_transactions_share_the_same_row():
+def test_conflicting_transactions_share_the_same_row():
     """画出来的两条事务必须真的改到同一行，否则「冲突」无从谈起。"""
-    dag = _ep_params("parallel-apply.json", "pyv.scenes.s04_dependency_dag")
-    conflict = _ep_params("parallel-apply.json", "pyv.scenes.s03_conflict_key")
+    dag = _params_for("pyv.scenes.s04_dependency_dag")
+    conflict = _params_for("pyv.scenes.s03_conflict_key")
     notes = dict(zip((str(x) for x in dag["nodes"]),
                      (str(x) for x in dag["node_notes"])))
     assert notes[str(conflict["txn_a"])] == notes[str(conflict["txn_b"])], \
         "被画成冲突的两条事务必须指向同一行"
 
 
-def test_ep05_pipeline_has_exactly_five_steps():
+def test_ddl_pipeline_has_exactly_five_steps():
     """结构化 DDL 的五步是社区讨论里的划分，一步都不能多、不能少。"""
-    params = _ep_params("structured-ddl.json", "pyv.scenes.s04_ddl_pipeline")
+    params = _params_for("pyv.scenes.s04_ddl_pipeline")
     assert len(params["steps"]) == 5
     for name, desc in params["steps"]:
         assert name and desc, "每一步都要有名字和说明"
 
 
-def test_ep05_shortfalls_are_four():
+def test_shortfalls_are_four():
     """「4 条做不到的事」是口播里的数字，画面上就得是四张卡片。"""
-    params = _ep_params("structured-ddl.json", "pyv.scenes.s03_shortfalls")
+    params = _params_for("pyv.scenes.s03_shortfalls")
     assert len(params["shortfalls"]) == 4

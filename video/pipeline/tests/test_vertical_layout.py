@@ -30,9 +30,10 @@ import numpy as np
 import pytest
 
 from pyv import contract as contract_mod
-from pyv import episodes as episodes_mod
 from pyv import scene_layout
 from pyv.palette import COLORS, hex_to_rgb
+
+import scene_segments
 
 ROOT = Path(__file__).resolve().parents[2]
 SCENES_DIR = Path(contract_mod.__file__).parent / "scenes"
@@ -66,12 +67,6 @@ EDGE_MARGIN = 3
 VERTICAL_ENTRY = "_render_vertical"
 
 
-def _episodes():
-    for episode in episodes_mod.EPISODE_ORDER:
-        script = episodes_mod.EPISODES[episode]
-        yield episode, contract_mod.load_contract(ROOT / "contracts" / f"{episode}.json")
-
-
 def _has_vertical_variant(module_path: Path) -> bool:
     return VERTICAL_ENTRY in module_path.read_text(encoding="utf-8")
 
@@ -99,10 +94,12 @@ def _render_vertical(module_name: str, params: dict, t: float = 0.6):
 
 
 def _segments():
-    """六期里用到的全部场景段（带契约里的真实文案）。"""
-    for episode, contract in _episodes():
-        for segment in contract.segments:
-            yield episode, segment
+    """用到的全部场景段（带契约里的真实文案）。
+
+    磁盘上有期就读期目录里的契约；没有期就按场景模块合成一段
+    （见 `scene_segments.py`）。
+    """
+    return scene_segments.segments()
 
 
 def _module_path(renderer: str) -> Path:

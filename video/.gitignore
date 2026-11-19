@@ -51,14 +51,13 @@ __pycache__/
 #
 # 帧是产物（跟着本机的成片走）；清单是「这一期抽了哪些帧、每帧该有
 # 什么文案」的对照表——审核记录里的判断要能对着它复核，所以它入库。
-# 放行顺序要紧：先放行目录（git 才会往里走），再拦内容，最后放行清单。
-!review/frames/
-review/frames/**
-!review/frames/*/
-!review/frames/*/frames.md
+#
+# 清单在期目录里（episodes/<slug>/frames.md），帧在期目录的 frames/
+# 子目录里——frames/ 已经被上面的「渲染产物」规则拦住了。
+!episodes/*/frames.md
 
-# 旁白（六期）。没有它就对齐不了、渲染不了。
-!narration_*.mp3
+# 旁白。没有它就对齐不了、渲染不了。
+!episodes/*/narration.mp3
 
 # 定标参照稿：音色参数（pitch/speed）是相对它标定的。
 !ddl-voiceover.mp3

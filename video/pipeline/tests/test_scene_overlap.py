@@ -10,8 +10,8 @@
 每次画字记下它的**墨迹包围盒**（`text_path` + `path_extents`，不是字号的行高），
 每次画箭头记下线段与箭头头部，两两求交。
 
-**覆盖。** 六期契约里的**全部 26 个场景模块**（`test_every_scene_module_is_
-covered` 钉住这一点），横竖两个画幅，每个模块扫 **21 个时刻**（0.00 到 1.00，
+**覆盖。** **全部 26 个场景模块**（`test_every_scene_module_is_covered`
+钉住这一点），横竖两个画幅，每个模块扫 **21 个时刻**（0.00 到 1.00，
 步长 0.05）——动画的中间态才是出事的地方，只看首帧和末帧等于没看。
 
 **半透明的字不算遮挡。** 淡到 0.6 以下的是背景（让位、影子、幽灵），
@@ -27,7 +27,9 @@ import cairo
 import pytest
 
 from pyv import contract as contract_mod
-from pyv import draw, episodes as episodes_mod, fonts, scene_layout
+from pyv import draw, fonts, scene_layout
+
+import scene_segments
 
 ROOT = Path(__file__).resolve().parents[2]
 SCENES_DIR = Path(contract_mod.__file__).parent / "scenes"
@@ -228,12 +230,12 @@ def _probe_frame(renderer, params, t, w, h, monkeypatch, modules=()) -> Probe:
 
 
 def _segments():
-    """六期契约里的全部场景段（带契约里的真实文案）。"""
-    for episode in episodes_mod.EPISODE_ORDER:
-        contract = contract_mod.load_contract(
-            ROOT / "contracts" / f"{episode}.json")
-        for segment in contract.segments:
-            yield episode, segment
+    """全部场景段（带契约里的真实文案）。
+
+    磁盘上有期就读期目录里的契约；没有期就按场景模块合成一段
+    （见 `scene_segments.py`）。
+    """
+    return scene_segments.segments()
 
 
 def _render_segment(segment):

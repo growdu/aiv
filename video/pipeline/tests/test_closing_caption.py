@@ -34,9 +34,9 @@ from pathlib import Path
 import pytest
 
 from pyv import contract as contract_mod
-from pyv import episodes as episodes_mod
 
 from scene_probe import LANDSCAPE, PORTRAIT, TIMES, Session
+import scene_segments
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -60,12 +60,12 @@ ALPHA_TOLERANCE = 0.01
 
 
 def _segments():
-    """六期契约里的全部场景段（带契约里的真实文案）。"""
-    for episode in episodes_mod.EPISODE_ORDER:
-        contract = contract_mod.load_contract(
-            ROOT / "contracts" / f"{episode}.json")
-        for segment in contract.segments:
-            yield episode, segment
+    """全部场景段（带契约里的真实文案）。
+
+    磁盘上有期就读期目录里的契约；没有期就按场景模块合成一段
+    （见 `scene_segments.py`）。
+    """
+    return scene_segments.segments()
 
 
 def _module(segment):

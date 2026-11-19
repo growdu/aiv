@@ -53,15 +53,15 @@ NOTE = (
 
 
 def _all_segments():
-    """六期契约里的全部视觉段。
+    """所有期契约里的全部视觉段。
 
     **按段抓，不按模块抓。** 同一个渲染器在不同期用的 `params` 不同
-    （`s01_intro` 与 `s06_outro` 六期都在用，每期的标题文案各不一样），
-    画面就不同、哈希就不同——只按渲染器存一份，后五期的画面永远比不到。
+    （`s01_intro` 与 `s06_outro` 每期都在用，每期的标题文案各不一样），
+    画面就不同、哈希就不同——只按渲染器存一份，后面的期画面永远比不到。
     """
-    for episode in episodes_mod.EPISODE_ORDER:
+    for episode in episodes_mod.known_eps():
         contract = contract_mod.load_contract(
-            AIV_ROOT / "contracts" / f"{episode}.json")
+            episodes_mod.contract_path(episode))
         for segment in contract.segments:
             yield episode, segment
 
@@ -126,7 +126,7 @@ def main() -> None:
             # 跨平台比像素是拿噪声当信号，所以**平台不同就跳过**——
             # 跨机的版式由 `tests/test_layout_fingerprint.py` 守。
             "platform": platform.system(),
-            # 覆盖了多少段——条数由六期契约推导，加期不用改这里，
+            # 覆盖了多少段——条数由所有期的契约推导，加期不用改这里，
             # 但漏抓会红（`tests/test_contract.py` 里有覆盖声称的守卫）。
             "segments": sum(1 for _ in _all_segments()),
         },

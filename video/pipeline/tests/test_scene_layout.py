@@ -19,21 +19,22 @@ import pytest
 
 from pyv import align
 from pyv import fonts
-from pyv import contract as contract_mod
 from pyv import subtitle as subtitle_mod
 from pyv.inkbox import ink_bottom
 from pyv.scenes import s04_spill
 
+import scene_segments
+
 ROOT = Path(__file__).resolve().parents[2]
 SCENES_DIR = Path(s04_spill.__file__).parent
 
-from pyv import episodes as episodes_mod
 
+#: 全部场景段（带契约里的真实文案）。磁盘上有期就读期目录里的契约，
+#: 没有期就按场景模块合成一段（见 `scene_segments.py`）。
+SEGMENTS = scene_segments.segments()
 
-EPISODES = {
-    ep: (episodes_mod.EPISODES[ep], f"{ep}.json")
-    for ep in episodes_mod.EPISODE_ORDER
-}
+#: 有字幕表可撞的输入：有期就读期目录里的，没有期就读**夹具期**。
+EPISODES = scene_segments.episode_sources()
 
 # 场景说明画在画面高度的几分之几处。EP01 定下来的规矩是 0.86。
 CAPTION_RATIO = 0.86
@@ -108,33 +109,33 @@ def test_the_caption_is_placed_at_the_series_position(module_path):
     )
 
 
-@pytest.mark.parametrize("episode", sorted(EPISODES))
-def test_the_caption_ink_stays_above_the_subtitle_band(episode):
+@pytest.mark.parametrize("label,segment", SEGMENTS,
+                         ids=[f"{label}-{s.renderer.split('.')[-1]}"
+                              for label, s in SEGMENTS])
+def test_the_caption_ink_stays_above_the_subtitle_band(label, segment):
     """说明的墨迹下沿必须高于字幕带上沿。"""
-    script, contract_name = EPISODES[episode]
-    contract = contract_mod.load_contract(ROOT / "contracts" / contract_name)
+    caption = segment.params.get("caption")
+    if not caption:
+        pytest.skip("这一段没有说明")
     band_top = _subtitle_band_top()
 
-    for segment in contract.segments:
-        caption = segment.params.get("caption")
-        if not caption:
-            continue
-        module_path = SCENES_DIR / f"{segment.renderer.split('.')[-1]}.py"
-        ratio = _caption_ratio(module_path)
-        assert ratio is not None, f"{module_path.name} 里找不到说明的画法"
-        bottom = ink_bottom(caption, CAPTION_X_RATIO * 1920,
-                            ratio * 1080, CAPTION_SIZE)
-        assert bottom < band_top, (
-            f"{episode} 的 {segment.renderer} 说明墨迹下沿在 y={bottom:.0f}，"
-            f"字幕带从 y={band_top:.0f} 开始，两行会绞在一起"
-        )
+    module_path = SCENES_DIR / f"{segment.renderer.split('.')[-1]}.py"
+    ratio = _caption_ratio(module_path)
+    assert ratio is not None, f"{module_path.name} 里找不到说明的画法"
+    bottom = ink_bottom(caption, CAPTION_X_RATIO * 1920,
+                        ratio * 1080, CAPTION_SIZE)
+    assert bottom < band_top, (
+        f"{label} 的 {segment.renderer} 说明墨迹下沿在 y={bottom:.0f}，"
+        f"字幕带从 y={band_top:.0f} 开始，两行会绞在一起"
+    )
 
 
-@pytest.mark.parametrize("episode", sorted(EPISODES))
-def test_every_episode_has_subtitles_to_collide_with(episode):
+@pytest.mark.parametrize("label,contract_path,script_path", EPISODES,
+                         ids=[label for label, _, _ in EPISODES])
+def test_every_episode_has_subtitles_to_collide_with(label, contract_path,
+                                                      script_path):
     """字幕表要是空的，这条守卫就等于没守。"""
-    script, _ = EPISODES[episode]
-    assert align.parse_subtitle_table(ROOT / script), f"{episode} 没有字幕"
+    assert align.parse_subtitle_table(script_path), f"{label} 没有字幕"
 
 
 # ---------------------------------------------------------------- spill 场景

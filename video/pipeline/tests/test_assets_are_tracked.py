@@ -24,13 +24,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 AIV_ROOT = REPO_ROOT / "video"
 
 #: 出片必需的素材：相对仓库根的路径 → 为什么需要它
+#:
+#: **旁白不入库**：旁白是**一期的产物**（`video/episodes/<slug>/narration.mp3`），
+#: 跟着那一期走，不是规则级的素材。规则级的素材只有下面这些——
+#: 音色定标参照稿、形象、品牌片、曲库、内置字体。
 REQUIRED_ASSETS = {
-    "video/narration_pg-parallel-decode.mp3": "EP01 旁白",
-    "video/narration_csn-total-ordering.mp3": "EP02 旁白",
-    "video/narration_wal-interleave.mp3": "EP03 旁白",
-    "video/narration_parallel-apply.mp3": "EP04 旁白",
-    "video/narration_structured-ddl.mp3": "EP05 旁白",
-    "video/narration_row-lock.mp3": "EP06 旁白",
     "video/ddl-voiceover.mp3": "音色定标的参照稿",
     "video/growdu2.jpeg": "形象原型（重新生成立绘的唯一来源）",
     "video/character/growdu_character_2k_nobg.png": "小象立绘（渲染必需）",
@@ -62,6 +60,14 @@ OPTIONAL_ASSETS = {
 
 #: 产物目录：里面不许有被跟踪的文件
 PRODUCT_DIRS = ("video/out", "video/build", "video/frames")
+
+#: 期目录里的产物：**抽出来的帧**与**时间轴**都是产物，不入库。
+#: 入库的是期目录里的事实（口播稿、契约、发布元数据、审校记录、抽帧清单），
+#: 产物只留本机——仓库不该背着成片的中间件长大。
+EPISODE_PRODUCT_PATTERNS = (
+    "video/episodes/*/frames/*",
+    "video/episodes/*/storyboard*.json",
+)
 
 
 def _git(*args: str) -> subprocess.CompletedProcess:
@@ -116,6 +122,14 @@ def test_product_directory_has_no_tracked_files(directory):
     result = _git("ls-files", directory)
     tracked = [line for line in result.stdout.splitlines() if line.strip()]
     assert tracked == [], f"{directory} 里有被跟踪的文件：{tracked}"
+
+
+@pytest.mark.parametrize("pattern", EPISODE_PRODUCT_PATTERNS)
+def test_episode_products_are_not_tracked(pattern):
+    """期目录里的帧与时间轴是产物——入库了仓库就会开始长。"""
+    result = _git("ls-files", pattern)
+    tracked = [line for line in result.stdout.splitlines() if line.strip()]
+    assert tracked == [], f"{pattern} 里有被跟踪的文件：{tracked}"
 
 
 def test_no_tracked_media_outside_the_allowlist():

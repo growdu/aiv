@@ -2,10 +2,11 @@
 
 用法：
     python -m pyv.cli validate --storyboard ../storyboard.json
-    python -m pyv.cli align    --audio ../pa_decode_v2.mp3 --script ../字幕-并行解码.md
+    python -m pyv.cli align    --audio ../episodes/<slug>/narration.mp3 \
+        --script ../episodes/<slug>/口播稿.md
     python -m pyv.cli render   --storyboard ../storyboard.json --out ../build
     python -m pyv.cli compose  --storyboard ../storyboard.json --build ../build --out ../out
-    python -m pyv.cli persona check --script ../字幕-并行解码.md
+    python -m pyv.cli persona check --script ../episodes/<slug>/口播稿.md
     python -m pyv.cli bgm check --music ../music/tracks/motif.wav
 """
 from __future__ import annotations
@@ -306,7 +307,8 @@ def cmd_publish(args: argparse.Namespace) -> int:
         return 1
 
     contract_episode = ""
-    contract_path = epmeta.AIV_ROOT / "contracts" / f"{args.episode}.json"
+    from pyv import episodes
+    contract_path = episodes.contract_path(args.episode)
     if contract_path.is_file():
         from pyv import contract as contract_mod
         contract_episode = contract_mod.load_contract(contract_path).episode
@@ -439,8 +441,9 @@ def main(argv: list[str] | None = None) -> int:
     p_align.add_argument("--audio", required=True)
     p_align.add_argument("--script", required=True)
     p_align.add_argument("--out", required=True)
-    p_align.add_argument("--scenes", default=str(contract.DEFAULT_CONTRACT),
-                         help="视觉分镜契约（本期文案与段落划分）")
+    p_align.add_argument("--scenes", default=None,
+                         help="视觉分镜契约（本期文案与段落划分）"
+                              "；省略时用 video/episodes/ 下第一期的")
     p_align.add_argument("--canvas", default="horizontal",
                          choices=sorted(palette.CANVASES),
                          help="画布档位：横版 1920x1080 / 竖版 1080x1920")

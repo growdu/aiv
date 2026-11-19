@@ -14,14 +14,32 @@ import re
 import sys
 from pathlib import Path
 
+import pytest
+
 from pyv import character, cli, persona
 
 FIXTURES = Path(__file__).parent / "fixtures"
 OK_SCRIPT = FIXTURES / "persona_script_ok.md"
 BAD_SCRIPT = FIXTURES / "persona_script_bad.md"
-# 真实口播稿不入测试夹具目录：它就是这一期实际在用的稿子（video/字幕-并行解码.md），
-# 夹具目录里放的是「测规则的样本」，两者不是一回事。
-REAL_SCRIPT = Path(__file__).resolve().parents[2] / "字幕-并行解码.md"
+
+
+def _real_scripts() -> list[tuple[str, Path]]:
+    """真正在用的口播稿（slug → 路径）。
+
+    **一期 = 一个目录**，稿子就在期目录里（`video/episodes/<slug>/口播稿.md`），
+    没有登记表。磁盘上没有期时用**夹具期**。
+
+    与 `persona_script_ok.md` / `persona_script_bad.md` 的区别：那两个是
+    「测规则的样本」，这里是**真在用的稿子**。
+    """
+    from pyv import episodes as episodes_mod
+
+    out: list[tuple[str, Path]] = []
+    for slug in episodes_mod.known_eps():
+        path = episodes_mod.script_path(slug)
+        if path.is_file():
+            out.append((slug, path))
+    return out or [("fixture", FIXTURES / "fixture" / "口播稿.md")]
 
 
 def _load(name: str, relative: str):
@@ -306,12 +324,14 @@ def test_bad_fixture_triggers_every_hard_rule():
         assert report.by_rule(rule_id), f"违规夹具没有触发 {rule_id}"
 
 
-def test_real_script_has_no_hard_violation():
-    """真实的历史口播稿不能被判违规。
+@pytest.mark.parametrize("label,script", _real_scripts(),
+                         ids=[label for label, _ in _real_scripts()])
+def test_real_script_has_no_hard_violation(label, script):
+    """真正在用的口播稿不能被判违规。
 
     它是规范出来之前写的，缺边界感和方法论表达——那是倾向，不是违规。
     """
-    report = persona.check_file(REAL_SCRIPT)
+    report = persona.check_file(script)
     assert report.ok, [f.message for f in report.errors]
     assert report.by_rule("persona.boundary")
     assert report.by_rule("persona.method")

@@ -16,8 +16,6 @@ from pathlib import Path
 
 # video/ 是 pipeline/ 的上一级：pyv/contract.py → pyv → pipeline → video
 AIV_ROOT = Path(__file__).resolve().parents[2]
-CONTRACTS_DIR = AIV_ROOT / "contracts"
-DEFAULT_CONTRACT = CONTRACTS_DIR / "pg-parallel-decode.json"
 
 
 @dataclass(frozen=True)
@@ -52,9 +50,23 @@ class Contract:
         return None
 
 
+def default_contract_path() -> Path:
+    """默认契约：磁盘上的第一期。
+
+    **没有期就没有默认契约**——报错比拿一份别的期的契约出片强。
+    """
+    from pyv import episodes
+
+    eps = episodes.known_eps()
+    if not eps:
+        raise FileNotFoundError(
+            "video/episodes/ 下没有期：没有默认契约，请用 --scenes 指定")
+    return episodes.contract_path(eps[0])
+
+
 def load_contract(path: str | Path | None = None) -> Contract:
     """读取并校验视觉分镜契约。"""
-    target = Path(path) if path else DEFAULT_CONTRACT
+    target = Path(path) if path else default_contract_path()
     if not target.is_file():
         raise FileNotFoundError(f"视觉分镜契约不存在：{target}")
     raw = json.loads(target.read_text(encoding="utf-8"))

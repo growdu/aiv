@@ -11,7 +11,7 @@
 
 用法：
 
-    python -m pyv.cli persona check --script ../字幕-并行解码.md
+    python -m pyv.cli persona check --script ../episodes/<slug>/口播稿.md
 
 能力域的划分依据是博客文章的真实覆盖范围（规范 §3.1），
 越界主题的依据是博客里没有实现记录的方向（规范 §3.3）。

@@ -18,7 +18,7 @@ DEFAULT_BGM_GAIN_DB = bgm_rules.BGM_GAIN_DB
 
 # 关键帧间隔。B站《文件上传预处理》要求「关键帧至少 10 秒一个」，
 # 也就是间隔 ≤ 10 秒。我们的成片由分段渲染再拼成，段边界会拉长间隔
-# （EP02 实测最大 10.417s，超标），所以在编码参数里把 GOP 定死。
+# （实测最大 10.417s，超标），所以在编码参数里把 GOP 定死。
 FPS_BASE = 24
 KEYFRAME_INTERVAL = FPS_BASE * 10   # 240 帧 = 10 秒
 

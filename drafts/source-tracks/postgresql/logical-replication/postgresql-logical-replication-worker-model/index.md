@@ -1,24 +1,4 @@
 ---
-episode: wal-interleave
-episode_no: 3
-series: 数据库内核机制
-episode_hook: "WAL 是操作级记录，几个事务交错着写；订阅端要的是「一个事务一整组」"
-episode_subtitle: video/字幕-WAL顺序.md
-episode_duration_s: "34.596"
-episode_license: "PostgreSQL BSD"
-episode_sources:
-  - src/backend/executor/execPartition.c
-  - src/backend/replication/logical/applyparallelworker.c
-  - src/backend/replication/logical/launcher.c
-  - src/backend/replication/logical/tablesync.c
-  - src/backend/replication/logical/worker.c
-  - src/include/replication/worker_internal.h
-episode_repro:
-  - "ALTER PUBLICATION pub_orders ADD TABLE orders; -- 父表"
-  - "ALTER SUBSCRIPTION sub_orders ADD TABLE orders_2024_h1;"
-  - "ALTER SUBSCRIPTION sub_orders ADD TABLE orders; -- 父表"
-  - "SHOW max_logical_replication_workers; -- 调整"
-  - "SELECT pid, type, subid, relid, state FROM pg_stat_activity WHERE backend_type LIKE '%logical%' OR query LIKE '%logical%' ORDER BY pid;"
 description: "主要源码路径： - ~/cwork/postgresql/src/backend/replication/logical/launcher.c - ~/cwork/postgresql/src/backend/replication/logical/worker.c - ~/cwork/postg…"
 ---
 

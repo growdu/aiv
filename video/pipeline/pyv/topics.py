@@ -160,18 +160,25 @@ def _first_code_block(lines: list[str]) -> list[str]:
 
 
 def _split_sections(text: str) -> list[tuple[str, list[str]]]:
-    """按二级标题切段，返回 (标题, 段落行)。"""
+    """按二级标题切段，返回 (标题, 段落行)。
+
+    **代码块里的 `## ` 不切**：模板写在代码块里，不能被当成一节。
+    """
     sections: list[tuple[str, list[str]]] = []
     heading = ""
     body: list[str] = []
+    in_fence = False
     for line in text.splitlines():
-        if line.startswith("## "):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence and line.startswith("## "):
             if heading or body:
                 sections.append((heading, body))
             heading = line[3:].strip()
             body = []
-        else:
-            body.append(line)
+            continue
+        body.append(line)
     if heading or body:
         sections.append((heading, body))
     return sections
@@ -221,11 +228,21 @@ def parse_topics(path: str | Path = TOPICS_PATH) -> list[Episode]:
 
 
 def _all_tables(body: list[str]) -> list[list[list[str]]]:
-    """把段落里的所有表格拆出来。"""
+    """把段落里的所有表格拆出来。
+
+    **代码块里的表格不算**：模板写在代码块里，不能被当成真的一期。
+    """
     tables: list[list[list[str]]] = []
     current: list[str] = []
+    in_fence = False
     for line in body + [""]:
-        if line.strip().startswith("|"):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if stripped.startswith("|"):
             current.append(line)
             continue
         if current:
@@ -245,7 +262,8 @@ def check_topics(episodes: list[Episode]) -> list[Finding]:
         findings.append(Finding(rule_id, level, message, target))
 
     if not episodes:
-        add("topics.structure", ERROR, "选题库里没解析出任何一期")
+        # 空库是合法状态：视频线刚清空重来，「不预先囤选题」是规矩，不是缺陷。
+        # 库里没有期，就没有可查的东西——没有可报的问题。
         return findings
 
     seen: set[str] = set()

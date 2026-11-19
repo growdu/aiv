@@ -93,7 +93,7 @@ python3 scripts/stamp_badge.py <png> ...  # 处理指定文件
 cd video/character
 python3 scripts/clear_badge.py            # 产出 growdu_character_2k_nobg_nobadge.png
 cd ../pipeline
-make EP=row-lock nobrand NOBADGE=1        # 用无铭牌素材重出片
+make EP=<slug> nobrand NOBADGE=1           # 用无铭牌素材重出片
 ```
 
 抹法是刷成**马甲色**：铭牌四周一圈取马甲色像素的中值，按列竖向插值填

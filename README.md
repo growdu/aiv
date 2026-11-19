@@ -67,7 +67,7 @@
 > **存量说明**：原来的 560 篇文档**已整体撤出 `docs/`**（2026-11-18，commit `8632f8c7`）——
 > 它们没过审，原件留在 `drafts/` 的镜像里。`docs/` 现在只留**已过审**的母稿，
 > 站点也只编译 `docs/`。**存量不回炉**：不补草稿、不倒回去走 `draft → review`——
-> 补出来的是假记录。`video/` 里现有的 6 期成片同理。
+> 补出来的是假记录。`video/` 里那 6 期成片同理——**已清空重来**，只留规则。
 
 ### 三条产线的分工
 
@@ -76,7 +76,7 @@
 | 产线 | 输入 | 产物 | 事实来源 |
 | --- | --- | --- | --- |
 | 技术站点 | `docs/` | 静态站 `platforms/blog/site/dist/` | `docs/` |
-| 品牌视频 AIV | `video/contracts/*.json` + 口播稿 + 旁白 | 1920×1080 成片 | 契约 + 规范文档 |
+| 品牌视频 AIV | `video/episodes/<slug>/` 一期一个目录 | 1920×1080 成片 | 契约 + 规范文档 |
 | 多平台分发 | `content/units/` 内容单元 + 能力声明 | 草稿 / 出包 / 已发链接 | `docs/`（内容）+ `platforms/<plat>/outbox/`（状态） |
 
 按**内容类型**切，是**两条流水线**（文档流 / 视频流）——见上面的图。
@@ -142,11 +142,12 @@
 
 | 模块 | 位置 | 干什么 |
 | --- | --- | --- |
-| 视觉分镜契约 | `video/contracts/<期>.json` | 一期视频的段落划分、画面文案与数字（**每期只写这里**） |
-| 发布元数据 | `video/publish/<期>.json` | 每期各平台的标题、简介、话题与分区（`pyv publish check` 体检） |
+| 期目录 | `video/episodes/<slug>/` | 一期一个目录：口播稿、契约、发布元数据、旁白、审校记录。**目录即接口**，没有期号登记表 |
+| 视觉分镜契约 | `video/episodes/<slug>/contract.json` | 一期视频的段落划分、画面文案与数字（**每期只写这里**） |
+| 发布元数据 | `video/episodes/<slug>/publish.json` | 每期各平台的标题、简介、话题与分区（`pyv publish check` 体检） |
 | 渲染引擎 | `video/pipeline/pyv/` | `pyv/cli.py` + `scenes/` + 28 个模块：`align`/`render`/`compose`/`timeline`/`subtitle`/`bgm`/`brand`/`persona`/`topics`/`doctor`/`preflight`/`review`/`layout`/`components`/`fingerprint`… |
-| 审核 | `video/review/` + `pyv/review.py` | 文本层 `VT-*` 与成片层 `VV-*` 的规则、一期一条记录、抽帧清单 |
-| 时间轴 | `storyboard_<EP>.json` | 由旁白对齐算出的产物，**不入库** |
+| 审核 | `video/review/` + `pyv/review.py` | 文本层 `VT-*` 与成片层 `VV-*` 的规则；一期的记录与抽帧清单在期目录里 |
+| 时间轴 | `episodes/<slug>/storyboard.json` | 由旁白对齐算出的产物，**不入库** |
 | 场景模板 | `video/pipeline/pyv/scenes/*.py` | 位置、尺寸、配色、动效等版式常量 |
 | 形象 | `video/character/scripts/` | 3D 小象生成、加眼镜、铭牌盖章 |
 | 品牌 | `video/brand/scripts/` | 片头/片尾渲染与配乐 |
@@ -159,8 +160,8 @@
 契约少参数 → 渲染前抛 `MissingParam`；契约里的文案不许回流成场景代码里的字面量
 （`pipeline/tests/test_contract.py` 盯这条）。
 
-流水线按期号切：`make EP=<期号> align|validate|brand|render|compose`。
-`align` 是手工步骤（需要旁白音频），其余可全自动。
+流水线按期切：`make EP=<slug> align|validate|brand|render|compose`。
+`align` 是手工步骤（需要旁白音频），其余可全自动。忘了 `EP=` 会当场报错。
 
 同一套还有几档变体与审校命令：
 
@@ -265,9 +266,9 @@
 | 内容契约（front matter） | `docs/**` 的 front matter | 作者 | 内容单元编译器 → 内容单元 → 各 adapter |
 | 平台能力 | `platforms/<id>/capability.toml` | 手写（对着平台文档复核） | publishkit + adapter |
 | 发布清单 manifest | JSON（内存/落盘） | publishkit | adapter |
-| 视觉分镜契约 | `video/contracts/<EP>.json` | 作者 | pyv 渲染引擎 |
-| 发布元数据 | `video/publish/<EP>.json` | 手写 | `pyv publish check` + 各平台 adapter |
-| 抽帧清单 | `video/review/frames/<EP>/frames.md` | 审核工具 | 审核记录（逐帧复核） |
+| 视觉分镜契约 | `video/episodes/<slug>/contract.json` | 作者 | pyv 渲染引擎 |
+| 发布元数据 | `video/episodes/<slug>/publish.json` | 手写 | `pyv publish check` + 各平台 adapter |
+| 抽帧清单 | `video/episodes/<slug>/frames.md` | 审核工具 | 审核记录（逐帧复核） |
 | 发布结果快照 | `platforms/<platform>/outbox/<content>__<platform>.json` | adapter | 幂等判定 + 站点发布索引 |
 | 调度状态 | `publish/schedule.json` | 调度层 | 调度层（周键幂等） |
 

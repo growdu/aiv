@@ -140,12 +140,14 @@ CHECKS = (
 
 
 def _segments():
-    """六期契约里的全部视觉段。"""
-    for episode in episodes_mod.EPISODE_ORDER:
-        contract = contract_mod.load_contract(
-            AIV_ROOT / "contracts" / f"{episode}.json")
+    """磁盘上各期契约里的全部视觉段。"""
+    for slug in episodes_mod.known_eps():
+        path = episodes_mod.contract_path(slug)
+        if not path.is_file():
+            continue
+        contract = contract_mod.load_contract(path)
         for segment in contract.segments:
-            yield episode, segment
+            yield slug, segment
 
 
 def _expected_keys() -> set[str]:
@@ -199,12 +201,34 @@ def test_the_fingerprint_fixture_is_tracked():
 
 
 def test_the_fingerprint_covers_every_segment_and_canvas():
-    """指纹必须覆盖六期 × 2 画幅 × 5 时刻——少一条就有一段没人守。"""
-    actual = set(_fixture()["frames"])
+    """指纹必须覆盖每段 × 2 画幅 × 5 时刻——少一条就有一段没人守。
+
+    两条判据：
+
+    1. **时刻齐全**：基准里每一段 × 每个画幅，五个时刻一个都不能少
+       （少抓一个时刻，那一段有一段没人守）。
+    2. **磁盘上的期都盖住了**：期目录里的每一段都要在基准里——
+       新加一期忘了重抓指纹，这条就红。
+    """
+    frames = _fixture()["frames"]
+    actual = set(frames)
+
+    moments: dict[tuple[str, str, str], set[str]] = {}
+    for key in actual:
+        episode, segment, canvas_at = key.split("/")
+        canvas, _, moment = canvas_at.partition("@")
+        moments.setdefault((episode, segment, canvas), set()).add(moment)
+    wanted = {str(t) for t in TIMES}
+    incomplete = {
+        "/".join(key): sorted(wanted - times)
+        for key, times in moments.items()
+        if wanted - times
+    }
+    assert not incomplete, f"指纹少了时刻：{sorted(incomplete)[:5]}"
+
     expected = _expected_keys()
-    assert actual == expected, (
-        f"指纹覆盖对不上：缺 {sorted(expected - actual)[:5]}；"
-        f"多 {sorted(actual - expected)[:5]}"
+    assert expected <= actual, (
+        f"指纹覆盖对不上：缺 {sorted(expected - actual)[:5]}"
     )
 
 
@@ -346,7 +370,10 @@ def test_every_segment_shows_its_title():
 def test_the_probe_can_see_a_text():
     """**守卫自己得会报警**——探针坏了就只是一段永远绿的代码。"""
     _need_bundled_font()
-    episode, segment = next(_segments())
+    segments = list(_segments())
+    if not segments:
+        pytest.skip("磁盘上没有期，没有段可探")
+    episode, segment = segments[0]
     module = importlib.import_module(segment.renderer)
     drawn = fingerprint.collect_texts(
         module, segment.params, CANVASES[0][1], CANVASES[0][2], TIMES[0])

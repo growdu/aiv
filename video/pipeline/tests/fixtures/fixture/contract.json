@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "episode": "fixture",
+  "title": "夹具期",
+  "segments": [
+    {
+      "id": "s01",
+      "renderer": "pyv.scenes.s01_intro",
+      "sentences": [0, 1],
+      "params": {
+        "title": "夹具期",
+        "subtitle": "流水线的最小输入",
+        "tagline": "格式对就行 · 内容不算数"
+      }
+    },
+    {
+      "id": "s02",
+      "renderer": "pyv.scenes.s06_outro",
+      "sentences": [2, 3],
+      "params": {
+        "title": "夹具期",
+        "subtitle": "只守输入格式",
+        "badge": "growdu"
+      }
+    }
+  ]
+}

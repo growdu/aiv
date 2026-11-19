@@ -17,16 +17,27 @@ def test_this_machine_has_no_hard_failures():
 
 
 def test_doctor_covers_every_episode():
-    """每一期的旁白都要被检查到——漏一期就等于漏一个坑。"""
+    """每一期的旁白与稿件都要被检查到——漏一期就等于漏一个坑。"""
     checks = doctor.run_checks()
     names = {c.name for c in checks}
-    for ep in episodes_mod.EPISODE_ORDER:
-        assert f"narration_{ep}.mp3" in names
+    for ep in episodes_mod.known_eps():
+        assert f"{ep} 的旁白" in names
         assert f"{ep} 的稿件与契约" in names
 
 
+def test_doctor_says_so_when_there_is_no_episode(monkeypatch, tmp_path):
+    """磁盘上没有期时，自检要说清楚「还没有期」，而不是装作查过了。"""
+    monkeypatch.setattr(episodes_mod, "EPISODES_DIR", tmp_path)
+    checks = doctor._check_episodes()
+    assert checks, "没有期也要给一条结论"
+    assert checks[0].ok
+    assert "还没有期" in checks[0].detail
+
+
 def test_missing_narration_is_reported_as_an_error(monkeypatch, tmp_path):
-    monkeypatch.setattr(episodes_mod, "AIV_ROOT", tmp_path)
+    """期在、旁白不在 → 报错，并给出能照着抄的合成命令。"""
+    (tmp_path / "some-ep").mkdir()
+    monkeypatch.setattr(episodes_mod, "EPISODES_DIR", tmp_path)
     checks = doctor._check_narrations()
     assert checks
     assert all(not c.ok and c.level == doctor.ERROR for c in checks)

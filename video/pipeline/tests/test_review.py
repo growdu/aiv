@@ -9,7 +9,7 @@
 3. 跨模块一致性：视频侧的词表与阈值必须与文档侧 `tools/review-check.py`
    **逐字相同**——改一边，另一边要红。
 
-另有一条盯记录与进度表的对应关系（六期记录 ↔ `INDEX.md` 六行）。
+另有一条盯记录与进度表的对应关系（期目录里的记录 ↔ `INDEX.md` 的行）。
 """
 from __future__ import annotations
 
@@ -28,10 +28,26 @@ from pyv import review
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOLS_CHECKER = REPO_ROOT / "tools" / "review-check.py"
 
+#: 进度表。一期一行，与期目录里的记录一一对应。
+REVIEW_INDEX = episodes.AIV_ROOT / "review" / "INDEX.md"
+
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 
 
 # ---------------------------------------------------------------- 夹具
+
+
+#: 夹具期在 `tests/fixtures/fixture/` 下——把期目录指到 `tests/fixtures`，
+#: slug 就是 `fixture`，`review` 那套按路径找文件的逻辑就能真跑一遍。
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+FIXTURE_EPISODE = "fixture"
+
+
+@pytest.fixture
+def fixture_episode(monkeypatch) -> str:
+    """夹具期的 slug（期目录已被指到 `tests/fixtures`）。"""
+    monkeypatch.setattr(episodes, "EPISODES_DIR", FIXTURES_DIR)
+    return FIXTURE_EPISODE
 
 
 def _materials(sentences: list[str], subtitles: list[str] | None = None,
@@ -224,20 +240,20 @@ def test_vt_07_checks_the_source_table_not_the_stale_storyboard():
     assert signals[0].target == "第1句"
 
 
-def test_check_text_runs_every_text_rule():
+def test_check_text_runs_every_text_rule(fixture_episode):
     """文本层跑一遍，报出的信号编号都在已知的规则表里。"""
-    report = review.check_text("pg-parallel-decode")
+    report = review.check_text(fixture_episode)
     assert report.layer == review.TEXT_LAYER
-    assert report.episode == "pg-parallel-decode"
+    assert report.episode == fixture_episode
     for signal in report.signals:
         assert signal.rule in review.TEXT_RULES or signal.rule.startswith("persona."), \
             signal.rule
     assert isinstance(report.to_dict(), dict)
 
 
-def test_check_text_reports_persona_findings_without_rewriting_them():
+def test_check_text_reports_persona_findings_without_rewriting_them(fixture_episode):
     """人格结论并入报告，但**判据只有一份**（pyv/persona.py）。"""
-    report = review.check_text("pg-parallel-decode")
+    report = review.check_text(fixture_episode)
     rules = {s.rule for s in report.signals}
     assert any(rule.startswith("persona.") for rule in rules)
     assert any("人格检查" in note for note in report.notes)
@@ -483,7 +499,7 @@ def test_the_frame_on_the_brand_boundary_counts_as_brand():
 def test_narration_gaps_stay_below_the_silence_threshold():
     """阈值是**量出来的**，不是拍的。
 
-    六期旁白共 74 处句间间隙，实测全部落在 0.25~0.748 s。
+    各期旁白里的句间间隙实测全部落在 0.25~0.748 s。
     阈值必须高于这个最大值，否则会把正常的换气报成「静音」——
     这条测试就是钉住它的：阈值一降，这里就红。
     """
@@ -491,9 +507,15 @@ def test_narration_gaps_stay_below_the_silence_threshold():
         pytest.skip("本机缺 ffmpeg 或 ffprobe")
     from pyv import align
 
+    narrations = [episodes.narration_path(slug)
+                  for slug in episodes.known_eps()
+                  if episodes.narration_path(slug).is_file()]
+    if not narrations:
+        pytest.skip("磁盘上没有带旁白的期，没有间隙可量")
+
     worst = 0.0
-    for episode in episodes.EPISODE_ORDER:
-        spans = align.detect_sentences(episodes.narration_path(episode))
+    for narration in narrations:
+        spans = align.detect_sentences(narration)
         for (_, prev_end), (next_start, _) in zip(spans, spans[1:]):
             worst = max(worst, next_start - prev_end)
     assert worst < review.NARRATION_SILENCE_S, (
@@ -739,28 +761,63 @@ def test_review_module_does_not_import_the_tools_checker():
 # ---------------------------------------------------------------- 记录与进度表
 
 
+def _index_table() -> tuple[list[str], list[list[str]]]:
+    """进度表（`video/review/INDEX.md`）里的表头与数据行。
+
+    **列的位置不写死**：表头自己说了哪一列是「slug」、哪一列是「待确认项」，
+    改了列序或加了列，这条也跟着走。表里第二张表（「批次说明」）不取。
+    """
+    assert REVIEW_INDEX.is_file(), f"进度表不在：{REVIEW_INDEX}"
+    header: list[str] = []
+    rows: list[list[str]] = []
+    for line in REVIEW_INDEX.read_text(encoding="utf-8").splitlines():
+        if not line.strip().startswith("|"):
+            if header:
+                break
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if not header:
+            header = cells
+            continue
+        if set("".join(cells)) <= set("-: "):
+            continue  # 分隔行
+        rows.append(cells)
+    return header, rows
+
+
+def _index_column(header: list[str], name: str) -> int:
+    assert name in header, f"进度表里没有「{name}」这一列：{header}"
+    return header.index(name)
+
+
 def test_every_episode_has_a_review_record():
-    """六期一期一条记录。"""
-    records = review.REVIEW_DIR / "episodes"
-    assert records.is_dir()
-    for episode in episodes.EPISODE_ORDER:
-        path = records / f"{episode}.md"
+    """期目录里有期，就有这一期的记录。
+
+    记录在期目录里（`video/episodes/<slug>/review.md`）——**路径说了算**，
+    不再有一张「哪一期该有记录」的登记表。
+    """
+    for slug in episodes.known_eps():
+        path = episodes.review_path(slug)
         assert path.is_file(), f"缺审核记录：{path}"
 
 
 def test_review_records_match_the_index():
-    """进度表与记录一一对应。
+    """进度表与磁盘上的期一一对应。
 
     **两处维护必然不一致**，而索引会变成噪声源——所以它由测试钉住。
+
+    判据是**集合相等**：表里有的期磁盘上必须有，磁盘上有的期表里必须有。
     """
-    index = (review.REVIEW_DIR / "INDEX.md").read_text(encoding="utf-8")
-    rows = [line for line in index.splitlines()
-            if re.match(r"^\|\s*ep\d\d\s*\|", line)]
-    assert len(rows) == len(episodes.EPISODE_ORDER)
-    for episode in episodes.EPISODE_ORDER:
-        assert episode in index
-        record = (review.REVIEW_DIR / "episodes" / f"{episode}.md")
-        assert record.is_file()
+    header, rows = _index_table()
+    slug_column = _index_column(header, "slug")
+    listed = {row[slug_column] for row in rows}
+    on_disk = set(episodes.known_eps())
+    assert listed == on_disk, (
+        f"进度表与磁盘对不上：表里有 {sorted(listed - on_disk)}，"
+        f"磁盘上有 {sorted(on_disk - listed)}"
+    )
+    for slug in on_disk:
+        assert episodes.review_path(slug).is_file()
 
 
 def _pending_items(record: Path) -> int:
@@ -800,18 +857,19 @@ def test_the_index_pending_count_matches_the_records():
     「待确认项」记的是**还没改掉**的条数，不是「优先修改」的总条数：
     已改的条目仍然留在记录里（它是改动的依据），但不再欠着。
     """
-    index = (review.REVIEW_DIR / "INDEX.md").read_text(encoding="utf-8")
-    for episode in episodes.EPISODE_ORDER:
-        row = next(line for line in index.splitlines()
-                   if line.strip().startswith("|")
-                   and [c.strip() for c in line.strip("|").split("|")][1:2]
-                   == [episode])
-        cells = [c.strip() for c in row.strip("|").split("|")]
-        assert cells[-2].isdigit(), f"{episode} 的「待确认项」列不是数字：{cells[-2]}"
-        pending = _pending_items(
-            review.REVIEW_DIR / "episodes" / f"{episode}.md")
-        assert int(cells[-2]) == pending, (
-            f"{episode}：进度表写着 {cells[-2]} 条待确认，"
+    header, rows = _index_table()
+    slug_column = _index_column(header, "slug")
+    pending_column = _index_column(header, "待确认项")
+    for row in rows:
+        slug = row[slug_column]
+        record = episodes.review_path(slug)
+        if not record.is_file():
+            continue  # 缺记录由「每期都有记录」那条报
+        assert row[pending_column].isdigit(), (
+            f"{slug} 的「待确认项」列不是数字：{row[pending_column]}")
+        pending = _pending_items(record)
+        assert int(row[pending_column]) == pending, (
+            f"{slug}：进度表写着 {row[pending_column]} 条待确认，"
             f"记录里没改掉的是 {pending} 条——对一下"
         )
 
@@ -827,9 +885,11 @@ def test_review_records_are_not_published():
     assert "review/" not in source
 
 
-def test_the_six_episode_records_exist_with_a_status_line():
+def test_every_review_record_has_a_status_line():
     """每条记录都带状态行——状态是进度表的依据。"""
-    records = review.REVIEW_DIR / "episodes"
-    for episode in episodes.EPISODE_ORDER:
-        text = (records / f"{episode}.md").read_text(encoding="utf-8")
-        assert re.search(r"^- 状态：", text, re.MULTILINE), episode
+    for slug in episodes.known_eps():
+        record = episodes.review_path(slug)
+        if not record.is_file():
+            continue  # 缺记录由「每期都有记录」那条报
+        text = record.read_text(encoding="utf-8")
+        assert re.search(r"^- 状态：", text, re.MULTILINE), slug

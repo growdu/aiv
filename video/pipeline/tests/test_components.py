@@ -16,9 +16,12 @@ import cairo
 import pytest
 
 from pyv import components
-from pyv import contract as contract_mod
+from pyv import episodes as episodes_mod
 
 AIV_ROOT = Path(__file__).resolve().parents[2]
+
+#: 夹具期的契约（`tests/fixtures/fixture/contract.json`）。
+FIXTURE_CONTRACT = Path(__file__).parent / "fixtures" / "fixture" / "contract.json"
 
 
 def _ctx(w: int = 800, h: int = 600):
@@ -146,7 +149,10 @@ def test_arrow_h_points_rightward():
 
 
 def _contract_copy() -> set[str]:
-    """六期契约里出现过的所有文案。"""
+    """契约里出现过的所有文案。
+
+    读的是**磁盘上真实存在的契约**：夹具期的，加上各期的。
+    """
     copy: set[str] = set()
 
     def walk(node):
@@ -160,7 +166,12 @@ def _contract_copy() -> set[str]:
             for value in node.values():
                 walk(value)
 
-    for path in sorted(contract_mod.CONTRACTS_DIR.glob("*.json")):
+    paths = [FIXTURE_CONTRACT]
+    for slug in episodes_mod.known_eps():
+        path = episodes_mod.contract_path(slug)
+        if path.is_file():
+            paths.append(path)
+    for path in paths:
         walk(json.loads(path.read_text(encoding="utf-8")))
     return copy
 

@@ -200,8 +200,8 @@ def repo_charset() -> set[str]:
 
     来源：
 
-    1. 六期契约 JSON 里的所有字符串——**画面文案的唯一来源**
-    2. 六份字幕稿的全部字符（字幕是烧进画面的，宁可多收）
+    1. 各期契约 JSON 里的所有字符串——**画面文案的唯一来源**
+    2. 各期口播稿的全部字符（字幕是烧进画面的，宁可多收）
     3. **画字模块**里的字符串字面量（见 `DRAWING_MODULES`）——
        场景里写死的少量文案（比如那个问号）在这里
     4. 基础 ASCII 与常用中英标点
@@ -224,10 +224,10 @@ def repo_charset() -> set[str]:
             for value in node.values():
                 walk(value)
 
-    for path in sorted((AIV_ROOT / "contracts").glob("*.json")):
+    for path in sorted((AIV_ROOT / "episodes").glob("*/contract.json")):
         walk(json.loads(path.read_text(encoding="utf-8")))
 
-    for path in sorted(AIV_ROOT.glob("字幕-*.md")):
+    for path in sorted((AIV_ROOT / "episodes").glob("*/口播稿.md")):
         add(path.read_text(encoding="utf-8"))
 
     for pattern in DRAWING_MODULES:

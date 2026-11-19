@@ -138,14 +138,48 @@ def _drawable(ch: str) -> bool:
     return True
 
 
+def _episode_contracts() -> list[Path]:
+    """磁盘上各期的契约（`video/episodes/<slug>/contract.json`）。"""
+    from pyv import episodes as episodes_mod
+
+    return [episodes_mod.contract_path(slug)
+            for slug in episodes_mod.known_eps()
+            if episodes_mod.contract_path(slug).is_file()]
+
+
+def _episode_scripts() -> list[Path]:
+    """磁盘上各期的口播稿（`video/episodes/<slug>/口播稿.md`）。"""
+    from pyv import episodes as episodes_mod
+
+    return [episodes_mod.script_path(slug)
+            for slug in episodes_mod.known_eps()
+            if episodes_mod.script_path(slug).is_file()]
+
+
+def _probe_modules() -> list[str]:
+    """探针要画的场景模块：目录里有的每一个。
+
+    **按目录扫**：加一个场景不用改这里；少一个场景，探针立刻瞎掉——
+    下面那条「探针盖住每个场景模块」的守卫盯着这件事。
+    """
+    scenes_dir = AIV_ROOT / "pipeline" / "pyv" / "scenes"
+    return [f"pyv.scenes.{path.stem}"
+            for path in sorted(scenes_dir.glob("*.py"))
+            if path.stem != "__init__"]
+
+
 def _repo_chars() -> set[str]:
     """仓库里会被画到画面上的字符（静态复算）。
 
     与 `scripts/build_font_subset.py` 里的那份**各写一份**：共用一份
     的话，提取逻辑写错了两边一起错，缺字守卫就永远绿着。
 
-    来源：六期契约的全部字符串值（画面文案的唯一来源）、六份字幕稿、
+    来源：磁盘上各期的契约（画面文案的唯一来源）与口播稿（烧进画面的字幕）、
     画字模块里的字符串字面量、基础 ASCII 与常用标点。
+
+    **夹具期不算**：它是测试输入，不是入库的内容——产品要画的字
+    不含它。（真要画它，缺字守卫会报红，那时的正确动作是重跑
+    `scripts/build_font_subset.py`。）
     """
     chars: set[str] = set()
 
@@ -164,10 +198,10 @@ def _repo_chars() -> set[str]:
             for value in node.values():
                 visit(value)
 
-    for path in sorted((AIV_ROOT / "contracts").glob("*.json")):
+    for path in _episode_contracts():
         visit(json.loads(path.read_text(encoding="utf-8")))
 
-    for path in sorted(AIV_ROOT.glob("字幕-*.md")):
+    for path in _episode_scripts():
         put(path.read_text(encoding="utf-8"))
 
     for pattern in DRAWING_MODULES:
@@ -204,8 +238,10 @@ def _drawn_chars() -> set[str]:
 
     **不看源码，看画面**：所有出字的路都走一遍。
 
-    1. **场景**：36 个视觉段 × 两个画幅 × 五个时刻，拦下每一次画字。
-    2. **字幕**：真实字幕稿 → 真实 `SubtitleBurner` → 真实 `wrap_line`
+    1. **场景**：目录里每个场景模块 × 两个画幅 × 五个时刻，拦下每一次画字。
+       画面内容用测试自造的最小 params（`tests/scene_params.py`）——
+       磁盘上没有期时，探针盯的仍然是**场景代码画出来的字**。
+    2. **字幕**：各期的口播稿 → 真实 `SubtitleBurner` → 真实 `wrap_line`
        → 拦在 `_outlined_text`——那是**切好行之后**真正落到画面上的
        那一行。
     3. **品牌片**：真实 `render_brand.py` 的片头 / 片尾各渲五个时刻，
@@ -225,10 +261,10 @@ def _drawn_chars() -> set[str]:
     from PIL import Image
 
     from pyv import align
-    from pyv import contract as contract_mod
-    from pyv import draw, episodes as episodes_mod
+    from pyv import draw
     from pyv import subtitle as subtitle_mod
     from pyv.timeline import SubtitleEvent, SubtitleStyle
+    from scene_params import params_for
 
     seen: set[str] = set()
 
@@ -247,32 +283,30 @@ def _drawn_chars() -> set[str]:
     draw.text = recorder
     subtitle_mod._outlined_text = recorder_line
     try:
-        # 1. 场景
-        for episode in episodes_mod.EPISODE_ORDER:
-            contract = contract_mod.load_contract(
-                AIV_ROOT / "contracts" / f"{episode}.json")
-            for segment in contract.segments:
-                module = importlib.import_module(segment.renderer)
-                bound = getattr(module, "text", None)
+        # 1. 场景：每个场景模块都画一遍
+        for module_name in _probe_modules():
+            module = importlib.import_module(module_name)
+            bound = getattr(module, "text", None)
+            if bound is not None:
+                module.text = recorder
+            try:
+                for width, height in CANVASES:
+                    for t in PROBE_TIMES:
+                        surface = cairo.ImageSurface(
+                            cairo.FORMAT_ARGB32, width, height)
+                        ctx = cairo.Context(surface)
+                        module.render(ctx, t, width, height,
+                                      params_for(module_name))
+                        del surface, ctx
+            finally:
                 if bound is not None:
-                    module.text = recorder
-                try:
-                    for width, height in CANVASES:
-                        for t in PROBE_TIMES:
-                            surface = cairo.ImageSurface(
-                                cairo.FORMAT_ARGB32, width, height)
-                            ctx = cairo.Context(surface)
-                            module.render(ctx, t, width, height, segment.params)
-                            del surface, ctx
-                finally:
-                    if bound is not None:
-                        module.text = bound
+                    module.text = bound
 
-        # 2. 字幕
+        # 2. 字幕：各期的口播稿 → 真实 SubtitleBurner → 真实 wrap_line
+        #    → 拦在 `_outlined_text`
         style = SubtitleStyle(primary="#000000", outline="#FFFFFF")
-        for episode in episodes_mod.EPISODE_ORDER:
-            texts = align.parse_subtitle_table(
-                episodes_mod.script_path(episode))
+        for script in _episode_scripts():
+            texts = align.parse_subtitle_table(script)
             events = [
                 SubtitleEvent(start=float(index), end=float(index) + 1.0,
                               text=text)
@@ -441,35 +475,35 @@ def test_the_runtime_probe_actually_sees_the_text():
 
 
 def test_every_visual_segment_is_covered_by_the_runtime_probe():
-    """运行时探针声称覆盖全部视觉段——那就钉住这个声称。
+    """运行时探针声称覆盖全部场景模块——那就钉住这个声称。
 
     少扫了一个场景，那个场景画出去的字就没人管了。
 
-    **36 段 / 26 个模块**：同一期里有几段复用同一个场景模块（换个
-    参数画同一套版式），所以段数比模块数多。两个数都钉住——
-    段数变了是契约变了，模块数变了是场景目录变了。
+    **按目录扫**：探针画的模块集合必须等于 `pyv/scenes/` 里的模块集合。
+    磁盘上有期时，契约里用到的模块也要在探针的覆盖范围里。
     """
     from pyv import contract as contract_mod
     from pyv import episodes as episodes_mod
 
-    segments = []
-    for episode in episodes_mod.EPISODE_ORDER:
-        contract = contract_mod.load_contract(
-            AIV_ROOT / "contracts" / f"{episode}.json")
-        segments.extend(segment.renderer for segment in contract.segments)
-
-    modules = {name.split(".")[-1] for name in segments}
+    probed = {name.split(".")[-1] for name in _probe_modules()}
     on_disk = {path.stem for path in
                (AIV_ROOT / "pipeline" / "pyv" / "scenes").glob("*.py")
                if path.stem != "__init__"}
-
-    assert len(segments) == 36, f"视觉段数变了：{len(segments)}"
-    assert modules == on_disk, (
-        f"契约里用到的场景模块与目录里的对不上："
-        f"目录有契约没用 {sorted(on_disk - modules)}；"
-        f"契约用了目录没有 {sorted(modules - on_disk)}"
+    assert probed == on_disk, (
+        f"探针画的场景模块与目录里的对不上："
+        f"目录有探针没画 {sorted(on_disk - probed)}；"
+        f"探针画了目录没有 {sorted(probed - on_disk)}"
     )
-    assert len(modules) == 26, f"场景模块数变了：{len(modules)}"
+
+    used = set()
+    for slug in episodes_mod.known_eps():
+        contract = contract_mod.load_contract(
+            episodes_mod.contract_path(slug))
+        used.update(segment.renderer.split(".")[-1]
+                    for segment in contract.segments)
+    assert used <= probed, (
+        f"契约里用到的场景模块探针没画：{sorted(used - probed)}"
+    )
 
 
 # ---------------------------------------------------------------- 体积与族名

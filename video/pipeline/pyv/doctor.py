@@ -163,16 +163,16 @@ def _check_narrations() -> list[Check]:
     from pyv import episodes
 
     checks: list[Check] = []
-    for ep in episodes.EPISODE_ORDER:
+    for ep in episodes.known_eps():
         narration = episodes.narration_path(ep)
         present = narration.is_file()
-        script = episodes.EPISODES[ep]
+        script = episodes.script_path(ep)
         checks.append(Check(
-            "素材", f"narration_{ep}.mp3", INFO if present else ERROR, present,
+            "素材", f"{ep} 的旁白", INFO if present else ERROR, present,
             "已就位" if present else "缺：这一期的旁白",
             fix="" if present else
             f"合成：python3 video/voice/scripts/synthesize_narration.py "
-            f"--script video/{script} --out video/narration_{ep}.mp3",
+            f"--script {script} --out {narration}",
         ))
     return checks
 
@@ -191,7 +191,15 @@ def _check_episodes() -> list[Check]:
     from pyv import episodes
 
     checks: list[Check] = []
-    for ep in episodes.EPISODE_ORDER:
+    eps = episodes.known_eps()
+    if not eps:
+        checks.append(Check(
+            "素材", "video/episodes/", INFO, True,
+            "还没有期：新建 video/episodes/<slug>/ 就是一个新的一期",
+            fix="",
+        ))
+        return checks
+    for ep in eps:
         script = episodes.script_path(ep)
         contract = episodes.contract_path(ep)
         missing = [str(p) for p in (script, contract) if not p.is_file()]
@@ -199,7 +207,7 @@ def _check_episodes() -> list[Check]:
             "素材", f"{ep} 的稿件与契约", INFO if not missing else ERROR,
             not missing,
             "已就位" if not missing else f"缺：{'、'.join(missing)}",
-            fix="" if not missing else "git checkout -- video/",
+            fix="" if not missing else f"git checkout -- video/episodes/{ep}/",
         ))
     return checks
 

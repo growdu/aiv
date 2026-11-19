@@ -1,6 +1,7 @@
 """每期的发布元数据：这一期在各个平台怎么自我介绍。
 
-**入库的是事实**：元数据要评审、要版本化，所以进 `video/publish/<EP>.json`。
+**入库的是事实**：元数据要评审、要版本化，所以进期目录
+`video/episodes/<slug>/publish.json`。
 **不入库的是产物**：成片、发布包都留本机。
 
 元数据只回答「这一期叫什么、封面取哪一帧、各平台的文案是什么」，
@@ -19,7 +20,9 @@ from pathlib import Path
 # video/ 是 pipeline/ 的上一级：pyv/epmeta.py → pyv → pipeline → video
 AIV_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = AIV_ROOT.parent
-PUBLISH_DIR = AIV_ROOT / "publish"
+#: 发布元数据跟着期走：video/episodes/<slug>/publish.json
+EPISODES_DIR = AIV_ROOT / "episodes"
+PUBLISH_NAME = "publish.json"
 # 能力声明是契约层的数据文件。pyv 只**读**它，不 import 契约层的任何包。
 # 声明住在平台自己的目录里：platforms/<plat>/capability.toml
 PLATFORMS_DIR = REPO_ROOT / "platforms"
@@ -134,8 +137,24 @@ class EpisodeMeta:
 
 
 def meta_path(episode: str, root: Path | None = None) -> Path:
-    base = Path(root) if root else PUBLISH_DIR
-    return base / f"{episode}.json"
+    """发布元数据的路径。
+
+    默认落在期目录里：`video/episodes/<slug>/publish.json`。
+    `root` 给定时，当成**期目录本身**（测试与外部调用走这条）。
+    """
+    base = Path(root) if root else EPISODES_DIR / episode
+    return base / PUBLISH_NAME
+
+
+def published_episodes() -> list[str]:
+    """磁盘上已有发布元数据的期（slug），按 slug 排序。"""
+    if not EPISODES_DIR.is_dir():
+        return []
+    return sorted(
+        path.parent.name
+        for path in EPISODES_DIR.glob(f"*/{PUBLISH_NAME}")
+        if path.is_file()
+    )
 
 
 def load_meta(episode: str, root: Path | None = None) -> EpisodeMeta:

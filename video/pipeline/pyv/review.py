@@ -6,7 +6,8 @@
 - **成片层**（`VV-*`）审「做出来是什么样」：抽帧看画面，查音轨，查技术参数。
 
 **两层都只出信号，不下结论。**「这句像不像人讲」「这张图讲清了没有」
-需要上下文和眼睛，由人和 Agent 判断，结论落在 `video/review/episodes/<EP>.md`。
+需要上下文和眼睛，由人和 Agent 判断，结论落在
+`video/episodes/<slug>/review.md`。
 
 规范在 `video/review/README.md`，设计在
 `video/review/specs/2026-11-16-video-review-design.md`。
@@ -32,8 +33,6 @@ from pyv.timeline import Scene, Storyboard
 
 AIV_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = AIV_ROOT.parent
-REVIEW_DIR = AIV_ROOT / "review"
-FRAMES_DIR = REVIEW_DIR / "frames"
 
 TEXT_LAYER = "text"
 VIDEO_LAYER = "video"
@@ -93,7 +92,7 @@ SUBTITLE_DARK_RATIO = 0.0008
 SCENE_FRAME_POINTS = (("mid", 0.50), ("late", 0.85))
 #: 正文区间里旁白静音超过这个秒数 → warn。
 #:
-#: **0.6 s 是拍脑袋的，实测不是。** 六期旁白共 74 处句间间隙，全部落在
+#: **0.6 s 是拍脑袋的，实测不是。** 实测的旁白共 74 处句间间隙，全部落在
 #: 0.25~0.748 s，中位数 0.427 s——0.6 s 卡在自然分布的尾巴里，
 #: 会把约两成的正常换气报成「静音」。
 #:
@@ -267,8 +266,9 @@ def _probe_duration(path: str | Path) -> float | None:
 def load_materials(episode: str) -> Materials:
     """装齐文本层的输入。
 
-    口播稿与字幕表来自 `video/字幕-<主题>.md`，契约来自 `video/contracts/<EP>.json`，
-    母稿与数字出处来自 `video/选题库.md` 的对应期。
+    口播稿与字幕表来自 `video/episodes/<slug>/口播稿.md`，契约来自
+    `video/episodes/<slug>/contract.json`，母稿与数字出处来自
+    `video/选题库.md` 的对应期（期号取自口播稿的 front matter）。
     """
     script_path = episodes.script_path(episode)
     contract_path = episodes.contract_path(episode)
@@ -277,7 +277,7 @@ def load_materials(episode: str) -> Materials:
     subtitles = align.parse_subtitle_table(script_path)
 
     notes: list[str] = []
-    ep_number = episodes.EP_NUMBERS.get(episode, "")
+    ep_number = episodes.ep_number(episode)
     motherdocs: list[Path] = []
     evidence: list[tuple[str, str, str]] = []
     title = contract.title
@@ -636,7 +636,7 @@ def _scene_spans(storyboard: Storyboard) -> list[tuple[Scene, float, float]]:
     真实的段边界与名义值差最多一帧（24fps 下 42 ms），且逐段累积。
 
     **这半帧的偏差会咬人**：编码器切出来的关键帧常常正好落在真实边界上。
-    实测 parallel-apply：名义 s01→s02 在 5.977 s，真实切点在 5.958 s，
+    实测一例：名义 s01→s02 在 5.977 s，真实切点在 5.958 s，
     而关键帧就在 5.958 s。按名义秒归属，这一帧画面上已经是下一段、
     归属却记成上一段——抽帧清单就会拿「下一段的画面」去核对「上一段的
     文案」，一整片假漏字。
@@ -1031,12 +1031,13 @@ def check_video(episode: str, out_dir: Path | None = None) -> Report:
     if media.video is None:
         return report
 
-    target_dir = out_dir or (FRAMES_DIR / episode)
+    frames_dir = out_dir or episodes.frames_dir(episode)
+    manifest_dir = out_dir or episodes.episode_root(episode)
     materials = load_materials(episode)
-    frames = extract_frames(media, target_dir, materials=materials)
+    frames = extract_frames(media, frames_dir, materials=materials)
     if frames:
-        manifest = write_frame_manifest(frames, target_dir, materials)
-        report.note(f"抽了 {len(frames)} 帧 → {target_dir}；清单 → {manifest}")
+        manifest = write_frame_manifest(frames, manifest_dir, materials)
+        report.note(f"抽了 {len(frames)} 帧 → {frames_dir}；清单 → {manifest}")
     else:
         report.note("没抽到帧：VV-01、VV-02 跳过")
 

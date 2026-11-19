@@ -239,7 +239,7 @@ def build_storyboard(audio_path: str | Path,
     """对齐旁白与口播稿，写出 storyboard.json 并返回其内容。
 
     `contract_path` 是视觉分镜契约：句到视觉段的映射 + 画面上的文案。
-    省略时用默认契约（`video/contracts/pg-parallel-decode.json`）。
+    省略时用默认契约（期目录里的 `contract.json`）。
 
     `canvas` 是画布档位（`horizontal` / `vertical`，见 `palette.CANVASES`）。
     **默认横版**——竖版是抖音那一档的另一个产物，不是替换。

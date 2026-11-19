@@ -13,9 +13,8 @@
 | 目录 | 内容 |
 | --- | --- |
 | `pipeline/` | 出片流水线：`pyv/` 渲染引擎 + `tests/` + `Makefile` |
-| `contracts/` | 视觉分镜契约：一期视频的段落划分与画面文案 |
-| `publish/` | 发布元数据：每期各平台的标题、简介、话题与分区（`pyv publish check` 体检） |
-| `review/` | 视频审校：文本层 `VT-*` 与成片层 `VV-*` 的规则、一期一条记录、抽帧清单 |
+| `episodes/` | 一期视频：一个目录，口播稿、契约、发布元数据、旁白、审校记录都在里面 |
+| `review/` | 视频审校的规则（文本层 `VT-*`、成片层 `VV-*`），一期的审校记录与抽帧清单在期目录里 |
 | `character/` | 3D 小象形象：生成、加眼镜、铭牌盖章（`scripts/`） |
 | `brand/` | 品牌片头/片尾：渲染与配乐（`scripts/`） |
 | `voice/` | 旁白音色与合成（`scripts/`） |
@@ -40,8 +39,6 @@
 
 [选题库.md](选题库.md) 是**选题这件事的唯一事实来源**：每一期一条，
 含题目、主钩子、关联文档、适配理由、口播骨架、画面契约草案与数字出处。
-第一季的主线是「机制族」——同一个机制往下挖；EP06 起进入第二季「内核机制」
-（行锁、MVCC 这些内核里的数据结构）。
 
 它同样可机检（`pipeline/pyv/topics.py`，8 条规则）：
 
@@ -59,28 +56,17 @@ make topics       # python -m pyv.cli topics check
 
 ### 进度
 
-| 期 | 主题 | 状态 | 成片规格 |
-| --- | --- | --- | --- |
-| EP01 | openGauss 的并行逻辑解码 | 已出片 | 正文 32.436 秒 |
-| EP02 | 一个 64 位计数器，决定所有事务的提交顺序 | 已出片 | 正文 35.316 秒 |
-| EP03 | WAL 里的顺序，不等于事务的顺序 | 已出片 | 正文 34.596 秒 |
-| EP04 | 并行接收之后，谁先应用 | 已出片 | 正文 35.424 秒 |
-| EP05 | 为什么 DDL 同步不能直接把 SQL 文本发过去 | 已出片 | 正文 34.128 秒 |
-| EP06 | 两个事务改同一行，谁先谁后（第二季入口） | 已出片 | 正文 35.208 秒 |
-
-六期的成片都是 1920×1080 / 24fps / H.264 yuv420p / AAC 48kHz 立体声，
-外加 2.833 秒品牌片头与片尾（EP01 共 38.125 秒，EP02 共 41.000 秒，
-EP03 共 40.262 秒，EP04 共 41.090 秒，EP05 共 39.833 秒，EP06 共 40.875 秒）。
-成片是产物、不入库，上面的时长是实测值，记在 [index.md](index.md) 与本表里。
+这条线刚清空重来：规则齐了，还没有期。建一期就是建一个目录，
+见 [episodes/README.md](episodes/README.md)。
 
 ## 本期内容进契约，版式常量留代码
 
 一条视频的**画面文案与数字**（标题、副标题、标签、核数、顺序号、性能倍数……）
-全部写在 `contracts/*.json` 的视觉分镜契约里，不写在场景代码里。
+全部写在 `episodes/<slug>/contract.json` 的视觉分镜契约里，不写在场景代码里。
 
 | | 放哪 | 谁定 |
 | --- | --- | --- |
-| 文案、数字、标签、枚举 | `contracts/<期>.json` | 每一期 |
+| 文案、数字、标签、枚举 | `episodes/<slug>/contract.json` | 每一期 |
 | 位置、尺寸、配色、动效 | `pipeline/pyv/scenes/*.py` | 模板 |
 
 这么分是为了让「换一期」不再等于「改一遍代码」：新一期只写契约，
@@ -110,9 +96,10 @@ make probe       # ffprobe 看成片的时长、编码与像素格式
 ```
 
 出片链路（`align → validate → brand → render → compose`）需要旁白音频
-（`narration_<期号>.mp3`，**已入库**）与视觉分镜契约（`contracts/<期号>.json`，
-已入库）——契约决定**画面上写什么**，旁白决定**什么时候出现**。
-时间轴 `storyboard_<期号>.json` 由 `align` 从旁白算出来，是产物，不入库。
+（`episodes/<slug>/narration.mp3`，**已入库**）与视觉分镜契约
+（`episodes/<slug>/contract.json`，已入库）——契约决定**画面上写什么**，
+旁白决定**什么时候出现**。
+时间轴 `episodes/<slug>/storyboard.json` 由 `align` 从旁白算出来，是产物，不入库。
 
 ### 出片之后：验收、体检与审校
 
@@ -120,11 +107,11 @@ make probe       # ffprobe 看成片的时长、编码与像素格式
 
 | 环节 | 命令 | 查什么 |
 | --- | --- | --- |
-| 成片验收 | `make EP=<期号> mix-verify` | 稳态 duck 深度、旁白/BGM 电平差、真峰值（规范 §5.7） |
-| 发布体检 | `python3 -m pyv.cli publish check --episode <期号>` | 发布元数据 + 成片技术门槛（每个平台各判一遍） |
-| 文本层审校 | `make review-text EP=<期号>` | `VT-*`：口播腔调、数字出处、口播与字幕是否一致 |
-| 成片层审校 | `make review-video EP=<期号>` | `VV-*`：漏画、字幕没烧上、旁白静音、时长与时间轴对不上 |
-| 抽帧看画面 | `make review-frames EP=<期号>` | 每段两帧 + 关键帧，出一份「这一帧该有什么文案」的对照清单 |
+| 成片验收 | `make EP=<slug> mix-verify` | 稳态 duck 深度、旁白/BGM 电平差、真峰值（规范 §5.7） |
+| 发布体检 | `python3 -m pyv.cli publish check --episode <slug>` | 发布元数据 + 成片技术门槛（每个平台各判一遍） |
+| 文本层审校 | `make review-text EP=<slug>` | `VT-*`：口播腔调、数字出处、口播与字幕是否一致 |
+| 成片层审校 | `make review-video EP=<slug>` | `VV-*`：漏画、字幕没烧上、旁白静音、时长与时间轴对不上 |
+| 抽帧看画面 | `make review-frames EP=<slug>` | 每段两帧 + 关键帧，出一份「这一帧该有什么文案」的对照清单 |
 
 审校的两层、阈值与边界见 [review/README.md](review/README.md)。
 
@@ -133,14 +120,14 @@ make probe       # ffprobe 看成片的时长、编码与像素格式
 抖音禁「过度营销信息」与站外引流，所以另出两档：
 
 ```bash
-make EP=<期号> nobrand            # 去品牌片头/片尾
-make EP=<期号> nobrand NOBADGE=1  # 再去掉胸口铭牌（铭牌也是品牌标识）
-make EP=<期号> vertical           # 9:16 竖版
+make EP=<slug> nobrand            # 去品牌片头/片尾
+make EP=<slug> nobrand NOBADGE=1  # 再去掉胸口铭牌（铭牌也是品牌标识）
+make EP=<slug> vertical           # 9:16 竖版
 ```
 
 三件事要记住：
 
-- **片段目录与成片都另起一份**（`build/<期号>__nobrand/`、`out/<期号>__nobrand.mp4`），
+- **片段目录与成片都另起一份**（`build/<slug>__nobrand/`、`out/<slug>__nobrand.mp4`），
   不跟带品牌的版本共用——共用会让增量渲染把带品牌片的片段当成可复用的。
 - **竖版本来就不套品牌片**：品牌片素材是横版的，贴到竖版画布上会被拉变形，
   `pyv.cli brand` 会直接拒绝。
@@ -170,7 +157,7 @@ cd video/pipeline && make doctor                       # 自检
 | 关掉 hinting | `pyv/fingerprint.py` 的前置条件 | Linux 的 FreeType 默认开 autohinter，轮廓点吸附像素网格——实测一行字的步进能差 **68px**，字号跟着差 3.2px |
 | 粗体用真 Bold 字形 | `assets/fonts/AIVSansCJKSC-Bold.otf` | 只装常规字重时 cairo 会**合成**粗体，CoreText 合成一套、FreeType 合成另一套，轮廓包围盒差 3.14px |
 | 布局指纹守卫 | `pyv/fingerprint.py` + `tests/test_layout_fingerprint.py` | 记落笔坐标、字号、步进宽度、轮廓包围盒——这四类是**字体的性质**，跨机可比 |
-| 逐像素基准 | `scripts/capture_scene_baseline.py` + `tests/test_contract.py` | 覆盖全部 36 个视觉段（6 期 × 6 段），守的是「文案搬进契约不该动到画面」 |
+| 逐像素基准 | `scripts/capture_scene_baseline.py` + `tests/test_contract.py` | 覆盖全部视觉段，守的是「文案搬进契约不该动到画面」 |
 
 **逐像素基准跨机不可比**：cairo 在 macOS 走 CoreText、在 Linux 走 FreeType，
 栅格化不同，像素必然不同。所以跨机靠**指纹**（实测最大差：坐标 0.000、字号 0.027、
@@ -179,34 +166,40 @@ cd video/pipeline && make doctor                       # 自检
 
 ## 换一期
 
-流水线按期号（`EP`）切：
+一期 = 一个目录，路径说了算：
 
 ```bash
 cd video/pipeline
-make EP=csn-total-ordering align      # 按这一期的旁白对齐出时间轴
-make EP=csn-total-ordering all         # validate → brand → render → compose
+make EP=<slug> align        # 按这一期的旁白对齐出时间轴
+make EP=<slug> all          # validate → brand → render → compose
 ```
 
-`EP` 决定这一期的契约、旁白、时间轴、片段目录与成片的文件名；
-**口播稿按主题命名**（`字幕-并行解码.md`、`字幕-CSN全序.md`），
-在 Makefile 里按 `EP` 显式登记——换期时忘了换稿会当场报错，
-而不是静悄悄地拿上一期的稿子出片。
+`EP` 收的是 **slug**（英文小写连字符），它决定这一期读哪个目录：
+`episodes/<slug>/` 里的口播稿、契约、旁白，就是这一期的输入。
+**忘了 `EP=` 会当场报错**，不会拿空路径去跑，
+也不会静悄悄地拿上一期的稿子出片。
 
-片段目录也按期分开（`build/<期号>/`）：各期的段 id 会重名（`s01`…），
+期目录里放这一期的全部输入与产物：`口播稿.md`（口播稿 + 字幕表）、
+`contract.json`（视觉分镜契约）、`publish.json`（发布元数据）、
+`narration.mp3`（旁白）、`storyboard.json`（时间轴）、
+`review.md`（这一期的审校记录）、`frames.md`（抽帧清单）、
+`frames/`（抽出来的帧）。哪些入库、哪些是产物，看下面这张表。
+
+片段目录也按期分开（`build/<slug>/`）：各期的段 id 会重名（`s01`…），
 共用一个目录会互相覆盖。
 
 | 入库 | 不入库（留本机） |
 | --- | --- |
-| `contracts/<期号>.json` 视觉分镜契约 | `storyboard_<期号>.json` 时间轴 |
-| `字幕-<主题>.md` 口播稿与字幕表 | `build/<期号>/*.mp4` 片段 |
-| `pipeline/pyv/scenes/*.py` 场景代码 | `out/<期号>.mp4` 成片 |
-| `narration_<期号>.mp3` 旁白（**出片必需**） | 发布包 |
-| `music/tracks/*.wav` 曲库（**出片必需**） | `review/frames/<期号>/*.png` 抽出来的帧 |
+| `episodes/<slug>/contract.json` 视觉分镜契约 | `episodes/<slug>/storyboard.json` 时间轴 |
+| `episodes/<slug>/口播稿.md` 口播稿与字幕表 | `build/<slug>/*.mp4` 片段 |
+| `pipeline/pyv/scenes/*.py` 场景代码 | `out/<slug>.mp4` 成片 |
+| `episodes/<slug>/narration.mp3` 旁白（**出片必需**） | 发布包 |
+| `music/tracks/*.wav` 曲库（**出片必需**） | `episodes/<slug>/frames/*.png` 抽出来的帧 |
 | `character/growdu_character_2k_nobg.png` 立绘（**出片必需**） | |
 | `brand/clips/*.mp4`、`brand/audio/*_mix.wav` 品牌片与音轨 | |
 | `pipeline/assets/fonts/*.otf` 内置字体子集（**跨机版式一致要用**） | |
-| `publish/<期号>.json` 发布元数据 | |
-| `review/frames/<期号>/frames.md` 抽帧清单 | |
+| `episodes/<slug>/publish.json` 发布元数据 | |
+| `episodes/<slug>/frames.md` 抽帧清单 | |
 
 抽帧的**帧不入库、清单入库**：帧是产物，跟着本机的成片走；清单是
 「这一期抽了哪些帧、每帧该有什么文案」的对照表——审核记录里的判断要能对着它复核。
@@ -214,7 +207,8 @@ make EP=csn-total-ordering all         # validate → brand → render → compo
 
 ## 审校（review）
 
-`review/` 存放对这条线的**审校任务与记录**，一期一条，规范在
+`review/` 存放对这条线的**审校规范与进度**，一期的审校记录在期目录里
+（`episodes/<slug>/review.md`），规范在
 [review/README.md](review/README.md)。目标不是把片子做得更华丽，
 而是让它像一位有经验的工程师在清楚地讲一件事：具体、自然、有判断。
 
@@ -227,9 +221,9 @@ make EP=csn-total-ordering all         # validate → brand → render → compo
 
 ```bash
 cd video/pipeline
-make review-text   EP=<期号>   # 文本层
-make review-video  EP=<期号>   # 成片层（需要本机有 out/<期号>.mp4）
-make review-frames EP=<期号>   # 抽帧 + 清单（帧不入库，清单入库）
+make review-text   EP=<slug>   # 文本层
+make review-video  EP=<slug>   # 成片层（需要本机有 out/<slug>.mp4）
+make review-frames EP=<slug>   # 抽帧 + 清单（帧不入库，清单入库）
 ```
 
 三条规矩：
@@ -240,7 +234,7 @@ make review-frames EP=<期号>   # 抽帧 + 清单（帧不入库，清单入库
 - **改稿会改到画面**：口播改了，契约的句子覆盖关系可能变，`align` 要重算时间轴、
   片段要重渲。只审文本不审成片，等于审了一份没出片的稿子。
 
-一期一条记录在 `review/episodes/<期号>.md`，进度在 `review/INDEX.md`（只维护一份）。
+一期一条记录在 `episodes/<slug>/review.md`，进度在 `review/INDEX.md`（只维护一份）。
 `review/` 只记录审核过程与结论，**不是对外发布内容**，不进 `docs/`，
 也不进发布白名单（与文档侧的根 `review/` 同一条纪律）。
 
@@ -281,20 +275,8 @@ python3 video/scripts/sync_publish_docs.py
 （正本 `index.md`，发布副本 `docs/life/aiv/index.md`）讲的是这条线本身：
 九个环节、唯一契约、入库边界，以及「片尾接回片头」的配乐闭环。
 
-它在目录迁移提交 `0b9cb9a` 里被删过，仓库里有 **8 处链接**指向它、当时全 404。
-旧页在 git 历史里（`0b9cb9a^:docs/life/aiv/index.md`，213 行），但**不能直接恢复**：
-里面写的是「成片线归雇主、我们支持了 X」的公司口径，与现在的第三方开发者口径冲突；
-还引用已作废的 `pa_decode_v2.mp3`、把 `storyboard.json` 说成唯一契约
-（现在契约是 `contracts/*.json`，storyboard 是产物）。所以按现状重写了。
-
-重写后链接自己就恢复了——引用它的页面一个字都没改：
-
-| 位置 | 处数 |
-| --- | --- |
-| `docs/life/_index.md` | 2 |
-| `docs/life/blog-to-wechat/index.md` | 3 |
-| `docs/life/shehui/media-account/index.md` | 2 |
-| `docs/source-tracks/postgresql/_index.md` | 1（路径另错了一层，一并改成 `../../life/aiv/index.html`） |
+**补页面，而不是改链接**：目标页不存在时相对链接原样留下，所以要**把页面写出来**，
+而不是去改引用它的那些链接（原理见上一节）。
 
 落地方式：正本 `index.md` + 发布副本 `docs/life/aiv/index.md`，
 并把 `index.md` 加进 `video/scripts/sync_publish_docs.py` 的 `PUBLISH_DOCS`，

@@ -19,7 +19,7 @@
 **为什么找「最紧的」。** 一处字常常同时落在好几块底色上——s03 的操作字
 既在芯片里，也在槽位面板里。要紧的是**它自己那块**（最小的那块）。
 
-**覆盖。** 六期契约里的全部场景段，横竖两个画幅，跟
+**覆盖。** 全部场景段，横竖两个画幅，跟
 `test_scene_overlap.py` 一样扫 21 个时刻。
 
 插桩本身在 `tests/scene_probe.py`——那里还有做时序检查要用的不透明度。
@@ -32,20 +32,20 @@ from pathlib import Path
 import pytest
 
 from pyv import contract as contract_mod
-from pyv import episodes as episodes_mod
 
 from scene_probe import LANDSCAPE, PORTRAIT, TIMES, Session
+import scene_segments
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def _segments():
-    """六期契约里的全部场景段（带契约里的真实文案）。"""
-    for episode in episodes_mod.EPISODE_ORDER:
-        contract = contract_mod.load_contract(
-            ROOT / "contracts" / f"{episode}.json")
-        for segment in contract.segments:
-            yield episode, segment
+    """全部场景段（带契约里的真实文案）。
+
+    磁盘上有期就读期目录里的契约；没有期就按场景模块合成一段
+    （见 `scene_segments.py`）。
+    """
+    return scene_segments.segments()
 
 
 def _render_segment(segment):
@@ -88,11 +88,15 @@ def test_text_stays_inside_its_own_background(episode, segment, orientation,
         )
 
 
-def _segment_of(episode: str, seg_id: str):
-    for ep, segment in SEGMENTS:
-        if ep == episode and segment.id == seg_id:
+def _segment_of_module(module_name: str):
+    """按场景模块找段（`s02_raw_sql` 这样的）。
+
+    **不看期**：这条守卫盯的是场景模块自己的行为，与哪一期用它无关。
+    """
+    for _, segment in SEGMENTS:
+        if segment.renderer.split(".")[-1] == module_name:
             return segment
-    raise AssertionError(f"契约里没有 {episode} 的 {seg_id}")
+    raise AssertionError(f"没有 {module_name} 这一段")
 
 
 def test_sql_chip_keeps_its_declared_font_size(monkeypatch):
@@ -107,7 +111,7 @@ def test_sql_chip_keeps_its_declared_font_size(monkeypatch):
     """
     import pyv.scenes.s02_raw_sql as s02
 
-    segment = _segment_of("structured-ddl", "s02")
+    segment = _segment_of_module("s02_raw_sql")
     ddl = str(segment.params["ddl_text"])
     renderer, modules = _render_segment(segment)
     w, h = LANDSCAPE

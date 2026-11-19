@@ -13,6 +13,9 @@ from pyv.timeline import Scene
 
 PACKAGE = Path(render.__file__).resolve().parent
 
+#: 夹具期的契约（`tests/fixtures/fixture/contract.json`）。
+FIXTURE_CONTRACT = Path(__file__).parent / "fixtures" / "fixture" / "contract.json"
+
 
 def _probe(path):
     out = subprocess.run(
@@ -69,12 +72,22 @@ def _contract_params(renderer: str) -> dict:
 
     场景的文案与数字全在契约里（见 `pyv/contract.py`），测试也照这个口径取，
     不要在测试里另抄一份——抄一份就等于又造了个真相来源。
+
+    磁盘上没有期时读**夹具期**的契约（`tests/fixtures/fixture/contract.json`），
+    有期时先读期目录里的契约。
     """
     from pyv import contract as contract_mod
+    from pyv import episodes as episodes_mod
 
-    for segment in contract_mod.load_contract().segments:
-        if segment.renderer == renderer:
-            return dict(segment.params)
+    paths = [episodes_mod.contract_path(slug)
+             for slug in episodes_mod.known_eps()]
+    paths.append(FIXTURE_CONTRACT)
+    for path in paths:
+        if not path.is_file():
+            continue
+        for segment in contract_mod.load_contract(path).segments:
+            if segment.renderer == renderer:
+                return dict(segment.params)
     raise AssertionError(f"契约里没有 {renderer} 这一段")
 
 

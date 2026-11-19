@@ -105,10 +105,10 @@ python3 scripts/fetch_music.py --all
 ```bash
 cd video/pipeline
 python -m pyv.cli bgm verify \
-    --video ../out/pg-parallel-decode.mp4 \
-    --narration ../narration_pg-parallel-decode.mp3 \
+    --video ../out/<slug>.mp4 \
+    --narration ../episodes/<slug>/narration.mp3 \
     --music ../music/tracks/series-bed-01.wav \
-    --storyboard ../storyboard_pg-parallel-decode.json
+    --storyboard ../episodes/<slug>/storyboard.json
 ```
 
 量四件事：稳态 duck 深度、旁白活跃段与 BGM 的电平差、成片真峰值、

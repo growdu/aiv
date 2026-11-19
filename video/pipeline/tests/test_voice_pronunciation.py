@@ -40,17 +40,29 @@ ROOT = Path(__file__).resolve().parents[2]
 
 from pyv import episodes as episodes_mod
 
-
-SCRIPTS = {
-    episodes_mod.EP_NUMBERS[ep]: episodes_mod.EPISODES[ep]
-    for ep in episodes_mod.EPISODE_ORDER
-}
+import scene_segments
 
 
-def _script_text(name: str) -> str:
+def _scripts() -> dict[str, Path]:
+    """磁盘上各期的口播稿（slug → 路径）。
+
+    有期读期目录里的；没有期读**夹具期**——守卫总得有稿子可扫。
+    """
+    scripts = {}
+    for slug in episodes_mod.known_eps():
+        path = episodes_mod.script_path(slug)
+        if path.is_file():
+            scripts[slug] = path
+    return scripts or {"fixture": scene_segments.FIXTURE_SCRIPT}
+
+
+SCRIPTS = _scripts()
+
+
+def _script_text(path: Path) -> str:
     """口播稿里的正文（第一个代码块）——只有它会被念出来。"""
     from pyv import align
-    return "\n".join(align.parse_script(ROOT / name))
+    return "\n".join(align.parse_script(path))
 
 
 # ---------------------------------------------------------------- 读音表
@@ -87,7 +99,7 @@ def test_every_hang_word_in_every_script_is_measured(episode):
     text = _script_text(SCRIPTS[episode])
     unknown = unverified_hang_words(text)
     assert not unknown, (
-        f"{SCRIPTS[episode]} 里出现了没实测过读音的「行」字词：{unknown}——"
+        f"{SCRIPTS[episode].name} 里出现了没实测过读音的「行」字词：{unknown}——"
         f"先用 voice/scripts/check_pronunciation.py 量出 háng / xíng，"
         f"再补进 pronunciation.py 的词表或替换表"
     )
@@ -131,9 +143,16 @@ def test_the_standalone_one_hang_word_is_replaced():
     assert "一行只写一个动作" not in spoken
 
 
-def test_the_row_lock_script_still_says_the_word_itself():
-    """这一期的口播稿必须仍然写着「行锁」——观众看到、字幕表里都是它。"""
-    text = _script_text(SCRIPTS["ep06"])
+@pytest.mark.parametrize("episode", sorted(SCRIPTS))
+def test_the_script_still_says_the_word_itself(episode):
+    """口播稿里写着「行锁」的那一期，必须仍然写着它。
+
+    **观众看到、字幕表里都是「行锁」**——替换只发生在送进 TTS 的文本上。
+    稿子里没有「行锁」的期不适用这条（跳过，并说清为什么）。
+    """
+    text = _script_text(SCRIPTS[episode])
+    if "行锁" not in text:
+        pytest.skip("这一期的口播稿里没有「行锁」")
     assert "行锁" in text, "口播稿里的「行锁」被改掉了？不应该改"
     spoken = apply_substitutions(text)
     assert "航锁" in spoken and "行锁" not in spoken
@@ -149,16 +168,23 @@ def test_the_find_helper_catches_word_initial_hang():
 # ---------------------------------------------------------------- 成品旁白
 
 
-@pytest.mark.skipif(not (ROOT / "narration_row-lock.spoken.txt").is_file(),
+@pytest.mark.skipif(not list(ROOT.glob("narration_*.spoken.txt")),
                     reason="旁本不在本机，跳过")
 def test_the_shipped_narration_was_synthesized_from_the_substituted_text():
     """本机有旁白成品时，核对**真正送进 TTS 的那份文本**。
 
     旁本（`*.spoken.txt`）是合成脚本写下的留底——它就是引擎听到的字。
     """
-    spoken = (ROOT / "narration_row-lock.spoken.txt").read_text(encoding="utf-8")
-    assert "航锁" in spoken, "旁白不是用替换后的文本合成的"
-    assert "行锁" not in spoken, "替换后的文本里不该还留着「行锁」"
+    checked = 0
+    for spoken_path in sorted(ROOT.glob("narration_*.spoken.txt")):
+        spoken = spoken_path.read_text(encoding="utf-8")
+        if "行锁" not in spoken and "航锁" not in spoken:
+            continue
+        checked += 1
+        assert "航锁" in spoken, f"{spoken_path.name} 不是用替换后的文本合成的"
+        assert "行锁" not in spoken, f"替换后的文本里不该还留着「行锁」"
+    if not checked:
+        pytest.skip("本机的旁本里没有提到「行锁」——这条前提无从验证")
 
 
 def test_the_pronunciation_judgement_constants_are_consistent():
