@@ -92,6 +92,7 @@ class Doc:
     text: str
     lines: list[str]
     blocks: list[Block]
+    kind: str = "article"
     signals: list[Signal] = field(default_factory=list)
     depth: dict = field(default_factory=dict)
 
@@ -793,6 +794,36 @@ RULES.extend([rule_str_01, rule_str_02, rule_str_03, rule_str_04,
               rule_fig_01, rule_fig_02])
 
 
+# --- 稿子 vs 索引页 ----------------------------------------------------
+#
+# 这一层的接口由**目录层级**承担：`_index.md` 是索引页，其余 `.md` 是稿子。
+# 稿子与索引页适用不同的规则集：
+#
+# - 索引页是一张清单。它不该有「编写人信息表」，也不该被要求「三个二级章节」
+#   或「五个技术深度要素」——那些是**稿子**的判据，套到清单上全是噪声。
+# - 但链接、拼写、H1、图示这些对两者一样要查。
+#
+# 所以这里按**文件名**分流，不靠 front matter 自报身份：层级说了它是什么，
+# 检查器就照着办。
+
+ARTICLE_ONLY = {
+    # AI 味信号：清单页没有需要润色的散文
+    "rule_aif_01", "rule_aif_02", "rule_aif_03", "rule_aif_04", "rule_aif_05",
+    # 技术深度五要素：判的是稿子的内容密度
+    "rule_dep_01", "rule_dep_02", "rule_dep_03", "rule_dep_04",
+    "rule_dep_05", "rule_dep_00",
+    # 结构：章节数、开头定位、结尾产物
+    "rule_str_01", "rule_str_02", "rule_str_03",
+    # 元信息：编写人信息表
+    "rule_met_01",
+}
+
+
+def doc_kind(path: Path) -> str:
+    """``index`` 还是 ``article`` —— 由目录层级判定。"""
+    return "index" if path.name == "_index.md" else "article"
+
+
 def derive_identity(path: Path, docs_root: Path = DOCS_ROOT) -> tuple[str, str]:
     """Derive ``(pillar, slug)`` from a docs/-relative path.
 
@@ -949,13 +980,15 @@ def load_doc(path: Path) -> Doc:
             title = block.text
             break
     return Doc(path=path, pillar=pillar, slug=slug, title=title,
-               text=raw, lines=lines, blocks=blocks)
+               text=raw, lines=lines, blocks=blocks, kind=doc_kind(path))
 
 
 def check_doc(doc: Doc) -> Doc:
     doc.signals = []
     doc.depth = {}
     for rule in RULES:
+        if doc.kind == "index" and rule.__name__ in ARTICLE_ONLY:
+            continue
         for signal in rule(doc):
             doc.signals.append(signal)
     return doc
@@ -967,6 +1000,7 @@ def to_report(doc: Doc) -> dict:
         "source": doc.rel_path,
         "pillar": doc.pillar,
         "slug": doc.slug,
+        "kind": doc.kind,
         "title": doc.title,
         "stats": {
             "chars": len(doc.text),
