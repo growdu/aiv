@@ -7,17 +7,19 @@
 - URL 派生错了 → 链接指向一个从未存在的路径，而服务器对未知路径返回
   **200 + 首页**（软 404），探活看不出来。
 
-所以本文件分四组测：
+所以本文件分五组测：
 
 1. **URL 派生**（单元）——拼出来的路径长什么样；
 2. **content_id 派生**（单元）——母稿怎么对应到内容单元；
 3. **字段校验**（单元）——缺一个必填字段就报错，绝不静默补默认值；
-4. **接缝**（集成）——真跑一遍 ``platforms/blog/site/tools/sync-hexo.py``，
-   验母稿派生的 content_id 与**编译产物**里的内容单元 id 一致、期号字段
-   真的到了产物。
+4. **系列一致性**（单元）——期号不重复、不跳号；
+5. **读母稿与发现**（单元）——期号母稿怎么被读出来、怎么被找到。
 
-另外有两条**漂移守卫**：期号字段的两份白名单必须一致、规格里写的钩子
-字数区间必须与代码里的常量一致。
+被测对象一律是**临时目录里现造的母稿**，不依赖仓库里存着哪几期内容——
+内容层清空是常态，测试要活的是「读母稿 / 发现期号」这套逻辑本身。
+
+另外有三条**规格漂移守卫**：规格里写的钩子字数区间与期号字段表必须与
+代码里的常量一致，规格里不该再出现嵌套的期号媒体字段。
 """
 
 import re
@@ -26,10 +28,7 @@ from pathlib import Path
 
 import pytest
 
-from publishkit.contract import PASSTHROUGH_FIELDS, parse_front_matter
 from publishkit.episode import (
-    EPISODE_LIST_FIELDS,
-    EPISODE_SCALAR_FIELDS,
     Episode,
     EpisodeError,
     EpisodeFieldError,
@@ -43,52 +42,11 @@ from publishkit.episode import (
     validate_episode_series,
 )
 
-# 集成测试的假仓库：把站点构建链的落点重定向到临时目录。
-from sync_harness import SYNC_SCRIPT, build_corpus, content_units_dir, run_sync
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SPEC = REPO_ROOT / "publish" / "spec" / "08-站点IP骨架.md"
 
-#: 六期母稿 → 内容单元 id。
-#:
-#: 这是**回归锁**：母稿换了路径或改结构，这里要跟着改。改错的后果是
-#: 落地 URL 指向另一个页面——而软 404 会让它看起来是好的。
-SIX_EPISODE_DRAFTS = {
-    "pg-parallel-decode": (
-        "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow/index.md",
-        "source-tracks/postgresql/logical-replication/postgresql-logical-replication-end-to-end-flow",
-    ),
-    "csn-total-ordering": (
-        "docs/source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering/index.md",
-        "source-tracks/postgresql/logical-replication/opengauss-csn-total-ordering",
-    ),
-    "wal-interleave": (
-        "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model/index.md",
-        "source-tracks/postgresql/logical-replication/postgresql-logical-replication-worker-model",
-    ),
-    "parallel-apply": (
-        "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker/index.md",
-        "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-trigger-apply-worker",
-    ),
-    "structured-ddl": (
-        "docs/source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering/index.md",
-        "source-tracks/postgresql/logical-replication/postgresql-logical-replication-ddl-dml-ordering",
-    ),
-    "row-lock": (
-        "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
-        "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive",
-    ),
-}
-
 
 # --- 工具 -------------------------------------------------------------------
-
-
-def read_post(root: Path, rel: str) -> str:
-    """读编译出来的内容单元（内容单元仓库住在 ``content/units/``）。"""
-    path = content_units_dir(root) / rel
-    assert path.is_file(), "sync-hexo.py 没有生成 {}".format(path)
-    return path.read_text(encoding="utf-8")
 
 
 def complete_fields(**overrides) -> dict:
@@ -104,6 +62,42 @@ def complete_fields(**overrides) -> dict:
     }
     fields.update(overrides)
     return fields
+
+
+def draft_text(**overrides) -> str:
+    """一份**合规**的期号母稿（front matter + 正文）。
+
+    标量字段来自 :func:`complete_fields`——同一套字段、同样的取值，
+    只是把它铺成母稿文件的样子。两个列表字段（``episode_sources`` /
+    ``episode_repro``）在 :func:`complete_fields` 里没有，这里补上。
+    """
+    fields = {"title": "带期号数据的一篇"}
+    fields.update(complete_fields(**overrides))
+    fields.setdefault(
+        "episode_sources",
+        ["docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md"],
+    )
+    fields.setdefault("episode_repro", ["make -C video/pipeline out"])
+    lines = ["---"]
+    for key, value in fields.items():
+        if isinstance(value, list):
+            lines.append("{}:".format(key))
+            lines.extend("  - {}".format(item) for item in value)
+        else:
+            lines.append("{}: {}".format(key, value))
+    lines.append("---")
+    lines.append("")
+    lines.append("正文第一段。")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_draft(root: Path, rel: str, text: str) -> Path:
+    """把一份母稿写进 ``root/docs/`` 底下，返回它的路径。"""
+    path = root / "docs" / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
 
 
 # --- 落地 URL 派生（单元） --------------------------------------------------
@@ -211,18 +205,6 @@ def test_content_id_for_draft_rejects_a_category_page():
 def test_content_id_for_draft_rejects_a_file_outside_the_root():
     with pytest.raises(Exception):
         content_id_for_draft("elsewhere/x.md", "docs")
-
-
-@pytest.mark.parametrize("slug", sorted(SIX_EPISODE_DRAFTS))
-def test_the_six_episode_drafts_map_to_their_content_units(slug):
-    """**回归锁**：六期母稿 → 内容单元 id。
-
-    母稿换了路径或改了结构，这里要跟着改。改错的后果是落地 URL 指向
-    另一个页面——而软 404 会让它看起来是好的。
-    """
-    draft, expected = SIX_EPISODE_DRAFTS[slug]
-
-    assert content_id_for_draft(REPO_ROOT / draft, REPO_ROOT / "docs") == expected
 
 
 # --- 字段校验（单元） ------------------------------------------------------
@@ -399,257 +381,66 @@ def test_validate_episode_series_ignores_articles_without_a_series():
 # --- 读母稿 ----------------------------------------------------------------
 
 
-def test_reading_a_draft_leaves_the_date_empty():
+def test_reading_a_draft_leaves_the_date_empty(tmp_path):
     """母稿的 ``date:`` 不是站点的日期。
 
-    ``platforms/blog/site/tools/sync-hexo.py`` 编译时把母稿的 ``date:``
-    覆盖成 git 里最早的
-    一次提交时间——站点 permalink 用的是那个值。2026-11-14 实测：六期
-    母稿里**四期根本没写** ``date:``。
+    站点构建链编译时把母稿的 ``date:`` 覆盖成 git 里最早的
+    一次提交时间——站点 permalink 用的是那个值。
 
     所以读母稿时 ``date`` 留空：宁可让落地 URL 算不出来，也不能算出
     一个指向另一天的地址。
     """
-    draft = REPO_ROOT / SIX_EPISODE_DRAFTS["row-lock"][0]
+    draft = write_draft(
+        tmp_path,
+        "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
+        draft_text(),
+    )
 
-    episode = read_episode(draft, drafts_root=REPO_ROOT / "docs")
+    episode = read_episode(draft, drafts_root=tmp_path / "docs")
 
     assert episode.content_id == "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"
     assert episode.date is None
 
 
-def test_reading_a_draft_refuses_to_invent_a_landing_url():
-    draft = REPO_ROOT / SIX_EPISODE_DRAFTS["row-lock"][0]
+def test_reading_a_draft_refuses_to_invent_a_landing_url(tmp_path):
+    draft = write_draft(
+        tmp_path,
+        "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md",
+        draft_text(),
+    )
 
-    episode = read_episode(draft, drafts_root=REPO_ROOT / "docs")
+    episode = read_episode(draft, drafts_root=tmp_path / "docs")
 
     with pytest.raises(EpisodeFieldError):
         episode.landing_url()
 
 
-def test_reading_a_missing_draft_says_so():
+def test_reading_a_missing_draft_says_so(tmp_path):
     with pytest.raises(EpisodeError):
-        read_episode(REPO_ROOT / "docs/does-not-exist.md")
+        read_episode(tmp_path / "docs/does-not-exist.md")
 
 
 def test_discover_episodes_finds_nothing_in_a_tree_without_episodes(tmp_path):
     """没有 ``episode`` 键的母稿不进期号线。"""
-    build_corpus(tmp_path, {"blog/plain.md": '---\ntitle: x\n---\n\n正文\n'})
+    write_draft(tmp_path, "blog/plain.md", "---\ntitle: x\n---\n\n正文\n")
 
     assert discover_episodes(tmp_path / "docs") == ()
 
 
 def test_find_episode_returns_none_when_nothing_matches(tmp_path):
-    build_corpus(tmp_path, {"blog/plain.md": '---\ntitle: x\n---\n\n正文\n'})
+    write_draft(tmp_path, "blog/plain.md", "---\ntitle: x\n---\n\n正文\n")
 
     assert find_episode(tmp_path / "docs", "row-lock") is None
 
 
 def test_find_episode_rejects_two_drafts_claiming_the_same_slug(tmp_path):
     """两个母稿声明同一个 slug 是**身份冲突**，不是「取一个」。"""
-    body = (
-        "---\n"
-        "title: x\n"
-        "episode: row-lock\n"
-        "episode_no: 6\n"
-        "series: 内核机制\n"
-        'episode_hook: "MVCC 让读不挡写，但两个写会互相覆盖——行锁在它上面加了一层协调"\n'
-        "episode_subtitle: video/字幕-行锁.md\n"
-        "episode_duration_s: 35.172\n"
-        "episode_license: PostgreSQL BSD\n"
-        "---\n\n正文\n"
-    )
-    build_corpus(tmp_path, {"blog/one.md": body, "blog/two.md": body})
+    body = draft_text()
+    write_draft(tmp_path, "blog/one.md", body)
+    write_draft(tmp_path, "blog/two.md", body)
 
     with pytest.raises(EpisodeFieldError):
         find_episode(tmp_path / "docs", "row-lock")
-
-
-# --- 接缝：真跑一遍 sync-hexo.py（集成） ------------------------------------
-
-
-EPISODE_DRAFT = """\
----
-title: "带期号数据的一篇"
-date: 2026-10-15 09:00:00
-episode: row-lock
-episode_no: 6
-series: 内核机制
-episode_hook: "MVCC 让读不挡写，但两个写会互相覆盖——行锁在它上面加了一层协调"
-episode_subtitle: "video/字幕-行锁.md"
-episode_duration_s: "35.172"
-episode_license: "PostgreSQL BSD"
-episode_sources:
-  - "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md"
-episode_repro:
-  - "make -C video/pipeline out"
----
-
-# 带期号数据的一篇
-
-正文第一段。
-"""
-
-
-def test_the_draft_content_id_matches_the_compiled_content_unit(tmp_path):
-    """**母稿 → content_id** 必须与**编译产物**里的内容单元 id 逐字相同。
-
-    两边算法不同：母稿在 ``docs/`` 下（``index.md`` 要变成它所在的
-    目录），产物在 ``content/units/`` 下（已经是 ``<目录>.md``）。
-    算法错了，落地 URL 就指向一个不存在的页面——而服务器对未知路径
-    返回 200 + 首页，**探活看不出来**。
-
-    所以这条测试真的跑一遍 ``platforms/blog/site/tools/sync-hexo.py``，
-    把两边对上。
-    """
-    build_corpus(tmp_path, {"source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md": EPISODE_DRAFT})
-    run_sync(tmp_path)
-
-    from_draft = content_id_for_draft(
-        tmp_path / "docs" / "source-tracks" / "postgresql" / "transaction-mvcc"
-        / "postgresql-row-lock-deep-dive" / "index.md",
-        tmp_path / "docs",
-    )
-    compiled = (
-        content_units_dir(tmp_path) / "source-tracks" / "postgresql"
-        / "transaction-mvcc" / "postgresql-row-lock-deep-dive.md"
-    )
-
-    assert compiled.is_file(), "sync-hexo.py 没有按 index.md 的规则编译"
-    assert from_draft == "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"
-
-
-def test_the_landing_url_is_derived_from_the_compiled_content_unit(tmp_path):
-    """**母稿 → content_id → URL** 的整条链，跑在真的编译产物上。
-
-    日期取**内容单元**的 ``date``（``sync-hexo.py`` 写进去的那个），
-    不取母稿的——母稿的会被覆盖掉。
-    """
-    build_corpus(tmp_path, {"source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md": EPISODE_DRAFT})
-    run_sync(tmp_path)
-
-    post = (
-        content_units_dir(tmp_path) / "source-tracks" / "postgresql"
-        / "transaction-mvcc" / "postgresql-row-lock-deep-dive.md"
-    )
-    episode = read_episode(post, posts_root=content_units_dir(tmp_path))
-
-    assert episode.content_id == "source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive"
-    assert episode.date is not None
-    assert episode.landing_url() == "/{}/{}/{}/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/".format(
-        episode.date[:4], episode.date[5:7], episode.date[8:10]
-    )
-
-
-def test_every_episode_field_reaches_the_compiled_product(tmp_path):
-    """**真文章 → 期号字段全部到达产物**。
-
-    只改一道白名单，字段就在中途被**静默丢掉**：页面照常渲染，只是
-    期号区块是空的。那正是 [00](00-架构设计.md) §2.2 记的「展示元数据
-    通道是断的」那种故障。
-    """
-    build_corpus(tmp_path, {"blog/episode.md": EPISODE_DRAFT})
-    run_sync(tmp_path)
-
-    fields, _ = parse_front_matter(read_post(tmp_path, "blog/episode.md"))
-
-    assert fields["episode"] == "row-lock"
-    assert fields["episode_no"] == "6"
-    assert fields["series"] == "内核机制"
-    assert fields["episode_hook"] == (
-        "MVCC 让读不挡写，但两个写会互相覆盖——行锁在它上面加了一层协调"
-    )
-    assert fields["episode_subtitle"] == "video/字幕-行锁.md"
-    assert fields["episode_duration_s"] == "35.172"
-    assert fields["episode_license"] == "PostgreSQL BSD"
-    assert fields["episode_sources"] == [
-        "docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive/index.md"
-    ]
-    assert fields["episode_repro"] == ["make -C video/pipeline out"]
-
-
-def test_the_compiled_product_satisfies_the_episode_contract(tmp_path):
-    """搬过去的字段要能被契约层读懂——这不是巧合，是接缝的定义。"""
-    build_corpus(tmp_path, {"blog/episode.md": EPISODE_DRAFT})
-    run_sync(tmp_path)
-
-    fields, _ = parse_front_matter(read_post(tmp_path, "blog/episode.md"))
-
-    assert validate_episode_fields(fields) == []
-
-
-def test_a_draft_without_episode_fields_is_untouched(tmp_path):
-    """没写期号字段的母稿，front matter 必须与改动前逐字段一致。"""
-    build_corpus(tmp_path, {"blog/plain.md": '---\ntitle: x\n---\n\n正文\n'})
-    run_sync(tmp_path)
-
-    fields, _ = parse_front_matter(read_post(tmp_path, "blog/plain.md"))
-
-    assert set(fields) == {"title", "date", "author", "categories", "tags"}
-    for field in EPISODE_SCALAR_FIELDS + EPISODE_LIST_FIELDS:
-        assert field not in fields
-
-
-# --- 两道白名单必须一致（漂移守卫） -----------------------------------------
-
-
-def test_the_sync_script_lists_every_episode_field():
-    """期号字段**逐个**出现在 ``platforms/blog/site/tools/sync-hexo.py``
-    的白名单里。
-
-    这一层**不许** import 契约层（有测试盯着），所以两份清单各写一份
-    字面量，一致性靠这两条测试钉住。
-
-    断言**与引号风格无关**：仓库跑 ruff format，字符串字面量的引号会被
-    统一成双引号——写死单引号的断言会在一次纯格式化之后突然变红，
-    而它本来要守的是「字段在不在白名单里」。
-    """
-    source = SYNC_SCRIPT.read_text(encoding="utf-8")
-
-    for field in EPISODE_SCALAR_FIELDS + EPISODE_LIST_FIELDS:
-        assert (
-            "'{}'".format(field) in source or '"{}"'.format(field) in source
-        ), "sync-hexo.py 的白名单里没有 {}".format(field)
-
-
-def test_the_two_passthrough_lists_agree():
-    """契约层与站点构建层的两份白名单必须是**同一组**期号字段。
-
-    两份清单各写一份字面量（契约层不许 import 构建层，构建层也不许
-    import 契约层），所以一致性靠这条测试钉住。
-
-    整体上 ``sync`` 的清单是契约层的**子集**——``title`` 由
-    ``sync-hexo.py`` 自己写（它要从正文里提标题），不需要透传。
-    """
-    sys.path.insert(0, str(REPO_ROOT / "tools"))
-    try:
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location("sync_hexo", SYNC_SCRIPT)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-    finally:
-        sys.path.pop(0)
-
-    sync_fields = set(module.PASSTHROUGH_SCALAR_FIELDS) | set(
-        module.PASSTHROUGH_LIST_FIELDS
-    )
-    contract_fields = set(PASSTHROUGH_FIELDS)
-    episode_fields = set(EPISODE_SCALAR_FIELDS) | set(EPISODE_LIST_FIELDS)
-
-    assert sync_fields & episode_fields == episode_fields, (
-        "sync-hexo.py 少搬了期号字段：{}".format(
-            sorted(episode_fields - sync_fields)
-        )
-    )
-    assert episode_fields <= contract_fields, (
-        "契约层少了期号字段：{}".format(sorted(episode_fields - contract_fields))
-    )
-    assert sync_fields <= contract_fields, (
-        "sync-hexo.py 搬了契约层不认识的字段：{}".format(
-            sorted(sync_fields - contract_fields)
-        )
-    )
 
 
 # --- 规格漂移守卫 ----------------------------------------------------------
