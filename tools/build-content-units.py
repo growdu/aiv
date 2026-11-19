@@ -51,6 +51,21 @@ from paths import CONTENT_UNITS, DOCS  # noqa: E402
 #: 不在表里的字段不往下传——避免母稿随手写个字段就污染所有平台。
 PASSTHROUGH = ("title", "date", "author", "description", "tags", "top", "draft")
 
+#: 母稿 front matter 里属于「期号」的字段。**必须与契约层
+#: publish/publishkit/contract.py 的 EPISODE_SCALAR_FIELDS +
+#: EPISODE_LIST_FIELDS 一致**——tests/test_content_units.py 钉住这条。
+#:
+#: 期号字段以前**不在**透传表里，于是被静默丢掉：页面照常渲染，
+#: 期号区块是空的。母稿与内容单元之间的「期号」这一条通道是断的。
+EPISODE_FIELDS = ("episode", "episode_no", "series", "episode_hook",
+                  "episode_subtitle", "episode_duration_s", "episode_license",
+                  "episode_sources", "episode_repro")
+
+#: 编译器自己写进 front matter 的字段（不来自母稿，母稿写了也不算数）。
+#: 母稿里的这些字段由编译器**推导**（title 可从 H1 来、description 可从
+#: 第一段来、date 可从 git 历史来、tags 要并上目录链上的），不直接抄。
+BASE_FIELDS = ("title", "date", "author", "description", "tags", "top", "draft")
+
 #: 目录链上的分类名取自各级 `_index.md` 的 `cascade.categories`。
 CASCADE_KEY = "cascade"
 
@@ -204,7 +219,13 @@ def build_unit(path: Path) -> Unit:
     if not date:
         raise CompileError(f"{rel} 找不到日期（front matter 里没有 date，git 里也查不到历史）")
 
-    extra = {k: fm[k] for k in PASSTHROUGH if k in fm and k not in ("title", "date", "author", "description", "tags", "top", "draft")}
+    # 母稿里多出来的字段按白名单搬进 `extra`。白名单 = 透传表 + 期号字段；
+    # 排除集是 BASE_FIELDS（编译器自己推导的那几个）。
+    #
+    # ⚠️ 以前这行的排除元组**正好等于 PASSTHROUGH 本身**，于是 `extra` 恒空——
+    # 期号字段就是那时候没进内容单元的。
+    extra = {k: fm[k] for k in PASSTHROUGH + EPISODE_FIELDS
+             if k in fm and k not in BASE_FIELDS}
 
     return Unit(
         path=rel,
@@ -235,8 +256,12 @@ def render(unit: Unit) -> str:
     for key, value in unit.extra.items():
         fm[key] = value
 
+    # `width=4096`：**不折行**。PyYAML 默认按 80 列折长标量，续行是缩进的
+    # 标量——契约层的扁平 front matter 解析器只读首行，于是 `description`
+    # 被截成半句（契约层 parse_front_matter 的 docstring 里记着这个坑）。
     head = yaml.safe_dump(
-        fm, allow_unicode=True, sort_keys=False, default_flow_style=False
+        fm, allow_unicode=True, sort_keys=False, default_flow_style=False,
+        width=4096,
     ).rstrip("\n")
     return f"---\n{head}\n---\n\n{unit.body.lstrip()}\n"
 
