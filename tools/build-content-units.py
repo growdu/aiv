@@ -84,6 +84,10 @@ class Unit:
     author: str
     description: str
     kind: str  # document | category
+    #: 分类**名**（`categories`）对应的分类内容单元 **id**，与 `categories` 同序同长。
+    #: 平台层要的是分类页的**地址**，地址由 id 推导（如 `source-tracks/_index`），
+    #: 展示名推不出来——所以这层映射由编译器算出来写进去。
+    category_ids: list[str] = field(default_factory=list)
     categories: list[str] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
     body: str = ""
@@ -161,13 +165,19 @@ def ancestors(rel: Path) -> list[Path]:
     return out
 
 
-def read_index_chain(rel: Path) -> tuple[list[str], list[str]]:
+def read_index_chain(rel: Path) -> tuple[list[str], list[str], list[str]]:
     """走一遍目录链，收集分类链与标签链。
 
     分类链来自各级 `_index.md` 的 `cascade.categories`（一级目录 = 分类，
     二级 = 系列……）；标签链来自各级 `_index.md` 的 `tags`。
+
+    同时收**分类内容单元 id**：某个分类名是**哪一级** `_index.md` 报出来的，
+    就配那一级的 id（`docs/a/_index.md` → `a/_index`）。
+    名字与 id **一起去重**——上级报过的名字不再重复报，id 也不跟着多一条，
+    否则两个列表会错位（名字 2 个、id 3 个）。
     """
     categories: list[str] = []
+    category_ids: list[str] = []
     tags: list[str] = []
     for idx in ancestors(rel):
         idx_path = DOCS / idx
@@ -177,13 +187,16 @@ def read_index_chain(rel: Path) -> tuple[list[str], list[str]]:
             )
         fm, _ = split_front_matter(idx_path.read_text(encoding="utf-8"))
         cascade = fm.get(CASCADE_KEY) or {}
+        # 祖先自己的内容单元 id：路径去掉 `.md`（`a/_index.md` → `a/_index`）。
+        idx_id = idx.as_posix()[:-3]
         for name in cascade.get("categories") or []:
             if name not in categories:
                 categories.append(name)
+                category_ids.append(idx_id)
         for tag in fm.get("tags") or []:
             if tag not in tags:
                 tags.append(tag)
-    return categories, tags
+    return categories, category_ids, tags
 
 
 def build_unit(path: Path) -> Unit:
@@ -204,7 +217,7 @@ def build_unit(path: Path) -> Unit:
     if not description:
         raise CompileError(f"{rel} 没有描述（front matter 里没有 description，正文里也找不到第一段）")
 
-    categories, tags = read_index_chain(rel)
+    categories, category_ids, tags = read_index_chain(rel)
     for tag in fm.get("tags") or []:
         if tag not in tags:
             tags.append(tag)
@@ -251,6 +264,7 @@ def build_unit(path: Path) -> Unit:
         author=str(fm.get("author") or "growdu"),
         description=description,
         kind="category" if is_index else "document",
+        category_ids=category_ids,
         categories=categories,
         tags=tags,
         body=body,
@@ -296,6 +310,7 @@ def render(unit: Unit) -> str:
         "description": unit.description,
         "kind": unit.kind,
         "categories": unit.categories,
+        "category_ids": unit.category_ids,
         "tags": unit.tags,
         "source_path": unit.path.as_posix(),
     }
@@ -361,6 +376,7 @@ def compile_only(rel_id: str) -> dict:
         "date": unit.date,
         "author": unit.author,
         "categories": unit.categories,
+        "category_ids": unit.category_ids,
         "tags": unit.tags,
         "source_path": rel,
     }

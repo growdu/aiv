@@ -149,3 +149,42 @@ def test_a_full_width_space_inside_a_description_is_kept(compiler):
     unit = compiler.build_unit(compiler.DOCS / "ep.md")
     fields, _ = parse_front_matter(compiler.render(unit))
     assert fields["description"] == "第一行　第二行"
+
+
+def test_the_compiler_writes_the_category_ids_next_to_the_category_names(compiler):
+    """分类名 → 分类内容单元 id 的映射由编译器算出来写进内容单元。"""
+    (compiler.DOCS / "a" / "b").mkdir(parents=True)
+    # ⚠️ **两级 `_index.md` 都要有**（裁决 R24）：`read_index_chain` 遇到缺的上级
+    # 会抛「目录链断了」（`tools/build-content-units.py:174`）——不是安静地跳过。
+    # 而且**每一级只报自己的分类名**：甲来自 `a/_index.md`、乙来自 `a/b/_index.md`，
+    # 于是 id 才是 ["a/_index", "a/b/_index"]。
+    (compiler.DOCS / "a" / "_index.md").write_text(
+        "---\ntitle: 甲\ncascade:\n  categories: [甲]\n---\n\n# 甲\n", encoding="utf-8")
+    (compiler.DOCS / "a" / "b" / "_index.md").write_text(
+        "---\ntitle: 乙\ncascade:\n  categories: [乙]\n---\n\n# 乙\n", encoding="utf-8")
+    # ⚠️ `date` 必须带引号（裁决 R25，同 Task 2 的 R7）：母稿没写日期时编译器
+    # 会去问 git，而 `tmp_path` 不是 git 仓库 → 抛「找不到日期」，证不了事。
+    (compiler.DOCS / "a" / "b" / "doc.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n", encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "a" / "b" / "doc.md")
+    assert unit.categories == ["甲", "乙"]
+    assert unit.category_ids == ["a/_index", "a/b/_index"]
+
+
+def test_the_two_category_lists_stay_aligned(compiler):
+    """两个列表必须同序同长——错位就会拼出别的分类的地址。
+
+    上级已经报过的分类名**不再重复报**（分类链是去重的），
+    所以 id 列表也得跟着去重——否则两个列表会错位
+    （分类 2 个、id 3 个）。
+    """
+    (compiler.DOCS / "a" / "b").mkdir(parents=True)
+    (compiler.DOCS / "a" / "_index.md").write_text(
+        "---\ntitle: 甲\ncascade:\n  categories: [甲]\n---\n\n# 甲\n", encoding="utf-8")
+    (compiler.DOCS / "a" / "b" / "_index.md").write_text(
+        "---\ntitle: 乙\ncascade:\n  categories: [甲, 乙]\n---\n\n# 乙\n", encoding="utf-8")
+    (compiler.DOCS / "a" / "b" / "doc.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n", encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "a" / "b" / "doc.md")
+    assert unit.categories == ["甲", "乙"]
+    assert unit.category_ids == ["a/_index", "a/b/_index"]
