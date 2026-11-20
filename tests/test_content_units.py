@@ -248,6 +248,54 @@ def test_the_check_mode_reports_an_image_that_is_out_of_sync(compiler, monkeypat
     assert compiler.main() == 1
 
 
+def test_the_check_mode_reports_an_image_that_was_never_copied(compiler, monkeypatch):
+    """图在 ``docs/`` 里、``content/units/images/`` 里没有——要报出来。"""
+    (compiler.DOCS / "x.png").write_bytes(b"x")
+    problems = compiler.image_problems()
+    assert any("图片不存在" in p for p in problems)
+    monkeypatch.setattr(sys, "argv", ["build-content-units.py", "--check"])
+    assert compiler.main() == 1
+
+
+def test_the_check_mode_reports_an_image_that_was_removed_from_docs(compiler, monkeypatch):
+    """图撤出 ``docs/`` 了、``content/units/images/`` 里还留着——要报出来。"""
+    stale = compiler.CONTENT_UNITS / "images" / "old.png"
+    stale.parent.mkdir(parents=True, exist_ok=True)
+    stale.write_bytes(b"x")
+    problems = compiler.image_problems()
+    assert any("撤出的存量没清干净" in p for p in problems)
+    monkeypatch.setattr(sys, "argv", ["build-content-units.py", "--check"])
+    assert compiler.main() == 1
+
+
+def test_a_category_named_images_is_not_compiled(compiler, monkeypatch, capsys):
+    """``images/`` 是图片仓库的位置——那一层不编译成内容单元，而且要**说一声**。
+
+    编译器把 ``docs/`` 的树镜像进 ``content/units/``，图片仓库就在
+    ``content/units/images/``。用户建一个叫 ``images`` 的分类目录，
+    那一层的内容单元会在同一轮编译里被 ``copy_images()`` 连锅端——
+    **源文件还在，产物没了**。
+
+    所以 ``images/`` 是保留名（跟 ``video/`` 一个待遇），而且不能静悄悄地吃。
+    """
+    (compiler.DOCS / "images").mkdir(parents=True)
+    (compiler.DOCS / "images" / "foo.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n",
+        encoding="utf-8")
+    (compiler.DOCS / "fig.png").write_bytes(b"x")
+
+    assert [u.path for u in compiler.compile_units()] == []
+
+    monkeypatch.setattr(sys, "argv", ["build-content-units.py"])
+    compiler.main()
+
+    err = capsys.readouterr().err
+    assert "images" in err, "这一层不编译，就得说一声"
+    # 那一层没变成内容单元，而**别的图还在它该在的地方**
+    assert not (compiler.CONTENT_UNITS / "images" / "foo.md").exists()
+    assert (compiler.CONTENT_UNITS / "images" / "fig.png").is_file()
+
+
 def test_the_compile_only_result_carries_the_category_ids(compiler):
     """`compile_only()` 的返回 dict 也要带 `category_ids`——平台层问的是它。"""
     (compiler.DOCS / "a" / "b").mkdir(parents=True)

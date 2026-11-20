@@ -380,15 +380,28 @@ def _resolve_asset(path: str, images_root: Path, unit_dir: str = "") -> Path:
     ``unit_dir`` 是内容单元 id 的**目录部分**：``db/x/_index`` 的目录是
     ``db/x``，顶层单元是空串。
 
-    绝对路径原样返回；相对路径找不到文件时，返回**没解析的那个候选**——
+    **绝对路径原样返回**——那是用户明确给的路径（``--cover`` 就是这么用的，
+    改成拒绝会把既有用例砸掉）。
+
+    **相对路径不许跑出图片根**：跑出去了就抛 ``AssetNotFound``——跟头条那边
+    一个口径（头条那边**连绝对路径也拒**，那边没有 ``--cover`` 这种用法；
+    这处差别两个 adapter 的 docstring 都写着）。
+
+    相对路径找不到文件时，返回**没解析的那个候选**——
     调用方自己判 ``is_file()``。
     """
     candidate = Path(path)
     if candidate.is_absolute():
         return candidate
-    resolved = Path(images_root) / unit_dir / candidate
-    if resolved.is_file():
-        return resolved
+    root = Path(images_root)
+    joined = root / unit_dir / candidate
+    resolved_root = root.resolve()
+    resolved = joined.resolve()
+    if resolved != resolved_root and resolved_root not in resolved.parents:
+        raise AssetNotFound(
+            "图路径跑出了图片根目录 {}：{}".format(resolved_root, path))
+    if joined.is_file():
+        return joined
     return candidate
 
 

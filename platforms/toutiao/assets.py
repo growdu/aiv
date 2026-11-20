@@ -115,6 +115,9 @@ def resolve_asset(path: str, images_root: Path, unit_dir: str = "") -> Path:
       package with a missing picture and no word about it;
     - a path that leaves the image root: an asset path is a relative path
       inside the image repository, never a way out of it.
+
+    **绝对路径也按图片根判**——不像微信那边（那边原样返回绝对路径，因为
+    ``--cover`` 就是给绝对路径用的；那边只拒**相对路径**越界）。
     """
     if is_remote(path):
         raise RemoteAsset("外链图不在本地：{}".format(path))

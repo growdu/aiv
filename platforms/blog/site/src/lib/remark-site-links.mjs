@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const EXTERNAL = /^(https?:|mailto:|tel:|data:|#|\/\/)/;
+// 同一条规则的 JS 副本——改一处要改两处（Python 那份在 `tools/paths.py`）。
 const IMAGE_EXT = /\.(png|jpe?g|gif|svg|webp|avif)$/i;
 
 /** 规则里必须有的键。少一个就是规则文件坏了。 */

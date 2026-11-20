@@ -14,6 +14,8 @@
   `content/units/images/`（`docs/a/b.png` → `content/units/images/a/b.png`）。
   于是正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``——
   站点与两个 adapter 共用这一条规则。
+  ⚠️ `images/` 是**保留名**：`docs/images/` 这一层不编译成内容单元
+  （那一层是图片仓库的位置），发现里面有稿子会**往 stderr 说一声**。
 - 内容单元 = 一篇 markdown + 一份 front matter。front matter 由母稿的
   front matter、目录链上的 `_index.md`、以及 git 历史推导出来。
 
@@ -71,6 +73,23 @@ BASE_FIELDS = ("title", "date", "author", "description", "tags", "top", "draft")
 
 #: 目录链上的分类名取自各级 `_index.md` 的 `cascade.categories`。
 CASCADE_KEY = "cascade"
+
+#: 图片仓库占住的名字——``docs/`` 下这一层**不编译**成内容单元。
+#:
+#: 编译器把 ``docs/`` 的树镜像进 ``content/units/``，图片仓库就在
+#: ``content/units/images/``。用户建一个叫 ``images`` 的分类目录，
+#: 那一层的内容单元会在同一轮编译里被 ``copy_images()`` 连锅端——
+#: **源文件还在，产物没了**。所以它是保留名（跟 ``video/`` 一个待遇）。
+IMAGES_DIR = "images"
+
+#: 内容单元仓库顶层**被占住**的名字——那一层不装内容单元。
+#:
+#: - ``video``：视频单元由 ``tools/build-video-pages.py`` 产出。
+#: - ``images``：图片仓库（``content/units/images/``）。
+#:
+#: 用户在 ``docs/`` 下建同名分类，内容单元会跟产物撞在同一层。
+#: 清残留时这些层一律跳过——它们本来就不该有内容单元。
+RESERVED_UNIT_DIRS = {"video", IMAGES_DIR}
 
 H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 
@@ -338,8 +357,30 @@ def render(unit: Unit) -> str:
 def compile_units() -> list[Unit]:
     units: list[Unit] = []
     for path in sorted(DOCS.rglob("*.md")):
+        if path.relative_to(DOCS).parts[0] == IMAGES_DIR:
+            continue  # images/ 是图片仓库的位置——保留名，不编译
         units.append(build_unit(path))
+    _warn_images_dir()
     return units
+
+
+def _warn_images_dir() -> None:
+    """``docs/images/`` 下有稿子就说一声——静悄悄吃掉一个分类最难查。
+
+    那一层不编译成内容单元（``images/`` 是图片仓库的位置），所以用户
+    建的分类**不会**变成页面。悄悄吃掉一个分类是最难查的那种问题：
+    稿子还在，页面没了，人只会去怀疑编译器。
+    """
+    layer = DOCS / IMAGES_DIR
+    if not layer.is_dir():
+        return
+    if not any(layer.rglob("*.md")):
+        return
+    print(
+        "警告：docs/images/ 这一层不编译成内容单元——`images/` 是图片仓库的位置"
+        "（content/units/images/）。那一层的稿子请挪到别的目录。",
+        file=sys.stderr,
+    )
 
 
 def _source_images() -> dict[Path, Path]:
@@ -504,8 +545,8 @@ def main() -> int:
                 problems.append(f"{rel}：内容单元与 docs/ 不同步")
         for existing in sorted(CONTENT_UNITS.rglob("*.md")):
             rel = existing.relative_to(CONTENT_UNITS)
-            if rel.parts and rel.parts[0] == "video":
-                continue  # 视频单元由 tools/build-video-pages.py 产出
+            if rel.parts and rel.parts[0] in RESERVED_UNIT_DIRS:
+                continue  # video/ 有别的生产者；images/ 是图片仓库——都不该有内容单元
             if rel not in rendered:
                 problems.append(f"{rel}：内容单元还在，但 docs/ 里已经没有了（撤出的存量没清干净）")
         # 图跟内容单元一样是产物——不同步也要报出来
@@ -526,12 +567,12 @@ def main() -> int:
             target.write_text(text, encoding="utf-8")
             written += 1
 
-    # docs/ 里撤掉但内容单元还在的（除视频单元），清掉——它们是撤出存量的残留。
+    # docs/ 里撤掉但内容单元还在的（除保留层），清掉——它们是撤出存量的残留。
     removed = 0
     for existing in sorted(CONTENT_UNITS.rglob("*.md")):
         rel = existing.relative_to(CONTENT_UNITS)
-        if rel.parts and rel.parts[0] == "video":
-            continue
+        if rel.parts and rel.parts[0] in RESERVED_UNIT_DIRS:
+            continue  # video/ 有别的生产者；images/ 是图片仓库——都不该有内容单元
         if rel not in rendered:
             existing.unlink()
             removed += 1

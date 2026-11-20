@@ -235,3 +235,20 @@ def test_the_drawn_svg_is_kept(tmp_path):
     assert first.is_file()
     again = svg_module.rasterise(path, tmp_path / "svg")
     assert again == first
+
+
+def test_a_relative_path_that_escapes_the_image_root_is_refused(tmp_path):
+    """正文里的相对路径不许跑出图片根——两个 adapter 是同一条规则。
+
+    头条那边早就拒了（``resolve_asset`` 抛 ``AssetNotFound``）；微信这边原来不拒，
+    于是 ``../../outside.png`` 会被解析到图片根之外，只要那个文件真存在，
+    就**上传给微信**。
+    """
+    from wechat.cli import AssetNotFound, _resolve_asset
+
+    images_root = tmp_path / "images"
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(b"x")
+
+    with pytest.raises(AssetNotFound):
+        _resolve_asset("../../../outside.png", images_root, "a/b")
