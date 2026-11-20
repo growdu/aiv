@@ -185,6 +185,27 @@ def test_marking_published_updates_the_package_meta(meta, video, tmp_path):
     assert data["published_url"] == "https://channels.weixin.qq.com/x"
 
 
+# --- 「包完整才算数」 --------------------------------------------------------
+#
+# 复用、标草稿、标发布走的是**同一套判断**：包里少了必须有的东西，
+# 就不算数。这套判断只有一处——`package.REQUIRED_FILES` 与
+# `package.missing_files()`。
+
+
+def test_missing_files_reports_what_the_package_lacks(meta, video, tmp_path):
+    result = package.build_package("ep01", meta, video, tmp_path / "out")
+    assert package.missing_files(result.dir) == []
+    (result.dir / "title.txt").unlink()
+    assert package.missing_files(result.dir) == ["title.txt"]
+
+
+def test_marking_drafted_requires_a_complete_package(meta, video, tmp_path):
+    result = package.build_package("ep01", meta, video, tmp_path / "out")
+    (result.dir / "title.txt").unlink()
+    with pytest.raises(FileNotFoundError):
+        package.mark_drafted(result.dir)
+
+
 # --- 命令行端到端 -----------------------------------------------------------
 
 

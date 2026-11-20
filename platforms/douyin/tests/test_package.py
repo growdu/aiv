@@ -279,6 +279,27 @@ def test_publishing_without_a_package_is_an_error(tmp_path):
         package.mark_published(tmp_path / "nope", "https://x")
 
 
+# --- 「包完整才算数」 --------------------------------------------------------
+#
+# 复用、标草稿、标发布走的是**同一套判断**：包里少了必须有的东西，
+# 就不算数。这套判断只有一处——`package.REQUIRED_FILES` 与
+# `package.missing_files()`。
+
+
+def test_missing_files_reports_what_the_package_lacks(meta, video, tmp_path):
+    result = _package(meta, video, tmp_path)
+    assert package.missing_files(result.dir) == []
+    (result.dir / "title.txt").unlink()
+    assert package.missing_files(result.dir) == ["title.txt"]
+
+
+def test_marking_drafted_requires_a_complete_package(meta, video, tmp_path):
+    result = _package(meta, video, tmp_path)
+    (result.dir / "title.txt").unlink()
+    with pytest.raises(FileNotFoundError):
+        package.mark_drafted(result.dir)
+
+
 def test_a_missing_file_in_the_package_forces_a_rebuild(meta, video, tmp_path):
     """**复用不是「目录还在就算数」。**
 

@@ -529,6 +529,60 @@ def test_marking_published_updates_the_package_meta(meta, video, tmp_path):
     assert data["published_url"] == "https://www.bilibili.com/video/BV1xx"
 
 
+# --- 「包完整才算数」 --------------------------------------------------------
+#
+# 复用、标草稿、标发布走的是**同一套判断**：包里少了必须有的东西，
+# 就不算数。这套判断只有一处——`package.REQUIRED_FILES` 与
+# `package.missing_files()`。
+
+
+def test_missing_files_reports_what_the_package_lacks(meta, video, tmp_path):
+    """「包完整才算数」这条规则得有一个能问的入口——今天没有。"""
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    assert package.missing_files(result.dir) == []
+    (result.dir / "title.txt").unlink()
+    assert package.missing_files(result.dir) == ["title.txt"]
+
+
+def test_a_missing_title_file_in_the_package_forces_a_rebuild(meta, video, tmp_path):
+    """**复用不是「目录还在就算数」。** 包里少了东西就重出。
+
+    这条**今天就是绿的**——三个 adapter 的复用分支本来就查完整性。
+    它是**回归护栏**，不是「先红后绿」的用例。
+    """
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    (result.dir / "title.txt").unlink()
+    again = package.build_package("ep02", meta, video, tmp_path / "out")
+    assert not again.reused, "包里缺了东西还报复用"
+    assert (again.dir / "title.txt").is_file()
+
+
+def test_marking_drafted_requires_a_complete_package(meta, video, tmp_path):
+    """残缺的包不许被标成「已投草稿」。"""
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    (result.dir / "title.txt").unlink()
+    with pytest.raises(FileNotFoundError):
+        package.mark_drafted(result.dir)
+
+
+def test_marking_published_requires_a_complete_package(meta, video, tmp_path):
+    """残缺的包也不许被标成「已发布」。"""
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    (result.dir / "title.txt").unlink()
+    with pytest.raises(FileNotFoundError):
+        package.mark_published(result.dir, "https://example.invalid/bili/1")
+
+
+def test_marking_drafted_clears_the_published_url(meta, video, tmp_path):
+    """标成草稿就不能还挂着已发布链接——视频号与抖音都清了，B站今天没清。"""
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    package.mark_published(result.dir, "https://example.invalid/bili/1")
+    package.mark_drafted(result.dir)
+    data = json.loads((result.dir / "meta.json").read_text(encoding="utf-8"))
+    assert data["status"] == "drafted"
+    assert data["published_url"] is None
+
+
 # --- 命令行端到端 ------------------------------------------------------------
 #
 # 本机素材（成片、storyboard）按 **adapter 自己找它们的路径**摆：
@@ -658,6 +712,38 @@ def test_marking_drafted_keeps_it_unpublished(episode_dir, tmp_path, monkeypatch
 
     shot = json.loads((tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__bilibili.json")
                       .read_text(encoding="utf-8"))
+    assert shot["status"] == "drafted"
+    assert shot["published_url"] is None
+
+
+def test_marking_drafted_after_published_clears_the_link(episode_dir, tmp_path,
+                                                          monkeypatch, make_video):
+    """**先发出去、再标回草稿**——旧链接要在**三处**都清干净。
+
+    视频号与抖音三处都清：包里的 `meta.json`、状态文件 `state.json`、入库快照。
+    B站今天**一处都没清**（`package.mark_drafted` 还不存在，
+    CLI 的 `current.published_url` 也不清）→「标了草稿却还挂着已发布链接」。
+
+    ⚠️ **快照文件名用扁平那个**：`f"{episodes.ep_id(EP_PATH)}__bilibili.json"`。
+    """
+    from bilibili import cli
+
+    _stage_video(cli, monkeypatch, tmp_path, make_video)
+
+    out = tmp_path / "out"
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 0
+    url = "https://www.bilibili.com/video/BV1xx"
+    assert cli.main(["mark", "published", EP_PATH, "--url", url,
+                     "--out", str(out)]) == 0
+    assert cli.main(["mark", "drafted", EP_PATH, "--out", str(out)]) == 0
+
+    state_data = json.loads((out / "state.json").read_text(encoding="utf-8"))
+    assert state_data["episodes"][EP_PATH]["status"] == "drafted"
+    assert state_data["episodes"][EP_PATH]["published_url"] is None
+
+    shot = json.loads(
+        (tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__bilibili.json")
+        .read_text(encoding="utf-8"))
     assert shot["status"] == "drafted"
     assert shot["published_url"] is None
 

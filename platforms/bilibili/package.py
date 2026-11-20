@@ -49,6 +49,33 @@ _STATUS_LABELS = {
     "failed": "投稿失败",
 }
 
+# 包里必须有的东西。**清单、封面、软链一样都不能少**——少了就是
+# 一个发不出去的包，而命令会报「成功」。
+#
+# **B站这一份是自己的清单**（含 `meta.json`）：各平台缺的东西不一样，
+# 不许互相统一——统一了就等于替别的平台决定它发得出去。
+REQUIRED_FILES = (
+    "video.mp4",
+    "cover.jpg",
+    "title.txt",
+    "description.txt",
+    "tags.txt",
+    "publish.md",
+    "meta.json",
+)
+
+
+def missing_files(target: str | Path) -> list[str]:
+    """这个包里少了哪些必须有的文件（按文件名排序）。
+
+    **「包完整才算数」这条规则只有一个入口。** 复用、标草稿、标发布
+    都问它——三处各写一遍判断，改一处就忘了另一处，
+    于是「复用查了完整性、标发布没查」这类漏网出现。
+    """
+    directory = Path(target)
+    return sorted(name for name in REQUIRED_FILES
+                  if not (directory / name).exists())
+
 
 def _status_heading(status: str, title: str, episode: str) -> str:
     label = _STATUS_LABELS.get(status, "待发布")
@@ -306,19 +333,9 @@ def build_package(
     previous = store.get(episode)
     digest = preflight.file_sha256(video_path)
 
-    files: dict[str, Path] = {}
-    # 包里该有的东西。**清单、封面、软链一样都不能少**——少了就是
+    # 包里该有的东西（清单见 `REQUIRED_FILES`）：少了就是
     # 一个发不出去的包，而命令会报「成功」。
-    names = [
-        "video.mp4",
-        "cover.jpg",
-        "title.txt",
-        "description.txt",
-        "tags.txt",
-        "publish.md",
-        "meta.json",
-    ]
-    files = {name: target / name for name in names}
+    files = {name: target / name for name in REQUIRED_FILES}
 
     reused = False
     if previous.video_sha256 == digest and (target / "meta.json").is_file():
@@ -326,8 +343,7 @@ def build_package(
         # **但要复查包里东西还在不在**：软链会悬空（成片被删了/换了），
         # 别的文件也会被人手删。少了任何一件就重出——复用不是
         # 「目录还在就算数」。
-        missing = sorted(name for name, path in files.items() if not path.exists())
-        if not missing:
+        if not missing_files(target):
             reused = True
     if not reused:
         target.mkdir(parents=True, exist_ok=True)
@@ -442,6 +458,9 @@ def mark_published(target: str | Path, url: str) -> Path:
     path = directory / "meta.json"
     if not path.is_file():
         raise FileNotFoundError(f"发布包不存在：{directory}")
+    missing = missing_files(directory)
+    if missing:
+        raise FileNotFoundError(f"发布包不完整，缺：{'、'.join(missing)}")
     data = json.loads(path.read_text(encoding="utf-8"))
     data["status"] = "published"
     data["published_url"] = url
@@ -450,4 +469,28 @@ def mark_published(target: str | Path, url: str) -> Path:
         encoding="utf-8",
     )
     rewrite_status_block(directory / "publish.md", "published")
+    return path
+
+
+def mark_drafted(target: str | Path) -> Path:
+    """回填「已存草稿」：视频已存进B站的草稿箱，还没公开。
+
+    **和 `published` 是两回事。** 草稿还没发出去，所以 `published_url` 要清掉——
+    留着旧链接会让人以为这条已经发出去了。
+    """
+    directory = Path(target)
+    path = directory / "meta.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"发布包不存在：{directory}")
+    missing = missing_files(directory)
+    if missing:
+        raise FileNotFoundError(f"发布包不完整，缺：{'、'.join(missing)}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["status"] = "drafted"
+    data["published_url"] = None
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    rewrite_status_block(directory / "publish.md", "drafted")
     return path

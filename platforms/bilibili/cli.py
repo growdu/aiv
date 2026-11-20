@@ -146,12 +146,9 @@ def cmd_mark(args: argparse.Namespace) -> int:
         if args.state == "published":
             package.mark_published(target, args.url)
         else:
-            # B站这一档没有「草稿」要写进包里的 meta.json，
-            # 但包**必须在**：草稿是拿这个包投出去的。
-            if not (target / "meta.json").is_file():
-                raise FileNotFoundError(f"发布包不存在：{target}")
-            # 清单要跟着状态改：它还写「待你上传」，人会再传一遍。
-            package.rewrite_status_block(target / "publish.md", args.state)
+            # 草稿是拿这个包投出去的，所以包**必须完整**——
+            # 判断只有 `package` 那一处（「包完整才算数」）。
+            package.mark_drafted(target)
     except FileNotFoundError as error:
         print(f"ERROR {error}", file=sys.stderr)
         print("      没有发布包就回填不了：先出包，再投稿，再回填"
@@ -165,6 +162,12 @@ def cmd_mark(args: argparse.Namespace) -> int:
     current.status = args.state
     if args.state == "published":
         current.published_url = args.url
+        published_url = args.url
+    else:
+        # 草稿还没发出去：链接必须清空，
+        # 留着旧链接会让人以为这条已经发出去了。
+        current.published_url = None
+        published_url = None
     store.save(args.episode, current)
 
     outbox = Path(args.outbox) if args.outbox else snapshot.OUTBOX_DIR
@@ -175,7 +178,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
         episode=args.episode, status=args.state, title=title,
         # 相对路径：快照要入库，绝对路径换台机器就对不上
         package_dir=package.repo_relative(target),
-        published_url=current.published_url,
+        published_url=published_url,
         reason=reason,
     )
     notify.notify(args.episode, args.state, title, str(target),
