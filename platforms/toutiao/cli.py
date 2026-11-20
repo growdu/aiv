@@ -44,7 +44,8 @@ sys.path.insert(0, str(_REPO_ROOT / "tools"))
 from paths import CONTENT_UNITS, CONTENT_UNIT_IMAGES  # noqa: E402
 
 __all__ = [
-    "EXIT_ERROR", "EXIT_INELIGIBLE", "EXIT_OK", "EXIT_USAGE", "main",
+    "EXIT_ERROR", "EXIT_INELIGIBLE", "EXIT_NOT_FOUND", "EXIT_OK",
+    "EXIT_USAGE", "main",
 ]
 
 # 文章目录：**内容单元仓库**（`content/units/`）——adapter 直接读它，
@@ -61,12 +62,19 @@ DEFAULT_STATE_FILE = _REPO_ROOT / "platforms" / "toutiao" / "out" / "state.json"
 #: 退出码的**出处**：契约层定死的那张表（`publish/publishkit/exit_codes.py`），
 #: 声明在能力声明的 `[exit]` 段里——数据是数据，规则变了改 TOML。
 #:
-#: 语义（四个码的定义见契约层）：``0`` 成功 / ``1`` 用法错（参数或配置不对）
-#: / ``2`` 缺前置条件（这一篇不合格，不该发）/ ``3`` 做事失败（接口、写盘
-#: 或母稿解析出错）。
+#: 语义（四个码的定义见契约层）：``0`` 成功 / ``1`` 用法错（**你给的参数或
+#: 配置不对**：命令写错、少给必填参数、目录路径配错）/ ``2`` 缺前置条件
+#: （**东西还没有 / 不该发**：文章不存在、快照不存在、目录不存在、这一篇
+#: 不合格）/ ``3`` 做事失败（接口、写盘或母稿解析出错）。
+#:
+#: 「少给一个必填参数」是 1；「参数没写错，但它指的东西还没有」是 2。
 _EXIT_CODES = load_exit_codes(DEFAULT_CAPABILITY)
 EXIT_OK = _EXIT_CODES["ok"]
 EXIT_USAGE = _EXIT_CODES["usage"]
+#: 「东西还没有」——文章不存在、快照不存在、目录不存在。
+#: 与 ``EXIT_INELIGIBLE`` 是同一个码，但这个名字说的是这一件事。
+EXIT_NOT_FOUND = _EXIT_CODES["precondition"]
+#: 「这一篇不合格，不该发」——超限之类。
 EXIT_INELIGIBLE = _EXIT_CODES["precondition"]
 EXIT_ERROR = _EXIT_CODES["failed"]
 
@@ -210,7 +218,7 @@ def cmd_scan(args) -> int:
     except FileNotFoundError as error:
         # 目录不存在：错误消息里已经带了「先产出内容单元再同步进站点」的指引。
         print("扫描失败：{}".format(error), file=sys.stderr)
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
     except ValueError as error:
         # 母稿坏掉（front matter 没闭合）：消息里带着出错的文件路径。
         print("扫描失败：{}".format(error), file=sys.stderr)
@@ -294,7 +302,7 @@ def _convert(args) -> tuple:
     post = _resolve_post(args.posts_dir, args.slug)
     if post is None:
         print("找不到文章: {}".format(args.slug), file=sys.stderr)
-        return EXIT_USAGE, None
+        return EXIT_NOT_FOUND, None
 
     result = slice_post(post, capability.limits, args.source_url)
     if result.article is None:
@@ -367,7 +375,7 @@ def cmd_convert_all(args) -> int:
     except FileNotFoundError as error:
         # 目录不存在：错误消息里已经带了「先产出内容单元再同步进站点」的指引。
         print("扫描失败：{}".format(error), file=sys.stderr)
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
     except ValueError as error:
         # 母稿坏掉（front matter 没闭合）：消息里带着出错的文件路径。
         print("扫描失败：{}".format(error), file=sys.stderr)
@@ -476,7 +484,7 @@ def cmd_mark(args) -> int:
     post = _resolve_post(args.posts_dir, args.slug)
     if post is None:
         print("找不到文章: {}".format(args.slug), file=sys.stderr)
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
 
     path = Path(args.outbox_dir) / snapshot_name(post.slug, "toutiao")
     if not path.is_file():
@@ -484,7 +492,7 @@ def cmd_mark(args) -> int:
             "找不到状态快照：{}（先跑一次 convert）".format(path),
             file=sys.stderr,
         )
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -658,7 +666,7 @@ def main(argv=None) -> int:
         return EXIT_USAGE
     except FileNotFoundError as error:
         print(str(error), file=sys.stderr)
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
     except Exception as error:                      # noqa: BLE001 -- 错误不吞
         print("失败：{}".format(error), file=sys.stderr)
         return EXIT_ERROR

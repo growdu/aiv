@@ -21,7 +21,8 @@ from PIL import Image
 
 from toutiao import cli
 from toutiao import state as state_module
-from toutiao.cli import EXIT_ERROR, EXIT_INELIGIBLE, EXIT_OK, EXIT_USAGE, main
+from toutiao.cli import (EXIT_ERROR, EXIT_INELIGIBLE, EXIT_NOT_FOUND, EXIT_OK,
+                         EXIT_USAGE, main)
 from toutiao.state import PublishState, StateStore
 
 
@@ -498,22 +499,27 @@ def test_mark_published_without_a_url_is_refused(tmp_path):
 
 
 def test_mark_without_a_snapshot_is_refused(tmp_path):
-    """没出包就没有快照可改。"""
+    """没出包就没有快照可改。
+
+    快照不存在 = **东西还没有** = 2（不是用法错 1：命令没写错，
+    它指的那份快照不在）。
+    """
     _site(tmp_path)
     code = main(
         _args(tmp_path, "mark", "published")
         + ["db/demo", "--url", "https://www.toutiao.com/article/1/"]
     )
-    assert code == EXIT_USAGE
+    assert code == EXIT_NOT_FOUND
 
 
 def test_mark_of_an_unknown_article_is_refused(tmp_path):
+    """文章不存在 = 东西还没有 = 2（同上：命令没写错，东西不在）。"""
     _site(tmp_path)
     code = main(
         _args(tmp_path, "mark", "published")
         + ["db/nope", "--url", "https://www.toutiao.com/article/1/"]
     )
-    assert code == EXIT_USAGE
+    assert code == EXIT_NOT_FOUND
 
 
 def test_the_exit_codes_come_from_the_declaration():

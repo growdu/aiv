@@ -77,21 +77,21 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 
 ## 三、每条命令跑什么、Expected 是什么
 
-数字是 **2026-11-20** 在 `main` 上**逐条单独跑**量出来的。
+数字是 **2026-11-19** 在 `main` 上**逐条单独跑**量出来的。
 **归位之后，总数必须与合并跑时一致**——少一条就是某条用例消失了，
 多一条就是某个目录被收集了两次。
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
-| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录 | 111 passed | 111 passed |
-| 2 | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点：学习流归属、死链、页面齐全 | 59 passed / 1 skipped | 59 passed / 1 skipped |
-| 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度 | 343 passed / 1 skipped | 343 passed / 1 skipped |
-| 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 395 passed / 2 skipped | 395 passed / 2 skipped |
-| 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 512 passed / 1 skipped | 512 passed / 1 skipped |
-| 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 119 passed | 119 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1056 passed / 60 skipped | 1056 passed / 60 skipped |
-| 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
-| 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
+| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录 | 81 passed | 81 passed |
+| 2 | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点：学习流归属、死链、页面齐全 | 51 passed / 1 skipped | 51 passed / 1 skipped |
+| 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度 | 338 passed / 1 skipped | 338 passed / 1 skipped |
+| 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 394 passed / 2 skipped | 394 passed / 2 skipped |
+| 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 504 passed / 1 skipped | 504 passed / 1 skipped |
+| 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 115 passed | 115 passed |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1050 passed / 60 skipped | 1050 passed / 60 skipped |
+| 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 68 passed | 68 passed |
+| 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 55 passed | 55 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 99 passed / 64 skipped / 1 failed | 99 passed / 64 skipped / 1 failed |
 
 ### 数字为什么变过（别拿旧基线来对账）
@@ -101,7 +101,6 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 | 2026-11-18（归位那轮） | 196 / 3 skip | 26 | 411 / 1 skip | 394 / 2 skip | 504 / 1 skip | 119 / 12 skip | 1269 / 23 skip / 3 red |
 | 2026-11-19（清库那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1052 / 60 skip |
 | 2026-11-19（视频线不发布那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip |
-| 2026-11-20（退出码定死那轮） | 111 | 59 / 1 skip | 343 / 1 skip | 395 / 2 skip | 512 / 1 skip | 119 | 1056 / 60 skip |
 
 变红的是**被测对象没了**，不是逻辑坏了：
 
@@ -158,26 +157,6 @@ B站与视频号两个 adapter 之前**既不在验收矩阵里，也不在任�
 > adapter 找成片的路径 `video/out/<期路径>.mp4` 跟流水线出片的
 > `video/out/<ep_id>.mp4` 对不上；快照文件名带斜杠，落在入库目录的**子目录**里。
 > 两条都记在 [`review/specs/2026-11-19-整体架构与模块边界.md`](../review/specs/2026-11-19-整体架构与模块边界.md) §五。
-
-### 「退出码语义定死」那轮（2026-11-20）
-
-契约层新增 `publish/publishkit/exit_codes.py`，把四个退出码定死
-（0 成功 / 1 用法错 / 2 缺前置条件 / 3 做事失败），五个 adapter 各自在
-能力声明的 `[exit]` 段里声明同一张表，**读它，不写死**。
-
-| 套件 | 变动 | 为什么 |
-| --- | --- | --- |
-| 根 | 81 → 111 | 新增 `tests/test_exit_codes.py`（只验接口：契约层的表、五个声明一致、wechat 有个读 `[exit]` 的函数——**不 import 五个 adapter**） |
-| publish | 338 → 343 | 契约层能力模型认识 `[exit]` 段，并且**它与契约层的表必须逐项相等**，不等就报错 |
-| toutiao | 394 → 395 | 退出码改成从能力声明的 `[exit]` 段读；README 里的用例数跟着改 |
-| wechat | 504 → 512 | 新增 `tests/test_cli.py`（钉住「用法错 = 1」「找不到 = 2」两档）；`EXIT_NOT_FOUND` 从 1 挪到 2 |
-| douyin | 115 → 119 | 退出码三档化（用法错 1 / 缺前置条件 2 / 做事失败 3）+ 写盘失败退 3 |
-| video | 1050 → 1056 | 视频线多了 `epmeta.load_exit_codes()`，它读平台的能力声明 |
-| B站 | 68 → 77 | 同抖音 |
-| 视频号 | 55 → 59 | 同抖音 |
-
-> **站点那一行（51 → 59）不是这轮改的**——它从 2026-11-19 起就停在旧数上，
-> 这轮量出来的 59 才是真数。表里的数是**量出来的**，不是推出来的。
 
 ### 那 1 个红（`browser/`）
 

@@ -17,7 +17,8 @@
     cd publish && python3 -m publishkit.cli schedule weekly
     PYTHONPATH=publish python3 -m publishkit.cli schedule weekly
 
-**退出码沿用 adapter 的约定**（``platforms/toutiao/cli.py`` 那一套）：
+**退出码的语义由契约层定死**（``publish/publishkit/exit_codes.py``），
+这里**从那张表取值**——不是「跟头条同一套」，是同一张表：
 
 ===  ==========================================
 0    成功
@@ -47,6 +48,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from . import PublishKitError
+from . import exit_codes
 from .capability import load_capability
 from .schedule import (
     PUBLISHED_STATUSES,
@@ -73,11 +75,13 @@ __all__ = [
     "main",
 ]
 
-#: 退出码是与调用方的约定（与 ``platforms/toutiao/cli.py`` 同一套）。
-EXIT_OK = 0
-EXIT_USAGE = 1
-EXIT_INELIGIBLE = 2
-EXIT_ERROR = 3
+#: 退出码的**出处**：契约层自己那张表（``publish/publishkit/exit_codes.py``）。
+#: 值从那儿取，**名字是 publish 自己的**（``EXIT_INELIGIBLE`` 是这里的话，
+#: 裁决 R17：各平台不统一措辞）。
+EXIT_OK = exit_codes.OK
+EXIT_USAGE = exit_codes.USAGE
+EXIT_INELIGIBLE = exit_codes.PRECONDITION
+EXIT_ERROR = exit_codes.FAILED
 
 #: 调 adapter 的默认超时（秒）。超时不等于失败（§7.1 第三条），
 #: 但也不能无限等下去。

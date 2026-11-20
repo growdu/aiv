@@ -430,3 +430,39 @@ def test_an_exit_section_with_a_missing_key_is_refused_loudly(tmp_path):
 
     with pytest.raises(epmeta.MetaError):
         epmeta.load_exit_codes("douyin", platforms_dir=tmp_path)
+
+
+def test_a_broken_exit_section_is_refused_loudly(tmp_path):
+    """写坏的声明当场报错——**三个 reader 在这一点上必须一样**。
+
+    头条与公众号那两个 reader 都拒「多出来的键」与「不是整数的值」；
+    视频线这个 reader 原来两样都不拒，于是 ``ok = "0"`` 会让退出码变成
+    **字符串**——同一件事在三个平台上表现不同。
+
+    报错信息里要带上是哪个键。
+    """
+    directory = tmp_path / "douyin"
+    directory.mkdir()
+
+    # 1. `[exit]` 段里出现了四个词之外的键。
+    (directory / "capability.toml").write_text(
+        'id = "douyin"\n[exit]\nok = 0\nusage = 1\nprecondition = 2\n'
+        'failed = 3\nbogus = 9\n', encoding="utf-8")
+    with pytest.raises(epmeta.MetaError) as unknown:
+        epmeta.load_exit_codes("douyin", platforms_dir=tmp_path)
+    assert "bogus" in str(unknown.value)
+
+    # 2. 值不是整数（字符串、布尔值都不行）。
+    (directory / "capability.toml").write_text(
+        'id = "douyin"\n[exit]\nok = "0"\nusage = 1\nprecondition = 2\n'
+        'failed = 3\n', encoding="utf-8")
+    with pytest.raises(epmeta.MetaError) as not_int:
+        epmeta.load_exit_codes("douyin", platforms_dir=tmp_path)
+    assert "ok" in str(not_int.value)
+
+    (directory / "capability.toml").write_text(
+        'id = "douyin"\n[exit]\nok = true\nusage = 1\nprecondition = 2\n'
+        'failed = 3\n', encoding="utf-8")
+    with pytest.raises(epmeta.MetaError) as boolean:
+        epmeta.load_exit_codes("douyin", platforms_dir=tmp_path)
+    assert "ok" in str(boolean.value)

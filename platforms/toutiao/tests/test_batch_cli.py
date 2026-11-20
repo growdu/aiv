@@ -17,7 +17,8 @@ import json
 
 from PIL import Image
 
-from toutiao.cli import EXIT_ERROR, EXIT_INELIGIBLE, EXIT_OK, EXIT_USAGE, main
+from toutiao.cli import (EXIT_ERROR, EXIT_INELIGIBLE, EXIT_NOT_FOUND, EXIT_OK,
+                         EXIT_USAGE, main)
 from toutiao.state import StateStore
 
 
@@ -198,13 +199,16 @@ def test_mark_published_still_refuses_to_be_marked_as_drafted(tmp_path):
 
 
 def test_mark_drafted_of_an_article_without_a_package_is_refused(tmp_path):
-    """没出包就没有快照可改。"""
+    """没出包就没有快照可改。
+
+    快照不存在 = **东西还没有** = 2（命令没写错，它指的东西不在）。
+    """
     _corpus(tmp_path, count=1)
     code = main(
         _args(tmp_path, "mark", "drafted", "db/p0",
               "--draft-id", "7708369671304528425")
     )
-    assert code == EXIT_USAGE
+    assert code == EXIT_NOT_FOUND
 
 
 def test_a_drafted_article_is_not_republished_by_a_changed_body(tmp_path):
