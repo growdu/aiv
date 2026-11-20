@@ -494,7 +494,8 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
 
     规则（§3.3）：
 
-    1. 候选集 = ``platforms`` 里含这个平台的内容单元；
+    1. 候选集 = ``platforms`` 里含这个平台的内容单元（**排除分类页**——
+       ``kind == "category"`` 的是站点的东西，不是要发给平台的文章）；
     2. 其中有 ``publish_on`` 落在本周的 → 选它（``publish_on`` 最早的；
        再并列按 ``content_id`` 字典序，保证确定性）；
     3. 没有 → 剔除**已发过的**（outbox 里有同 ``(content_id, platform)``
@@ -507,7 +508,18 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
     理由是一句人话——「本周没有可发的」不是错误，是一个事实。
     """
     index = outbox if outbox is not None else OutboxIndex()
-    candidates = [unit for unit in units if platform in unit.platforms]
+    # 候选集 = ``platforms`` 里含这个平台的内容单元，**但不含分类页**。
+    #
+    # 分类页（``kind == "category"``）是**站点**的东西——它是一级目录的
+    # 落地页，不是要发给平台的文章。契约层一旦认了 ``category`` 这个 kind，
+    # 不在这里排除，分类页就会进发布候选集（然后被当成一篇稿子发出去）。
+    #
+    # kind 在 ``unit.contract.kind`` 上——``ContentUnit`` 自己没有 kind 属性。
+    candidates = [
+        unit
+        for unit in units
+        if platform in unit.platforms and unit.contract.kind != "category"
+    ]
     if not candidates:
         return None, "候选集是空的：没有内容单元的 platforms 里包含 {!r}".format(
             platform

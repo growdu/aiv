@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -52,7 +53,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import yaml  # noqa: E402
 
-from paths import CONTENT_UNITS, DOCS, IMAGE_EXTENSIONS  # noqa: E402
+from paths import CONTENT_UNITS as _CONTENT_UNITS, DOCS as _DOCS, IMAGE_EXTENSIONS  # noqa: E402
+
+#: 母稿目录——**模块级全局**（根套件 `tests/test_content_units.py`
+#: 的夹具用 `monkeypatch.setattr(module, "DOCS", ...)` 换掉它，
+#: 所以读取必须发生在**导入时**，不许改成「在函数里现读环境变量」）。
+#:
+#: 测试可以指到别处去（跟 ``VIDEO_CONFIG`` 一个路子）：给了 ``AIV_DOCS``
+#: 就用它，**没给就用仓库默认的**（默认行为一个字都不许变）。
+DOCS = Path(os.environ["AIV_DOCS"]) if os.environ.get("AIV_DOCS") else _DOCS
+
+#: 内容单元仓库——同上，``AIV_CONTENT_UNITS`` 覆盖它。
+CONTENT_UNITS = (
+    Path(os.environ["AIV_CONTENT_UNITS"])
+    if os.environ.get("AIV_CONTENT_UNITS")
+    else _CONTENT_UNITS
+)
 
 #: 母稿 front matter 里属于「期号」的字段——**母稿里唯一往下搬的一组**。
 #: 不在表里的字段不往下传：避免母稿随手写个字段就污染所有平台。

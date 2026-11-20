@@ -61,13 +61,20 @@ def write_post(posts_dir: Path, rel: str, front_matter: str) -> Path:
     return path
 
 
-def make_unit(content_id, *, platforms=("wechat",), publish_on=None, day=None):
-    """造一个内容单元（不落盘，只给选题规则用）。"""
+def make_unit(content_id, *, platforms=("wechat",), publish_on=None, day=None,
+              kind="document"):
+    """造一个内容单元（不落盘，只给选题规则用）。
+
+    ``kind`` 是**内容契约**的取值（``document`` / ``category`` / ``video``）——
+    真实的内容单元上它在 ``unit.contract.kind`` 上（``ContentUnit`` 自己
+    没有 kind 属性），所以这里也挂在 contract 上。
+    """
 
     class _Contract:
         def __init__(self):
             self.platforms = tuple(platforms)
             self.title = content_id
+            self.kind = kind
 
     return type(
         "Unit",
@@ -403,6 +410,23 @@ def test_the_candidate_set_of_one_platform_does_not_leak_into_another():
     chosen, _ = select_for_platform(units, "wechat", window=THIS_WEEK)
 
     assert chosen.content_id == "only-wechat"
+
+
+def test_a_category_page_is_not_a_publish_candidate():
+    """分类页（``kind == "category"``）是站点的东西，不是要发给平台的文章。
+
+    契约层认了 ``category`` 这个 kind 之后，分类页就会进发布候选集——
+    编译器把一级目录的 ``_index.md`` 也编译成内容单元（``kind: category``），
+    它比稿子老，选题规则按「最久未发」排时**第一个选中的就是它**。
+    """
+    units = [
+        make_unit("a/_index", kind="category", day=date(2020, 1, 1)),
+        make_unit("a/doc", kind="document", day=date(2026, 7, 27)),
+    ]
+
+    chosen, _ = select_for_platform(units, "wechat", window=THIS_WEEK)
+
+    assert chosen.content_id == "a/doc"
 
 
 def test_a_unit_without_any_date_still_can_be_chosen():

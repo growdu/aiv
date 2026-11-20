@@ -27,6 +27,16 @@ DOCS = REPO_ROOT / "docs"
 # 内容单元仓库：所有平台共用的那一半。站点只是它的一个消费者。
 CONTENT_UNITS = REPO_ROOT / "content" / "units"
 
+# ``DOCS`` / ``CONTENT_UNITS`` 这两个常量**可以指到别处去**——
+# ``tools/build-content-units.py`` 认两个环境变量（跟 ``VIDEO_CONFIG``
+# 一个路子），**只在给了的时候才覆盖**，默认行为一个字都不变：
+#
+# - ``AIV_DOCS``：母稿目录（覆盖 ``DOCS``）
+# - ``AIV_CONTENT_UNITS``：内容单元仓库（覆盖 ``CONTENT_UNITS``）
+#
+# 那是给**测试**用的：用例自己造语料，不往真的仓库里写东西
+# （「只做框架，不做内容」的红线）。
+
 #: 内容单元仓库里的**图片**副本。编译器按 docs 相对路径把图片拷进来，
 #: 站点与两个 adapter 都从这儿拿图（正文里的一张图落在
 #: ``图片根/单元目录/正文里的相对路径``）。
