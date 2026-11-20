@@ -177,15 +177,33 @@ def category_archive_url(source_url: str, category_id: str) -> str:
     return source_url.rstrip("/") + doc_url(category_id)
 
 
+def _id_order(category_id: str) -> tuple:
+    """候选分类单元 id 的排序键：层级最浅的在前，同深度按字典序。
+
+    段数 = id 里的斜杠数 + 1（分类页的 id 尾巴都带 ``_index``），
+    所以斜杠少的那个就是层级浅的那个。
+    """
+    return (category_id.count("/"), category_id)
+
+
 def category_id_for(posts, name: str) -> str | None:
-    """分类名 → 分类内容单元 id。找不到返回 None。"""
+    """分类名 → 分类内容单元 id。找不到返回 None。
+
+    同一个分类名可能落在两个**互不为祖先**的目录上：编译器只在**一篇之内**
+    的目录链上去重（``if name not in categories`` 守的是这一篇自己的链），
+    不跨篇——于是两个 id 都「对」。取**层级最浅**的那个（那是列出文章最多的
+    那个页面，与老代码 ``build_category_paths`` 同一口径），同深度时按 id
+    字典序取小的：**结果与文件顺序无关**。
+    """
+    candidates = []
     for post in posts:
-        cats = tuple(getattr(post, "categories", ()) or ())
-        ids = tuple(getattr(post, "category_ids", ()) or ())
-        for index, category in enumerate(cats):
+        ids = post.category_ids
+        for index, category in enumerate(post.categories):
             if category == name and index < len(ids):
-                return ids[index]
-    return None
+                candidates.append(ids[index])
+    if not candidates:
+        return None
+    return min(candidates, key=_id_order)
 
 
 def load_spec(path: Path) -> list:
@@ -305,9 +323,8 @@ def _category_id_for_chain(posts, wanted, selected) -> str:
     for post in posts:
         if post.slug not in chosen:
             continue
-        cats = tuple(getattr(post, "categories", ()) or ())
-        ids = tuple(getattr(post, "category_ids", ()) or ())
-        for index, category in enumerate(cats):
+        ids = post.category_ids
+        for index, category in enumerate(post.categories):
             if category in wanted and index < len(ids):
                 return ids[index]
     return ""

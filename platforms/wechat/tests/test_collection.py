@@ -81,6 +81,31 @@ def test_category_id_for_finds_the_unit_id_of_a_category():
     assert category_id_for(posts, "没有这个分类") is None
 
 
+def test_category_id_for_takes_the_shallowest_id_of_a_repeated_name():
+    """同一个分类名落在两个互不为祖先的目录上 → 取**层级最浅**的那个。
+
+    编译器只在**一篇之内**的目录链上去重，不跨篇——所以两个 id 都「对」。
+    老代码（`build_category_paths`）取的是最浅的那个，这里保持同一口径。
+    """
+    posts = [
+        _post("a", "A", ["数据库"], category_ids=["数据库深入/数据库/_index"]),
+        _post("b", "B", ["数据库"], category_ids=["数据库/_index"]),
+    ]
+    assert category_id_for(posts, "数据库") == "数据库/_index"
+    # 结果与文件顺序无关
+    assert category_id_for(list(reversed(posts)), "数据库") == "数据库/_index"
+
+
+def test_category_id_for_breaks_a_tie_by_the_id_itself():
+    """同样深时按 id 字典序取小的——结果与文件顺序无关。"""
+    posts = [
+        _post("a", "A", ["数据库"], category_ids=["集群/_index"]),
+        _post("b", "B", ["数据库"], category_ids=["数据库深入/_index"]),
+    ]
+    assert category_id_for(posts, "数据库") == "数据库深入/_index"
+    assert category_id_for(list(reversed(posts)), "数据库") == "数据库深入/_index"
+
+
 def test_slugize_replaces_spaces_with_dashes():
     """The adapter's own slug rule: spaces become dashes, Chinese is kept."""
     assert slugize("Go Web") == "Go-Web"
@@ -167,6 +192,24 @@ def test_build_collections_reads_a_specification():
     assert collections[0].title == "数据库精选"
     assert collections[0].description == "挑几篇"
     assert [ref.slug for ref in collections[0].articles] == ["a"]
+
+
+def test_build_collections_reads_the_category_id_from_a_specification():
+    """合集配置里的键是 `category_id`——拼错就落回 fallback。
+
+    键名写错时 `_category_id_for_chain` 的 fallback 照样给得出一个 id，
+    所以这条用例专门钉住**键名**。
+    """
+    posts = [
+        _post("a", "A", ["数据库"], date="2026-01-01 00:00:00"),
+        _post("b", "B", ["数据库"], date="2026-02-01 00:00:00"),
+    ]
+    spec = [{"title": "数据库精选", "categories": ["数据库"],
+             "category_id": "数据库/_index"}]
+    collection = build_collections(posts, spec)[0]
+    assert collection.category_id == "数据库/_index"
+    assert collection.archive_url("https://growdu.cn") == \
+        "https://growdu.cn/docs/数据库/"
 
 
 def test_build_collections_adds_extra_articles_from_a_specification():

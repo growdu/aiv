@@ -187,7 +187,7 @@ export WX_NOTIFY_KEY=SCTxxxxxxxx     # https://sct.ftqq.com 扫码登录即可�
 | 幂等 | `state.py` | ✅ 三层键（正文指纹含分类标签） |
 | 通知 | `notify.py` | ✅ Server酱 / 企业微信 / 通用 webhook |
 | 分类 / 合集 | `collection.py` | ✅ 分类标签、合集计划、导览文章、勾选清单（**平台上的归属仍是人工**） |
-| slug | `slugs.py` | ✅ adapter 自己的 slug 规则（分类归档路径的每一段） |
+| slug | `slugs.py` | ✅ adapter 自己的 slug 规则（**不再参与归档地址**：地址形状归仓库根的 `rules/urls.json` 那份共享规则管） |
 | 批量 / 定时 | `cli.py` | ✅ `batch` 批量建草稿、`auto-draft` 定时自动进草稿（launchd 模板在 `deploy/`） |
 | 拆分 | `split.py` | ✅ 超上限的文章按标题边界拆成多篇，编号 + 衔接；上限可配（`--max-length`） |
 | 审计 | `audit.py` | ✅ 复算全语料统计与 HTML 合规检查 |
