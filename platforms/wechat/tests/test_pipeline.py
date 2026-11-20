@@ -699,7 +699,8 @@ def _series_posts(tmp_path):
     for name, title in (("one", "第一篇"), ("two", "第二篇")):
         (target / (name + ".md")).write_text(
             "---\ntitle: \"{}\"\ndate: 2026-11-0{} 15:00:00\nauthor: growdu\n"
-            "categories:\n  - 数据库\n---\n\n正文一段。\n\n![图](images/demo.png)\n".format(
+            "categories:\n  - 数据库\ncategory_ids:\n  - 数据库/_index\n"
+            "---\n\n正文一段。\n\n![图](images/demo.png)\n".format(
                 title, "1" if name == "one" else "2"),
             encoding="utf-8")
     _write_png(tmp_path / "source" / "images" / "demo.png")
@@ -722,6 +723,22 @@ def test_categories_lists_the_articles_of_one_category(tmp_path, capsys):
     assert code == 0
     assert "第一篇" in out
     assert "第二篇" in out
+    assert "https://growdu.cn/docs/数据库/" in out
+
+
+def test_categories_says_the_page_is_missing_without_a_category_id(tmp_path, capsys):
+    """语料里没有 `category_ids` → 分类照样列出来，只是站点上还没有这一页。"""
+    posts_dir = tmp_path / "source" / "_posts"
+    target = posts_dir / "database"
+    target.mkdir(parents=True)
+    (target / "one.md").write_text(
+        "---\ntitle: \"第一篇\"\ndate: 2026-11-01 15:00:00\nauthor: growdu\n"
+        "categories:\n  - 数据库\n---\n\n正文一段。\n", encoding="utf-8")
+    code = main(["categories", "数据库"] + _args(posts_dir, tmp_path / "out"))
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "第一篇" in out
+    assert "没有分类单元 id" in out
 
 
 def test_categories_reports_an_unknown_category(tmp_path, capsys):
@@ -774,7 +791,7 @@ def test_publish_collection_creates_a_draft(tmp_path, server, monkeypatch):
     assert "第一篇" in article["content"]
     assert "第二篇" in article["content"]
     assert article["thumb_media_id"] == "COVER_ID"
-    assert article["content_source_url"].startswith("https://growdu.cn/categories/")
+    assert article["content_source_url"] == "https://growdu.cn/docs/数据库/"
 
 
 def test_publish_collection_is_idempotent(tmp_path, server, monkeypatch):

@@ -100,6 +100,7 @@ class Post:
     body: str
     categories: tuple
     date: str
+    category_ids: tuple = ()
 
     @property
     def fingerprint(self) -> str:
@@ -185,6 +186,23 @@ def build_permalink(slug: str, date: str) -> str:
     return "/{}/{}/{}/{}/".format(parts[0], parts[1], parts[2], quote(slug))
 
 
+def _string_list(value) -> tuple:
+    """把 front matter 里的一个值读成字符串元组。
+
+    编译器写空列表用的是**内联** `[]`（`yaml.safe_dump` 的流式写法），
+    而这个扁平解析器只认「`key:` 下面空着 = 空列表」——内联的 `[]`
+    会被读成**字符串** `"[]"`，于是「一个名叫 `[]` 的分类」。
+    """
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        text = value.strip()
+        if not text or text == "[]":
+            return ()
+        return (text,)
+    return tuple(str(item) for item in value)
+
+
 def load_post(path: Path, posts_dir: Path) -> Post:
     """Load one post file into a :class:`Post`."""
     text = Path(path).read_text(encoding="utf-8")
@@ -194,11 +212,8 @@ def load_post(path: Path, posts_dir: Path) -> Post:
     title = (fields.get("title") or Path(path).stem).strip()
     date = fields.get("date") or "2024-01-01 00:00:00"
 
-    raw_categories = fields.get("categories", "")
-    if isinstance(raw_categories, str):
-        categories = (raw_categories,) if raw_categories else ()
-    else:
-        categories = tuple(raw_categories)
+    categories = _string_list(fields.get("categories"))
+    category_ids = _string_list(fields.get("category_ids"))
 
     return Post(
         path=Path(path),
@@ -209,6 +224,7 @@ def load_post(path: Path, posts_dir: Path) -> Post:
         body=body,
         categories=categories,
         date=date,
+        category_ids=category_ids,
     )
 
 

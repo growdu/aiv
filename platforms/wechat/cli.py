@@ -1600,8 +1600,12 @@ def cmd_categories(args) -> int:
         print("分类「{}」共 {} 篇\n".format(args.name, len(refs)))
         for ref in refs:
             print("  {}  {}".format(ref.label, ref.title))
-        print("\n归档页: {}".format(
-            collection_module.category_archive_url(args.source_url, args.name)))
+        category_id = collection_module.category_id_for(posts, args.name)
+        if category_id:
+            print("\n归档页: {}".format(
+                collection_module.category_archive_url(args.source_url, category_id)))
+        else:
+            print("\n归档页: （没有分类单元 id，站点上还没有这一页）")
         return EXIT_OK
 
     total = sum(len(refs) for refs in categories.values())

@@ -114,6 +114,19 @@ def test_load_post_builds_slug_permalink_and_fingerprint(tmp_path):
     assert post.fingerprint == load_post(target, posts_dir).fingerprint
 
 
+def test_load_post_reads_an_empty_category_list_as_no_category(tmp_path):
+    """编译器写空列表用的是**内联** `[]`——它不是「一个名叫 `[]` 的分类」。"""
+    posts_dir = tmp_path / "_posts"
+    posts_dir.mkdir()
+    target = posts_dir / "a.md"
+    target.write_text(
+        "---\ntitle: \"x\"\ndate: 2026-11-09 15:00:00\n"
+        "categories: []\ncategory_ids: []\n---\n\n正文\n", encoding="utf-8")
+    post = load_post(target, posts_dir)
+    assert post.categories == ()
+    assert post.category_ids == ()
+
+
 def test_discover_lists_every_markdown_post(tmp_path):
     posts_dir, _ = _write(tmp_path, "database/a.md", FM)
     _write(tmp_path, "db/postgresql/b.md", FM)
