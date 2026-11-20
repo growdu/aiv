@@ -2,7 +2,7 @@
 
 **站点是六个第三方平台之一**——这是 2026-11-18 顶层设计定下的事。
 
-在这之前站点不在平台层里：它走 `docs/` → `content/units/` → `site/src/` →
+在这之前站点不在平台层里：它走 `docs/` → `content/units/` → `site/source/` →
 `site/dist/` 这条链，跟另外五个平台（公众号、头条号、抖音、视频号、B 站）
 是**两套东西**——那五个走「能力声明 → 发布清单 → outbox 快照」，
 站点不走。于是顶层的心智模型缺了一块：目录里数得出来五个平台，
@@ -42,7 +42,8 @@ DOCS_DIR = REPO_ROOT / "docs"
 DRAFTS_DIR = REPO_ROOT / "drafts"
 
 #: **内容单元仓库**：母稿编译出来的产物（平台无关，所有平台共用的那一半）。
-#: 站点通过 `site/tools/sync-content.py` 拿自己那份副本。
+#: 站点**直接读它**（`site/tools/build-posts.py`），不留副本——
+#: 副本是字节级重复，仓库早就把它记成欠账（`acceptance/README.md` 的 I1/I3）。
 #: **它是构建产物，不入库**——所以它不在的时候，`status` 要说「还没编译」，
 #: 而不是报「0 篇内容」。
 CONTENT_UNITS_DIR = REPO_ROOT / "content" / "units"

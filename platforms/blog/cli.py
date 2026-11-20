@@ -9,7 +9,7 @@
 （`.github/workflows/site.yml`）。别的平台是「逐篇出包、发一篇文章」，
 站点不是——站点没有「一篇一篇发」这回事，只有「整站重建一次」。
 把逐篇出包在这里重写一遍，等于把
-`site/tools/build-learning-path.py` + Astro
+`site/tools/build-learning-path.py` + hexo
 再写一遍，而两份必然漂移。
 
 所以这里只回答两个问题：
@@ -30,6 +30,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -51,6 +52,24 @@ CAPABILITY_PATH = Path(__file__).resolve().parent / "capability.toml"
 SITE_DIR = Path(__file__).resolve().parent / "site"
 LEARNING_PATH = SITE_DIR / "data" / "learning-path.compiled.json"
 DIST_DIR = SITE_DIR / "dist"
+
+
+def _load_site_urls():
+    """站点那一份地址规则（`site/tools/urls.py`）。
+
+    **问它，不复刻。** 地址形状在站点里只有一处说了算；这里再抄一遍，
+    两边迟早漂移。站点那一份读仓库根的 `rules/urls.json`，规则表不在时
+    用同样的默认值兜底。
+    """
+    path = SITE_DIR / "tools" / "urls.py"
+    spec = importlib.util.spec_from_file_location("blog_site_urls", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+SITE_URLS = _load_site_urls()
 
 #: 站点在公开互联网上的地址。**由使用者给**，框架不写死：
 #: 环境变量 `SITE_URL`（Astro 构建与 CI 用的也是同一个变量）。
@@ -141,15 +160,11 @@ def _learning() -> dict:
 def _site_url(unit_id: str, kind: str) -> str:
     """这个内容单元在站上的地址。
 
-    **口径与 `site/src/lib/urls.ts` 一致**（那是站点里唯一决定链接形状的地方）：
+    **口径只有一处**：`site/tools/urls.py`（它读仓库根的 `rules/urls.json`）。
     分类页的 id 尾巴带 `_index`、视频的 id 开头带 `video/`——
-    那是内容单元里的形状，不是 URL 里的形状，这里负责抹掉。
+    那是内容单元里的形状，不是 URL 里的形状，由它负责抹掉。
     """
-    if kind == "video":
-        return "/videos/{}/".format(unit_id.removeprefix("video/"))
-    if kind == "category" or unit_id.endswith("/_index"):
-        return "/docs/{}/".format(unit_id.removesuffix("/_index"))
-    return "/docs/{}/".format(unit_id)
+    return SITE_URLS.unit_url(unit_id, kind)
 
 
 def _compile_only(unit_id: str) -> dict:

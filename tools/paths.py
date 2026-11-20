@@ -36,40 +36,33 @@ SITE_DATA = SITE / "data"
 #: 站点私有的工具（学习流编译、内容同步、围栏体检）。
 SITE_TOOLS = SITE / "tools"
 
-#: 站点的**构建产物**——Astro 的输出目录。整站构建的结果都在这儿。
+#: 站点的**构建产物**——hexo 的输出目录。整站构建的结果都在这儿。
 SITE_DIST = SITE / "dist"
 
-#: 站点的**静态资源源码**目录（`public/`）：favicon 入库，
-#: `images/`、`js/` 是构建时从 `docs/` 与 `node_modules/` 同步进来的，不入库。
+#: 站点的**源目录**（hexo 的 `source/`）。静态文件、生成的文章、主题的数据
+#: 都挂在这儿。
+SITE_SOURCE = SITE / "source"
+
+#: 平台层（公众号、头条号……）读的那批文章。
 #:
-#: ⚠️ 它**不是**站点产物——产物是 `SITE_DIST`。
-#: （2026-11-18 站点重做之前，这里放的是 hexo 的产物 `public/`，
-#: 同一个名字换了含义，这是那轮重做留下的最隐蔽的一处。）
-SITE_PUBLIC = SITE / "public"
-
-#: 站点的**源目录**（Astro 工程的 `src/`）。页面、组件、样式都在这儿。
-SITE_SOURCE = SITE / "src"
-
-#: 站点拿到的那份**内容单元副本**——Astro 的 content collection 读它。
+#: **就是内容单元仓库本身**（`content/units/`）——站点不再留副本。
+#: 副本是字节级重复，而仓库早就把它记成欠账
+#: （`acceptance/README.md` 的 I1/I3）：站点与发布层都直接读 `content/units/`。
 #:
-#: 它是**构建产物，不入库**：根 `tools/build-content-units.py` 把 `docs/`
-#: 编译成 `content/units/`，再由 `platforms/blog/site/tools/sync-content.py`
-#: 同步进这个目录。平台层（公众号、头条号……）读的就是这份副本。
-SITE_POSTS = SITE_SOURCE / "content" / "units"
+#: 站点自己把它编成 hexo 的文章，落在 `site/source/_posts/`——
+#: 那是**站点渲染的产物**，不是给别的平台读的。
+SITE_POSTS = CONTENT_UNITS
 
-# --- 以下是 hexo 时代的路径 -------------------------------------------------
+# --- 主题与配置的路径 ------------------------------------------------------
 #
-# 站点重做（2026-11-18）把 hexo 换成了 Astro，这些目录已经不存在了。
-# 这些常量**先留着**：引用它们的模块（`publish/`、`platforms/wechat/`、
-# `platforms/toutiao/`、`tools/` 里几个脚本）伸手进站点目录拿东西，
-# 那是那些模块的欠账（见 `review/specs/2026-11-18-站点重做-学习流门面.md` §14.5），
-# 该由那些模块自己解耦掉——**解耦的方式是把跨平台的规则搬回根 `tools/`，
-# 不是继续引用某个平台的私有目录**。
-SITE_THEMES = SITE / "themes"          # 主题目录（已不存在）
-SITE_CONFIG = SITE / "_config.yml"     # 站点配置（已不存在）
-#: 站点自己的主题覆盖配置（对 matery 的覆盖层，已不存在）
+# 站点重做（2026-11-18）把 hexo 换成了 Astro，2026-11-20 又换回来了。
+# 这些常量现在**又都存在了**——主题树是 hexo 版的 matery，
+# `_config.yml` 由 `_config.template.yml` + `data/site.json` 填出来。
+SITE_THEMES = SITE / "themes"          # 主题目录
+SITE_CONFIG = SITE / "_config.yml"     # 站点配置（生成物）
+#: 站点自己的主题覆盖配置（对 matery 的覆盖层）
 SITE_MATERY_CONFIG = SITE / "_config.matery.yml"
-#: 主题外的自制素材（logo、头像、收款码……，已不存在）
+#: 主题外的自制素材（logo、头像、收款码……）
 SITE_ASSETS = SITE / "theme-assets"
 
 # 根 tools/ —— 平台无关的工具住这儿
