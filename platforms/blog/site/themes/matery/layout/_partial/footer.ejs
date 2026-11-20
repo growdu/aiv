@@ -1,0 +1,29 @@
+<%
+    // 身份读 site.data.site.*；起始日期读 start_date（`YYYY-MM-DD`）。
+    var _site = (site.data && site.data.site) || {};
+    var _name = _site.name || config.title;
+    var _footer = _site.footer || {};
+    var _note = _footer.note || '';
+    var _startYear = String(_site.start_date || '').slice(0, 4);
+    var _thisYear = String(new Date().getFullYear());
+    var _yearText = (_startYear && _startYear !== _thisYear)
+        ? _startYear + '-' + _thisYear
+        : (_startYear || _thisYear);
+%>
+<footer class="page-footer bg-color">
+    <div class="container row center-align" style="margin-bottom: 0 !important;">
+        <div class="col s12 m12 l12 copy-right">
+            Copyright&nbsp;&copy;
+            <span id="year"><%- _yearText %></span>
+            <a href="<%- url_for('/') %>"><%- _name %></a>
+            |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
+            |&nbsp;Theme&nbsp;<a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank">Matery</a>
+            <% if (_note) { %>
+            <br>
+            <span class="footer-note"><%- _note %></span>
+            <% } %>
+        </div>
+    </div>
+</footer>
+
+<div class="progress-bar"></div>

@@ -1,0 +1,162 @@
+<!DOCTYPE HTML>
+<html lang="<%= config.language %>">
+<%- partial('_partial/head') %>
+
+<%# 首页的版面是「正好一屏」：首页第一页带 home-page 这个类，
+    tech.css 用它把首屏 + 统计条 + 学习路径做成不用滚动就能看完。
+    其余页面不带这个类，布局完全不受影响。 %>
+<body class="<%- is_home() && page.current === 1 ? 'home-page' : '' %>">
+    <%- partial('_partial/header') %>
+
+    <%- body %>
+
+    <%- partial('_partial/footer') %>
+
+    <%- partial('_partial/search') %>
+    <%- partial('_widget/day-night') %>
+    <%- partial('_partial/back-top') %>
+
+    <script defer src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.materialize) %>"></script>
+    <script defer src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.aos) %>"></script>
+    <script defer src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.scrollProgress) %>"></script>
+    <script defer src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.lightgallery) %>"></script>
+    <script defer src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.matery) %>"></script>
+
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}</script>
+<script id="custom-blog-script">
+(function(){
+  var bar=document.createElement('div');bar.className='reading-progress';document.body.appendChild(bar);
+  function updateBar(){var st=window.scrollY,dh=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(dh>0?(st/dh*100):0)+'%';}
+  window.addEventListener('scroll',updateBar,{passive:true});updateBar();
+})();
+</script>
+
+<% var _hasCode = !!(page.content && /<(?:pre|code)\b/i.test(page.content)); %>
+<% if (is_post() && _hasCode) { %>
+<script src="<%- url_for(theme.libs.js.prism) %>"></script>
+<% } %>
+<% if (theme.mermaid.enable) { %>
+<script>
+/* Mermaid loader -----------------------------------------------------------
+   页面上没有 .mermaid 容器就完全不下载这个库（3MB 出头），
+   有的话只加载一次，主题与版面参数取自 _config.matery.yml。            */
+(function () {
+  if (!document.querySelector('.mermaid')) return;
+  var el = document.createElement('script');
+  el.src = '<%- url_for(theme.libs.js.mermaid) %>';
+  el.onload = function () {
+    var opts = <%- JSON.stringify({
+      theme: (theme.mermaid && theme.mermaid.options && theme.mermaid.options.theme) || 'default',
+      nodeSpacing: (theme.mermaid && theme.mermaid.options && theme.mermaid.options.nodeSpacing) || 30,
+      rankSpacing: (theme.mermaid && theme.mermaid.options && theme.mermaid.options.rankSpacing) || 30,
+      padding: (theme.mermaid && theme.mermaid.options && theme.mermaid.options.padding) || 10,
+      wrappingWidth: (theme.mermaid && theme.mermaid.options && theme.mermaid.options.wrappingWidth) || 220,
+      diagramMarginX: (theme.mermaid && theme.mermaid.options && theme.mermaid.options.diagramMarginX) || 8,
+      actorMargin: (theme.mermaid && theme.mermaid.options && theme.mermaid.options.actorMargin) || 30,
+      boxMargin: (theme.mermaid && theme.mermaid.options && theme.mermaid.options.boxMargin) || 4
+    }) %>;
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: opts.theme,
+      flowchart: {
+        useMaxWidth: true,
+        nodeSpacing: opts.nodeSpacing,
+        rankSpacing: opts.rankSpacing,
+        padding: opts.padding,
+        wrappingWidth: opts.wrappingWidth
+      },
+      sequence: {
+        useMaxWidth: true,
+        diagramMarginX: opts.diagramMarginX,
+        actorMargin: opts.actorMargin,
+        boxMargin: opts.boxMargin
+      }
+    });
+    /* mermaid.run() 是异步的：<svg> 要等 promise 落定才出现，
+       所以适配那一步得排在它后面。 */
+    var fitted = function () { window.initMermaidDiagrams(); };
+    mermaid.run({ querySelector: '.mermaid', suppressErrors: true }).then(fitted, fitted);
+  };
+  document.body.appendChild(el);
+})();
+</script>
+<script>
+/* Mermaid 图表的行为 ------------------------------------------------------
+   1. fitMermaidDiagrams()：mermaid 渲染出来的 <svg> 带 width="100%"，
+      图比正文栏宽时会被整体缩小，标签字也跟着缩（手机上能缩到 4~16%）。
+      缩到文字小于 ~13px 就不缩了，保留原尺寸、让容器横向滚动。
+   2. 点图打开原尺寸的浮层。                                       */
+function fitMermaidDiagrams() {
+  var root = document.getElementById('articleContent');
+  if (!root) return;
+  var MIN_SCALE = 0.7;
+  var svgs = document.querySelectorAll('#articleContent .mermaid svg');
+  for (var i = 0; i < svgs.length; i++) {
+    var svg = svgs[i];
+    var box = svg.parentNode;
+    /* 解析失败的图会被 mermaid 换成一个固定 2412x512 的占位块——
+       那个占位块比正文栏宽得多，每一张坏图都会把版面撑破。
+       换成一句提示。 */
+    if (svg.getAttribute('aria-roledescription') === 'error') {
+      var container = box.closest ? box.closest('.mermaid') : box;
+      if (!container) container = box;
+      var notice = document.createElement('div');
+      notice.className = 'mermaid-error';
+      notice.textContent = '⚠ 此图语法错误，未能渲染';
+      container.innerHTML = '';
+      container.appendChild(notice);
+      container.className += ' mermaid-broken';
+      continue;
+    }
+    /* 记住 mermaid 自己的上限（inline max-width = 自然宽度），
+       还原时要用：不然窄图会被拉满整栏。 */
+    if (!box.getAttribute('data-mermaid-maxw')) {
+      box.setAttribute('data-mermaid-maxw', svg.style.maxWidth || '');
+    }
+    var vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/);
+    var natW = parseFloat(vb[2]);
+    var avail = box.clientWidth;
+    if (!natW || !avail) continue;
+    if (avail / natW >= MIN_SCALE) {
+      svg.style.width = '';
+      svg.style.maxWidth = box.getAttribute('data-mermaid-maxw');
+      box.style.textAlign = '';
+    } else {
+      svg.style.width = natW + 'px';
+      svg.style.maxWidth = 'none';
+      box.style.textAlign = 'left';
+    }
+  }
+}
+
+window.initMermaidDiagrams = function () {
+  if (window.__mermaidBound) return;
+  window.__mermaidBound = true;
+  fitMermaidDiagrams();
+  window.addEventListener('resize', fitMermaidDiagrams);
+  document.addEventListener('click', function (e) {
+    var svg = e.target && e.target.closest
+      ? e.target.closest('#articleContent .mermaid svg')
+      : null;
+    if (!svg) return;
+    var vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/);
+    var natW = parseFloat(vb[2]) || svg.clientWidth;
+    var natH = parseFloat(vb[3]) || svg.clientHeight;
+    var box = document.createElement('div');
+    box.className = 'mermaid-zoom';
+    var clone = svg.cloneNode(true);
+    clone.removeAttribute('width');
+    clone.removeAttribute('height');
+    clone.style.width = natW + 'px';
+    clone.style.height = natH + 'px';
+    clone.style.maxWidth = 'none';
+    box.appendChild(clone);
+    box.addEventListener('click', function () { box.remove(); });
+    document.body.appendChild(box);
+  });
+};
+</script>
+<% } %>
+</body>
+
+</html>

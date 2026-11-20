@@ -1,0 +1,609 @@
+/* tech.css -----------------------------------------------------------------
+   本站自己的样式：导航栏里的定位句（.logo-tagline）和学习路径页
+   （.learning-page）。
+
+   为什么单独开一个文件：
+   docs/blog/重构方案.md §5.4 规定新样式只放这里，不再往 tools/patch-theme.py
+   里塞 CSS —— patcher 注入的样式没法 review、没法单测，出错时也看不出是谁写的。
+
+   历史：这里原来还管着首页首屏 .home-hero（搜索框 + 分类徽章 + 打字机
+   + 一句定位）。2026-11-19 那句定位搬进了顶部导航栏（紧跟站名），首屏那块整个退休了 —— 首页只剩统计条 + 学习路径，
+   正好一屏。同一天再调一次：首页上**不再显示**那句定位（导航栏里
+   挂着口号，第一眼看到的应该是「这个站有多少东西」），首页的 h1
+   改成站名。
+   ------------------------------------------------------------------------- */
+
+/* --- 导航栏里的定位句 -----------------------------------------------------
+   2026-11-19：定位句从首屏搬到了导航栏，紧跟在站名后面。
+
+   颜色跟着导航栏走：导航栏是深色底（matery.css 的 header .nav-transparent
+   给的是 #263238），所以这里是浅色字。左边一条竖线把站名和这句
+   分开。
+
+   **首页上不显示它** —— 首页只有统计条 + 学习路径，导航栏里再挂一句
+   口号，第一眼看到的应该是「这个站有多少东西」。首页的 h1 改成站名
+   （见下面 h1.logo-span）。
+
+   窄屏（< 992px）不显示：那时候导航栏右边是汉堡按钮，标题行挤不下，
+   而且手机上「让人写代码成为一种习惯」这种话本来就该往下看。 */
+.logo-tagline {
+  display: inline-block;
+  margin: 0 0 0 14px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 255, 255, .28);
+  font-size: .82rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: .04em;
+  color: rgba(255, 255, 255, .62);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* 首页上站名是 h1 —— matery 的 h1 有 48px 的上外边距、2.0rem 的字号和
+   2.0rem 的行高，还是个块级元素（block）：直接用的话，它会把导航栏里
+   的 LOGO 挤到下一行、导航栏凭空高一块。
+   按 .logo-span 的样子重置：inline + 无外边距 + 继承字重行高 ——
+   视觉上跟别的页面一模一样。 */
+header .brand-logo h1.logo-span {
+  display: inline;
+  margin: 0;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+@media (max-width: 992px) {
+  .logo-tagline {
+    display: none;
+  }
+}
+
+/* learning-page ------------------------------------------------------------
+   学习路径页（/learning/ 和每条赛道一页）的排版。
+
+   页面骨架在 themes/matery/layout/learning.ejs，正文是
+   tools/build-learning-path.py 生成的 Markdown。这里只管**索引页特有**的
+   那几件事：面包屑、阶段标题、以及「一篇文章一行」的长清单分两栏排。
+
+   为什么清单要分两栏：db-internals 的 L7（逻辑复制与流式）有 85 篇，
+   一栏排下来是一屏接一屏 —— 读者根本看不到这条赛道到底有多厚，
+   更看不到「我读到第几篇了」。
+   ------------------------------------------------------------------------- */
+
+.learning-page {
+  --lp-accent: #0b7285;
+  --lp-rule: rgba(31, 41, 51, .12);
+}
+
+.learning-page__container {
+  max-width: 1080px;
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+.learning-page__crumb {
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: #5b6670;
+}
+
+.learning-page__crumb a {
+  color: #5b6670;
+  text-decoration: none;
+}
+
+.learning-page__crumb a:hover,
+.learning-page__crumb a:focus-visible {
+  color: var(--lp-accent);
+  text-decoration: underline;
+}
+
+.learning-page__crumb-sep {
+  margin: 0 8px;
+  color: #9aa5ad;
+}
+
+.learning-page__body {
+  padding: 8px 4px 16px;
+}
+
+/* 阶段标题：L1 / L2 …… */
+.learning-page__body h2 {
+  margin-top: 2.2rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid var(--lp-rule);
+}
+
+.learning-page__body h3 {
+  margin-top: 1.6rem;
+}
+
+/* 阶段里的文章清单：两栏，别让 85 篇文章堆成一堵墙 */
+.learning-page__body ul {
+  columns: 2;
+  column-gap: 2.5rem;
+}
+
+.learning-page__body ul li {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  margin-bottom: .35rem;
+}
+
+.learning-page__body table {
+  display: table;
+  width: 100%;
+}
+
+.learning-page__body table td,
+.learning-page__body table th {
+  vertical-align: top;
+}
+
+@media (max-width: 992px) {
+  .learning-page__body ul {
+    columns: 1;
+  }
+}
+
+body.DarkMode .learning-page {
+  --lp-accent: #66c2d0;
+  --lp-rule: rgba(223, 230, 234, .16);
+}
+
+body.DarkMode .learning-page__crumb,
+body.DarkMode .learning-page__crumb a {
+  color: #9fb0b8;
+}
+
+body.DarkMode .learning-page__crumb a:hover,
+body.DarkMode .learning-page__crumb a:focus-visible {
+  color: var(--lp-accent);
+}
+
+/* 首页学习路径面板（8 条赛道）------------------------------------------------
+   赛道卡片复用了 patch-theme.py 注入的 .lane-grid / .lane-card 类名，
+   颜色改用 CSS 变量 --lane-color / --lane-tint：加一条赛道只需要在下面
+   加两行变量，不用再写一遍图标、边框、链接三处颜色。 */
+
+.lane-grid--tracks {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.lane-grid--tracks .lane-card {
+  border-top-color: var(--lane-color, #009688);
+}
+
+.lane-grid--tracks .lane-card__icon {
+  color: var(--lane-color, #009688);
+  background: var(--lane-tint, rgba(0, 150, 136, .12));
+}
+
+.lane-grid--tracks .lane-card__more {
+  color: var(--lane-color, #009688);
+}
+
+.lane-card__count {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: var(--lane-color, #009688);
+  background: var(--lane-tint, rgba(0, 150, 136, .12));
+}
+
+.lane-card__stages {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lane-card__stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #546e7a;
+  background: rgba(0, 0, 0, .04);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.lane-card__stage-id {
+  font-weight: 700;
+  color: var(--lane-color, #009688);
+}
+
+/* 「看完整的学习地图」这条链接在标题行里（首页只这么用），
+   单独占一行的 .learning-path__all 外壳 2026-11-18 已删。 */
+.learning-path__all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #00796b;
+  text-decoration: none;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(0, 150, 136, .10);
+  transition: background .2s ease, transform .2s ease;
+}
+
+.learning-path__all-link:hover,
+.learning-path__all-link:focus-visible {
+  background: rgba(0, 150, 136, .18);
+  transform: translateY(-2px);
+}
+
+.learning-path__all-link i {
+  transition: transform .2s ease;
+}
+
+.learning-path__all-link:hover i {
+  transform: translateX(3px);
+}
+
+/* 赛道配色：每条赛道一个色（--lane-color 描边/图标/链接，--lane-tint 淡底） */
+.lane-card--db-internals   { --lane-color: #00796b; --lane-tint: rgba(0, 121, 107, .12); }
+.lane-card--distributed    { --lane-color: #6a1b9a; --lane-tint: rgba(106, 27, 154, .12); }
+.lane-card--linux-network  { --lane-color: #1565c0; --lane-tint: rgba(21, 101, 192, .12); }
+.lane-card--dataplane      { --lane-color: #ef6c00; --lane-tint: rgba(239, 108, 0, .12); }
+.lane-card--ai-tools       { --lane-color: #c2185b; --lane-tint: rgba(194, 24, 91, .12); }
+.lane-card--engineering    { --lane-color: #2e7d32; --lane-tint: rgba(46, 125, 50, .12); }
+.lane-card--life           { --lane-color: #6d4c41; --lane-tint: rgba(109, 76, 65, .12); }
+.lane-card--blogging       { --lane-color: #3949ab; --lane-tint: rgba(57, 73, 171, .12); }
+
+@media (max-width: 992px) {
+  .lane-grid--tracks {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .lane-grid--tracks {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.DarkMode .lane-card__stage {
+  color: #b0bec5;
+  background: rgba(255, 255, 255, .06);
+}
+
+body.DarkMode .learning-path__all-link {
+  color: #4db6ac;
+  background: rgba(77, 182, 172, .12);
+}
+
+body.DarkMode .learning-path__all-link:hover,
+body.DarkMode .learning-path__all-link:focus-visible {
+  background: rgba(77, 182, 172, .20);
+}
+
+/* --- 首页占满一屏（统计条 + 学习路径）-------------------------------------
+   2026-11-18：文章区、「最新一期」、代表作三块删掉之后，首页剩下
+   首屏 + 统计条 + 学习路径。目标是这几块正好占满一屏 —— 读者不用滚动
+   就能看完 8 条赛道。
+
+   2026-11-19：首屏里的搜索框和分类徽章也删了，只剩一句定位；统计条
+   挪到了最上面。于是 flex 列的顺序变成：
+
+     body.home-page  → 一个「至少一屏高」的 flex 列
+       .home-stats    统计条，内容固定（flex: 0 0 auto）
+       .home-content  吃掉剩下的空间（flex: 1 1 auto）
+         .learning-path 继续往下分
+           .lane-grid    卡片跟着长高（grid-auto-rows）
+
+   **2026-11-19（第二次）**：定位句（.home-hero）也退休了 —— 它搬到了
+   顶部导航栏，紧跟在站名后面。于是首页正文只剩统计条 + 学习路径两段，
+   省下来的 40px 全给了卡片。
+
+   做法（按 docs/blog/重构方案.md §5.4，新样式只放 tech.css，不进
+   patch-theme.py 注入的那份）：
+
+   **自适应**的三条边界：
+   * 手机（< 993px）时整段不生效，回到正常文档流 —— 窄屏硬塞会把字
+     压得没法看；手机上一屏装不下 8 条赛道，本来就该滚；
+   * 空间真的不够时，滚动的是学习路径面板自己（overflow:auto），
+     不是整页 —— 整页滚动会把统计条一起推走；
+   * body 用的是 height（不是 min-height）：flex 的「收缩到刚好装下」
+     要有一个确定的高度才生效。内容装不下时是**溢出可见**的，
+     页面照常能滚，不会被裁掉一块 —— 宁可多滚一屏，不丢内容。
+
+   **2026-11-19（第三次）**：这条界线的下限从 1100px 挪到了 **993px**。
+
+   原来 1100px 以下整段不生效，页面回到正常文档流 —— 于是在
+   1024px 那种「半屏窗口」的宽度上，首页要滚将近一屏（实测溢出
+   957px）。而导航栏是**固定**的：页面一滚，统计条就滑到导航栏底下，
+   看着就像两行字撞在一起。
+
+   现在桌面宽度（≥ 993px）一律是「一屏」版面：整页不滚，统计条永远
+   在导航栏底下，不会撞上。993px 以下是手机，导航栏收成汉堡菜单，
+   定位句也不显示（见上面 .logo-tagline 那条媒体查询）。
+
+   用 dvh 而不是 vh：手机上地址栏收放时 vh 会跳，dvh 跟着实际视口走。
+   ---------------------------------------------------------------------- */
+
+@media (min-width: 993px) {
+  body.home-page {
+    /* 这一组变量原来定义在 .home-hero 上（首屏那块）。首屏退休之后，
+       卡片里那个「+N 个阶段」角标还在用其中两个 —— 变量跟着搬过来。 */
+    --tech-muted: #5b6670;
+    --tech-rule: rgba(31, 41, 51, .14);
+
+    display: flex;
+    flex-direction: column;
+    /* height 而不是 min-height：flex 的「收缩到刚好装下」要有一个确定的
+       高度才生效。装不下时内容是**溢出可见**的（body 的 overflow-y:auto
+       兜着），页面照常能滚，不会被裁掉一块。 */
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* 夜间模式：跟着原来 .home-hero 的深色值走。 */
+  body.DarkMode.home-page {
+    --tech-muted: #9fb0b8;
+    --tech-rule: rgba(223, 230, 234, .16);
+  }
+
+  /* --- 统计条：最上面 ---------------------------------------------------- */
+  body.home-page .home-stats {
+    flex: 0 0 auto;
+    padding-top: 12px;
+  }
+
+  /* 统计条压扁：数字小一圈，省下来的高度给学习路径。 */
+  body.home-page .stats-banner {
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+  }
+
+  body.home-page .stat-card { padding: 9px 12px; }
+  body.home-page .stat-num { font-size: 21px; margin-bottom: 0; }
+  body.home-page .stat-label { font-size: 12px; }
+
+  /* --- 下面那块：学习路径 ------------------------------------------------ */
+  body.home-page .home-content {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 0;
+    padding-bottom: 0;
+  }
+
+  body.home-page .home-content > .container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  body.home-page .learning-path {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin: 0;
+    padding: 10px 0 12px;
+  }
+
+  body.home-page .learning-path > .container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* 标题行：标题 + 副标题 +「看完整的学习地图」排成一行。
+     那条链接原来自己占一行（32px），首页一屏放不下，就挪到标题右边了。 */
+  body.home-page .learning-path .section-title {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    text-align: left;
+    margin-bottom: 8px;
+  }
+  body.home-page .learning-path .section-title h2 {
+    font-size: 18px;
+    margin: 0;
+    white-space: nowrap;
+  }
+  body.home-page .learning-path .section-subtitle {
+    font-size: 12px;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body.home-page .learning-path .learning-path__all-link {
+    margin-left: auto;
+    flex: 0 0 auto;
+    padding: 4px 12px;
+    font-size: 12.5px;
+  }
+
+  /* 卡片网格：行高跟着面板走 —— 面板有多余的空间就分给行，卡片跟着长高，
+     **面板不留一整块空白**（首页看着像少了一半内容）。
+
+     min-content 是下限：卡片的内容比这一行该有的高度还高时，行不会被压
+     扁（字会挤成一团），面板自己滚（overflow: auto）—— 滚的是面板，不是
+     整页。
+
+     卡片内部会不会空，见下面两段：视口矮的时候卡片排 2 列，够高的时候
+     卡片里列出全部阶段。 */
+  body.home-page .lane-grid--tracks {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-auto-rows: minmax(min-content, 1fr);
+    align-content: stretch;
+    overflow: auto;
+  }
+
+  body.home-page .lane-card {
+    /* height:auto —— my.css 里那条 height:100% 在这里是循环依赖
+       （行高由卡片决定，卡片又按行高算），Chrome 会算出比内容更高的高度。
+       放开之后卡片就是内容的高度，多出来的空间给网格去分。 */
+    height: auto;
+    position: relative;
+    padding: 8px 12px 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  body.home-page .lane-card__head { gap: 8px; margin-bottom: 4px; }
+  body.home-page .lane-card__icon { font-size: 19px; width: 24px; height: 24px; }
+  /* 13px + 行高 1.35：最长的那个赛道名（「数据面：DPDK · VPP」）也要一行放得下，
+     放不下就折两行 —— 折行的那张卡比别的卡高 25px，一屏就装不下了。 */
+  body.home-page .lane-card__title { font-size: 13px; line-height: 1.35; }
+  body.home-page .lane-card__count { font-size: 11px; padding: 2px 6px; }
+  body.home-page .lane-card__desc {
+    font-size: 12px;
+    line-height: 1.45;
+    min-height: 0;
+    /* 简介紧跟在标题下面。卡片被拉高的时候（屏幕高），空出来的地方在
+       简介和阶段角标之间 —— 那是一张「有页脚的卡片」的样子；
+       把简介推到卡片底部的话，空档就夹在标题和简介中间，像漏了内容。 */
+    margin: 0 0 4px;
+    /* 简介最多一行：卡片等高，第二行不占地方。整句在赛道页上有。
+       行数不能放开到两行 —— Chrome 算卡片的最小高度时按行数算，
+       两行的话八张卡一屏就放不下了。 */
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* 阶段角标排成一行：第一行放不下的话让第一个角标里的标题省略，
+     不换行 —— 换行会把卡片撑高，两行卡片一屏就放不下。
+     margin-top:auto —— 角标钉在卡片底部，标题和简介留在顶部。 */
+  body.home-page .lane-card__stages {
+    flex-wrap: nowrap;
+    margin-top: auto;
+    margin-bottom: 0;
+    gap: 4px;
+    /* 右边给卡片右下角那个箭头让出位置，别压在「+N 个阶段」上。 */
+    padding-right: 16px;
+    overflow: hidden;
+  }
+  body.home-page .lane-card__stage {
+    font-size: 11px;
+    padding: 2px 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  body.home-page .lane-card__stage-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body.home-page .lane-card__stage--rest { flex-shrink: 0; }
+
+  /* 卡片本身就是一个链接（<a>），「从这条赛道开始」那行字是重复的提示 ——
+     首页把它收成右下角一个小箭头，那 22px 的高度让给卡片内容。 */
+  body.home-page .lane-card__more {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    margin: 0;
+    font-size: 0;
+    line-height: 1;
+  }
+  body.home-page .lane-card__more i { font-size: 13px; }
+
+  /* 八张卡各列全部阶段的话，卡片高度翻三倍、页面要滚两屏。
+     首页只留第一个阶段，后面折成「+N 个阶段」（完整阶段表在赛道页）。 */
+  body.home-page .lane-card__stage:not(:first-child):not(.lane-card__stage--rest) {
+    display: none;
+  }
+  body.home-page .lane-card__stage--rest {
+    color: var(--tech-muted);
+    background: transparent;
+    border: 1px dashed var(--tech-rule);
+  }
+}
+
+/* 屏幕够高（1440×900 的笔记本，视口 813px）：卡片被拉高，简介那行就放开
+   成两行 —— 地方多，一句话说不完的话没必要截断。 */
+@media (min-width: 993px) and (min-height: 800px) {
+  body.home-page .lane-card__desc { -webkit-line-clamp: 2; }
+}
+
+/* 高屏（视口 900px 高以上、1200px 宽以上，1920×1080 的桌面）：八张卡排
+   4 列 × 2 行的话，
+   每张卡有 240px 以上 —— 这时候把**全部阶段**竖着列出来（不是只留第一个
+   阶段 + 「+N 个阶段」角标）。
+
+   为什么：卡片被拉高到 280px，里面却只有标题、简介和一个角标 —— 卡的
+   中间空一大块，看着像漏了内容。把阶段列出来，空出来的地方就是阶段本身。
+   阶段行按卡片的高度平分（flex: 1），卡片越高行越高，最多 40px 一行。
+
+   放不下的时候（比如视口刚好 900px）：面板自己滚（overflow: auto），
+   页面照旧不滚 —— 滚的是面板，不是整页。 */
+@media (min-width: 1200px) and (min-height: 900px) {
+  /* 简介只留一行：竖着列阶段已经占了不少高度，简介一多卡片就放不下。 */
+  body.home-page .lane-card__desc { -webkit-line-clamp: 1; }
+
+  body.home-page .lane-card__stages {
+    flex-direction: column;
+    align-items: stretch;
+    flex: 1 1 auto;
+    /* 基础规则里是 margin-top: auto（角标钉在卡片底部）—— 竖排的时候
+       改成跟着简介走，让阶段把卡片剩下的高度填满。 */
+    margin-top: 6px;
+    gap: 3px;
+    /* 右边给卡片右下角那个箭头让出位置。 */
+    padding-right: 24px;
+  }
+  /* 全部阶段都露出来，「+N 个阶段」那个角标就没用了（它数的是被折起来
+     的阶段，现在一个都没折）。 */
+  body.home-page .lane-card__stages .lane-card__stage:not(.lane-card__stage--rest) {
+    display: inline-flex;
+  }
+  body.home-page .lane-card__stage--rest { display: none; }
+  body.home-page .lane-card__stage {
+    flex: 1 1 auto;
+    max-height: 40px;
+    padding: 1px 6px;
+  }
+}
+
+/* 中屏：视口不够高（< 900px）**或者**窗口不够宽（< 1200px）的时候，
+   4 列 × 2 行的话每张卡只有 150px 高 —— 标题、简介、角标挤在一起，
+   看不清。改成 2 列 × 4 行：卡片变宽变矮，一行放得下标题、简介和第一个
+   阶段，八张卡正好占满面板。
+
+   窄窗口（1024px 那种半屏）也走这一条：4 列的话每张卡只有 230px 宽，
+   中文标题会折成三四行，卡片高得离谱，一屏装不下。
+
+   卡里只列第一个阶段（高屏那一段的「全部阶段」在这里用不上：卡片只有
+   90px 高，列不下）。 */
+@media (min-width: 993px) and (max-width: 1199px),
+       (min-width: 1100px) and (max-height: 899px) {
+  body.home-page .lane-grid--tracks {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 6px;
+  }
+}
+
+/* 矮屏幕（老笔记本、开着开发者工具的浏览器）：视口不到 800px 高的时候，
+   统计条 + 8 张卡放不下，顺序是：先把卡片里那一行简介收起来 ——
+   简介整句在赛道页上有。
+   统计条和学习路径本身不动，那是首页要看的东西。 */
+@media (min-width: 993px) and (max-height: 800px) {
+  body.home-page .home-stats { padding-top: 8px; }
+  body.home-page .lane-card__desc { display: none; }
+  /* 统计条和页脚各让一点出来 —— 两张卡 + 标题要的那点高度。 */
+  body.home-page .stats-banner { margin: 0 0 6px; }
+  body.home-page .stat-card { padding: 6px 12px; }
+  body.home-page .learning-path { padding: 4px 0; }
+  body.home-page .learning-path .section-title { margin-bottom: 4px; }
+  body.home-page .page-footer { padding-top: 10px; padding-bottom: 8px; }
+}

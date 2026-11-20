@@ -13,6 +13,13 @@
 3. **落到兜底桶** —— 规则没命中，单元被扔进 ``fallback_stage``。
    兜底桶是**构建期就该炸**的东西：它意味着「这篇我也不知道该放哪」。
 
+**还有一层**：编译结果有**两面**。
+
+- ``data/learning-path.compiled.json`` 是**账本**——文档与视频都在里面，
+  发布层要问「这一期归哪一格」；
+- ``source/_data/learning.json`` 是**站上那一面**——只有文档。
+  站上没有视频页（作者拍板），把视频列进学习流页面，点过去就是一个 404。
+
 **契约**
 --------
 1. 每个 ``kind=document|video`` 的内容单元都归到了**恰好一条**赛道的一个阶段。
@@ -20,6 +27,7 @@
 3. 规则表结构合法：赛道 id 唯一、阶段 id 递增、``fallback_stage`` 存在、
    ``catch_all`` 只出现在**最后一个**阶段（写在中间会把后面阶段全吞掉）。
 4. 编译产物与内容单元对得上（``--check`` 通过）。
+5. 站上那一面不含视频；学习流关着时两面都不生成。
 
 **这一层只看站点自己的东西**：内容单元（``content/units/``）与编译结果。
 内容单元本身是不是最新的，是根级 ``tools/build-content-units.py --check`` 的事，
@@ -39,12 +47,16 @@ from pathlib import Path
 
 import pytest
 
+from conftest import load_tool
 from paths import CONTENT_UNITS, SITE, SITE_DATA
 
 SITE_ROOT = SITE
 RULES_FILE = SITE_DATA / "learning-path.json"
 COMPILED_FILE = SITE_DATA / "learning-path.compiled.json"
+LEARNING_DATA = SITE_ROOT / "source" / "_data" / "learning.json"
 TOOL = SITE_ROOT / "tools" / "build-learning-path.py"
+
+build_learning_path = load_tool("build-learning-path.py")
 
 
 def _load(path: Path):
@@ -61,6 +73,11 @@ def rules():
 @pytest.fixture(scope="module")
 def compiled():
     return _load(COMPILED_FILE)
+
+
+@pytest.fixture(scope="module")
+def site_view():
+    return _load(LEARNING_DATA)
 
 
 def _unit_ids() -> list[str]:
@@ -157,6 +174,55 @@ def test_stage_counts_match_the_unit_lists(compiled):
             assert stage["count"] == len(stage["units"]), (
                 f"{track['id']}/{stage['id']} 的 count 与 units 长度对不上"
             )
+
+
+# ── 站上那一面：只有文档 ─────────────────────────────────
+
+
+def test_the_site_side_has_no_videos(site_view):
+    """站上没有视频页（作者拍板）——学习流页面里不许出现指向视频的链接。"""
+    offenders = []
+    for track in site_view["tracks"]:
+        for stage in track["stages"]:
+            offenders += [u for u in stage["units"] if u.startswith("video/")]
+    assert not offenders, f"站上那一面列了视频（点过去是 404）：{offenders}"
+
+
+def test_the_site_side_counts_only_documents(site_view):
+    """首页的「N 篇」与赛道卡的篇数，说的是同一件事：站上有的文章。"""
+    counted = sum(track["count"] for track in site_view["tracks"])
+    assert site_view["total"] == counted, "总篇数与各赛道的篇数对不上"
+
+
+def test_the_ledger_keeps_the_videos(compiled):
+    """账本那一面仍然记着视频——发布层要问「这一期归哪一格」。"""
+    videos = [uid for uid in compiled["assignment"] if uid.startswith("video/")]
+    ledger_videos = [
+        unit
+        for track in compiled["tracks"]
+        for stage in track["stages"]
+        for unit in stage["units"]
+        if unit.startswith("video/")
+    ]
+    assert ledger_videos == videos, "账本里的视频条目与对照表对不上"
+
+
+# ── 学习流可以整个关掉 ───────────────────────────────────
+
+
+def test_disabling_the_learning_path_produces_nothing(tmp_path, monkeypatch):
+    """模块关着 → 不映射、不报错、一个页面都不生成。"""
+    rules_file = tmp_path / "learning-path.json"
+    rules_file.write_text(
+        json.dumps({"enabled": False, "tracks": []}), encoding="utf-8"
+    )
+    monkeypatch.setattr(build_learning_path, "RULES_PATH", rules_file)
+    monkeypatch.setattr(build_learning_path, "CONTENT_UNITS", tmp_path / "units")
+
+    result, problems = build_learning_path.compile_learning_path()
+    assert result["enabled"] is False
+    assert result["tracks"] == []
+    assert problems == [], f"关着的模块不该报问题：{problems}"
 
 
 # ── 编译产物是最新的 ─────────────────────────────────────

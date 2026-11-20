@@ -1,23 +1,30 @@
 {
   "name": "blog-site",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "description": "站点的 Astro 实现：目录树 + 学习流 + 时间轴。身份与结构由 data/site.json 定义。",
+  "description": "站点框架（Hexo + matery 主题）。身份在 data/site.json，内容在 content/units/。",
   "scripts": {
-    "dev": "astro dev",
-    "build": "npm run compile && npm run activity && npm run sync && astro build",
-    "preview": "astro preview",
-    "compile": "python3 tools/build-learning-path.py",
-    "activity": "python3 tools/build-activity.py",
-    "sync": "python3 tools/sync-content.py",
-    "check": "python3 tools/check-markdown.py",
-    "test": "python3 -m pytest tests/ -q"
+    "sync": "python3 tools/build-learning-path.py && python3 tools/build-posts.py && python3 tools/apply-site-config.py && python3 tools/copy-vendor.py && node tools/rewrite-links.mjs",
+    "build": "npm run sync && npm run clean && hexo generate",
+    "server": "hexo server",
+    "clean": "node tools/clean.mjs"
+  },
+  "hexo": {
+    "version": "7.3.0"
   },
   "dependencies": {
-    "@astrojs/markdown-remark": "^7.3.9",
-    "@astrojs/sitemap": "^3.7.5",
-    "astro": "^7.4.12",
-    "mermaid": "^12.3.0"
+    "hexo": "^7.3.0",
+    "hexo-generator-archive": "^2.0.0",
+    "hexo-generator-feed": "^3.0.0",
+    "hexo-generator-index": "^4.0.0",
+    "hexo-generator-searchdb": "^1.4.0",
+    "hexo-generator-sitemap": "^3.0.0",
+    "hexo-renderer-ejs": "^2.0.0",
+    "hexo-renderer-marked": "^7.0.1",
+    "hexo-wordcount": "^6.0.1",
+    "mermaid": "10.9.8",
+    "prismjs": "^1.29.0",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5"
   }
 }

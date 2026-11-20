@@ -2,24 +2,19 @@ name: Site
 
 # 站点（blog 平台）的构建与校验。
 #
-# 2026-11-18 站点重做之前，这里有两条工作流：
-#   hexo.yml       —— 构建与部署（hexo + matery 主题）
-#   site-guard.yml —— 站点契约测试
-# 站点重做把 hexo 换成了 Astro，两条都作废了：
-# hexo.yml 引用的 `sync-hexo.py`、`adapt-units.py`、`_config.matery.yml`、
-# `themes/matery/`、`patch-theme.py`、`copy-vendor.py`、`subset-icons.py`、
-# `source/sw.js` **全部不存在**——它每次 push 必红，却一直没人看见。
+# 2026-11-18 站点重做之后，站点换成了 Astro；2026-11-20 又换成了
+# Hexo + matery 主题（blog-bak 那套，见
+# `review/specs/2026-11-20-站点框架换成hexo.md`）。
+# 这一条工作流跟着换了两次实现，**链子没变**：
 #
-# 现在合成这一条，两个 job：
-#   verify —— 守约束（内容单元是最新的、围栏体检、学习流数据是最新的）
-#   build  —— 出产物（Astro 构建 + 站点守卫测试 + 产物作为 artifact 挂上）
+#   verify —— 守约束（内容单元是最新的、围栏体检、学习流归类是全的）
+#   build  —— 出产物（hexo 构建 + 站点守卫测试 + 产物作为 artifact 挂上）
 #
-# **不部署。** upload 那一步留给上线那一轮（见
-# `review/specs/2026-11-18-站点重做-学习流门面.md` §十四）。
+# **不部署。** upload 那一步留给上线那一轮。
 # 线上现在还是旧版；这一条只保证「新站能构建出来、且没死链」。
 #
 # 为什么校验与构建分开：校验是纯 Python、几秒钟的事，一个模块红了
-# 不该让另一个人等 npm install；构建要装依赖、跑 Astro，慢一个量级。
+# 不该让另一个人等 npm install；构建要装依赖、跑 hexo，慢一个量级。
 # 两个 job 各带 `timeout-minutes`——run 不结束 → 并发组不释放 →
 # 后面全卡在 pending。
 
@@ -108,12 +103,6 @@ jobs:
         # `--check` 是给本地用的（改了规则表忘了重编，它会提醒你）。
         run: python3 platforms/blog/site/tools/build-learning-path.py
 
-      - name: 活动数据编译
-        # 账本（site/data/activity.json）+ 内容单元 → data/activity.compiled.json。
-        # 首页那四个数字与 /timeline/ 的时间轴都读它。
-        # 账本只增不改、站点不挖仓库旧历史，所以这一步永远是快的。
-        run: python3 platforms/blog/site/tools/build-activity.py
-
   build:
     name: 构建
     runs-on: ubuntu-latest
@@ -147,13 +136,13 @@ jobs:
         working-directory: platforms/blog/site
 
       - name: 构建站点
-        # npm run build = 学习流编译 → 内容同步 → astro build。
-        # **必须在编译内容单元之后**：学习流编译器读的是 content/units/，
+        # npm run build = 学习流编译 → 内容单元编译成文章 → 注入身份 →
+        # 搬第三方库 → 重写正文里的链接 → hexo generate。
+        # **必须在编译内容单元之后**：站点读的是 content/units/，
         # 那时候它必须已经在。
         #
-        # SITE_URL 决定 sitemap 与 canonical 的地址——本机默认是
-        # 192.168.1.99（见 astro.config.mjs），CI 里出的是要发出去的产物，
-        # 所以给上正式域名。
+        # SITE_URL 决定 sitemap 与 canonical 的地址——CI 里出的是要发出去的
+        # 产物，所以给上正式域名。
         run: npm run build
         working-directory: platforms/blog/site
         env:

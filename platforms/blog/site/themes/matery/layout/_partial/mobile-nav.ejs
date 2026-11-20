@@ -1,0 +1,36 @@
+<%
+    // 跟 navigation.ejs 一样，导航读 site.data.site.nav。
+    var _site = (site.data && site.data.site) || {};
+    var _nav = _site.nav || [];
+    var _name = _site.name || config.title;
+    var _description = _site.description || config.description || '';
+%>
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        <a href="<%- url_for('/') %>" class="mobile-head-link" aria-label="返回首页">
+        <% if (theme.logo !== undefined && theme.logo.length > 0) { %>
+        <img src="<%- theme.jsDelivr.url %><%- url_for(theme.logo) %>" class="logo-img circle responsive-img" alt="<%= _name %>">
+        <% } %>
+        <div class="logo-name"><%= _name %></div>
+        </a>
+        <% if (_description) { %>
+        <div class="logo-desc"><%= _description %></div>
+        <% } %>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        <% _nav.forEach(function(item) { %>
+        <li class="m-nav-item">
+		<a href="<%- url_for(item.href) %>" class="waves-effect waves-light">
+			<% if (item.icon) { %>
+			    <i class="fa-fw <%- item.icon %>"></i>
+			<% } else { %>
+				<i class="fas fa-fw fa-link"></i>
+			<% } %>
+			<%= item.label %>
+		</a>
+        </li>
+        <% }); %>
+    </ul>
+</div>

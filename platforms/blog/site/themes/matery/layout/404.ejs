@@ -1,0 +1,28 @@
+<%#
+  404 页。
+
+  主题自带的 404 是一整屏的照片封面（`/medias/banner/N.jpg`）——
+  那些图已经删掉了（框架不该自带图片素材），所以这一页改成
+  纯排版的版本：说清楚「没有这一页」，给出两个能走的去处。
+%>
+<main class="content">
+  <div class="container">
+    <div class="card">
+      <div class="card-content center-align" style="padding: 64px 24px;">
+        <div class="title" style="font-size: 4rem; line-height: 1; margin-bottom: 12px;">404</div>
+        <h2 style="font-weight: 600; margin-bottom: 12px;">没有这一页</h2>
+        <p style="color: #666; margin-bottom: 28px;">
+          地址可能变了，或者这一页还没有写出来。换个词搜搜，或者从下面两处开始。
+        </p>
+        <p style="margin: 0;">
+          <a href="<%- url_for('/') %>" style="display: inline-block; padding: 10px 22px; border-radius: 3px; background: #009688; color: #fff; text-decoration: none; margin: 4px;">
+            回到首页
+          </a>
+          <a href="<%- url_for('/archives/') %>" style="display: inline-block; padding: 10px 22px; border-radius: 3px; border: 1px solid #009688; color: #009688; text-decoration: none; margin: 4px;">
+            翻归档
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</main>

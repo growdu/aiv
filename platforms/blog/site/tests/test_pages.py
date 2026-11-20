@@ -1,120 +1,140 @@
-"""构建产物的守卫：每个单元都有页面，站内没有死链。
+"""产物这一层的守卫：每个内容单元都有页面，站内没有死链。
 
 **背景**
 ------
-站点是静态产物——链接错了不会报错，只会让读者点到一个 404。
-这个测试把构建产物爬一遍：把每个 HTML 里的站内链接都取出来，
-挨个核对目标文件在不在。
+站点是**全量构建**的：一次构建，整站重新生成。所以「某一篇没生成出来」
+这种事不会在运行期报错——它只是**悄悄不见了**。链接重写器还会把母稿里的
+相对链接换成站上的地址，换对了是好事，换错了就是一个 404。
 
-**它守的两条**
---------
-1. 每个内容单元都有对应的页面（内容上了站，却在导航里找不到，比 404 更糟）。
-2. 站内链接不指向不存在的页面。
+所以这两条得有人守着：
 
-**跑法**（站点模块自己的验收）::
+1. **每个内容单元都有一个页面**（文档 `/docs/<id>/`、目录页 `/docs/<目录>/`）；
+2. **站内没有死链**——产物里每一个站内地址都真的存在。
+
+**站上没有视频页**（作者拍板）：视频单元的地址（`/videos/<slug>/`）在
+地址表里，但站内不生成那些页面。正文里指向视频的链接因此是站内死链——
+这一条是**已知的后果**，不是错误：那些地址归发布层落地。
+所以死链检查跳过 `/videos/`。
+
+跑法（站点模块自己的验收）::
 
     cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q
-
-没构建过就跳过——这个测试要的是产物，不是源码。
 """
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
 
 import pytest
 
 from paths import CONTENT_UNITS, SITE
 
-DIST = SITE / "dist"
+SITE_ROOT = SITE
+DIST = SITE_ROOT / "dist"
 
-HREF = re.compile(r'href="(/[^"#?]*)"')
+#: 产物里取地址的地方。
+LINK_RE = re.compile(r'(?:href|src)="([^"]+)"')
 
-
-def _unit_ids() -> list[tuple[str, str]]:
-    """(kind, id) 列表，id 是相对 content/units/ 的路径（不带 .md）。"""
-    out = []
-    for path in sorted(CONTENT_UNITS.rglob("*.md")):
-        rel = path.relative_to(CONTENT_UNITS).as_posix()
-        unit_id = rel.removesuffix(".md")
-        if unit_id.endswith("/_index") or unit_id == "_index":
-            kind = "category"
-        else:
-            kind = _front_matter_kind(path)
-        out.append((kind, unit_id))
-    return out
-
-
-def _front_matter_kind(path: Path) -> str:
-    """从 front matter 里读 kind（读不到就按文档算）。"""
-    head = path.read_text(encoding="utf-8", errors="ignore")[:2000]
-    match = re.search(r"^kind:\s*(\S+)\s*$", head, re.M)
-    return match.group(1).strip("\"'") if match else "document"
-
-
-def _url_for(kind: str, unit_id: str) -> str:
-    """单元 → 站上地址（与 src/lib/urls.ts 同一套规则）。"""
-    if kind == "video":
-        return f"/videos/{unit_id.removeprefix('video/')}/"
-    if kind == "category":
-        return "/docs/" + unit_id.removesuffix("/_index") + "/"
-    return f"/docs/{unit_id}/"
-
-
-def _target_of(url: str) -> Path | None:
-    """站内地址 → dist 里的文件（找不到就返回 None）。"""
-    path = unquote(urlsplit(url).path)
-    if path == "/":
-        return DIST / "index.html"
-    candidate = DIST / path.lstrip("/")
-    if candidate.is_dir():
-        return candidate / "index.html"
-    if candidate.suffix == "":
-        return candidate / "index.html"
-    return candidate
+#: 站内不生成的地址前缀：视频页由发布层落地。
+DEAD_LINK_EXEMPT_PREFIXES = ("/videos/",)
 
 
 @pytest.fixture(scope="module")
-def dist_pages() -> list[Path]:
+def dist() -> Path:
     if not DIST.exists():
         pytest.skip("还没构建（先跑 npm run build）")
-    return sorted(DIST.rglob("*.html"))
+    return DIST
 
 
-def test_every_unit_has_a_page(dist_pages):
+def _unit_kinds() -> list[tuple[str, str]]:
+    """内容单元 → [(单元 id, kind)]。"""
+    out = []
+    for path in sorted(CONTENT_UNITS.rglob("*.md")):
+        rel = path.relative_to(CONTENT_UNITS).as_posix()
+        text = path.read_text(encoding="utf-8")
+        kind = "document"
+        if text.startswith("---"):
+            end = text.find("\n---", 3)
+            if end != -1:
+                for line in text[3:end].splitlines():
+                    if line.startswith("kind:"):
+                        kind = line.split(":", 1)[1].strip()
+        out.append((rel[: -len(".md")], kind))
+    return out
+
+
+def _dist_target(dist: Path, url: str) -> Path:
+    """站内地址 → 产物里的文件。"""
+    clean = url.split("#")[0].split("?")[0]
+    target = dist / clean.lstrip("/")
+    if clean.endswith("/"):
+        target = target / "index.html"
+    elif target.is_dir():
+        target = target / "index.html"
+    return target
+
+
+# ── 每个内容单元都有页面 ───────────────────────────────────
+
+
+def test_every_document_unit_has_a_page(dist):
     missing = []
-    for kind, unit_id in _unit_ids():
-        url = _url_for(kind, unit_id)
-        target = _target_of(url)
-        if target is None or not target.exists():
-            missing.append(f"{kind}:{unit_id} → {url}")
-    assert not missing, "这些内容单元没有对应页面：\n" + "\n".join(missing)
+    for unit_id, kind in _unit_kinds():
+        if kind != "document":
+            continue
+        target = dist / "docs" / unit_id / "index.html"
+        if not target.exists():
+            missing.append(unit_id)
+    assert not missing, f"这些内容单元没有页面：{missing}"
 
 
-def test_video_units_have_a_page(dist_pages):
-    """视频单元走 /videos/<slug>/，跟文档不是一个前缀。"""
-    videos = [uid for kind, uid in _unit_ids() if kind == "document" and uid.startswith("video/")]
+def test_every_category_unit_has_a_page(dist):
     missing = []
-    for unit_id in videos:
-        url = _url_for("video", unit_id)
-        target = _target_of(url)
-        if target is None or not target.exists():
-            missing.append(url)
-    assert not missing, "这些视频没有页面：\n" + "\n".join(missing)
+    for unit_id, kind in _unit_kinds():
+        if kind != "category":
+            continue
+        directory = unit_id[: -len("_index")] if unit_id.endswith("_index") else unit_id
+        target = dist / "docs" / directory / "index.html"
+        if not target.exists():
+            missing.append(unit_id)
+    assert not missing, f"这些目录单元没有页面：{missing}"
 
 
-def test_no_dead_internal_links(dist_pages):
-    dead: dict[str, set[str]] = {}
-    for page in dist_pages:
-        html = page.read_text(encoding="utf-8", errors="ignore")
-        for href in HREF.findall(html):
-            if href.startswith("/_astro/") or href.startswith("/js/") or href.startswith("/images/"):
-                continue  # 构建产物与静态资源，另有其责
-            target = _target_of(href)
-            if target is None or not target.exists():
-                dead.setdefault(href, set()).add(str(page.relative_to(DIST)))
-    assert not dead, "这些站内链接指向不存在的页面：\n" + "\n".join(
-        f"{url}  ←  {', '.join(sorted(pages))}" for url, pages in sorted(dead.items())
-    )
+def test_the_site_has_no_video_pages(dist):
+    """站上没有视频页（作者拍板）。"""
+    assert not (dist / "videos").exists(), "站上不该有视频页"
+
+
+# ── 站内没有死链 ───────────────────────────────────────────
+
+
+def test_there_are_no_dead_internal_links(dist):
+    dead: list[str] = []
+    for html in sorted(dist.rglob("*.html")):
+        text = html.read_text(encoding="utf-8", errors="ignore")
+        for match in LINK_RE.finditer(text):
+            url = match.group(1)
+            if not url.startswith("/") or url.startswith("//"):
+                continue
+            clean = url.split("#")[0].split("?")[0]
+            if not clean:
+                continue
+            if clean.startswith(DEAD_LINK_EXEMPT_PREFIXES):
+                continue
+            if not _dist_target(dist, clean).exists():
+                dead.append(f"{html.relative_to(dist)} → {url}")
+
+    assert not dead, "站内死链：\n  " + "\n  ".join(sorted(set(dead)))
+
+
+def test_the_fixed_pages_exist(dist):
+    """导航与规范里写死的那几个页面，一个都不能少。"""
+    for rel in (
+        "index.html",
+        "archives/index.html",
+        "about/index.html",
+        "all/index.html",
+        "404.html",
+    ):
+        assert (dist / rel).exists(), f"{rel} 不在产物里"

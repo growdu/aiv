@@ -1,0 +1,63 @@
+<%#
+  目录导航页 —— `/docs/<目录>/`。
+
+  **它是什么**：内容单元里 `kind: category` 的那些（母稿是目录下的
+  `_index.md`）。它不是文章，所以没有发布日期、没有字数、没有上下篇——
+  它是**这一层目录的门面**：一段引言 + 底下那些文档的入口。
+
+  **为什么单独一个 layout**：Hexo 找不到 `page.ejs` 时会退回 `post.ejs`，
+  那一套带上发布日期、阅读时长、上下篇导航，对一页目录索引全是不相干的东西
+  （一篇文章的「上一篇」，对「PostgreSQL 源码主线」这个目录没有任何意义）。
+
+  **子文档从哪来**：站上所有文章与目录页的地址（`permalink`）里，落在
+  本页地址底下、且**只深一层**的那些。深两层的归各自的目录页管——
+  目录是分层的，不是一口气摊平。
+
+  用 `<div>` 而不是 `<nav>` 放面包屑：Materialize 按**元素名**给 nav 上样式
+  （`nav{height:64px;...}`），那一块会被压成一条 64px 高的红条。
+  参见 tests/test_content_nav_not_materialize_navbar.py。
+%>
+<%
+  var _base = page.permalink || '/';
+  // 底下可能有两种东西：文档（文章）与子目录的门面（目录页）。
+  var _all = (site.posts || []).concat((site.pages || []));
+  var _children = _all.filter(function (p) {
+    var link = p.permalink || '';
+    if (link === _base || link.indexOf(_base) !== 0) return false;
+    // 只取直接子级：剩下的地址里只许有一个斜杠。
+    var rest = link.slice(_base.length);
+    return rest.slice(0, -1).indexOf('/') === -1;
+  });
+%>
+<main class="content learning-page">
+  <div class="container learning-page__container">
+    <div class="learning-page__crumb">
+      <a href="<%- url_for('/') %>"><i class="fas fa-home"></i>&nbsp;首页</a>
+      <span class="learning-page__crumb-sep">/</span>
+      <a href="<%- url_for('/archives/') %>">归档</a>
+    </div>
+
+    <div class="card">
+      <div class="card-content learning-page__body">
+        <div id="articleContent">
+          <%- page.content %>
+        </div>
+
+        <% if (_children.length) { %>
+        <hr/>
+        <h3>这一层有什么</h3>
+        <ul>
+          <% _children.forEach(function (p) { %>
+          <li>
+            <a href="<%- url_for(p.permalink) %>"><%= p.title %></a>
+            <% if (p.description) { %>
+            <div class="docs-index__desc"><%= p.description %></div>
+            <% } %>
+          </li>
+          <% }); %>
+        </ul>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</main>

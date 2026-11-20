@@ -1,0 +1,34 @@
+<%
+    // 导航读 site.data.site.nav —— 身份在使用者手里（data/site.json），
+    // 框架里不写死哪几项。
+    //
+    // 每一项：{key, href, label, icon?}。`icon` 可省（省了就不带图标）。
+    var _site = (site.data && site.data.site) || {};
+    var _nav = _site.nav || [];
+%>
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  <% _nav.forEach(function(item) { %>
+  <li class="hide-on-med-and-down nav-item">
+    <a href="<%- url_for(item.href) %>" class="waves-effect waves-light">
+      <% if (item.icon) { %>
+      <i class="<%- item.icon %>" style="zoom: 0.6;"></i>
+      <% } %>
+      <span><%= item.label %></span>
+    </a>
+  </li>
+  <% }); %>
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="<%= __('search') %>" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+<%- partial('_partial/mobile-nav') %>

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""学习流编译：规则表 + 内容单元 → 站点的学习流数据。
+"""学习流编译：规则表 + 内容单元 → 站点的学习流数据与页面。
 
 **输入**
 
@@ -8,8 +8,13 @@
 
 **输出**
 
-- `platforms/blog/site/data/learning-path.compiled.json` —— 站点直接读的编译结果：
+- `platforms/blog/site/data/learning-path.compiled.json` —— 编译结果（**账本**）：
   每条赛道、每个阶段、底下挂着哪些内容单元，外加一张「内容单元 → 赛道/阶段」的对照表。
+  文档与视频都在里面——发布层要问「这一期归哪一格」。
+- `platforms/blog/site/source/_data/learning.json` —— 模板读的数据（首页的面板读它）。
+  这是**站上那一面**：只列文档（站上没有视频页）。
+- `platforms/blog/site/source/learning/index.md` —— 学习流总览页。
+- `platforms/blog/site/source/learning/<赛道>/index.md` —— 每条赛道一页。
 
 **规矩**
 
@@ -22,6 +27,8 @@
 4. **学习流可以整个关掉**。规则表 `data/learning-path.json` 里
    `enabled: false`（或者干脆没有这个文件）→ 学习流这个模块不存在：
    不映射、不报错、一个页面都不生成。站点退成普通的文档站。
+5. **模板不生成内容**。页面的正文由这里按规则表编出来，主题只负责把它
+   放进框里。规则改了，页面跟着变；不要在模板里手写文章列表。
 
 用法：
 
@@ -34,6 +41,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -44,10 +52,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import yaml  # noqa: E402
 
 from paths import CONTENT_UNITS  # noqa: E402
+from urls import unit_url  # noqa: E402
 
 SITE = Path(__file__).resolve().parents[1]
 RULES_PATH = SITE / "data" / "learning-path.json"
 COMPILED_PATH = SITE / "data" / "learning-path.compiled.json"
+LEARNING_DATA = SITE / "source" / "_data" / "learning.json"
+LEARNING_PAGES = SITE / "source" / "learning"
 
 #: 进学习流的单元类型。分类页（category）是目录导航，不进。
 LEARNABLE_KINDS = ("document", "video")
@@ -197,6 +208,7 @@ def compile_learning_path() -> tuple[dict, list[str]]:
             {
                 "id": track["id"],
                 "title": track["title"],
+                "icon": track.get("icon", ""),
                 "summary": track.get("summary", ""),
                 "audience": track.get("audience", ""),
                 "goal": track.get("goal", ""),
@@ -216,17 +228,192 @@ def compile_learning_path() -> tuple[dict, list[str]]:
                     f"学习流规则表里得给它写一条"
                 )
 
+    total = sum(t["count"] for t in tracks_out)
     result = {
         "generated": rules.get("updated", ""),
         "enabled": enabled,
+        "total": total,
         "tracks": tracks_out,
         "assignment": assignment,
     }
     return result, problems
 
 
+# ── 页面生成 ────────────────────────────────────────────────────────
+
+
+def _front_matter(title: str) -> str:
+    return (
+        "---\n"
+        f"title: {json.dumps(title, ensure_ascii=False)}\n"
+        "layout: learning\n"
+        "type: learning\n"
+        "---\n\n"
+    )
+
+
+def _unit_info(units_by_path: dict[str, dict]) -> dict[str, dict]:
+    """内容单元 → {标题, 地址, 分类}。地址由 `tools/urls.py` 决定。"""
+    out = {}
+    for path, unit in units_by_path.items():
+        out[path] = {
+            "title": unit["title"],
+            "url": unit_url(path, unit["kind"]),
+            "categories": unit["categories"],
+        }
+    return out
+
+
+def site_view(result: dict, units: list[dict]) -> dict:
+    """编译结果 → **站上那一面**。
+
+    **为什么有两面**：编译结果（`data/learning-path.compiled.json`）是
+    **归类账本**——文档与视频都记在里面，发布层要问「这一期归哪一格」。
+    站上那一面只列**文档**：站上没有视频页（作者拍板），把视频列进学习流
+    页面，点过去就是一个 404。
+
+    所以这里只做一件事：把视频从页面与计数里摘掉，账本本身不动。
+    """
+    kinds = {u["path"]: u["kind"] for u in units}
+    tracks = []
+    total = 0
+    for track in result.get("tracks") or []:
+        stages = []
+        track_total = 0
+        for stage in track.get("stages") or []:
+            members = [p for p in stage.get("units") or [] if kinds.get(p) != "video"]
+            stages.append(
+                {
+                    "id": stage["id"],
+                    "title": stage["title"],
+                    "goal": stage.get("goal", ""),
+                    "units": members,
+                    "count": len(members),
+                }
+            )
+            track_total += len(members)
+        tracks.append(
+            {
+                "id": track["id"],
+                "title": track["title"],
+                "icon": track.get("icon", ""),
+                "summary": track.get("summary", ""),
+                "audience": track.get("audience", ""),
+                "goal": track.get("goal", ""),
+                "stages": stages,
+                "count": track_total,
+            }
+        )
+        total += track_total
+    return {
+        "generated": result.get("generated", ""),
+        "enabled": result.get("enabled", True),
+        "total": total,
+        "tracks": tracks,
+    }
+
+
+def render_learning_pages(result: dict, units: list[dict]) -> dict[str, str]:
+    """编出学习流的页面。返回 {相对 source/ 的路径: 正文}。
+
+    页面列的是**站上有的东西**：视频没有页面，不列（否则就是站内死链）。
+    """
+    by_path = {u["path"]: u for u in units}
+    info = _unit_info(by_path)
+    tracks = result.get("tracks") or []
+    total = result.get("total") or 0
+
+    pages: dict[str, str] = {}
+
+    # ── 总览页 ─────────────────────────────────────────────────────
+    lines = [
+        _front_matter("学习路径"),
+        "# 学习路径",
+        "",
+        f"全站 {total} 篇内容，按**赛道**和**阶段**排成了一条可以从头读到尾的路。",
+        "每条赛道都说明了：读它之前该会什么、读完能做什么、下一篇读哪篇。",
+        "",
+        "**不是分类，是顺序。** 内容按主题分了类，那是**检索**用的；",
+        "这里是**导航**用的 —— 告诉你先读什么。",
+        "",
+        "## 赛道地图",
+        "",
+    ]
+    for track in tracks:
+        icon = f"{track['icon']} " if track.get("icon") else ""
+        lines.append(f"### [{track['title']}](/learning/{track['id']}/) · {track['count']} 篇")
+        lines.append("")
+        if track.get("summary"):
+            lines.append(track["summary"])
+            lines.append("")
+        lines.append("| 阶段 | 主题 | 文章数 |")
+        lines.append("| --- | --- | ---: |")
+        for stage in track["stages"]:
+            lines.append(f"| **{stage['id']}** | {stage['title']} | {stage['count']} |")
+        lines.append("")
+    pages["learning/index.md"] = "\n".join(lines).rstrip() + "\n"
+
+    # ── 每条赛道一页 ───────────────────────────────────────────────
+    for track in tracks:
+        lines = [
+            _front_matter(f"{track['title']} · 学习路径"),
+            f"# {track['title']}",
+            "",
+        ]
+        if track.get("summary"):
+            lines += [f"> {track['summary']}", ""]
+        if track.get("audience"):
+            lines += [f"**适合谁**：{track['audience']}", ""]
+        if track.get("goal"):
+            lines += [f"**读完能做什么**：{track['goal']}", ""]
+        lines += ["[← 回到学习路径总览](/learning/)", "", "## 阶段一览", ""]
+        lines += ["| 阶段 | 主题 | 文章数 | 读完这一阶段，你该能做到 |"]
+        lines += ["| --- | --- | ---: | --- |"]
+        for stage in track["stages"]:
+            goal = stage.get("goal", "").replace("|", "\\|")
+            lines.append(f"| **{stage['id']}** | {stage['title']} | {stage['count']} | {goal} |")
+        lines.append("")
+        for stage in track["stages"]:
+            lines.append(f"## {stage['id']} · {stage['title']}")
+            lines.append("")
+            if stage.get("goal"):
+                lines += [stage["goal"], ""]
+            if not stage["units"]:
+                lines += ["_这一阶段还没有内容。_", ""]
+                continue
+            for unit_path in stage["units"]:
+                meta = info.get(unit_path)
+                if not meta:
+                    continue
+                cats = " / ".join(meta["categories"])
+                suffix = f" — {cats}" if cats else ""
+                lines.append(f"- [{meta['title']}]({meta['url']}){suffix}")
+            lines.append("")
+        pages[f"learning/{track['id']}/index.md"] = "\n".join(lines).rstrip() + "\n"
+
+    return pages
+
+
+def write_pages(pages: dict[str, str]) -> None:
+    """把页面写进 `source/learning/`，并清掉残留。"""
+    if LEARNING_PAGES.exists():
+        shutil.rmtree(LEARNING_PAGES)
+    for rel, text in pages.items():
+        target = LEARNING_PAGES.parent / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+
+
+def clear_pages() -> None:
+    """学习流关着的时候，把它的页面与数据清干净。"""
+    if LEARNING_PAGES.exists():
+        shutil.rmtree(LEARNING_PAGES)
+    if LEARNING_DATA.exists():
+        LEARNING_DATA.unlink()
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="把规则表 + 内容单元编译成学习流数据")
+    ap = argparse.ArgumentParser(description="把规则表 + 内容单元编译成学习流数据与页面")
     ap.add_argument("--check", action="store_true", help="只检查，不写文件")
     args = ap.parse_args()
 
@@ -255,28 +442,70 @@ def main() -> int:
 
     text = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
 
+    enabled = result.get("enabled", True)
+    if enabled:
+        units = load_units()
+        view = site_view(result, units)
+        pages = render_learning_pages(view, units)
+        learning_data = json.dumps(view, ensure_ascii=False, indent=2) + "\n"
+    else:
+        pages = {}
+        learning_data = None
+
     if args.check:
+        problems = []
         if not COMPILED_PATH.exists():
-            print("学习流数据不存在（该跑一次 build-learning-path.py）", file=sys.stderr)
+            problems.append("学习流数据不存在（该跑一次 build-learning-path.py）")
+        elif COMPILED_PATH.read_text(encoding="utf-8") != text:
+            problems.append("学习流数据与规则表/内容单元不同步")
+
+        if enabled:
+            if not LEARNING_DATA.exists():
+                problems.append("source/_data/learning.json 不存在")
+            elif LEARNING_DATA.read_text(encoding="utf-8") != learning_data:
+                problems.append("source/_data/learning.json 与规则表不同步")
+            for rel, body in pages.items():
+                target = LEARNING_PAGES.parent / rel
+                if not target.exists():
+                    problems.append(f"{target.relative_to(SITE)}：不存在")
+                elif target.read_text(encoding="utf-8") != body:
+                    problems.append(f"{target.relative_to(SITE)}：与规则表不同步")
+        else:
+            if LEARNING_DATA.exists():
+                problems.append("学习流关着，但 source/_data/learning.json 还在")
+            if LEARNING_PAGES.exists():
+                problems.append("学习流关着，但 source/learning/ 还在")
+
+        if problems:
+            for p in problems:
+                print(p, file=sys.stderr)
+            print(f"\n{len(problems)} 处不一致", file=sys.stderr)
             return 1
-        if COMPILED_PATH.read_text(encoding="utf-8") != text:
-            print("学习流数据与规则表/内容单元不同步", file=sys.stderr)
-            return 1
-        print("学习流数据是最新的")
+        print("学习流数据与页面是最新的")
         return 0
 
     COMPILED_PATH.write_text(text, encoding="utf-8")
-    if not result.get("enabled", True):
+    if not enabled:
+        clear_pages()
         print("学习流：关着（规则表 enabled=false 或没有规则表）——不生成任何学习流页面")
         return 0
-    total = sum(t["count"] for t in result["tracks"])
+
+    LEARNING_DATA.parent.mkdir(parents=True, exist_ok=True)
+    LEARNING_DATA.write_text(learning_data, encoding="utf-8")
+    write_pages(pages)
+
+    total = result["total"]
+    site_total = sum(t["count"] for t in view["tracks"])
     empty = [
         f"{t['id']}/{s['id']}"
-        for t in result["tracks"]
+        for t in view["tracks"]
         for s in t["stages"]
         if s["count"] == 0
     ]
-    print(f"学习流：{len(result['tracks'])} 条赛道，{total} 篇内容归属")
+    print(
+        f"学习流：{len(result['tracks'])} 条赛道，{total} 篇内容归属"
+        f"（站上列 {site_total} 篇，视频没有页面），{len(pages)} 个页面"
+    )
     if empty:
         print(f"空阶段 {len(empty)} 个（审校还没到）：{'、'.join(empty)}")
     return 0

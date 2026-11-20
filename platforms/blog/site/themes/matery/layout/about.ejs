@@ -1,0 +1,30 @@
+<%#
+  关于页。
+
+  身份读 site.data.site.*；正文是 `content/about.md`（没有就由
+  `tools/apply-site-config.py` 按身份字段生成一段）。
+%>
+<%
+  var _site = (site.data && site.data.site) || {};
+  var _name = _site.name || config.title;
+  var _tagline = _site.tagline || '';
+  var _description = _site.description || '';
+  var _startDate = String(_site.start_date || '');
+%>
+<main class="content learning-page">
+  <div class="container learning-page__container">
+    <div class="learning-page__crumb">
+      <a href="<%- url_for('/') %>"><i class="fas fa-home"></i>&nbsp;首页</a>
+      <span class="learning-page__crumb-sep">/</span>
+      <a href="<%- url_for('/about/') %>">关于</a>
+    </div>
+
+    <div class="card">
+      <div class="card-content learning-page__body">
+        <div id="articleContent">
+          <%- page.content %>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>

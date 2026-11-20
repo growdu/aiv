@@ -1,0 +1,34 @@
+<%
+    // 身份读 site.data.site.*（见 _partial/head.ejs 的说明）。
+    var _site = (site.data && site.data.site) || {};
+    var _name = _site.name || config.title;
+    var _tagline = _site.tagline || '';
+%>
+<header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="<%- url_for('/') %>" class="waves-effect waves-light" aria-label="返回首页">
+                    <% if (theme.logo !== undefined && theme.logo.length > 0) { %>
+                    <img src="<%- theme.jsDelivr.url %><%- url_for(theme.logo) %>" class="logo-img" alt="LOGO">
+                    <% } %>
+                    <%# 首页上站名是 h1 —— 首页的 h1 就是站名。
+                        别的页面 h1 是文章标题，站名用 span —— 两处不打架。 %>
+                    <% if (is_home()) { %>
+                    <h1 class="logo-span"><%= _name %></h1>
+                    <% } else { %>
+                    <span class="logo-span"><%= _name %></span>
+                    <% } %>
+                </a>
+                <%# 定位句挂在站名后面。
+                    首页不显示它（首页第一眼看到的应该是「这个站有多少东西」），
+                    别的页面显示。 %>
+                <% if (!is_home() && _tagline) { %>
+                <span class="logo-tagline"><%= _tagline %></span>
+                <% } %>
+            </div>
+            <%- partial('_partial/navigation') %>
+        </div>
+    </nav>
+
+</header>

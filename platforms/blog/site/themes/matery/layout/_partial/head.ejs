@@ -1,0 +1,176 @@
+<%
+    // 身份一律读 site.data.site.*（`source/_data/site.json`，
+    // 由 tools/apply-site-config.py 从 data/site.json 注进来）。
+    // **模板里不许出现写死的站名**——框架是通用的，身份在使用者手里。
+    var _site = (site.data && site.data.site) || {};
+    var _name = _site.name || config.title;
+    var _tagline = _site.tagline || '';
+    var _description = _site.description || config.description || '';
+
+    var title = page.title;
+
+    // archives page title
+    if (is_archive()) {
+        title = __('archives');
+        if (is_month()) {
+            title += ': ' + page.year + '/' + page.month;
+        } else if (is_year()) {
+            title += ': ' + page.year;
+        }
+    }
+
+    // final page title.
+    var pageTitle = title ? title + ' | ' + _name : _name;
+
+    // keywords.
+    var keyWords = page.keywords ? page.keywords : _name;
+    if (!page.keywords && title) {
+        keyWords = title + ', ' + keyWords;
+    }
+
+    // description.
+    var description = _description;
+    if (page.summary) {
+        description = page.summary;
+    } else if (page.description) {
+        // 文章 front matter 里的 description（作者写的摘要）。
+        description = page.description;
+    } else if (page.hasOwnProperty('__post') && page.__post) {
+        description = strip_html(page.content).substring(0, 120);
+    }
+
+    let iconType = 'image/png'
+    let faviconExt = theme.favicon.substr(theme.favicon.lastIndexOf('.') + 1, theme.favicon.length)
+    if (faviconExt === 'png') {
+        iconType = 'image/png'
+    } else if (faviconExt === 'svg') {
+        iconType = 'image/svg+xml'
+    } else if (faviconExt === 'gif') {
+        iconType = 'image/gif'
+    } else if (faviconExt === 'jpeg') {
+        iconType = 'image/jpeg'
+    } else if (faviconExt === 'jpg') {
+        iconType = 'image/jpeg'
+    } else if (faviconExt === 'ico') {
+        iconType = 'image/x-icon, image/vnd.microsoft.icon'
+    }
+%>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="<%= keyWords %>">
+    <meta name="description" content="<%= description %>">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-core">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <title><%= pageTitle %></title>
+    <link rel="icon" type="<%= iconType %>" href="<%- theme.jsDelivr.url %><%- url_for(theme.favicon) %>">
+    <%- partial('_partial/main-style') %>
+
+    <!-- jQuery stays synchronous on purpose: ~15 inline scripts across the
+         theme (dark-mode toggle, TOC, search, galleries) call it while the
+         page is still parsing.  Making it `defer` would need every one of
+         those rewritten and a browser-level smoke test to catch the misses,
+         and the site has no such test in CI. -->
+    <script src="<%- theme.jsDelivr.url %><%- url_for(theme.libs.js.jquery) %>"></script>
+
+<meta property="og:title" content="<%= page.title || _name %>">
+<% var _u = url_for(page.path); var _rel = (config.root && _u.indexOf(config.root) === 0) ? _u.slice(config.root.length) : _u.replace(/^\/+/, ''); var _selfUrl = config.url + '/' + _rel; var _ogRaw = page.cover || page.thumbnail || '/medias/featureimages/0.svg'; var ogImage = /^https?:\/\//i.test(_ogRaw) ? _ogRaw : config.url + _ogRaw; %>
+<meta name="theme-color" content="#009688">
+<meta property="og:site_name" content="<%= _name %>">
+<meta property="og:type" content="<%= page.layout === 'post' ? 'article' : 'website' %>">
+<meta property="og:url" content="<%- _selfUrl %>">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:description" content="<%= page.description || _description %>">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="<%= page.title || _name %>">
+<meta name="twitter:description" content="<%= page.description || _description %>">
+<% if (page.layout === 'post') { %>
+<meta property="article:author" content="<%= page.author || _name %>">
+<meta property="article:published_time" content="<%- date(page.date, 'YYYY-MM-DD') %>">
+<% if (page.categories && page.categories.data && page.categories.data.length > 0) { %>
+<meta property="article:section" content="<%= page.categories.data[0].name %>">
+<% } %>
+<% if (page.tags && page.tags.data) { %>
+<% page.tags.data.forEach(function(tag) { %>
+<meta property="article:tag" content="<%= tag.name %>">
+<% }); %>
+<% } %>
+<% } %>
+<meta property="og:image" content="<%- ogImage %>">
+<meta name="twitter:image" content="<%- ogImage %>">
+<link rel="manifest" href="<%- url_for('/manifest.json') %>">
+<link rel="icon" type="image/svg+xml" href="<%- url_for('/favicon.svg') %>">
+<link rel="canonical" href="<%- _selfUrl %>">
+<% if (page.layout === 'post') { %>
+<% var _cat = (page.categories && page.categories.data && page.categories.data.length > 0) ? page.categories.data[0].name : ''; %>
+<% var _tags = (page.tags && page.tags.data) ? page.tags.data.map(function(t) { return t.name; }).join(', ') : ''; %>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"<%= page.title %>","datePublished":"<%- date(page.date, 'YYYY-MM-DD') %>","author":{"@type":"Person","name":"<%= page.author || _name %>"},"publisher":{"@type":"Organization","name":"<%= _name %>"},"mainEntityOfPage":{"@type":"WebPage","@id":"<%- _selfUrl %>"}<% if (_cat) { %>,"articleSection":"<%= _cat %>"<% } %><% if (_tags) { %>,"keywords":"<%= _tags %>"<% } %>}</script>
+<% } else { %>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"<%= _name %>","url":"<%- config.url %>"}</script>
+<% } %>
+<% var _hasCode = !!(page.content && /<(?:pre|code)\b/i.test(page.content)); %>
+<% if (_hasCode) { %>
+<link href="<%- url_for('/libs/prism/prism.min.css') %>" rel="stylesheet"/>
+<% } %>
+<style>
+<% if (_hasCode) { %>
+pre[class*="language-"]{background:#263238!important;border-radius:6px;padding:14px 16px;font-size:14px;margin:16px 0;overflow-x:auto;line-height:1.55}
+code[class*="language-"]{background:transparent!important;padding:0;font-family:Consolas,Monaco,'Source Code Pro',monospace;font-size:14px}
+:not(pre)>code[class*="language-"]{background:#f5f5f5!important;padding:2px 6px;border-radius:4px}
+<% } %>
+.mermaid{text-align:center;margin:16px 0}
+</style>
+<style id="custom-blog-style">
+/* Article typography */
+#articleContent{font-size:16px;line-height:1.85}
+#articleContent p{margin-bottom:1.3em}
+#articleContent h2{margin-top:1.8em;margin-bottom:.8em;padding-bottom:.3em;border-bottom:2px solid #e0e0e0;font-weight:700}
+#articleContent h3{margin-top:1.5em;margin-bottom:.6em;font-weight:600}
+#articleContent blockquote{border-left:4px solid #009688;background:#f5f5f5;padding:12px 20px;margin:16px 0;border-radius:0 8px 8px 0;color:#666}
+#articleContent :not(pre)>code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.9em}
+#articleContent pre>code{background:transparent;padding:0;font-size:inherit;border-radius:0}
+#articleContent table{width:100%;border-collapse:collapse;margin:16px 0;display:block;overflow-x:auto}
+#articleContent th,#articleContent td{border:1px solid #e0e0e0;padding:8px 12px;text-align:left}
+#articleContent th{background:#f5f5f5;font-weight:600}
+#articleContent img{border-radius:8px;max-width:100%}
+/* Reading progress bar */
+.reading-progress{position:fixed;top:0;left:0;height:3px;width:0;background:#009688;z-index:99999;transition:width .1s ease}
+/* Card hover */
+.card{transition:transform .25s ease,box-shadow .25s ease}
+.card:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,.1)}
+/* Related posts */
+.related-posts-card{margin:20px 0}
+.related-posts-title{font-size:18px;font-weight:700;margin-bottom:12px;color:#333}
+.related-posts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.related-post-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f9f9f9;border-radius:8px;text-decoration:none;color:#555;transition:background .2s}
+.related-post-item:hover{background:#e8f5e9}
+.related-post-name{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.related-post-date{font-size:12px;color:#aaa;white-space:nowrap;margin-left:8px}
+/* Scrollbar */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:#f5f5f5}
+::-webkit-scrollbar-thumb{background:#bbb;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#999}
+/* Selection & scroll polish */
+::selection{background:#009688;color:#fff}
+html{scroll-behavior:smooth}
+a:focus-visible,button:focus-visible{outline:2px solid #009688;outline-offset:2px}
+/* Print styles */
+@media print{.reading-progress,.nav-wrapper,.bg-cover,footer,.prev-next,.related-posts-card,#back-top{display:none!important}#articleContent{font-size:12pt;line-height:1.5}main.content{margin:0!important;width:100%!important}.card{box-shadow:none!important;border:1px solid #ddd}}
+</style>
+<style>
+/* blog-mermaid-ui:start */
+#articleContent .mermaid{margin:16px auto;text-align:center;max-width:100%;overflow:auto;max-height:80vh;overscroll-behavior:contain;border-radius:6px}
+#articleContent .mermaid svg{display:inline-block;vertical-align:middle;cursor:zoom-in}
+#articleContent .mermaid.mermaid-broken{max-height:none;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;color:#92400e;text-align:left;font-size:13px;line-height:1.6}
+.mermaid-zoom{position:fixed;top:0;right:0;bottom:0;left:0;z-index:100000;background:rgba(0,0,0,.9);overflow:auto;padding:32px;box-sizing:border-box;cursor:zoom-out}
+.mermaid-zoom svg{display:block;margin:0 auto;max-width:none!important}
+/* blog-mermaid-ui:end */
+</style>
+</head>

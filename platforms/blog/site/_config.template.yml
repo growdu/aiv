@@ -1,0 +1,114 @@
+# 站点配置模板 —— `tools/apply-site-config.py` 从它生成 `_config.yml`。
+#
+# **这里只放框架的形状**：目录、生成器、分页、feed、sitemap。
+# **身份不在这里**——站名、简介、导航、页脚在 `data/site.json` 里，
+# 由 `apply-site-config.py` 注进来（下面那些双花括号的占位会被替换）。
+#
+# `_config.yml` 是**生成物，不入库**。改配置改这个模板。
+
+# ── 身份（apply-site-config.py 填）────────────────────────────
+title: "{{name}}"
+subtitle: "{{tagline}}"
+description: "{{description}}"
+author: "{{name}}"
+language: "{{language}}"
+timezone: "{{timezone}}"
+
+# 地址不是身份，是部署的事：`SITE_URL` 环境变量优先，其次 `site.json`
+# 的 `url` 字段，都没有就用本地地址。
+url: "{{url}}"
+root: /
+
+# ── 目录 ───────────────────────────────────────────────────
+source_dir: source
+public_dir: dist
+# 这些文件自己就是完整产物，主题的包裹不碰它们。
+skip_render:
+  - lib/**/*
+  - 404.html
+  - manifest.json
+  - sw.js
+  - favicon.svg
+
+# ── 写作 ───────────────────────────────────────────────────
+new_post_name: :title.md
+default_layout: post
+titlecase: false
+external_link:
+  enable: true
+  nofollow: true
+  field: site
+  exclude: ''
+filename_case: 0
+render_drafts: false
+post_asset_folder: false
+relative_link: false
+future: true
+
+# 代码高亮走 prism（主题自带 `/libs/prism/`）。
+syntax_highlighter: prismjs
+prismjs:
+  preprocess: false
+  line_number: false
+  tab_replace: '  '
+
+# ── 首页 ───────────────────────────────────────────────────
+# 首页是**单页**：内容全在 `home-content.ejs` 里，那个 partial 只在
+# `page.current === 1` 时渲染。per_page 为 0 时只产出一页首页；
+# 留着 10 会生成一串零内容的 `/page/N/`。
+index_generator:
+  path: ''
+  per_page: 0
+  order_by: -date
+
+# 分类页与标签页**整套不做**：hexo-generator-category / hexo-generator-tag
+# 从来不装，所以分类/标签页不存在。文章 front matter 里的
+# categories / tags 留着（学习流归类与搜索索引都在用），只是不摆给访客。
+default_category: uncategorized
+category_map:
+tag_map:
+
+per_page: 10
+pagination_dir: page
+
+# 归档页：按年、按月分页。
+archive_generator:
+  per_page: 30
+  yearly: true
+  monthly: true
+
+# ── RSS / sitemap / 检索 ───────────────────────────────────
+feed:
+  enable: true
+  type: atom
+  path: atom.xml
+  limit: 20
+  content: false
+
+sitemap:
+  tags: false
+  categories: false
+
+# 检索索引（主题的搜索面板读 `/search.json`）。
+search:
+  path: search.json
+  field: post
+  content: true
+  format: strip
+
+# ── 主题 ───────────────────────────────────────────────────
+theme: matery
+
+# ── Markdown ───────────────────────────────────────────────
+marked:
+  prependRoot: true
+  postAsset: false
+  lazyload: true
+
+include:
+exclude:
+ignore:
+
+# 部署交给 CI（GitHub Actions），hexo 自己不上传。
+deploy:
+  type: ''

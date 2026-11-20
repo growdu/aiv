@@ -1,26 +1,16 @@
 {
-  "version": 1,
-  "note": "站点身份与结构。**框架层不许写死这些值**——用户在哪儿定义，页面就只读哪儿。\n\n改这一个文件就够：名字、简介、首页首屏、导航、页脚。\n\n各模块自己的规则在各自的表里，不在这儿：\n- 学习流（赛道 × 阶段）：data/learning-path.json（`enabled: false` 就整个关掉）\n- 活动数字（连续多少天）：data/activity.json\n\n导航项可以带 `feature`：那个功能关着时，这一项自动不出现（首页按钮同理）。",
+  "version": 2,
+  "note": "站点身份与结构。**框架层不许写死这些值**——用户在哪儿定义，页面就只读哪儿。\n\n改这一个文件就够：名字、简介、导航、页脚。\n\n各模块自己的规则在各自的表里，不在这儿：\n- 学习流（赛道 × 阶段）：data/learning-path.json（`enabled: false` 就整个关掉）\n\n导航项可以带 `feature`：那个功能关着时，这一项自动不出现。\n\n地址不是身份，是部署的事：SITE_URL 环境变量优先，其次这里的 url，都没有就用本地地址。",
   "name": "growdu",
   "tagline": "一条成体系的学习流",
   "description": "growdu：一条成体系的学习流。数据库内核、分布式、网络与数据面、AI 工具与工程实践。",
-  "home": {
-    "title": "growdu · 一条成体系的学习流",
-    "lead": "不是一堆文章，是一条能走完的路：从「会用」到「读得懂、还改得动」。",
-    "sub": "每一篇文档、每一期视频都挂在同一条阶梯上，标明自己在第几级。",
-    "actions": [
-      { "label": "从学习流开始", "href": "/learning/", "feature": "learning_path" },
-      { "label": "直接翻全部内容", "href": "/all/" }
-    ]
-  },
+  "url": "https://growdu.cn",
+  "start_date": "2022-04-13",
   "nav": [
     { "key": "learning", "href": "/learning/", "label": "学习流", "feature": "learning_path" },
-    { "key": "videos", "href": "/videos/", "label": "视频" },
-    { "key": "all", "href": "/all/", "label": "全部" },
-    { "key": "timeline", "href": "/timeline/", "label": "时间轴" },
+    { "key": "archives", "href": "/archives/", "label": "归档" },
     { "key": "about", "href": "/about/", "label": "关于" }
   ],
-  "search": { "href": "/all/", "label": "全库检索" },
   "footer": {
     "note": "growdu · 一个人的学习流。文档与视频都由这个仓库生成。"
   }

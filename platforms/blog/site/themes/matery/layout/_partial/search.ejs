@@ -1,0 +1,232 @@
+<!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;<%= __('search') %></span>
+            <input type="search" id="searchInput" name="s" placeholder="<%= __('searchTip') %>"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script defer src="<%- url_for('/libs/minisearch/minisearch.min.js') %>"></script>
+<script type="text/javascript">
+$(function () {
+    // ============ MiniSearch-powered local search ============
+    // Features vs the legacy indexOf search:
+    //   - Fuzzy match (tolerate typos / missing chars)
+    //   - Prefix match (typing '分布' hits '分布式系统')
+    //   - Chinese bigram tokenization (no space-separated segmentation needed)
+    //   - Multi-keyword AND (each whitespace-separated token must match)
+    //   - Title / tags / categories boosted above body content
+    //   - Highlighting of matched terms in the snippet
+
+    var $input = document.getElementById('searchInput');
+    var $resultContent = document.getElementById('searchResult');
+
+    // Bail out gracefully if the library failed to load (offline / CDN blocked).
+    if (typeof MiniSearch === 'undefined') {
+        $resultContent.innerHTML = '<p class="search-empty">搜索库加载失败，请刷新页面重试。</p>';
+        return;
+    }
+
+    function escapeRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c];
+        });
+    }
+
+    // Chinese-friendly tokenizer: lowercase, then for each CJK word emit bigram
+    // sub-tokens so matches don't require perfect word boundaries. English
+    // words pass through as single tokens. Mixed strings get both whole
+    // tokens and bigrams of the CJK runs.
+    function tokenize(text) {
+        if (!text) return [];
+        var cleaned = String(text).toLowerCase();
+        var out = [];
+        var re = /[\u4e00-\u9fff]+|[a-z0-9]+/g;
+        var m;
+        while ((m = re.exec(cleaned)) !== null) {
+            var tok = m[0];
+            if (/[\u4e00-\u9fff]/.test(tok)) {
+                // CJK: emit bigrams (and the original token if length <= 4)
+                for (var i = 0; i < tok.length - 1; i++) {
+                    out.push(tok.substr(i, 2));
+                }
+                if (tok.length <= 4) out.push(tok);
+            } else {
+                out.push(tok);
+            }
+        }
+        return out;
+    }
+
+    // Strip HTML tags from raw post content so the snippet is plain text.
+    function stripHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    // Build a highlighted snippet around the first occurrence of any keyword.
+    // Returns {html, found}; html is empty if no keyword matched.
+    function buildSnippet(content, keywords, ctxBefore, ctxAfter) {
+        if (!content) return { html: '', found: false };
+        var lower = content.toLowerCase();
+        var firstIdx = -1;
+        for (var i = 0; i < keywords.length; i++) {
+            var idx = lower.indexOf(String(keywords[i] || '').toLowerCase());
+            if (idx !== -1 && (firstIdx === -1 || idx < firstIdx)) firstIdx = idx;
+        }
+        if (firstIdx === -1) return { html: '', found: false };
+        var start = Math.max(0, firstIdx - ctxBefore);
+        var end = Math.min(content.length, firstIdx + ctxAfter);
+        var slice = (start > 0 ? '…' : '') + content.substring(start, end) + (end < content.length ? '…' : '');
+        var html = escapeRe(slice);
+        // Highlight keywords (longest first to avoid replacing substrings)
+        var sortedKw = keywords.slice().sort(function (a, b) { return b.length - a.length; });
+        sortedKw.forEach(function (kw) {
+            if (!kw) return;
+            var kwRe = new RegExp(escapeRe(kw), 'gi');
+            html = html.replace(kwRe, function (m) { return '<em class="search-keyword">' + m + '</em>'; });
+        });
+        return { html: html, found: true };
+    }
+
+    var searchIndex = null;
+    var rawDocs = {};              // url -> raw plain-text content (for snippet building)
+    var docMeta = {};              // url -> { categories, tags } 原样（数组）
+    var indexed = false;
+    var loadError = null;
+
+    // MiniSearch 存下来的字段是 **extractField 的输出**：categories / tags
+    // 在索引里是字符串（saveStoredFields 走的是同一个 extractField），
+    // 不是 search.json 里的数组。直接 .join() 会炸：
+    // 「r.categories.join is not a function」——线上唯一的检索入口就这么废了。
+    //
+    // 显示用的分类与标签从 docMeta 里取**原始数组**，这样 ' · ' 分隔符还在；
+    // 万一 docMeta 里没有（索引是别处建的），退回索引里的值，用 asList
+    // 归一化后一样能渲染。
+    function asList(v) {
+        if (v === null || v === undefined || v === '') return [];
+        return Array.isArray(v) ? v : [String(v)];
+    }
+
+    function render(query) {
+        var q = (query || '').trim();
+        if (!indexed) {
+            $resultContent.innerHTML = loadError
+                ? '<p class="search-empty">搜索索引加载失败：' + escapeHtml(loadError) + '</p>'
+                : '<p class="search-empty">搜索索引加载中…</p>';
+            return;
+        }
+        if (!q) { $resultContent.innerHTML = ''; return; }
+
+        var results;
+        try {
+            results = searchIndex.search(q, {
+                prefix: true,
+                // fuzzy: 0 = exact, 1 = very loose. Allow 1 edit for 4+ char
+                // queries, slightly stricter for short ones to avoid noise.
+                fuzzy: function (term) { return term.length >= 4 ? 0.2 : 0.3; },
+                combineWith: 'AND',
+                boost: { title: 4, tags: 3, categories: 2 },
+                maxFuzzy: 3
+            });
+        } catch (e) {
+            $resultContent.innerHTML = '<p class="search-empty">搜索出错：' + escapeHtml(e.message) + '</p>';
+            return;
+        }
+
+        if (!results || results.length === 0) {
+            $resultContent.innerHTML = '<p class="search-empty">未找到 "<strong>' + escapeHtml(q) + '</strong>" 的相关结果。</p>';
+            return;
+        }
+
+        var html = '<ul class="search-result-list">';
+        results.slice(0, 20).forEach(function (r) {
+            var url = r.url || ('/' + r.id);
+            var title = r.title || r.id;
+            var key = r.url || r.title;
+            var raw = rawDocs[key] || '';
+            // Highlight the actual terms MiniSearch matched (r.terms), falling
+            // back to the user's raw query so single-bigram noise still shows.
+            var tokens = (r.terms && r.terms.length) ? r.terms.slice() : [];
+            q.split(/\s+/).forEach(function (t) { if (t && tokens.indexOf(t) === -1) tokens.push(t); });
+            var snippet = buildSnippet(raw, tokens, 30, 90);
+            var meta = docMeta[key] || r;
+            var cats = asList(meta.categories).join(' · ');
+            var tags = asList(meta.tags).join(' · ');
+
+            html += '<li class="search-result-item">';
+            html += '<a href="' + escapeHtml(url) + '" class="search-result-title">' + escapeHtml(title) + '</a>';
+            if (cats) html += '<span class="search-result-meta">' + escapeHtml(cats) + '</span>';
+            if (snippet.found) {
+                html += '<p class="search-result">' + snippet.html + '</p>';
+            }
+            if (tags) html += '<p class="search-result-tags">' + escapeHtml(tags) + '</p>';
+            html += '</li>';
+        });
+        html += '</ul>';
+        if (results.length > 20) {
+            html += '<p class="search-empty">仅显示前 20 条，共匹配 ' + results.length + ' 条结果。</p>';
+        }
+        $resultContent.innerHTML = html;
+    }
+
+    // Lazy-load the JSON index on first interaction (so it doesn't block
+ // page load on slow networks). hexo-generator-searchdb builds
+ // /search.json with shape: [{ title, url, content, categories: [], tags: [] }, ...].
+    var loaded = false;
+    function ensureIndex(cb) {
+        if (loaded) { cb(); return; }
+        $.ajax({
+            url: '<%- url_for("/search.json") %>',
+            dataType: 'json',
+            timeout: 15000,
+            success: function (data) {
+                try {
+                    searchIndex = new MiniSearch({
+                        idField: 'id',
+                        fields: ['title', 'content', 'categories', 'tags'],
+                        storeFields: ['title', 'url', 'categories', 'tags'],
+                        tokenize: tokenize,
+                        processTerm: function (term) { return String(term || '').toLowerCase(); },
+                        // Categories / tags are arrays; concat them so the
+                        // tokenizer sees one string per document.
+                        extractField: function (doc, fieldName) {
+                            var v = doc[fieldName];
+                            if (Array.isArray(v)) return v.join(' ');
+                            return v == null ? '' : String(v);
+                        }
+                    });
+                    // hexo-generator-searchdb's JSON output has no id field,
+                    // so derive one from the URL (guaranteed unique per post).
+                    data.forEach(function (d) { if (!d.id) d.id = d.url || d.title; });
+                    searchIndex.addAll(data);
+                    data.forEach(function (d) {
+                        var key = d.url || d.title;
+                        rawDocs[key] = stripHtml(d.content || '');
+                        docMeta[key] = { categories: d.categories, tags: d.tags };
+                    });
+                    indexed = true;
+                } catch (e) {
+                    loadError = e.message || '索引初始化失败';
+                }
+                loaded = true;
+                cb();
+            },
+            error: function (xhr, status, err) {
+                loadError = (err && err.message) || status || '网络错误';
+                loaded = true;
+                cb();
+            }
+        });
+    }
+
+    $input.addEventListener('input', function () {
+        ensureIndex(function () { render(this.value); }.bind($input));
+    });
+});
+</script>

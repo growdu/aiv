@@ -1,0 +1,78 @@
+<%/*
+  首页正文面板 —— 统计条 + 学习路径。
+
+  首页是**正好一屏**的固定版面：读者第一眼看到的应该是「这个站有多少东西」，
+  接着就是几条赛道 —— 不用往下翻就知道这站是什么规模、从哪儿开始读。
+
+  两段都**不带 data-aos**：AOS 的 fade-up 会把内容整体往下挪 100px 再淡入，
+  那一截让页面在动画期间比视口高出一截，滚动条会闪一下，内容还会跳一下。
+  一屏的版面不要这种入场动画。
+
+  只在首页的第一页渲染（`page.current === 1`）。
+
+  **数据从哪来**
+  - 文章数、字数：从 `site.posts` 现算。
+  - 站龄：从 `site.data.site.start_date`（身份文件里的起始日期）。
+  - 学习路径：从 `site.data.learning`（学习流的编译结果）。
+*/%>
+<% if (is_home() && page.current === 1) { %>
+<%
+  var _site = (site.data && site.data.site) || {};
+
+  // 文章数。
+  var postCount = site.posts.length;
+
+  // 站龄：从起始日期算到今天。
+  var totalDays = '';
+  try {
+    var _start = String(_site.start_date || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (_start) {
+      var start = new Date(Number(_start[1]), Number(_start[2]) - 1, Number(_start[3]));
+      totalDays = Math.max(1, Math.floor((new Date() - start) / 86400000));
+    }
+  } catch (e) {}
+
+  // 总字数：hexo-wordcount 的 `totalcount(site)` 过千就返回 "659.8k" 这种
+  // 带后缀的字符串，除不开——所以自己按篇加起来，再把 "Xk" 折回数字。
+  var totalWords = 0;
+  site.posts.forEach(function (post) {
+    var w = wordcount(post.content || '');
+    if (typeof w === 'string' && w.slice(-1) === 'k') {
+      w = parseFloat(w.slice(0, -1)) * 1000;
+    }
+    totalWords += w;
+  });
+
+  // 「站龄」那张卡指向关于页（导航里没有关于页就不指，指向归档）。
+  var _aboutHref = '';
+  (_site.nav || []).forEach(function (item) {
+    if (!_aboutHref && item.href === '/about/') _aboutHref = item.href;
+  });
+%>
+
+<%# ============== 统计条（在最上面） ============== %>
+<section class="home-stats">
+  <div class="container">
+    <div class="stats-banner">
+      <a class="stat-card" href="<%- url_for('/archives/') %>">
+        <div class="stat-num"><%= postCount %></div>
+        <div class="stat-label">篇文章</div>
+      </a>
+      <a class="stat-card" href="<%- url_for('/archives/') %>">
+        <div class="stat-num"><%= Math.round(totalWords / 10000) %>w</div>
+        <div class="stat-label">总字数</div>
+      </a>
+      <a class="stat-card" href="<%- url_for(_aboutHref || '/archives/') %>">
+        <div class="stat-num"><%= totalDays %></div>
+        <div class="stat-label">天持续更新</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="home-content">
+  <div class="container">
+    <%- partial('_partial/learning-path') %>
+  </div>
+</section>
+<% } %>

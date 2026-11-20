@@ -1,0 +1,143 @@
+# matery 主题的默认配置。
+#
+# ⚠️ **这个文件是「框架」的一部分，不是「某个站」的一部分。**
+# 它里面不许出现站名、地址、头像、项目、履历——那些是**身份**，
+# 住在 `platforms/blog/site/data/site.json` 里，由
+# `tools/apply-site-config.py` 注进 `source/_data/site.json`，
+# 模板读 `site.data.site.*`。
+#
+# 这里只留**行为**：要不要目录、代码块能不能复制、图表怎么画、
+# 资源从哪儿加载。站点那一层的覆盖在 `platforms/blog/site/_config.matery.yml`。
+
+# ── 资源从哪儿来 ───────────────────────────────────────────
+# 空 = 从站点自己的 `/libs/` 出（不走 CDN）。
+jsDelivr:
+  url:
+
+# 品牌区的 logo 图。不放就只显示站名（logo: ''）。
+logo: ''
+
+# 站点图标。
+favicon: /favicon.svg
+
+# 无图可用的文章用这张占位图。
+featureImages:
+  - /medias/featureimages/0.svg
+
+# 网站背景图（默认关着）。
+background:
+  enable: false
+  url: ''
+
+# 首页封面轮播里的背景视频（首页不做封面，默认关着）。
+cover:
+  video:
+    enable: false
+    src: []
+
+# ── 文章页 ─────────────────────────────────────────────────
+# 目录（悬浮按钮 + 侧栏面板）。
+toc:
+  enable: true
+  heading: h2, h3, h4
+  collapseDepth: 0
+  showToggleBtn: true
+
+# 代码块：显示语言名、可复制、可收缩、可否折行。
+code:
+  lang: true
+  copy: true
+  shrink: true
+  break: false
+
+# 文章信息条：发布日期、更新时间、字数、阅读时长、阅读次数。
+postInfo:
+  date: true
+  update: false
+  wordCount: true
+  min2read: true
+  totalCount: false
+  readCount: false
+
+# 归档页顶部的文章日历。
+postCalendar: true
+
+# 分享按钮（本地脚本，不依赖第三方服务）。
+sharejs:
+  enable: true
+  sites: twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin
+
+addthis:
+  enable: false
+  pubid: ''
+
+# ── 转载规则 ───────────────────────────────────────────────
+# 正文末尾的「转载规则」区块。默认用 CC BY-SA。
+reprint:
+  enable: true
+  default: cc_by_sa
+
+# ── 图表 ───────────────────────────────────────────────────
+mermaid:
+  enable: true
+  version: 'latest'
+  options:
+    theme: 'forest'
+    nodeSpacing: 30
+    rankSpacing: 30
+    padding: 10
+    wrappingWidth: 220
+    diagramMarginX: 8
+    actorMargin: 30
+    boxMargin: 4
+
+# ── 平时用不到、但模板要读的几项 ───────────────────────────
+# 阅读次数统计（需要站点自带的统计脚本，默认关着）。
+siteCounter:
+  enable: false
+
+# 阅读密码（默认关着）。
+verifyPassword:
+  enable: false
+  promptMessage: 请输入访问本文章的密码
+  errorMessage: 密码错误，将返回主页！
+
+# 数学公式（默认关着；开了还要在文章 front matter 里写 `mathjax: true`）。
+mathjax:
+  enable: false
+  cdn: https://cdn.bootcss.com/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML
+
+# ── 前端库 ─────────────────────────────────────────────────
+# 这些文件都在主题的 `source/libs/` 下（本地托管，不走 CDN）。
+libs:
+  css:
+    matery: /css/matery.css
+    mycss: /css/my.css
+    post: /css/post.css
+    dark: /css/dark.css
+    tech: /css/tech.css
+    fontAwesome: /libs/awesome/css/all.min.css
+    materialize: /libs/materialize/materialize.min.css
+    aos: /libs/aos/aos.css
+    animate: /libs/animate/animate.min.css
+    lightgallery: /libs/lightGallery/css/lightgallery.min.css
+    tocbot: /libs/tocbot/tocbot.css
+    prism: /libs/prism/prism.min.css
+  js:
+    matery: /js/matery.js
+    jquery: /libs/jquery/jquery-3.6.0.min.js
+    materialize: /libs/materialize/materialize.min.js
+    aos: /libs/aos/aos.js
+    scrollProgress: /libs/scrollprogress/scrollProgress.min.js
+    lightgallery: /libs/lightGallery/js/lightgallery-all.min.js
+    tocbot: /libs/tocbot/tocbot.min.js
+    prism: /libs/prism/prism.min.js
+    echarts: /libs/echarts/echarts.min.js
+    codeblock: /libs/codeBlock/codeBlockFuction.js
+    codelang: /libs/codeBlock/codeLang.js
+    codecopy: /libs/codeBlock/codeCopy.js
+    codeshrink: /libs/codeBlock/codeShrink.js
+    crypto: /libs/cryptojs/crypto-js.min.js
+    # mermaid 从 node_modules 搬过来（`tools/copy-vendor.py`），
+    # 主题的 source/libs/ 下没有它。
+    mermaid: /lib/mermaid/mermaid.min.js

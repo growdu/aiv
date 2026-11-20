@@ -1,0 +1,205 @@
+# matery 主题的覆盖层 —— **只管行为，不管身份**。
+#
+# 身份（站名、简介、导航、页脚）在 `data/site.json`，由
+# `tools/apply-site-config.py` 注进 `source/_data/site.json`，
+# 模板读 `site.data.site.*`。**这个文件里不许出现站名。**
+#
+# 主题自带的默认配置在 `themes/matery/_config.yml`（上游的默认值），
+# 站点这一层的值优先。
+
+# ── 资源从哪儿来 ───────────────────────────────────────────
+# 空 = 从站点自己的 `/libs/` 出（不走 CDN）。
+jsDelivr:
+  url:
+
+# 不放 logo 图：品牌区只显示站名与一句定位。
+logo: ''
+favicon: /favicon.svg
+
+# ── 文章页 ─────────────────────────────────────────────────
+# 目录（悬浮按钮 + 侧栏面板）。
+toc:
+  enable: true
+  heading: h2, h3, h4
+  collapseDepth: 0
+  showToggleBtn: true
+
+# 代码块：显示语言名、可复制、可收缩。
+code:
+  lang: true
+  copy: true
+  shrink: true
+  break: false
+
+# 文章信息条：日期、字数、阅读时长。
+postInfo:
+  date: true
+  update: false
+  wordCount: true
+  min2read: true
+  totalCount: false
+  readCount: false
+
+# 图片灯箱与懒加载。
+fancybox:
+  enable: true
+lazyload:
+  enable: true
+
+# 归档页顶部的文章日历。
+postCalendar: true
+
+# ── 检索 ───────────────────────────────────────────────────
+search:
+  enable: true
+  path: search.json
+  field: post
+
+# ── 图表 ───────────────────────────────────────────────────
+# mermaid 的加载器在 `layout.ejs` 里：页面上没有 `.mermaid` 容器就完全不下载。
+mermaid:
+  enable: true
+  version: 'latest'
+  options:
+    theme: 'forest'
+    nodeSpacing: 30
+    rankSpacing: 30
+    padding: 10
+    wrappingWidth: 220
+    diagramMarginX: 8
+    actorMargin: 30
+    boxMargin: 4
+
+# mermaid 库从 node_modules 搬进来（`tools/copy-vendor.py`），
+# 主题默认指的那个路径不存在。
+libs:
+  js:
+    mermaid: /lib/mermaid/mermaid.min.js
+  css:
+    # 首页的版面样式（正好一屏）。
+    tech: /css/tech.css
+
+# 无图可用的文章用这张占位图（主题自带的 24 张图已经删掉了）。
+featureImages:
+  - /medias/featureimages/0.svg
+
+# ── 明确关掉的东西 ─────────────────────────────────────────
+# 这些是**产品特性**或**人设**：跟「一个文档站」无关，一律关掉。
+# （值写在这里是为了说清楚「关掉了」，不是让使用者去调。）
+
+# 首页那一大块（全屏照片 carousel + 打字机 + 梦想 + 音乐）。
+cover:
+  enable: false
+dream:
+  enable: false
+music:
+  enable: false
+musics:
+  enable: false
+video:
+  enable: false
+recommend:
+  enable: false
+
+# 评论系统：评论要 GitHub 授权，那是**产品**的选择，不是框架的事。
+gitalk:
+  enable: false
+gitalk_pages:
+  enable: false
+gitment:
+  enable: false
+disqus:
+  enable: false
+livere:
+  enable: false
+valine:
+  enable: false
+waline:
+  enable: false
+changyan:
+  enable: false
+twikoo:
+  enable: false
+
+# 打赏、统计、备案、订阅卡片。
+reward:
+  enable: false
+busuanziStatistics:
+  enable: false
+siteCounter:
+  enable: false
+clicklove:
+  enable: false
+icp:
+  enable: false
+subscribe:
+  rss: false
+
+# 特效与第三方脚本。
+translate:
+  enable: false
+sakura:
+  enable: false
+snowdown:
+  enable: false
+mouseStar:
+  enable: false
+instantpage:
+  enable: false
+canvas_nest:
+  enable: false
+ribbon:
+  enable: false
+ribbon_dynamic:
+  enable: false
+tcaptcha:
+  enable: false
+tidio:
+  enable: false
+daovoice:
+  enable: false
+tuxiaochao:
+  enable: false
+
+# 外部站点的按钮（GitHub fork 角标、首页第二个按钮）。
+githubLink:
+  enable: false
+indexbtn:
+  enable: false
+socialLink: {}
+
+# 人设：头像、履历、项目、技能、相册、时间线、荣誉、教育。
+profile:
+  avatar: ''
+  career: ''
+  introduction: ''
+myProjects:
+  enable: false
+mySkills:
+  enable: false
+myGallery:
+  enable: false
+myEducation:
+  enable: false
+myHonors:
+  enable: false
+myTimeline:
+  enable: false
+
+# 别的杂项。
+bbtime:
+  enable: false
+artitalk:
+  enable: false
+verifyPassword:
+  enable: false
+mathjax:
+  enable: false
+copyright:
+  enable: false
+time:
+  enable: false
+background:
+  enable: false
+banner:
+  enable: false
