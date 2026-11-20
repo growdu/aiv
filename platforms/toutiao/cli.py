@@ -30,7 +30,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from .capability import default_capability_path, load_capability
+from .capability import default_capability_path, load_capability, load_exit_codes
 from .contract import slice_post
 from .mdparse import discover, discover_unsupported, load_post
 from .notify import build_message, send
@@ -47,15 +47,6 @@ __all__ = [
     "EXIT_ERROR", "EXIT_INELIGIBLE", "EXIT_OK", "EXIT_USAGE", "main",
 ]
 
-#: The exit codes are the contract with whoever runs the command:
-#: ``0`` success, ``1`` a bad argument or a bad configuration, ``2`` this
-#: post is not eligible for Toutiao, ``3`` an interface, a write or a
-#: source-parsing error.
-EXIT_OK = 0
-EXIT_USAGE = 1
-EXIT_INELIGIBLE = 2
-EXIT_ERROR = 3
-
 # 文章目录：**内容单元仓库**（`content/units/`）——adapter 直接读它，
 # 不再读站点的副本。
 DEFAULT_POSTS_DIR = CONTENT_UNITS
@@ -66,6 +57,18 @@ DEFAULT_OUT_DIR = _REPO_ROOT / "platforms" / "toutiao" / "out"
 DEFAULT_OUTBOX_DIR = _REPO_ROOT / "platforms" / "toutiao" / "outbox"
 DEFAULT_CAPABILITY = default_capability_path()
 DEFAULT_STATE_FILE = _REPO_ROOT / "platforms" / "toutiao" / "out" / "state.json"
+
+#: 退出码的**出处**：契约层定死的那张表（`publish/publishkit/exit_codes.py`），
+#: 声明在能力声明的 `[exit]` 段里——数据是数据，规则变了改 TOML。
+#:
+#: 语义（四个码的定义见契约层）：``0`` 成功 / ``1`` 用法错（参数或配置不对）
+#: / ``2`` 缺前置条件（这一篇不合格，不该发）/ ``3`` 做事失败（接口、写盘
+#: 或母稿解析出错）。
+_EXIT_CODES = load_exit_codes(DEFAULT_CAPABILITY)
+EXIT_OK = _EXIT_CODES["ok"]
+EXIT_USAGE = _EXIT_CODES["usage"]
+EXIT_INELIGIBLE = _EXIT_CODES["precondition"]
+EXIT_ERROR = _EXIT_CODES["failed"]
 
 #: The value of every shared option when it was not given.  The options
 #: are attached to the top-level parser *and* to every subcommand, so

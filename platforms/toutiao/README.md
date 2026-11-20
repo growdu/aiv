@@ -47,7 +47,7 @@
   （灌草稿走的是浏览器里的后台接口，**不是开放平台的 API** ——
   账号仍未认证，`automation` 那一栏维持 `manual`）
 - **实现状态**：切片、渲染、出包、幂等状态、通知、批量出包、命令行**都已实现**
-  （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**396 条用例**。
+  （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**397 条用例**。
   其中 2 条是**语料级回归**——内容单元 `content/units` 不入库，
   干净检出里它们是 `skipped`（394 passed / 2 skipped），
   本地有母稿时才会真跑（396 passed）。
@@ -147,6 +147,8 @@ cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli status
 ```
 
 退出码：`0` 成功 / `1` 参数或配置错误 / `2` 该篇不合格 / `3` 接口或写盘错误。
+这四个码的**语义由契约层定死**（`publish/publishkit/exit_codes.py`），本 adapter
+读自己能力声明里的 `[exit]` 段——五个平台是同一张表。
 
 `mark` 有两档，各带各的凭据：
 

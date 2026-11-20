@@ -666,7 +666,7 @@ def test_the_cli_fails_loudly_when_the_video_is_missing(episode_dir, tmp_path,
 
     monkeypatch.setattr(cli, "AIV_ROOT", tmp_path / "video")
 
-    assert cli.main(["package", EP_PATH, "--out", str(tmp_path / "out")]) == 1
+    assert cli.main(["package", EP_PATH, "--out", str(tmp_path / "out")]) == 2
     assert "成片不存在" in capsys.readouterr().err
 
 
@@ -769,7 +769,7 @@ def test_marking_published_without_a_url_is_refused(episode_dir, tmp_path,
 
     out = tmp_path / "out"
     assert cli.main(["package", EP_PATH, "--out", str(out)]) == 0
-    assert cli.main(["mark", "published", EP_PATH, "--out", str(out)]) == 2
+    assert cli.main(["mark", "published", EP_PATH, "--out", str(out)]) == 1
     assert "--url" in capsys.readouterr().err
 
 
@@ -827,7 +827,7 @@ def test_a_reprint_without_a_source_is_refused(episodes_root, tmp_path,
     _stage_video(cli, monkeypatch, tmp_path, make_video)
 
     out = tmp_path / "out"
-    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 1
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 2
     err = capsys.readouterr().err
     assert "source" in err
     assert not (out / EP_PATH).exists(), "预检没过还留下了半个包"

@@ -45,7 +45,7 @@ def test_the_cli_runs_without_pythonpath():
 def test_the_cli_reports_a_missing_video_instead_of_crashing(tmp_path):
     """成片不在就报错退出——不能留一个 traceback 给不熟代码的人。"""
     proc = _run(["package", "no-such-episode", "--out", str(tmp_path / "out")])
-    assert proc.returncode == 1
+    assert proc.returncode == 2
     assert "ERROR" in proc.stderr
     assert "Traceback" not in proc.stderr
 
@@ -81,7 +81,7 @@ def test_the_missing_video_hint_reaches_the_terminal(episode_dir, tmp_path,
     from douyin import cli
 
     monkeypatch.setattr(cli, "AIV_ROOT", tmp_path / "video")
-    assert cli.main(["package", EP_PATH]) == 1
+    assert cli.main(["package", EP_PATH]) == 2
     err = capsys.readouterr().err
     assert "vertical" in err
     assert f"make EP={EP_PATH} vertical" in err
@@ -125,7 +125,7 @@ def test_marking_published_without_a_package_is_refused(episode_dir, tmp_path,
 
     out = tmp_path / "out"
     assert cli.main(["mark", "published", EP_PATH, "--url",
-                      "https://www.douyin.com/video/1", "--out", str(out)]) == 1
+                      "https://www.douyin.com/video/1", "--out", str(out)]) == 2
     err = capsys.readouterr().err
     assert "发布包不存在" in err
     assert not (out / "state.json").exists(), "失败的回填留下了状态文件"
@@ -143,7 +143,7 @@ def test_a_failed_mark_leaves_no_state_behind(tmp_path, capsys):
 
     out = tmp_path / "out"
     assert cli.main(["mark", "published", "no-such-episode", "--url",
-                      "https://www.douyin.com/video/1", "--out", str(out)]) == 1
+                      "https://www.douyin.com/video/1", "--out", str(out)]) == 2
     err = capsys.readouterr().err
     assert "ERROR" in err
     assert "Traceback" not in err
@@ -172,7 +172,7 @@ def test_a_video_that_vanished_gives_an_error_not_a_traceback(episode_dir,
     video.write_bytes(b"not really a video")
     monkeypatch.setattr(package, "build_package", _vanished)
     assert cli.main(["package", EP_PATH, "--video", str(video),
-                      "--out", str(tmp_path / "out")]) == 1
+                      "--out", str(tmp_path / "out")]) == 2
     err = capsys.readouterr().err
     assert "ERROR" in err
     assert "Traceback" not in err
@@ -193,4 +193,37 @@ def test_drafted_is_now_an_option():
     proc = _run(["mark", "drafted", "ep01"])
     # 不是「参数不合法」——是这一期压根没有元数据/发布包
     assert "invalid choice" not in proc.stderr
-    assert proc.returncode == 1
+    assert proc.returncode == 2
+
+
+def test_the_exit_codes_come_from_the_declaration():
+    """退出码从能力声明的 `[exit]` 段读——语义由契约层定死。
+
+    写死在 Python 里的那四个数字，改 TOML 就改不动了。
+    """
+    from douyin import cli
+    from pyv import epmeta
+
+    codes = epmeta.load_exit_codes("douyin")
+    assert codes == {"ok": 0, "usage": 1, "precondition": 2, "failed": 3}
+    assert (cli.EXIT_OK, cli.EXIT_USAGE, cli.EXIT_PRECONDITION,
+            cli.EXIT_FAILED) == (codes["ok"], codes["usage"],
+                                 codes["precondition"], codes["failed"])
+
+
+def test_a_write_failure_is_a_failed_run(episode_dir, tmp_path, monkeypatch,
+                                         capsys):
+    """写盘失败 = 做事失败 = 3（动手了，没成——不是「缺前置条件」）。"""
+    from douyin import cli, package
+
+    def _boom(*args, **kwargs):
+        raise OSError("写盘失败：磁盘满了")
+
+    video = tmp_path / "v.mp4"
+    video.write_bytes(b"not really a video")
+    monkeypatch.setattr(package, "build_package", _boom)
+    assert cli.main(["package", EP_PATH, "--video", str(video),
+                      "--out", str(tmp_path / "out")]) == 3
+    err = capsys.readouterr().err
+    assert "写盘失败" in err
+    assert "Traceback" not in err

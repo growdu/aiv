@@ -44,6 +44,7 @@ from . import snapshot as snapshot_module
 from . import split as split_module
 from . import titles as titles_module
 from . import version as version_module
+from .capability import default_capability_path, load_exit_codes
 from .mdparse import parse
 from .posts import (AUTHOR_LIMIT, BODY_LIMIT, CONTENT_BYTES_LIMIT, CONTENT_LIMIT,
                     DEFAULT_AUTHOR, DIGEST_LIMIT, TITLE_LIMIT, check_eligibility,
@@ -76,10 +77,21 @@ DEFAULT_STAMP_FILE = Path(__file__).resolve().parents[0] / "out" / ".auto-draft-
 # WeChat accepts.
 DEFAULT_COVER = Path(__file__).resolve().parents[0] / "assets" / "default-cover.png"
 
-EXIT_OK = 0
-EXIT_NOT_FOUND = 1
-EXIT_REJECTED = 2
-EXIT_API_ERROR = 3
+#: 退出码的**出处**：契约层定死的那张表（`publish/publishkit/exit_codes.py`），
+#: 声明在能力声明的 `[exit]` 段里——数据是数据，规则变了改 TOML。
+#:
+#: 语义（四个码的定义见契约层）：``0`` 成功 / ``1`` 用法错（参数不对、命令
+#: 写错）/ ``2`` 缺前置条件（东西不存在、不该发、条件必填没满足）/
+#: ``3`` 做事失败（接口、写盘、解析出错）。
+_EXIT_CODES = load_exit_codes(default_capability_path())
+EXIT_OK = _EXIT_CODES["ok"]
+EXIT_USAGE = _EXIT_CODES["usage"]
+#: 「找不到」是**缺前置条件**：文章、分类、合集不存在。
+EXIT_NOT_FOUND = _EXIT_CODES["precondition"]
+#: 「被拒」也是**缺前置条件**：凭据不对、超长、超限、缺图。
+EXIT_REJECTED = _EXIT_CODES["precondition"]
+#: 接口报错是**做事失败**：动手了，没成。
+EXIT_API_ERROR = _EXIT_CODES["failed"]
 
 # Stands in for an externally hosted picture that could not be fetched and
 # re-hosted on WeChat.  WeChat removes such pictures silently, so the
@@ -2062,7 +2074,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as error:
+        # argparse 已经把用法和错误打印出来了。``--help`` 的退出码是 0，
+        # 其余都是用法错误 —— 本命令约定用法错误是 1（契约层那张表）。
+        return EXIT_OK if error.code == 0 else EXIT_USAGE
     try:
         args.max_length = resolve_content_limit(args.max_length)
     except ValueError as error:

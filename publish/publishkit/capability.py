@@ -73,6 +73,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import PublishKitError
+from .exit_codes import CANONICAL
 
 __all__ = [
     "AUTOMATIONS",
@@ -107,6 +108,7 @@ _REQUIRED_TOP_KEYS = ("id", "name", "kind", "automation", "review")
 _TOP_KEYS = _REQUIRED_TOP_KEYS + (
     "adapter",
     "auth",
+    "exit",
     "ip_allowlist",
     "limits",
     "media",
@@ -355,6 +357,26 @@ def _validate_adapter(adapter_raw: dict) -> dict:
     return adapter
 
 
+def _validate_exit(exit_raw: dict) -> dict:
+    """``[exit]`` 是退出码声明——**契约层定死的那张表**（``exit_codes.py``）。
+
+    平台不许自己另编一套：五个 adapter 的退出码必须一致，调用方才能统一
+    处理「重试该重试的」。写了但对不上，当场拒绝——这一层是唯一的闸门。
+    """
+    if not exit_raw:
+        return {}
+    codes = {}
+    for key, value in exit_raw.items():
+        codes[key] = _convert(value, "exit.{}".format(key), _as_int)
+    if codes != dict(CANONICAL):
+        raise CapabilityFieldError(
+            "能力模型字段 exit 与契约层的退出码表不一致：{}（契约层：{}）".format(
+                codes, dict(CANONICAL)
+            )
+        )
+    return codes
+
+
 def _validate_verified(value: object) -> str:
     """``verified`` 是一次实测的日期（§5）；日期未定的那天允许写 XX。"""
     text = _convert(value, "verified", _as_str)
@@ -466,6 +488,7 @@ def load_capability_file(path) -> Capability:
     limits = _validate_limits(_table(data, "limits"))
     adapter = _validate_adapter(_table(data, "adapter"))
     media = _table(data, "media")
+    _validate_exit(_table(data, "exit"))
 
     return Capability(
         id=platform_id,

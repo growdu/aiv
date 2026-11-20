@@ -514,3 +514,18 @@ def test_mark_of_an_unknown_article_is_refused(tmp_path):
         + ["db/nope", "--url", "https://www.toutiao.com/article/1/"]
     )
     assert code == EXIT_USAGE
+
+
+def test_the_exit_codes_come_from_the_declaration():
+    """退出码从能力声明的 `[exit]` 段读——语义由契约层定死。
+
+    写死在 Python 里的那四个数字，改 TOML 就改不动了。
+    """
+    from toutiao.capability import default_capability_path, load_exit_codes
+    from toutiao.cli import (EXIT_ERROR, EXIT_INELIGIBLE, EXIT_OK,
+                             EXIT_USAGE)
+
+    codes = load_exit_codes(default_capability_path())
+    assert codes == {"ok": 0, "usage": 1, "precondition": 2, "failed": 3}
+    assert (EXIT_OK, EXIT_USAGE, EXIT_INELIGIBLE, EXIT_ERROR) == (
+        codes["ok"], codes["usage"], codes["precondition"], codes["failed"])

@@ -115,11 +115,13 @@ def test_public_interface_is_locked():
     with pytest.raises(dataclasses.FrozenInstanceError):
         cap.automation = "api_publish"
 
+    # ``load_exit_codes`` 是退出码那张表的读取器（2026-11-20 加的）：
+    # 退出码的语义由契约层定死，头条只**读**自己能力声明里的 ``[exit]`` 段。
     assert set(capability_module.__all__) == {
         "AUTOMATIONS", "Capability", "Limits",
-        "default_capability_path", "load_capability",
+        "default_capability_path", "load_capability", "load_exit_codes",
     }
-    assert len(capability_module.__all__) == 5
+    assert len(capability_module.__all__) == 6
 
 
 def test_unknown_automation_is_rejected(tmp_path):

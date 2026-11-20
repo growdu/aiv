@@ -6,6 +6,13 @@
 
 只做「把包准备好」这一件事。发布在人工手里（`manual` 档）——
 真发出去之后用 `mark published` 回填链接，状态与快照才跟着变成 `published`。
+
+**退出码**由契约层定死（`publish/publishkit/exit_codes.py`），声明在
+`platforms/bilibili/capability.toml` 的 `[exit]` 段里：
+
+    0 成功 / 1 用法错（参数不对、命令写错）
+    2 缺前置条件（读不到元数据、包不存在、成片不在、预检没过）
+    3 做事失败（打包、写盘失败）
 """
 from __future__ import annotations
 
@@ -22,6 +29,14 @@ from bilibili import notify, package, snapshot, state, subtitle
 AIV_ROOT = Path(__file__).resolve().parents[2] / "video"
 DEFAULT_OUT = Path(__file__).resolve().parents[0] / "out"
 WEBHOOK_ENV = "BILIBILI_WEBHOOK"
+
+#: 退出码的**出处**：契约层定死的那张表，声明在本平台的能力声明里——
+#: 数据是数据，规则变了改 TOML，不改 Python。
+_EXIT_CODES = epmeta.load_exit_codes("bilibili")
+EXIT_OK = _EXIT_CODES["ok"]
+EXIT_USAGE = _EXIT_CODES["usage"]
+EXIT_PRECONDITION = _EXIT_CODES["precondition"]
+EXIT_FAILED = _EXIT_CODES["failed"]
 
 
 def _video_path(episode: str) -> Path:
@@ -68,12 +83,12 @@ def cmd_package(args: argparse.Namespace) -> int:
         meta = epmeta.load_meta(args.episode)
     except epmeta.MetaError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
 
     video = Path(args.video) if args.video else _video_path(args.episode)
     if not video.is_file():
         print(f"ERROR 成片不存在：{video}（先跑 make all 出片）", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
 
     try:
         result = package.build_package(
@@ -84,13 +99,13 @@ def cmd_package(args: argparse.Namespace) -> int:
         for finding in error.findings:
             print(f"ERROR  {finding.rule_id}  {finding.message}", file=sys.stderr)
         print("FAIL 预检没过，不出包", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
     except epmeta.MetaError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
     except FileNotFoundError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
 
     for warning in result.warnings:
         print(f"WARNING {warning}")
@@ -98,7 +113,7 @@ def cmd_package(args: argparse.Namespace) -> int:
                   str(result.dir), os.environ.get(WEBHOOK_ENV))
     print(f"OK 发布包 → {result.dir}"
           + ("（成片没变，复用已有的包）" if result.reused else ""))
-    return 0
+    return EXIT_OK
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -112,7 +127,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     if current.reject_reason:
         print(f"驳回原因 {current.reject_reason}")
     print(f"通知措辞：{notify.phrase(current.status)}")
-    return 0
+    return EXIT_OK
 
 
 def cmd_mark(args: argparse.Namespace) -> int:
@@ -130,14 +145,14 @@ def cmd_mark(args: argparse.Namespace) -> int:
     if args.state == "published" and not args.url:
         print("ERROR 标成 published 必须给 --url——"
               "没有公开链接就不该说「已发布」。", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
 
     # 1. 元数据：读不到就退出（这一期压根没配 B站文案）
     try:
         meta = epmeta.load_meta(args.episode)
     except epmeta.MetaError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
     title = _title_of(meta)
 
     # 2. 发布包：没有包就没有「发出去的是哪一版」——不许回填
@@ -154,7 +169,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
         print("      包不在或不完整就回填不了：先出包，再投稿，再回填"
               f"（python -m bilibili.cli package {args.episode}）",
               file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
 
     # 3. 到这儿才算成了：状态与快照一起落
     store = state.StateStore(Path(args.out) / "state.json")
@@ -187,7 +202,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
         print(f"OK {args.episode} 已回填发布链接")
     else:
         print(f"OK {args.episode} 已标成「{args.state}」（还没公开）")
-    return 0
+    return EXIT_OK
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -217,8 +232,19 @@ def main(argv: list[str] | None = None) -> int:
                         help="状态快照目录，默认 platforms/bilibili/outbox")
     p_mark.set_defaults(func=cmd_mark)
 
-    args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as error:
+        # argparse 已经把用法和错误打印出来了。``--help`` 的退出码是 0，
+        # 其余都是用法错误 —— 本命令约定用法错误是 1（契约层那张表）。
+        return EXIT_OK if error.code == 0 else EXIT_USAGE
+    try:
+        return args.func(args)
+    except Exception as error:                      # noqa: BLE001 -- 错误不吞
+        # 做事失败：动手了，没成（打包、写盘、接口）。别把 traceback 甩到
+        # 终端上——那看着像崩溃，不像「这一条没成」。
+        print(f"ERROR {error}", file=sys.stderr)
+        return EXIT_FAILED
 
 
 if __name__ == "__main__":

@@ -230,7 +230,7 @@ def test_convert_writes_html_without_touching_network(sample_post, tmp_path):
 def test_convert_reports_missing_post(sample_post, tmp_path, capsys):
     posts_dir, _ = sample_post
     code = main(["convert", "no/such/post"] + _args(posts_dir, tmp_path / "out"))
-    assert code == 1
+    assert code == 2
 
 
 def test_convert_shortens_a_long_title_instead_of_refusing(tmp_path, capsys):
@@ -748,7 +748,7 @@ def test_categories_says_the_page_is_missing_without_a_category_id(tmp_path, cap
 def test_categories_reports_an_unknown_category(tmp_path, capsys):
     posts_dir = _series_posts(tmp_path)
     code = main(["categories", "没有这个分类"] + _args(posts_dir, tmp_path / "out"))
-    assert code == 1
+    assert code == 2
     assert "找不到分类" in capsys.readouterr().err
 
 
@@ -777,7 +777,7 @@ def test_collections_writes_the_index_article_and_the_checklist(tmp_path, capsys
 def test_collections_reports_an_unknown_collection(tmp_path, capsys):
     posts_dir = _series_posts(tmp_path)
     code = main(["collections", "没有这个合集"] + _args(posts_dir, tmp_path / "out"))
-    assert code == 1
+    assert code == 2
     assert "找不到合集" in capsys.readouterr().err
 
 
@@ -829,7 +829,7 @@ def test_publish_collection_reports_an_unknown_collection(tmp_path, server, monk
 
     code = main(["publish-collection", "没有这个合集"]
                 + _args(posts_dir, tmp_path / "out", server=server))
-    assert code == 1
+    assert code == 2
     assert "/cgi-bin/draft/add" not in _Handler.calls
 
 

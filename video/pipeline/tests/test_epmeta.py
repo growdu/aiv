@@ -394,3 +394,39 @@ def test_broken_json_raises_a_meta_error(tmp_path):
     (root / epmeta.PUBLISH_NAME).write_text("{不是 JSON", encoding="utf-8")
     with pytest.raises(epmeta.MetaError):
         epmeta.load_meta("ep01", root=root)
+
+
+# --- 退出码声明（[exit]）---------------------------------------------------
+
+
+def test_the_exit_codes_come_from_the_platform_declaration():
+    """退出码从能力声明的 `[exit]` 段读——语义由契约层定死。
+
+    三个视频 adapter 的退出码都走这一个读取器，所以这一条就把它们的
+    出处钉住了：改 TOML 就改退出码，不改 Python。
+    """
+    for platform in ("douyin", "bilibili", "channels"):
+        codes = epmeta.load_exit_codes(platform)
+        assert codes == {"ok": 0, "usage": 1, "precondition": 2, "failed": 3}
+
+
+def test_a_missing_exit_section_is_refused_loudly(tmp_path):
+    """声明里没有 `[exit]` 段——adapter 的退出码就没有答案，当场报错。"""
+    directory = tmp_path / "douyin"
+    directory.mkdir()
+    (directory / "capability.toml").write_text(
+        'id = "douyin"\nname = "抖音"\nkind = "video"\n', encoding="utf-8")
+
+    with pytest.raises(epmeta.MetaError):
+        epmeta.load_exit_codes("douyin", platforms_dir=tmp_path)
+
+
+def test_an_exit_section_with_a_missing_key_is_refused_loudly(tmp_path):
+    """四行少一行都不行——「这一档退几」不能只对一半。"""
+    directory = tmp_path / "douyin"
+    directory.mkdir()
+    (directory / "capability.toml").write_text(
+        'id = "douyin"\n[exit]\nok = 0\nusage = 1\nfailed = 3\n', encoding="utf-8")
+
+    with pytest.raises(epmeta.MetaError):
+        epmeta.load_exit_codes("douyin", platforms_dir=tmp_path)
