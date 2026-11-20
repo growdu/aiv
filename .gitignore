@@ -1,17 +1,29 @@
-# ── 站点构建产物（Astro 重建，2026-11-18）────────────────────
-# Astro 的 outDir 是 dist/。public/ 是**静态资源源码**（favicon 等，入库），
-# 里面同步进来的 images/ 与 js/ 是构建产物，不入库。
+# ── 站点构建产物（hexo，2026-11-20）────────────────────────────
+# hexo 的产物目录。
 /platforms/blog/site/dist/
-/platforms/blog/site/public/images/
-/platforms/blog/site/public/js/
-# 内容单元的站点副本（sync-content.py 同步进来的，不入库）
-/platforms/blog/site/src/content/units/
+# hexo 的缓存（Astro 时代留下的 `.astro/` 也一并挡掉）。
+/platforms/blog/site/db.json
+/platforms/blog/site/.astro/
+# 站点配置：由 `_config.template.yml` + `data/site.json` 填出来（生成物）。
+/platforms/blog/site/_config.yml
+# 站点源目录里的生成物：
+#   _posts/   —— 内容单元编出来的文章（build-posts.py）
+#   _data/    —— 模板读的数据（build-learning-path.py / apply-site-config.py）
+#   images/   —— 母稿里的图片（build-posts.py）
+#   lib/      —— 第三方库（copy-vendor.py）
+#   learning/ —— 学习流的页面（build-learning-path.py）
+#   about/    —— 关于页（apply-site-config.py）
+#   robots.txt / manifest.json —— 跟着身份走的两个小文件
+/platforms/blog/site/source/_posts/
+/platforms/blog/site/source/_data/
+/platforms/blog/site/source/images/
+/platforms/blog/site/source/lib/
+/platforms/blog/site/source/learning/
+/platforms/blog/site/source/about/
+/platforms/blog/site/source/robots.txt
+/platforms/blog/site/source/manifest.json
 # 学习流的编译结果（build-learning-path.py 编出来的，跟内容单元一样是产物）
 /platforms/blog/site/data/learning-path.compiled.json
-# 活动数据的编译结果（build-activity.py 编出来的；账本本身 activity.json 入库）
-/platforms/blog/site/data/activity.compiled.json
-# Astro 的类型缓存
-/platforms/blog/site/.astro/
 # 内容单元仓库：母稿编译出来的产物（规格 §4.2）。
 # 它是**所有平台共用的那一半**——契约层与各平台 adapter 真正读的东西，
 # 但它是 build product，所以不入库；CI 里现编。
@@ -40,6 +52,15 @@ __pycache__/
 
 # Superpowers scratch: SDD ledgers, task briefs, review packages.
 .superpowers/
+
+# Agent session scratch (the "remember" ledger the ECC hooks write into
+# whatever directory a session happens to run in). Local bookkeeping only.
+# It must be ignored **from the repo root** — a nested `.gitignore` inside
+# it does not stop git from reporting the directory itself, and
+# `publish/tests/test_real_declarations.py` walks `platforms/` treating every
+# directory as a platform. One scratch dir under `platforms/` would fail
+# that guard for a reason that has nothing to do with the code.
+.remember/
 
 # Agent session scratch (pi/Claude session ids) — local bookkeeping only.
 session.txt
