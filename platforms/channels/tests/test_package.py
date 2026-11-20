@@ -11,6 +11,7 @@ import pytest
 
 from conftest import EP_PATH
 from channels import package, snapshot, state
+from pyv import episodes
 
 
 def test_build_package_writes_every_file(meta, video, tmp_path):
@@ -216,7 +217,7 @@ def test_the_cli_packages_and_marks_an_episode(episode_dir, tmp_path, monkeypatc
     assert state_data["episodes"][EP_PATH]["status"] == "published"
     assert state_data["episodes"][EP_PATH]["published_url"] == url
 
-    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__channels.json")
+    shot = json.loads((tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__channels.json")
                       .read_text(encoding="utf-8"))
     assert shot["status"] == "published"
     assert shot["published_url"] == url

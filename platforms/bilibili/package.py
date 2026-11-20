@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 
-from pyv import epmeta, preflight
+from pyv import epmeta, episodes, preflight
 
 from bilibili import assets, contract, snapshot, state, subtitle
 
@@ -283,7 +283,8 @@ def build_package(
     `subtitle_events` 给了就把字幕转成 `subtitle.srt` 一并放进包里。
 
     **参数是字幕事件，不是 storyboard 对象**：adapter 只能 import
-    `pyv.epmeta` 与 `pyv.preflight`（规格 §3.3），碰不到 `pyv.timeline`。
+    `pyv.epmeta`、`pyv.preflight` 与 `pyv.episodes`（坐标/路径助手，规格 §3.3），
+    碰不到 `pyv.timeline`。
     读 storyboard 的活儿由调用方（CLI）用 `subtitle.events_from_storyboard()` 做。
     """
     copy = contract.slice_copy(meta)
@@ -413,7 +414,7 @@ def build_package(
     )
     outbox = Path(outbox_dir) if outbox_dir else snapshot.OUTBOX_DIR
     snapshot.write_snapshot(
-        outbox / f"{episode}__bilibili.json",
+        outbox / f"{episodes.ep_id(episode)}__bilibili.json",
         episode=episode,
         status=status,
         title=copy.title,

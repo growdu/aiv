@@ -13,6 +13,7 @@ from PIL import Image
 
 from bilibili import assets, package, snapshot, state
 from conftest import EP_PATH, publish_payload, reprint_payload, write_episode
+from pyv import episodes
 
 
 # --- 产物结构 ----------------------------------------------------------------
@@ -307,6 +308,29 @@ def test_the_package_writes_an_outbox_snapshot(meta, video, tmp_path):
     assert not Path(data["package_dir"]).is_absolute(), f"package_dir 是绝对路径：{data['package_dir']}"
 
 
+def test_the_outbox_snapshot_is_flat(meta, video, tmp_path):
+    """outbox 是**入库目录**——文件名扁平，不许在它下面长出一层一层的目录。
+
+    今天写的是 ``outbox/<系列>/<合集>/<文档>/<档位>__bilibili.json``——
+    于是入库目录里长出四层中文目录，CI 里那条「入库目录里只允许有 git 跟踪的
+    文件」的守卫就红。
+    """
+    outbox = tmp_path / "outbox"
+    episode = "演示系列/演示合集/夹具文档/short"
+    # ⚠️ **元数据的 episode 必须跟着换**（裁决 T8-1）：
+    # `build_package` 会拿 `episode` 去比 `meta.episode`
+    # （`epmeta.check_meta` 的 `contract_episode`，`epmeta.py:214`），
+    # 不一致就是一条 **error** 级的 finding → `build_package` 直接抛
+    # `PackageError`（`package.py:296`）——用例会**因为另一个原因**红。
+    # `EpisodeMeta` 是 `@dataclass(frozen=True)`，用 `dataclasses.replace` 换掉。
+    # （这个测试文件**已经** `import dataclasses`。）
+    meta4 = dataclasses.replace(meta, episode=episode)
+    package.build_package(episode, meta4, video, tmp_path / "out", outbox_dir=outbox)
+    names = sorted(p.relative_to(outbox).as_posix()
+                   for p in outbox.rglob("*") if p.is_file())
+    assert names == ["演示系列-演示合集-夹具文档-short__bilibili.json"]
+
+
 def test_the_snapshot_reads_the_automation_from_the_capability_file(meta, video, tmp_path, outbox):
     """档位由能力声明说了算，不能写死。
 
@@ -569,7 +593,7 @@ def test_the_cli_packages_and_marks_an_episode(episode_dir, tmp_path, monkeypatc
     assert state_data["episodes"][EP_PATH]["status"] == "published"
     assert state_data["episodes"][EP_PATH]["published_url"] == url
 
-    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__bilibili.json")
+    shot = json.loads((tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__bilibili.json")
                       .read_text(encoding="utf-8"))
     assert shot["status"] == "published"
     assert shot["published_url"] == url
@@ -632,7 +656,7 @@ def test_marking_drafted_keeps_it_unpublished(episode_dir, tmp_path, monkeypatch
     assert state_data["episodes"][EP_PATH]["status"] == "drafted"
     assert state_data["episodes"][EP_PATH]["published_url"] is None
 
-    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__bilibili.json")
+    shot = json.loads((tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__bilibili.json")
                       .read_text(encoding="utf-8"))
     assert shot["status"] == "drafted"
     assert shot["published_url"] is None

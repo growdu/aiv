@@ -23,7 +23,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pyv import epmeta, preflight
+from pyv import epmeta, episodes, preflight
 
 from douyin import assets, contract, snapshot, state
 
@@ -454,7 +454,7 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
     }.get(status, "人工发布后回填")
     outbox = Path(outbox_dir) if outbox_dir else snapshot.OUTBOX_DIR
     snapshot.write_snapshot(
-        outbox / f"{episode}__douyin.json",
+        outbox / f"{episodes.ep_id(episode)}__douyin.json",
         episode=episode, status=status, title=copy.title,
         package_dir=repo_relative(target), published_url=published_url,
         reason=reason,

@@ -42,8 +42,10 @@ CONFIG := $(PY) -m pyv.cli config
 
 EP ?=
 EPISODE_DIR := $(if $(strip $(EP)),$(ROOT)/episodes/$(EP))
-# 期路径压平成一个文件名片段（斜杠 → 连字符）。片段与成片都用它，
-# 免得 out/ 下面长出一层一层的目录。
+# 期路径压平成一个文件名片段（斜杠 → 连字符）。**只有片段目录用它**——
+# 片段是中间产物，落在 build/ 下面，用一个扁平名就够。
+# **成片不用它**：成片按期分目录（out/<系列>/<合集>/<文档>/<档位>.mp4），
+# 一眼看出它属于哪一期。
 EP_ID := $(subst /,-,$(EP))
 SCRIPT := $(EPISODE_DIR)/口播稿.md
 CONTRACT := $(EPISODE_DIR)/contract.json
@@ -56,7 +58,8 @@ BGM_ARG := $(if $(strip $(BGM)),--bgm $(BGM))
 
 # 片段目录按期分开：各期的段 id 会重名（s01…），共用一个目录会互相覆盖。
 BUILD := $(ROOT)/build/$(EP_ID)
-OUT := $(ROOT)/out/$(EP_ID).mp4
+# 成片按期分目录：期路径原样（斜杠就是目录分隔符）。
+OUT := $(ROOT)/out/$(EP).mp4
 
 # 无品牌导流版：抖音这一档用。去掉品牌片头/片尾，落版标签也不带品牌名——
 # 抖音禁「过度营销信息」与站外引流，片头整屏字标与片尾的 growdu.cn 胶囊
@@ -66,7 +69,7 @@ OUT := $(ROOT)/out/$(EP_ID).mp4
 # 带品牌片的片段当成可复用的（成片的 sha256 变了才发现，已经晚了）。
 NOBRAND_STORYBOARD := $(EPISODE_DIR)/storyboard__nobrand.json
 NOBRAND_BUILD := $(ROOT)/build/$(EP_ID)__nobrand
-NOBRAND_OUT := $(ROOT)/out/$(EP_ID)__nobrand.mp4
+NOBRAND_OUT := $(ROOT)/out/$(EP)__nobrand.mp4
 
 # 无标牌形象（抖音这一档备用）：胸口那枚铭牌也是品牌标识，
 # 被判「过度营销信息」时用它重出片。**默认不换**——铭牌占比极小，
@@ -82,7 +85,7 @@ CHARACTER_FLAG := $(if $(NOBADGE),$(if $(NOBADGE_CHAR),--character $(NOBADGE_CHA
 VERTICAL_ALIGNED := $(EPISODE_DIR)/storyboard__vertical_aligned.json
 VERTICAL_STORYBOARD := $(EPISODE_DIR)/storyboard__vertical.json
 VERTICAL_BUILD := $(ROOT)/build/$(EP_ID)__vertical
-VERTICAL_OUT := $(ROOT)/out/$(EP_ID)__vertical.mp4
+VERTICAL_OUT := $(ROOT)/out/$(EP)__vertical.mp4
 
 .PHONY: all test doctor validate align brand render compose nobrand vertical probe persona bgm mix-verify topics pronunciation review review-text review-video review-frames clean require-EP
 
@@ -197,4 +200,4 @@ review-frames: require-EP
 	$(PY) -m pyv.cli review frames --episode $(EP)
 
 clean:
-	rm -rf $(BUILD) $(ROOT)/out/$(EP_ID).mp4
+	rm -rf $(BUILD) $(OUT)

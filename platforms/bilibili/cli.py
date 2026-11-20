@@ -15,7 +15,7 @@ import os
 import sys
 from pathlib import Path
 
-from pyv import epmeta
+from pyv import epmeta, episodes
 
 from bilibili import notify, package, snapshot, state, subtitle
 
@@ -29,7 +29,12 @@ def _video_path(episode: str) -> Path:
 
 
 def _storyboard_path(episode: str) -> Path:
-    return AIV_ROOT / f"storyboard_{episode}.json"
+    """时间轴在**期目录里**：流水线写在那里（`align` 的产物）。
+
+    以前找的是 `video/storyboard_<期路径>.json`——那个地方流水线从来不写，
+    于是 B站的字幕轨**永远出不来**。
+    """
+    return AIV_ROOT / "episodes" / episode / "storyboard.json"
 
 
 def _title_of(meta) -> str:
@@ -42,9 +47,9 @@ def _subtitle_events(episode: str):
     **没有就返回空列表**，不是报错：字幕是加分项，
     没有字幕的片子照样能发（只是没字幕轨）。
 
-    这里不 import `pyv.timeline`——adapter 只 import `epmeta` 与 `preflight`
-    （规格 §3.3）。storyboard 是本机产物，读它不违反「只读元数据与能力声明」，
-    因为它不是另一个平台的接口。
+    这里不 import `pyv.timeline`——adapter 只 import `epmeta`、`preflight`
+    与 `episodes`（坐标/路径助手，规格 §3.3）。storyboard 是本机产物，
+    读它不违反「只读元数据与能力声明」，因为它不是另一个平台的接口。
     """
     path = _storyboard_path(episode)
     if not path.is_file():
@@ -166,7 +171,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
     reason = ("人工发布后回填" if args.state == "published"
               else "已存草稿，未投稿")
     snapshot.write_snapshot(
-        outbox / f"{args.episode}__bilibili.json",
+        outbox / f"{episodes.ep_id(args.episode)}__bilibili.json",
         episode=args.episode, status=args.state, title=title,
         # 相对路径：快照要入库，绝对路径换台机器就对不上
         package_dir=package.repo_relative(target),

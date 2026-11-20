@@ -11,7 +11,7 @@ import os
 import sys
 from pathlib import Path
 
-from pyv import epmeta
+from pyv import epmeta, episodes
 
 from channels import notify, package, snapshot, state
 
@@ -132,7 +132,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
 
     outbox = Path(args.outbox) if args.outbox else snapshot.OUTBOX_DIR
     snapshot.write_snapshot(
-        outbox / f"{args.episode}__channels.json",
+        outbox / f"{episodes.ep_id(args.episode)}__channels.json",
         episode=args.episode, status=args.state, title=title,
         # 相对路径：快照要入库，绝对路径换台机器就对不上
         package_dir=package.repo_relative(target), published_url=published_url,

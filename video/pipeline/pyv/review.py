@@ -579,7 +579,7 @@ def check_text(episode: str) -> Report:
 def load_media(episode: str) -> Media:
     """装齐成片层的输入。产物不在就记 note，不静默跳过。"""
     notes: list[str] = []
-    video = AIV_ROOT / "out" / f"{episodes.ep_id(episode)}.mp4"
+    video = episodes.cut_path(episode)
     if not video.is_file():
         notes.append(f"成片不在本机（{video}）：成片层整体跳过")
         video = None
