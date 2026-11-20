@@ -1,6 +1,6 @@
 # wechat — 博客到公众号的转换与自动发布
 
-把站点的内容单元副本（`platforms/blog/site/src/content/units/`）转换成公众号可直接发布的 HTML，并推送到公众号草稿箱。
+把内容单元仓库（`content/units/`）转换成公众号可直接发布的 HTML，并推送到公众号草稿箱。
 
 ## 现状
 
@@ -70,9 +70,9 @@
 ## 快速开始
 
 ```bash
-# 1. 生成内容单元并同步进站点（首次或改动 docs/ 后，约 3 分钟）
+# 1. 生成内容单元（首次或改动 docs/ 后，约 3 分钟）
+#    公众号 adapter 直接读 content/units/，不需要先同步进站点
 python3 tools/build-content-units.py
-python3 platforms/blog/site/tools/sync-content.py
 
 # 2. 盘点：哪些文章能发，哪些不能，为什么
 cd platforms && python3 -m wechat.cli scan

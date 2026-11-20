@@ -142,7 +142,7 @@
 | 内容编译 | `tools/build-content-units.py` | `docs/` → `content/units/`：推导 front matter（标题、描述、日期、分类链），**正文一个字不改** |
 | 视频内容单元 | `tools/build-video-pages.py` | 视频线的口播稿 → `content/units/video/`（母稿在 `video/` 那一线） |
 | 学习流编译 | `platforms/blog/site/tools/build-learning-path.py` | 规则表（`site/data/learning-path.json`）+ 内容单元 → `site/data/learning-path.compiled.json`。**漏归类 = 构建失败** |
-| 内容同步 | `platforms/blog/site/tools/sync-content.py` | `content/units/` → `site/src/content/units/`；`docs/` 的图片 → `site/public/images/`；mermaid 自托管 → `site/public/js/` |
+| 内容同步 | `platforms/blog/site/tools/sync-content.py` | `content/units/` → `site/src/content/units/`；`content/units/images/` 的图片 → `site/public/images/`；mermaid 自托管 → `site/public/js/` |
 | 渲染 | `platforms/blog/site/src/` | Astro 工程：页面、组件、布局；链接与图片重写、mermaid 转换在 `site/src/lib/` 的 remark/rehype 插件里 |
 | 围栏体检 | `platforms/blog/site/tools/check-markdown.py` | 扫 `docs/` 与 `drafts/`：畸形围栏、表格列数、mermaid 块…… |
 | 站点守卫 | `platforms/blog/site/tests/` | 学习流归属、死链、页面齐全（26 个用例） |
@@ -328,7 +328,7 @@
 ```bash
 # 站点（在 platforms/blog/site/ 里）
 npm run compile       # 学习流规则表 + 内容单元 → site/data/learning-path.compiled.json
-npm run sync          # 内容单元 → site/src/content/units/；docs/ 的图片 → public/images/
+npm run sync          # 内容单元 → site/src/content/units/；content/units/images/ → public/images/
 npm run build         # compile + sync + astro build（产物在 site/dist/）
 npm run preview       # 本地预览
 npm test              # 站点自己的守卫测试（26 个用例）
