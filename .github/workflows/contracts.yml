@@ -54,9 +54,17 @@ jobs:
           python-version: '3.12'
 
       - name: Install system dependencies
+        # fonts-noto-cjk：中文字形。
+        # ffmpeg：**视频平台 adapter 的套件要现场造一段 3 秒的小视频**当成片
+        #   （`tests/conftest.py` 的 `make_video` 夹具调 ffmpeg 编码）。
+        #   runner 镜像里没有它 → 抖音 / B站 / 视频号三条 step 全在夹具阶段
+        #   就炸，一个断言都没跑到——闸门红着，却看不出红的是「契约被破」
+        #   还是「机器上少个程序」。
+        #   （视频流水线自己那套依赖在 video-pipeline.yml 里装，那边还要
+        #     cairo 与字体。）
         run: |
           sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk
+          sudo apt-get install -y fonts-noto-cjk ffmpeg
 
       - name: Install python dependencies
         run: |
