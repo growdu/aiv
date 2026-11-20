@@ -451,10 +451,10 @@ class ContentContract:
 
     @property
     def is_publish_candidate(self) -> bool:
-        """这篇算不算发布候选：``platforms`` 非空、**且不是分类页**（06 规格 §3.2）。
+        """这篇算不算发布候选。
 
-        分类页（``kind == "category"``）是站点的东西——一级目录的落地页，
-        不是要发给平台的稿子。
+        规则只有一份，在 :func:`is_publish_candidate` 里——本属性是它在
+        内容契约自己身上的那一层壳，**别处不许再抄一份判断**。
         """
         return is_publish_candidate(self)
 
