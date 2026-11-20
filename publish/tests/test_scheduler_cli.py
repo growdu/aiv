@@ -219,7 +219,7 @@ def workspace(tmp_path):
 
 
 def test_a_bad_argument_exits_with_one(workspace):
-    """参数错是 1——2 在这一层是「这一篇不合格」，不能共用。"""
+    """参数错是 1——2 在这一层是「缺前置条件」，不能共用。"""
     with pytest.raises(SystemExit) as error:
         main(["schedule", "weekly", "--nonsense"])
 
@@ -393,7 +393,7 @@ def test_an_interface_error_is_recorded_in_the_outbox(workspace):
 
 
 def test_an_ineligible_article_is_never_retried_automatically(workspace):
-    """这一篇不合格（退出码 2）→ 转人工，不自动重试。"""
+    """缺前置条件没满足（退出码 2）→ 转人工，不自动重试。"""
     workspace.set_mode("db/demo", "ineligible")
 
     code = main(workspace.argv("schedule", "weekly"))

@@ -22,8 +22,8 @@
 
 ===  ==========================================
 0    成功
-1    参数或配置错误
-2    这一篇不合格
+1    参数或配置写错了
+2    缺前置条件：东西还没有 / 还不够
 3    接口或写盘错误
 ===  ==========================================
 
@@ -107,7 +107,7 @@ _REVIEW_MARKERS = (
 class _Parser(argparse.ArgumentParser):
     """参数错了退出码是 1（不是 argparse 默认的 2）。
 
-    2 在这一层的约定里是「这一篇不合格」，参数写错与「不合格」是两回事，
+    2 在这一层的约定里是「缺前置条件」，参数写错与「缺前置条件」是两回事，
     不能共用一个退出码。
     """
 
@@ -526,20 +526,20 @@ def publish_one(
 
     if not adapter_wrote:
         if result.code == EXIT_INELIGIBLE:
-            # 不合格：不是发布尝试，但**要记下来**，否则它会一直霸占
+            # 缺前置条件：不是发布尝试，但**要记下来**，否则它会一直霸占
             # 「最久未发」的位置（§7.4）。不自动重试。
             write_snapshot(
                 config,
                 content_id,
                 platform,
                 status="failed",
-                reason="adapter 报这一篇不合格：{}".format(reason),
+                reason="adapter 报前置条件没满足：{}".format(reason),
                 title=title,
                 automation=capability.automation,
                 retryable=False,
             )
             return EXIT_INELIGIBLE, [
-                "{} → {}：不合格（{}），已记进 outbox，转人工。".format(
+                "{} → {}：前置条件没满足（{}），已记进 outbox，转人工。".format(
                     content_id, platform, reason
                 )
             ]
@@ -596,7 +596,7 @@ def _titles_of(units) -> dict:
 class _Publisher:
     """把「发一篇到某个平台」这件事包起来，顺带记住退出码。
 
-    退出码取最严重的那个：接口错误（3）比「这一篇不合格」（2）严重。
+    退出码取最严重的那个：接口错误（3）比「缺前置条件」（2）严重。
 
     **成功时不说话**：成功的话由调度层那一句「成功」交代（两层各说一遍
     是噪声）；只有出问题时它才开口——那时候要说的是**为什么**。
