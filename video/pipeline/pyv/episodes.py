@@ -148,8 +148,8 @@ def cut_path(ep: str) -> Path:
     """成片的路径：out/<系列>/<合集>/<文档>/<档位>.mp4。
 
     **一处算，两处用**——``pyv/cli.py`` 的 preflight 与 ``pyv/review.py``
-    的成片层今天各算一遍（两处都写着 ``episodes.ep_id(...)``），
-    改的时候漏一处就找不到成片了。
+    的成片层**原来**各算一遍（两处都写着 ``episodes.ep_id(...)``），
+    改的时候漏一处就找不到成片了。现在两处都调它。
     """
     return AIV_ROOT / "out" / f"{ep}.mp4"
 

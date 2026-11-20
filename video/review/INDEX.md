@@ -29,7 +29,7 @@
 ```sh
 cd video/pipeline
 make review-text  EP=<期路径>     # 文本层
-make review-video EP=<期路径>     # 成片层（需要 out/<期路径压平>.mp4）
+make review-video EP=<期路径>     # 成片层（需要 out/<期路径>.mp4）
 make review-frames EP=<期路径>    # 抽帧 + 清单（帧不入库）
 ```
 
