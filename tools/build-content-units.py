@@ -79,16 +79,21 @@ CASCADE_KEY = "cascade"
 #: 编译器把 ``docs/`` 的树镜像进 ``content/units/``，图片仓库就在
 #: ``content/units/images/``。用户建一个叫 ``images`` 的分类目录，
 #: 那一层的内容单元会在同一轮编译里被 ``copy_images()`` 连锅端——
-#: **源文件还在，产物没了**。所以它是保留名（跟 ``video/`` 一个待遇）。
+#: **源文件还在，产物没了**。所以它是**保留名**：编译时跳过 + 清残留时跳过，
+#: **两处都跳**。（跟 ``video/`` **不一样**——那个名字不是保留名，
+#: 见 :data:`RESERVED_UNIT_DIRS`。）
 IMAGES_DIR = "images"
 
-#: 内容单元仓库顶层**被占住**的名字——那一层不装内容单元。
+#: **清残留时跳过**的顶层名字。
 #:
-#: - ``video``：视频单元由 ``tools/build-video-pages.py`` 产出。
-#: - ``images``：图片仓库（``content/units/images/``）。
+#: - ``images``：**保留名**——它是**图片仓库**占着这个名字
+#:   （``content/units/images/``）。编译时跳过 + 清残留时跳过，**两处都跳**。
+#: - ``video``：**不是保留名**——它只是**另一个生产者**
+#:   （``tools/build-video-pages.py``）的产物占着那个名字，
+#:   所以**只有清残留时跳过**；**编译时照编**
+#:   （``docs/video/x.md`` 今天照样编译成 ``content/units/video/x.md``）。
 #:
 #: 用户在 ``docs/`` 下建同名分类，内容单元会跟产物撞在同一层。
-#: 清残留时这些层一律跳过——它们本来就不该有内容单元。
 RESERVED_UNIT_DIRS = {"video", IMAGES_DIR}
 
 H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
@@ -485,6 +490,11 @@ def compile_only(rel_id: str) -> dict:
     平台层（`platforms/blog/cli.py`）问的是这个编译器，不是自己抄一遍规则。
     """
     path = locate_source(rel_id)
+    if path.relative_to(DOCS).parts[0] == IMAGES_DIR:
+        # ⚠️ 顺序：先 locate_source（找不到就是「找不到这一篇」），再判保留名。
+        # 全量编译跳过这一层，--only 也得跳——不然「这一篇能不能进站」会答错。
+        raise CompileError(
+            "images/ 是保留名（图片仓库的位置），这一层不编译成内容单元：{}".format(rel_id))
     unit = build_unit(path)
     rel = unit.path.as_posix()
     unit_id = rel[:-3] if rel.endswith(".md") else rel
@@ -546,7 +556,7 @@ def main() -> int:
         for existing in sorted(CONTENT_UNITS.rglob("*.md")):
             rel = existing.relative_to(CONTENT_UNITS)
             if rel.parts and rel.parts[0] in RESERVED_UNIT_DIRS:
-                continue  # video/ 有别的生产者；images/ 是图片仓库——都不该有内容单元
+                continue  # 清残留时都跳：images/ 是保留名（图片仓库），video/ 是另一个生产者的产物
             if rel not in rendered:
                 problems.append(f"{rel}：内容单元还在，但 docs/ 里已经没有了（撤出的存量没清干净）")
         # 图跟内容单元一样是产物——不同步也要报出来
@@ -567,12 +577,12 @@ def main() -> int:
             target.write_text(text, encoding="utf-8")
             written += 1
 
-    # docs/ 里撤掉但内容单元还在的（除保留层），清掉——它们是撤出存量的残留。
+    # docs/ 里撤掉但内容单元还在的（除 images/ 与 video/ 这两层），清掉——它们是撤出存量的残留。
     removed = 0
     for existing in sorted(CONTENT_UNITS.rglob("*.md")):
         rel = existing.relative_to(CONTENT_UNITS)
         if rel.parts and rel.parts[0] in RESERVED_UNIT_DIRS:
-            continue  # video/ 有别的生产者；images/ 是图片仓库——都不该有内容单元
+            continue  # 清残留时都跳：images/ 是保留名（图片仓库），video/ 是另一个生产者的产物
         if rel not in rendered:
             existing.unlink()
             removed += 1

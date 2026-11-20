@@ -308,3 +308,40 @@ def test_the_compile_only_result_carries_the_category_ids(compiler):
     result = compiler.compile_only("a/b/doc.md")
     assert "category_ids" in result
     assert result["category_ids"] == ["a/_index", "a/b/_index"]
+
+
+def test_the_only_path_refuses_the_reserved_images_directory(compiler):
+    """`--only` 也得认保留名——不然「这一篇能不能进站」会答错。
+
+    平台层问的是编译器（`platforms/blog/cli.py` 跑
+    `build-content-units.py --only <id>`，读 stdout 的 JSON）。
+    全量编译跳过 `docs/images/` 这一层，而 `--only` 不跳 →
+    用户拿到「能进站」，实际那一篇永远不会有页面。
+    """
+    (compiler.DOCS / "images").mkdir(parents=True)
+    (compiler.DOCS / "images" / "foo.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n",
+        encoding="utf-8")
+
+    with pytest.raises(compiler.CompileError):
+        compiler.compile_only("images/foo")
+
+
+def test_the_only_path_says_why_the_reserved_directory_is_refused(compiler):
+    """保留名那句跟「目录链断了」不是一回事——用例得钉住它。
+
+    brief 里那条用例**不造** ``_index.md``，于是 ``build_unit()`` 会先抛
+    「目录链断了」——两条路径都抛 ``CompileError``，那条用例**不区分**
+    编译器到底说了哪一句。本条把目录链补齐（目录链**完整**），
+    于是抛出来的**只可能**是保留名那一句。
+    """
+    (compiler.DOCS / "images").mkdir(parents=True)
+    (compiler.DOCS / "images" / "_index.md").write_text(
+        "---\ntitle: 图\ncascade:\n  categories: [图]\n---\n\n# 图\n", encoding="utf-8")
+    (compiler.DOCS / "images" / "foo.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n",
+        encoding="utf-8")
+
+    with pytest.raises(compiler.CompileError) as error:
+        compiler.compile_only("images/foo")
+    assert "保留名" in str(error.value)
