@@ -520,6 +520,17 @@ def test_source_url_scheme_is_stripped():
     assert result.article.body.endswith("完整版见 example.com")
 
 
+def test_a_blank_site_url_means_no_half_a_sentence():
+    """只有空格的站点地址 = 没有站点地址。
+
+    ``"   ".strip()`` 是空串——不 strip 的话，「完整版见」后面就空着一截，
+    正是这个 Task 要消灭的那种半句话。
+    """
+    result = slice_post(_post(body="正文。"), LIMITS, source_url="   ")
+
+    assert "完整版见" not in result.article.body
+
+
 # ---- 不可发 ----
 
 def test_post_without_any_paragraph_is_skipped():

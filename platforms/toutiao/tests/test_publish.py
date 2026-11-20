@@ -278,6 +278,21 @@ def test_the_checklist_says_the_footer_must_stay_plain_text(tmp_path):
     assert "不是超链接" in lines[0]
 
 
+def test_a_blank_site_url_leaves_the_footer_line_out(tmp_path):
+    """只有空格的站点地址 → 清单里不该有「检查正文末尾」那一行。
+
+    那一行是提醒上传者去核对正文的结尾；正文里没有那句「完整版见 …」，
+    这行就是让人去找一个不存在的句子。
+    """
+    posts, images_root = _site(tmp_path)
+    result = write_package(_article(), CAP, tmp_path / "out", images_root, "   ")
+    lines = [
+        line for line in _readme(result).splitlines()
+        if line.startswith("- [ ] 检查正文末尾")
+    ]
+    assert lines == [], lines
+
+
 def test_the_checklist_says_the_publish_is_two_steps(tmp_path):
     """清单要写清「发表」是**两步**，不是点一下就完事。
 

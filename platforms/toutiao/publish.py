@@ -279,7 +279,7 @@ def write_package(
     _reset_package(package_dir, images_dir)
 
     limits = capability.limits
-    site = source_url.split("://", 1)[-1].rstrip("/")
+    site = source_url.strip().split("://", 1)[-1].rstrip("/")
     # 图落在 ``图片根/单元目录/正文里的路径``——单元目录是内容单元 id 的
     # **目录部分**（``db/x/_index`` 的目录是 ``db/x``；顶层单元是空串）。
     unit_dir = posixpath.dirname(article.content_id)

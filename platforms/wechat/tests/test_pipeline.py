@@ -343,6 +343,20 @@ def test_no_site_url_means_the_draft_is_refused(sample_post, tmp_path, server, m
     assert "SITE_URL" in capsys.readouterr().err
 
 
+def test_the_site_url_is_not_captured_at_import(monkeypatch):
+    """站点地址必须**运行时**读。
+
+    导入时读到的是进程启动那一刻的快照——开发者 shell 里 export 的值
+    会混进来，测试夹具（导入之后才设的）更是根本救不了它。
+    """
+    import importlib
+    import wechat.cli as wechat_cli
+
+    monkeypatch.setenv("SITE_URL", "https://from-the-shell.example/")
+    reloaded = importlib.reload(wechat_cli)
+    assert reloaded.DEFAULT_SOURCE_URL == ""
+
+
 def test_get_draft_reads_the_body_back(sample_post, tmp_path, server, monkeypatch):
     """能读回一篇草稿的正文——这是核对「微信到底存了多少」的唯一办法。"""
     posts_dir, slug = sample_post
@@ -836,6 +850,25 @@ def test_publish_collection_requires_credentials(tmp_path, server, monkeypatch, 
     assert code == 2
     assert "WX_APPID" in capsys.readouterr().err
     assert "/cgi-bin/draft/add" not in _Handler.calls
+
+
+def test_publish_collection_refuses_without_a_site_url(tmp_path, server, monkeypatch, capsys):
+    """合集导览的「阅读原文」也要站点地址——缺了就退 2，一个字节都不上传。
+
+    少了它，归档地址就是一条相对路径（``/docs/…/``），公众号那边点不开。
+    README 承诺过「没有它就拒绝发布」——合集这条路也得兑现。
+    """
+    posts_dir = _series_posts(tmp_path)
+    monkeypatch.setenv("WX_APPID", "appid")
+    monkeypatch.setenv("WX_APPSECRET", "secret")
+    monkeypatch.delenv("SITE_URL", raising=False)
+
+    code = main(["publish-collection", "数据库"]
+                + _args(posts_dir, tmp_path / "out", server=server))
+    assert code == 2, "缺站点地址还把合集导览发出去了"
+    assert "SITE_URL" in capsys.readouterr().err
+    assert "/cgi-bin/draft/add" not in _Handler.calls
+    assert "/cgi-bin/material/add_material" not in _Handler.calls
 
 
 def test_publish_collection_reports_an_unknown_collection(tmp_path, server, monkeypatch, capsys):

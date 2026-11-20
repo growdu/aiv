@@ -84,6 +84,10 @@ cd platforms && python3 -m wechat.cli audit
 cd platforms && python3 -m wechat.cli convert <slug>
 ```
 
+**发布前先重跑编译器**：`content/units/` 是**构建产物**（不进仓库）。
+编译器改了而单元没重跑，单元里会留着旧的署名 → 署名进了内容指纹 →
+**整个草稿箱重发一遍**（正文一个字都没变）。
+
 ## 命令
 
 | 命令 | 作用 |

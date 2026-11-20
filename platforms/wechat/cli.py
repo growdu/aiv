@@ -65,10 +65,11 @@ DEFAULT_POSTS_DIR = CONTENT_UNITS
 # 正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``。
 DEFAULT_IMAGES_DIR = CONTENT_UNIT_IMAGES
 DEFAULT_OUT_DIR = Path(__file__).resolve().parents[0] / "out"
-# 站点根 URL：从环境变量 ``SITE_URL`` 来——**与站点构建用的是同一个变量**
-# （``platforms/blog/site/`` 的 Astro/hexo 配置也读它）。
-# 没有它就是空串：框架不写死任何域名，缺了就响亮地拒绝（退出码 2）。
-DEFAULT_SOURCE_URL = os.environ.get("SITE_URL", "")
+# 站点根 URL：**模块层不读环境变量**。
+#
+# 导入时读到的是**进程启动那一刻**的快照——测试夹具是导入**之后**才设的，
+# 开发者 shell 里 export 的值更会混进来。**唯一一次读在 `main()` 里**（运行时）。
+DEFAULT_SOURCE_URL = ""
 DEFAULT_SECRETS_FILE = Path(__file__).resolve().parents[0] / "secrets.json"
 DEFAULT_COLLECTIONS_FILE = Path(__file__).resolve().parents[0] / "collections.json"
 DEFAULT_REPO_DIR = REPO_ROOT
@@ -1801,6 +1802,13 @@ def cmd_publish_collection(args) -> int:
         print("缺少 WX_APPID / WX_APPSECRET 环境变量", file=sys.stderr)
         return EXIT_REJECTED
 
+    # 站点地址是「阅读原文」的前置条件：缺了它，合集导览的归档地址就是
+    # 一条相对路径（``/docs/…/``）——公众号那边点不开。跟单篇那一条同一道
+    # 检查，且必须在**任何上传之前**（封面、草稿一个字都还没发出去）。
+    if not args.source_url.strip():
+        print(_NO_SITE_URL, file=sys.stderr)
+        return EXIT_REJECTED
+
     html = collection_module.render_collection_index(collection, args.source_url)
     if len(html) > _limit(args):
         print("合集导览正文 {} 字符，超过上限 {} 字符，已拒绝发布".format(
@@ -2130,11 +2138,12 @@ def main(argv=None) -> int:
         return EXIT_USAGE
     args.appid = args.appid or os.environ.get("WX_APPID", "")
     args.appsecret = args.appsecret or os.environ.get("WX_APPSECRET", "")
-    # 站点地址：**运行时**才读环境变量。模块顶层那份
-    # ``DEFAULT_SOURCE_URL`` 是**导入时**求的（导入之后才设上的环境变量它
-    # 看不见）；这一行才是运行时那唯一一次读——少一个域名，公众号的
-    # 「阅读原文」就成了一条点不开的相对路径。
-    args.source_url = os.environ.get("SITE_URL", args.source_url)
+    # 站点地址：**运行时**才读环境变量——这是**唯一**一次读。
+    # 命令行 beats 环境变量：跟这个文件里其余每一个环境变量兜底一样
+    # （`args.cover` / `args.notify` / `args.appid`……），也跟头条那边
+    # `_fill_defaults` 一样。模块层那份 `DEFAULT_SOURCE_URL` 只是空串，
+    # 它**不是**「导入时的环境变量」。
+    args.source_url = args.source_url or os.environ.get("SITE_URL", "")
     args.cover = args.cover or os.environ.get("WX_COVER", "")
     args.notify = args.notify or os.environ.get("WX_NOTIFY", "")
     args.notify_key = args.notify_key or os.environ.get("WX_NOTIFY_KEY", "")

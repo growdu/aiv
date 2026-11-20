@@ -439,7 +439,7 @@ def slice_post(post: SourcePost, limits: Limits, source_url: str = "") -> SliceR
         digest = digest[: limits.digest_chars]
         notes.append("摘要已裁剪到 {} 字".format(limits.digest_chars))
 
-    site = source_url.split("://", 1)[-1].rstrip("/")
+    site = source_url.strip().split("://", 1)[-1].rstrip("/")
     # 没有站点地址 → **整句不放**：留一个「完整版见 」是半句话，
     # 读者点不开，编辑看着也像出了错。
     tail = "完整版见 {}".format(site) if site else ""

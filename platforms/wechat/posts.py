@@ -221,6 +221,9 @@ def load_post(path: Path, posts_dir: Path) -> Post:
     # 署名是**内容**：母稿写了就带上，没写就是空的。框架不替使用者决定。
     author = fields.get("author") or ""
     if not isinstance(author, str):
+        # front matter 的值**不保证是字符串**（`author: 42`、`author: [...]`）。
+        # 不是字符串就**当没有署名**——不要「顺手」改成 `str(...)`：那是把
+        # 别人的写法印在草稿的落款上。
         author = ""
 
     return Post(
