@@ -598,7 +598,7 @@ def _write_mother(tmp_path):
 
 def test_the_whole_chain_produces_the_expected_html(tmp_path):
     post = _write_mother(tmp_path)
-    sliced = slice_post(post, LIMITS)
+    sliced = slice_post(post, LIMITS, source_url="https://growdu.cn")
     assert sliced.article is not None
     result = render(sliced.article)
 
@@ -621,7 +621,7 @@ def test_the_whole_chain_produces_the_expected_html(tmp_path):
 
 def test_the_whole_chain_produces_the_expected_text(tmp_path):
     post = _write_mother(tmp_path)
-    sliced = slice_post(post, LIMITS)
+    sliced = slice_post(post, LIMITS, source_url="https://growdu.cn")
     result = render(sliced.article)
 
     assert result.text == "\n\n".join([
@@ -676,7 +676,7 @@ def test_the_whole_chain_produces_a_paste_ready_html(tmp_path):
 
 def test_the_whole_chain_text_has_no_tags(tmp_path):
     post = _write_mother(tmp_path)
-    result = render(slice_post(post, LIMITS).article)
+    result = render(slice_post(post, LIMITS, source_url="https://growdu.cn").article)
 
     assert _tags_in(result.text) == []
     assert "完整版见 growdu.cn" in result.text

@@ -499,9 +499,20 @@ def test_long_body_is_truncated_and_noted():
 
 
 def test_body_ends_with_the_plain_site_mention():
-    result = slice_post(_post(body="正文。"), LIMITS)
+    result = slice_post(_post(body="正文。"), LIMITS, source_url="https://growdu.cn")
     assert result.article.body.endswith("完整版见 growdu.cn")
     assert "http" not in result.article.body
+
+
+def test_no_site_url_means_no_half_a_sentence():
+    """没有站点地址时，「完整版见」后面不能空着一截。
+
+    今天 ``source_url`` 写死成 ``https://growdu.cn``；改成从缝里取之后，
+    没配 ``SITE_URL`` 就得**整句不放**——不能留一个「完整版见 」。
+    """
+    result = slice_post(_post(body="正文。"), LIMITS, source_url="")
+
+    assert "完整版见" not in result.article.body
 
 
 def test_source_url_scheme_is_stripped():

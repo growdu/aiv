@@ -126,3 +126,39 @@ def test_a_picture_that_cannot_be_downloaded_stays_a_human_job(tmp_path, picture
     assert not (result.package_dir / "images" / "01.webp").exists()
     readme = (result.package_dir / "README.md").read_text(encoding="utf-8")
     assert "需人工下载" in readme
+
+
+def test_the_downloader_never_fakes_a_referer():
+    """**框架不替请求指定 Referer**（规格 §三）。
+
+    今天下载器在 403 之后会**换个写死的 Referer 再试一遍**（防盗链常常就松口了），
+    那个 Referer 是站名——而防盗链是**站点的**事，框架不该替它编一个。
+
+    这条用例自己起一个会记账的假图床：每次请求的头都记下来。
+    """
+    seen = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):  # noqa: N802 -- BaseHTTPRequestHandler 的约定
+            seen.append(dict(self.headers))
+            self.send_response(403)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = "http://127.0.0.1:{}/x.png".format(server.server_port)
+        with pytest.raises(AssetUnreachable):
+            fetch_remote_asset(url)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert not any("referer" in {k.lower() for k in headers} for headers in seen), \
+        "框架不该替请求指定 Referer"
+    assert len(seen) == 1, "403 不该重试——重试只是白等一个超时"

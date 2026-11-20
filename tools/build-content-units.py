@@ -308,7 +308,9 @@ def build_unit(path: Path) -> Unit:
         path=rel,
         title=title,
         date=str(date),
-        author=str(fm.get("author") or "growdu"),
+        # 署名是**内容**：母稿写了就带上，没写就是空的。
+        # 编译器不替使用者决定署名。
+        author=str(fm.get("author") or ""),
         description=description,
         kind="category" if is_index else "document",
         categories=categories,

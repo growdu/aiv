@@ -16,7 +16,7 @@ from wechat.cli import (_docs_changed, _drop_batch_lock, _fingerprint, _git,
                        _render_parts, _take_batch_lock, main)
 from wechat.assets import prepare_image
 from wechat.material import MaterialCache
-from wechat.posts import CONTENT_LIMIT, DEFAULT_AUTHOR, load_post
+from wechat.posts import CONTENT_LIMIT, load_post
 from wechat.publish import WeChatClient
 
 # The tests below are about how an article is cut, so they pin the
@@ -291,13 +291,13 @@ def test_the_fingerprint_of_an_untouched_article_does_not_move(tmp_path):
     send.  If the fingerprint of an article whose title did not change
     moves, all of them are sent again for no reason.
 
-    The default author is left out of the hash for the same reason: the
-    drafts in the box were made with it, and counting it would move the
-    hash of every article in the corpus.
+    The empty byline is left out of the hash for the same reason: the
+    drafts in the box were made without one, and counting it would move
+    the hash of every article in the corpus.
     """
     post = _post_with_title(tmp_path, "一个短标题")
     tag = "<p>分类</p>"
-    assert _fingerprint(post, tag, CONTENT_LIMIT, DEFAULT_AUTHOR) == _legacy_fingerprint(
+    assert _fingerprint(post, tag, CONTENT_LIMIT, "") == _legacy_fingerprint(
         post, tag, CONTENT_LIMIT)
 
 
@@ -305,7 +305,7 @@ def test_the_fingerprint_moves_when_the_title_is_shortened(tmp_path):
     """A title that was cut has to reach the drafts that carry it."""
     post = _post_with_title(tmp_path, "主标题在这里：{}".format("副标题" * 20))
     tag = "<p>分类</p>"
-    assert _fingerprint(post, tag, CONTENT_LIMIT, DEFAULT_AUTHOR) != _legacy_fingerprint(
+    assert _fingerprint(post, tag, CONTENT_LIMIT, "") != _legacy_fingerprint(
         post, tag, CONTENT_LIMIT)
 
 
@@ -313,7 +313,7 @@ def test_publish_creates_draft_with_expected_payload(sample_post, tmp_path, serv
     posts_dir, slug = sample_post
     monkeypatch.setenv("WX_APPID", "appid")
     monkeypatch.setenv("WX_APPSECRET", "secret")
-    monkeypatch.setenv("WX_SOURCE_URL", "https://growdu.cn")
+    monkeypatch.setenv("SITE_URL", "https://growdu.cn")
 
     code = main(["publish", slug] + _args(posts_dir, tmp_path / "out", server=server))
     assert code == 0
@@ -325,6 +325,22 @@ def test_publish_creates_draft_with_expected_payload(sample_post, tmp_path, serv
     assert article["thumb_media_id"] == "COVER_ID"
     assert len(article["digest"]) <= 120
     assert "参考链接" in article["content"]
+
+
+def test_no_site_url_means_the_draft_is_refused(sample_post, tmp_path, server, monkeypatch, capsys):
+    """公众号的「阅读原文」需要站点地址；没有就响亮地拒绝。
+
+    少了它，``content_source_url`` 会变成 ``/docs/xxx/``——一个相对路径，
+    公众号那边点不开。所以这是**缺前置条件**（退出码 2），不是「发出去再说」。
+    """
+    posts_dir, slug = sample_post
+    monkeypatch.setenv("WX_APPID", "appid")
+    monkeypatch.setenv("WX_APPSECRET", "secret")
+    monkeypatch.delenv("SITE_URL", raising=False)
+
+    code = main(["publish", slug] + _args(posts_dir, tmp_path / "out", server=server))
+    assert code == 2, "缺站点地址还把草稿发出去了"
+    assert "SITE_URL" in capsys.readouterr().err
 
 
 def test_get_draft_reads_the_body_back(sample_post, tmp_path, server, monkeypatch):

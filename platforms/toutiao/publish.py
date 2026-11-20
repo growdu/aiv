@@ -229,7 +229,7 @@ def write_package(
     capability: Capability,
     package_root: Path,
     images_root: Path,
-    source_url: str = "https://growdu.cn",
+    source_url: str = "",
     fetch_remote: bool = False,
 ) -> PackageResult:
     """Write the manual publish package for one article.
@@ -480,9 +480,12 @@ def write_package(
             )
         )
 
-    checklist.append(
-        "- [ ] 检查正文末尾是纯文本「完整版见 {}」，不是超链接".format(site)
-    )
+    if site:
+        # 没有站点地址 → 正文末尾**没有**那句「完整版见 …」，
+        # 清单就不该让人去找它（那是个不存在的句子）。
+        checklist.append(
+            "- [ ] 检查正文末尾是纯文本「完整版见 {}」，不是超链接".format(site)
+        )
     # 2026-11-13 实测：平台的发表是**两步**——点「预览并发布」只弹「预览确认发布」
     # 面板，面板里的「确认发布」才真的发。清单只写「发表」，操作的人点完第一下
     # 以为发出去了就收工，文章根本没出去。

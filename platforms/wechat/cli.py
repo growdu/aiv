@@ -47,7 +47,7 @@ from . import version as version_module
 from .capability import default_capability_path, load_exit_codes
 from .mdparse import parse
 from .posts import (AUTHOR_LIMIT, BODY_LIMIT, CONTENT_BYTES_LIMIT, CONTENT_LIMIT,
-                    DEFAULT_AUTHOR, DIGEST_LIMIT, TITLE_LIMIT, check_eligibility,
+                    DIGEST_LIMIT, TITLE_LIMIT, check_eligibility,
                     discover, load_post, resolve_content_limit)
 from .state import PublishState, StateStore, needs_submit
 
@@ -65,7 +65,10 @@ DEFAULT_POSTS_DIR = CONTENT_UNITS
 # 正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``。
 DEFAULT_IMAGES_DIR = CONTENT_UNIT_IMAGES
 DEFAULT_OUT_DIR = Path(__file__).resolve().parents[0] / "out"
-DEFAULT_SOURCE_URL = "https://growdu.cn"
+# 站点根 URL：从环境变量 ``SITE_URL`` 来——**与站点构建用的是同一个变量**
+# （``platforms/blog/site/`` 的 Astro/hexo 配置也读它）。
+# 没有它就是空串：框架不写死任何域名，缺了就响亮地拒绝（退出码 2）。
+DEFAULT_SOURCE_URL = os.environ.get("SITE_URL", "")
 DEFAULT_SECRETS_FILE = Path(__file__).resolve().parents[0] / "secrets.json"
 DEFAULT_COLLECTIONS_FILE = Path(__file__).resolve().parents[0] / "collections.json"
 DEFAULT_REPO_DIR = REPO_ROOT
@@ -76,6 +79,10 @@ DEFAULT_STAMP_FILE = Path(__file__).resolve().parents[0] / "out" / ".auto-draft-
 # this corpus has none, and a draft with no cover is not something
 # WeChat accepts.
 DEFAULT_COVER = Path(__file__).resolve().parents[0] / "assets" / "default-cover.png"
+
+#: 缺站点地址时说的那句话。它说的是**要配什么**（``SITE_URL``），
+#: 退出码说的是**这是哪一类**（2 = 缺前置条件，不是 1 = 命令写错了）。
+_NO_SITE_URL = "缺少站点地址：请配置环境变量 SITE_URL（公众号的「阅读原文」需要它）"
 
 #: 退出码的**出处**：契约层定死的那张表（`publish/publishkit/exit_codes.py`），
 #: 声明在能力声明的 `[exit]` 段里——数据是数据，规则变了改 TOML。
@@ -149,6 +156,21 @@ class Branding:
     summary: str
 
 
+def _author_of(post, args) -> str:
+    """The byline this article is published under.
+
+    An explicit ``--author`` wins; without one the article's own
+    ``author`` field is used -- the ``author:`` of the content unit's
+    front matter, which the compiler copied from the mother draft.
+
+    The byline is **content**: the framework does not decide it, and it
+    does not fall back to a name of its own.  Every place that prints or
+    counts it asks here, so the signature, the fingerprint, the draft
+    payload and the length check all speak about the same byline.
+    """
+    return args.author or post.author
+
+
 def _branding(post, args) -> Branding:
     """The body of an article and the brand elements that go with it."""
     blocks = parse(post.body)
@@ -158,7 +180,7 @@ def _branding(post, args) -> Branding:
     return Branding(
         blocks=blocks,
         card=brand_module.byline_html(byline),
-        signature=brand_module.signature_html(args.author),
+        signature=brand_module.signature_html(_author_of(post, args)),
         summary=summary,
     )
 
@@ -227,9 +249,9 @@ def _fingerprint(post, tag_html: str, limit: int, author: str) -> str:
     from this hash, which meant that changing ``--author`` looked like
     it did nothing -- the drafts kept the old signature.
 
-    The **default** author does not count, though, for the same reason
+    The **empty** byline does not count, though, for the same reason
     the shortened title does not: the drafts that are already in the box
-    were made with it, and counting it would change the hash of every
+    were made without one, and counting it would change the hash of every
     article and send all of them again for no change in their content.
     """
     digest = hashlib.sha256()
@@ -244,7 +266,7 @@ def _fingerprint(post, tag_html: str, limit: int, author: str) -> str:
     digest.update(tag_html.encode("utf-8"))
     digest.update(b"\x00")
     digest.update(str(limit).encode("utf-8"))
-    if author != DEFAULT_AUTHOR:
+    if author:
         digest.update(b"\x00")
         digest.update(author.encode("utf-8"))
     return digest.hexdigest()
@@ -965,7 +987,7 @@ def _draft_parts(client, store, post, args) -> list:
     whole corpus cheap.
     """
     tag = _category_tag(post, args)
-    fingerprint = _fingerprint(post, tag, _limit(args), args.author)
+    fingerprint = _fingerprint(post, tag, _limit(args), _author_of(post, args))
 
     state = store.get(post.slug)
     if (state.media_id and state.fingerprint == fingerprint
@@ -985,6 +1007,12 @@ def _draft_parts(client, store, post, args) -> list:
 
 def _draft_part(client, store, post, part, fingerprint, args) -> DraftResult:
     """Put one part of an article into the draft box."""
+    # 「阅读原文」要拼站点地址。少了它，``content_source_url`` 就是一条
+    # 相对路径（``/docs/xxx/``）——公众号那边点不开。
+    # 这是**缺前置条件**（退出码 2），不是「发出去再说」；而且要在
+    # **上传任何东西之前**就拒掉：草稿箱里不许留下半截草稿。
+    if not args.source_url.strip():
+        raise RejectedPost(_NO_SITE_URL)
     result = part.result
     # 这一篇的单元目录（内容单元 id 的目录部分）——它上传的是这一篇的图。
     unit_dir = posixpath.dirname(post.slug)
@@ -1017,7 +1045,7 @@ def _draft_part(client, store, post, part, fingerprint, args) -> DraftResult:
     article = {
         "article_type": "news",
         "title": part.title,
-        "author": args.author,
+        "author": _author_of(post, args),
         "digest": digest,
         "content": html,
         "content_source_url": args.source_url.rstrip("/") + post.permalink,
@@ -1156,8 +1184,9 @@ def cmd_publish(args) -> int:
             retryable=True,
         )
 
-    if len(args.author) > AUTHOR_LIMIT:
-        print("作者 {} 超过上限 {} 字符".format(args.author, AUTHOR_LIMIT), file=sys.stderr)
+    author = _author_of(post, args)
+    if len(author) > AUTHOR_LIMIT:
+        print("作者 {} 超过上限 {} 字符".format(author, AUTHOR_LIMIT), file=sys.stderr)
         return _reject_with_snapshot(
             args, post, f"作者署名超过上限 {AUTHOR_LIMIT} 字符"
         )
@@ -1436,7 +1465,7 @@ def cmd_batch(args) -> int:
             skipped.append((post.slug, "; ".join(eligibility.reasons)))
             continue
         fingerprint = _fingerprint(post, _category_tag(post, args),
-                                  _limit(args), args.author)
+                                  _limit(args), _author_of(post, args))
         state = store.get(post.slug)
         drafted = bool(state.media_id)
         # A split article has several drafts; the article counts as done
@@ -1481,6 +1510,12 @@ def cmd_batch(args) -> int:
 
     if not args.appid or not args.appsecret:
         print("缺少 WX_APPID / WX_APPSECRET 环境变量", file=sys.stderr)
+        return EXIT_REJECTED
+
+    # 站点地址是「阅读原文」的前置条件。批量里缺它 → **每一篇都发不出去**，
+    # 那就该当场退 2，而不是把整批记成「跳过」还退 0（静悄悄的空跑）。
+    if not args.source_url.strip():
+        print(_NO_SITE_URL, file=sys.stderr)
         return EXIT_REJECTED
 
     # From here on the run writes to the ledger and to the draft box, so
@@ -1800,6 +1835,8 @@ def cmd_publish_collection(args) -> int:
     article = {
         "article_type": "news",
         "title": title,
+        # 合集导览不是某一篇文章，它没有自己的署名：只有命令行**显式**
+        # 给了的署名才算数，框架不替它挑一篇文章的署名。
         "author": args.author,
         "digest": collection_module.collection_digest(collection),
         "content": html,
@@ -1980,8 +2017,8 @@ def _add_common_options(parser, *, suppress: bool) -> None:
                         help="微信接口地址")
     parser.add_argument("--appid", default=default(""), help="公众号 AppID，默认取环境变量")
     parser.add_argument("--appsecret", default=default(""), help="公众号 AppSecret，默认取环境变量")
-    parser.add_argument("--author", default=default(DEFAULT_AUTHOR),
-                        help="作者署名")
+    parser.add_argument("--author", default=default(""),
+                        help="作者署名；不给就用这篇文章自己的 author（内容单元 front matter 里的）")
     parser.add_argument("--cover", default=default(""), help="封面图路径，默认取文章首图")
     parser.add_argument("--secrets-file", type=Path, default=default(DEFAULT_SECRETS_FILE),
                         help="本地凭据 JSON，默认 platforms/wechat/secrets.json")
@@ -2093,7 +2130,11 @@ def main(argv=None) -> int:
         return EXIT_USAGE
     args.appid = args.appid or os.environ.get("WX_APPID", "")
     args.appsecret = args.appsecret or os.environ.get("WX_APPSECRET", "")
-    args.source_url = os.environ.get("WX_SOURCE_URL", args.source_url)
+    # 站点地址：**运行时**才读环境变量。模块顶层那份
+    # ``DEFAULT_SOURCE_URL`` 是**导入时**求的（导入之后才设上的环境变量它
+    # 看不见）；这一行才是运行时那唯一一次读——少一个域名，公众号的
+    # 「阅读原文」就成了一条点不开的相对路径。
+    args.source_url = os.environ.get("SITE_URL", args.source_url)
     args.cover = args.cover or os.environ.get("WX_COVER", "")
     args.notify = args.notify or os.environ.get("WX_NOTIFY", "")
     args.notify_key = args.notify_key or os.environ.get("WX_NOTIFY_KEY", "")

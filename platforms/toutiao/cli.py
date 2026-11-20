@@ -92,7 +92,10 @@ _DEFAULTS = {
     "outbox_dir": DEFAULT_OUTBOX_DIR,
     "capability": DEFAULT_CAPABILITY,
     "state_file": DEFAULT_STATE_FILE,
-    "source_url": "https://growdu.cn",
+    # 站点地址：环境变量 ``SITE_URL``（与站点构建用的是同一个变量）。
+    # 没有它就是空串——框架不写死任何域名，正文末尾那句「完整版见 …」
+    # 也就整句不放。
+    "source_url": os.environ.get("SITE_URL", ""),
     "notify": "",
     "notify_key": "",
 }
@@ -641,6 +644,7 @@ def _common_parser() -> argparse.ArgumentParser:
 def _fill_defaults(namespace: argparse.Namespace) -> None:
     """Put the default value in for every shared option that was not given."""
     given_outbox_dir = hasattr(namespace, "outbox_dir")
+    given_source_url = hasattr(namespace, "source_url")
     for name, value in _DEFAULTS.items():
         if not hasattr(namespace, name):
             setattr(namespace, name, value)
@@ -648,6 +652,10 @@ def _fill_defaults(namespace: argparse.Namespace) -> None:
         # The command line option wins over the environment variable, which
         # wins over the repository default.
         namespace.outbox_dir = _default_outbox_dir()
+    if not given_source_url:
+        # 站点地址**运行时**再读一次：``_DEFAULTS`` 里那份是导入时求的，
+        # 而环境变量可能在导入之后才设上（测试夹具就是那样做的）。
+        namespace.source_url = os.environ.get("SITE_URL", "")
 
 
 def main(argv=None) -> int:

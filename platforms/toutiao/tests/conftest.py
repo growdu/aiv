@@ -116,7 +116,9 @@ def isolated_credentials(monkeypatch):
     monkeypatch.delenv("TT_CLIENT_ID", raising=False)
     monkeypatch.delenv("TT_CLIENT_SECRET", raising=False)
     monkeypatch.delenv("TT_ACCESS_TOKEN", raising=False)
-    monkeypatch.delenv("TT_SOURCE_URL", raising=False)
+    # 站点地址：开发者本机真设的 ``SITE_URL`` 不该漏进头条的测试。
+    # （``TT_SOURCE_URL`` 是一个没人读的死变量——全仓只有这一处提到它。）
+    monkeypatch.delenv("SITE_URL", raising=False)
     monkeypatch.delenv("TT_NOTIFY", raising=False)
     monkeypatch.delenv("TT_NOTIFY_KEY", raising=False)
     # The scheduling layer's variables: they decide where the snapshot

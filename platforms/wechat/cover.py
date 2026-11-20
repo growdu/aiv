@@ -21,6 +21,7 @@ import colorsys
 import hashlib
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -64,11 +65,21 @@ _FALLBACK_FONTS = (
     str(_WINDOWS_FONTS / "segoeui.ttf"),
 )
 
-_BRAND = "growdu.cn"
+def _brand() -> str:
+    """The brand word printed in the corner of the card.
+
+    It is the host name of the site, taken from ``SITE_URL`` -- the same
+    variable the site build uses.  **Without it there is no brand word**:
+    the framework does not invent one.
+    """
+    url = os.environ.get("SITE_URL", "").strip()
+    if not url:
+        return ""
+    return urlparse(url).netloc
 
 # Bumped when the drawing changes, so that the cards already drawn are
 # drawn again instead of being served from the cache.
-_CARD_VERSION = 2
+_CARD_VERSION = 3
 
 
 def _font(size: int, *, chinese: bool = True):
@@ -200,9 +211,10 @@ def cover_card(slug: str, title: str, category: str, out_dir: Path, *,
     """
     text = cover_text(title, part_index, part_total)
     # 卡片文件名里的指纹：本地内容指纹，内容变了就该重画。
+    # 品牌字样也算内容——它来自环境变量，换了域名就该重画。
     key = hashlib.sha256(
-        "{}|{}|{}|{}|{}".format(
-            _CARD_VERSION, slug, title, category, text).encode("utf-8")
+        "{}|{}|{}|{}|{}|{}".format(
+            _CARD_VERSION, slug, title, category, text, _brand()).encode("utf-8")
     ).hexdigest()[:12]
     target_dir = Path(out_dir) / "covers"
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -236,8 +248,9 @@ def cover_card(slug: str, title: str, category: str, out_dir: Path, *,
     for line in lines:
         draw.text((margin, y), line, font=big, fill=(245, 248, 252))
         y += 68
-    if tiny is not None:
-        draw.text((margin, HEIGHT - 62), _BRAND, font=tiny, fill=(132, 152, 175))
+    brand = _brand()
+    if tiny is not None and brand:
+        draw.text((margin, HEIGHT - 62), brand, font=tiny, fill=(132, 152, 175))
 
     image.save(target, "PNG")
     return target

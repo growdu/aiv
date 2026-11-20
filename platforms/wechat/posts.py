@@ -30,12 +30,6 @@ from url_rules import doc_url  # noqa: E402
 
 AUTHOR_LIMIT = 16
 
-# The author the drafts carry when nobody says otherwise.  It is also
-# the one that is left out of the content fingerprint: the drafts in the
-# box were made with it, so counting it would change the hash of every
-# article and send all of them again for no change in their content.
-DEFAULT_AUTHOR = "growdu"
-
 # The body limit of one draft, in characters of rendered HTML.
 #
 # The official field table says "content 少于 2 万字符", but that line is
@@ -108,6 +102,11 @@ class Post:
     categories: tuple
     date: str
     category_ids: tuple = ()
+    #: The byline this article carries -- the ``author:`` of the content
+    #: unit's front matter.  It is **content**: the mother draft either
+    #: names an author or it does not, and the framework does not make
+    #: one up.
+    author: str = ""
 
     @property
     def fingerprint(self) -> str:
@@ -219,6 +218,10 @@ def load_post(path: Path, posts_dir: Path) -> Post:
 
     categories = _string_list(fields.get("categories"))
     category_ids = _string_list(fields.get("category_ids"))
+    # 署名是**内容**：母稿写了就带上，没写就是空的。框架不替使用者决定。
+    author = fields.get("author") or ""
+    if not isinstance(author, str):
+        author = ""
 
     return Post(
         path=Path(path),
@@ -230,6 +233,7 @@ def load_post(path: Path, posts_dir: Path) -> Post:
         categories=categories,
         date=date,
         category_ids=category_ids,
+        author=author,
     )
 
 

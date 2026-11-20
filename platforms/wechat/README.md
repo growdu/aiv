@@ -119,7 +119,7 @@ adapter 是同一条。
 | --- | --- |
 | `WX_APPID` | 公众号 AppID |
 | `WX_APPSECRET` | 公众号 AppSecret（**不要提交到仓库**） |
-| `WX_SOURCE_URL` | 站点根 URL，用于拼「阅读原文」，默认 `https://growdu.cn` |
+| `SITE_URL` | 站点根 URL，用于拼「阅读原文」（与站点构建用的是同一个变量）；**没有它就拒绝发布**（退出码 2，缺前置条件） |
 | `WX_COVER` | 封面图路径（未指定时依次取文章首张本地图、首张外链图、**本地生成的封面卡**、仓库自带默认封面） |
 | `WX_NOTIFY` | 通知通道：`serverchan` / `wechat_work` / `webhook` |
 | `WX_NOTIFY_KEY` | 通知凭据：SendKey / webhook key / 完整 URL |
