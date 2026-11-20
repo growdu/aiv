@@ -2087,8 +2087,10 @@ def main(argv=None) -> int:
     try:
         args.max_length = resolve_content_limit(args.max_length)
     except ValueError as error:
+        # 上限写错了（``--max-length`` 给的或 ``WX_MAX_LENGTH`` 给的）：
+        # **用法错 = 1**（契约层那张表）。
         print(str(error), file=sys.stderr)
-        return EXIT_REJECTED
+        return EXIT_USAGE
     args.appid = args.appid or os.environ.get("WX_APPID", "")
     args.appsecret = args.appsecret or os.environ.get("WX_APPSECRET", "")
     args.source_url = os.environ.get("WX_SOURCE_URL", args.source_url)

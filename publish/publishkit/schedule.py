@@ -348,7 +348,7 @@ class OutboxIndex:
 
         - 已经发过的（成功态）→ 不再发；
         - 结果未知（超时，§7.1 第三条）→ **不能自动重发**，可能已经发出去了；
-        - 失败且不自动重试的（这一篇不合格 / 平台审核不通过）→ 转人工，
+        - 失败且不自动重试的（前置条件没满足 / 平台审核不通过）→ 转人工，
           而且它不该继续霸占「最久未发」的位置（§7.4）；
         - 失败但可重试的 → 不在这里挡（它由重试那一路处理）。
         """
@@ -747,7 +747,7 @@ def retry_failed(
     """把 outbox 里「失败且可重试」的记录重试一次（§7.2）。
 
     - ``status = "failed"`` 且 ``retryable`` 不是 False 的记录：重试一次；
-    - ``retryable = False`` 的（这一篇不合格 / 平台审核不通过）：
+    - ``retryable = False`` 的（前置条件没满足 / 平台审核不通过）：
       **永不自动重试**；
     - 已经试够 ``max_attempts`` 次的：转人工，不再自动重试。
 
@@ -973,7 +973,7 @@ def _publish_to_platforms(config, content_id, platforms, publisher, dry_run, ski
             and record.status == "failed"
             and record.data.get("retryable") is False
         ):
-            # 不合格 / 审核不通过：转人工，不自动重试（§7.1）。
+            # 前置条件没满足 / 审核不通过：转人工，不自动重试（§7.1）。
             messages.append(
                 "{} → {}：转人工（不自动重试），跳过。".format(content_id, platform)
             )

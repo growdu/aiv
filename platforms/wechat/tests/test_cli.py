@@ -13,9 +13,23 @@ def test_a_usage_error_exits_with_one():
 
 
 def test_a_missing_article_is_a_precondition_failure(tmp_path):
-    """文章不存在 = 缺前置条件 = 2（今天退 1，`EXIT_NOT_FOUND` 归到「前置条件」）。"""
+    """文章不存在 = 缺前置条件 = 2（以前退 1，`EXIT_NOT_FOUND` 现在归到「前置条件」）。"""
     assert main(["convert", "no-such-slug",
                  "--posts-dir", str(tmp_path)]) == 2
+
+
+def test_an_invalid_max_length_is_a_usage_error(tmp_path, capsys):
+    """正文上限写错了 = 用法错 = 1（不是 2）。
+
+    ``--max-length`` 给的不是正整数（``WX_MAX_LENGTH`` 环境变量给坏了也一样），
+    是**参数/配置写错了**——契约层那张表里这一档是 1。
+    """
+    code = main(["convert", "no-such-slug",
+                 "--posts-dir", str(tmp_path),
+                 "--max-length", "-1"])
+    assert code == 1
+    # 断的是**上限**这一条报错，不是 argparse 的用法错（那也退 1，但理由不同）。
+    assert "正文上限" in capsys.readouterr().err
 
 
 def test_the_exit_codes_come_from_the_declaration():

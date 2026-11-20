@@ -146,7 +146,7 @@ cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli mark p
 cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli status
 ```
 
-退出码：`0` 成功 / `1` 参数或配置错误（少给必填参数也是这一档）/
+退出码：`0` 成功 / `1` 参数或配置写错了（少给*命令行*必填参数也是这一档）/
 `2` 东西不存在（文章 / 快照 / 目录不在）或该篇不合格 / `3` 接口或写盘错误。
 这四个码的**语义由契约层定死**（`publish/publishkit/exit_codes.py`），本 adapter
 读自己能力声明里的 `[exit]` 段——五个平台是同一张表。
