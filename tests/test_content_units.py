@@ -1,5 +1,6 @@
 """内容单元编译器的用例——**全部自己造语料**，不依赖仓库里曾经有过的内容。"""
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -55,6 +56,12 @@ def test_the_video_permalink_is_the_videos_url():
     """视频页地址统一成 /videos/<id>/——站点现在就是这么发的。"""
     module = _video_pages()
     assert module.permalink("video/row-lock") == "/videos/row-lock/"
+
+
+def test_the_video_compiler_does_not_hardcode_the_video_prefix():
+    """视频编译器不许自己写死 '/videos/'——得从共享规则里取。"""
+    text = (REPO_ROOT / "tools" / "build-video-pages.py").read_text(encoding="utf-8")
+    assert not re.search(r"""['"`]/videos/""", text), "视频编译器写死了 '/videos/'"
 
 
 def test_an_episode_field_reaches_the_content_unit(compiler):
