@@ -34,6 +34,7 @@ from .capability import list_capabilities
 from .contract import (
     ContentContract,
     ContractError,
+    is_publish_candidate,
     parse_content_date,
     read_contract,
 )
@@ -514,9 +515,9 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
     # 落地页，不是要发给平台的文章。契约层一旦认了 ``category`` 这个 kind，
     # 不在这里排除，分类页就会进发布候选集（然后被当成一篇稿子发出去）。
     #
-    # kind 在 ``unit.contract.kind`` 上——``ContentUnit`` 自己没有 kind 属性。
+    # 「什么算候选」住在契约层的 ``is_publish_candidate`` 里（那里也认了分类页）。
     matched = [unit for unit in units if platform in unit.platforms]
-    candidates = [unit for unit in matched if unit.contract.kind != "category"]
+    candidates = [unit for unit in matched if is_publish_candidate(unit.contract)]
     if not candidates:
         if matched:
             # 有内容单元、只是它们**都是分类页**——分类页是站点的东西，

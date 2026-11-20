@@ -366,7 +366,7 @@ python3 tools/check-content-contract.py   # 按内容契约校验内容单元，
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements/publish.txt        # 契约层与调度层（零运行时依赖）
+pip install -r requirements/publish.txt        # 契约层与调度层（publishkit 零运行时依赖；测试要 pyyaml）
 pip install -r requirements/wechat.txt         # 公众号 adapter
 pip install -r requirements/site.txt           # 站点模块与根编译器（含 pyyaml）
 pip install -r requirements/video-pipeline.txt # AIV 视频生产线

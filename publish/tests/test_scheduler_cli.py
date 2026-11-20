@@ -322,6 +322,22 @@ def test_the_candidates_command_lists_the_candidate_set(workspace, capsys):
     assert "db/other" in output
 
 
+def test_the_candidates_command_leaves_the_category_pages_out(workspace, capsys):
+    """分类页是站点的东西——它不进候选集清单。"""
+    units = workspace.root / "content" / "units"
+    (units / "db" / "_index.md").write_text(
+        "---\ntitle: 分类\ndate: 2026-01-01 00:00:00\nkind: category\nplatforms:\n  - fake\n---\n\n正文。\n",
+        encoding="utf-8",
+    )
+
+    code = main(workspace.argv("schedule", "candidates"))
+
+    assert code == EXIT_OK
+    output = capsys.readouterr().out
+    assert "db/_index" not in output
+    assert "db/demo" in output
+
+
 def test_the_status_command_shows_what_is_pending(workspace, capsys):
     main(workspace.argv("schedule", "weekly"))
     capsys.readouterr()

@@ -6,7 +6,7 @@
    ——CRLF（weixin 那份不认）与缩进标量（weixin 那份读成空列表）——
    都是钉死的有意为之，各由下面一条用例显式断言；
 2. 坏字段必须以 ``ContractFieldError`` 明确失败，不漏出裸 KeyError / TypeError；
-3. ``platforms`` 非空即进入发布候选集（06 规格 §3.2）。
+3. 候选集判定：``platforms`` 非空、**且不是分类页**（06 规格 §3.2）。
 """
 
 from datetime import date
@@ -330,6 +330,17 @@ def test_empty_platforms_list_is_not_a_publish_candidate(tmp_path):
 
     assert contract.platforms == ()
     assert contract.is_publish_candidate is False
+
+
+def test_a_category_page_is_not_a_publish_candidate(tmp_path):
+    """分类页也是站点的东西——它声明了 platforms 也不进候选集。"""
+    path = tmp_path / "post.md"
+    path.write_text(
+        "---\ntitle: x\nkind: category\nplatforms:\n  - wechat\n---\n\n正文\n",
+        encoding="utf-8",
+    )
+
+    assert read_contract(path).is_publish_candidate is False
 
 
 # --- 坏输入 -------------------------------------------------------------

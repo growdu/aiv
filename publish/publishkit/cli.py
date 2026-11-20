@@ -765,12 +765,16 @@ def cmd_schedule_candidates(args) -> int:
 
     wanted = {cap.id for cap in capabilities}
     rows = []
+    categories = []
     for unit in units:
         if not unit.platforms:
             continue
         if wanted and not wanted.intersection(unit.platforms):
             continue
         if platform_filter and platform_filter not in unit.platforms:
+            continue
+        if not unit.contract.is_publish_candidate:
+            categories.append(unit)
             continue
         rows.append(unit)
 
@@ -792,7 +796,10 @@ def cmd_schedule_candidates(args) -> int:
             )
         )
     if not rows:
-        print("  （候选集是空的：没有内容单元声明 platforms）")
+        if categories:
+            print("  （候选集是空的：这些内容单元都是分类页，没有要发的稿子）")
+        else:
+            print("  （候选集是空的：没有内容单元声明 platforms）")
     return EXIT_OK
 
 

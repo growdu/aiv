@@ -94,6 +94,7 @@ __all__ = [
     "ContractFieldError",
     "ContractFileError",
     "contract_from_fields",
+    "is_publish_candidate",
     "parse_content_date",
     "parse_front_matter",
     "read_contract",
@@ -450,8 +451,25 @@ class ContentContract:
 
     @property
     def is_publish_candidate(self) -> bool:
-        """``platforms`` 非空即进入发布候选集（06 规格 §3.2）。"""
-        return bool(self.platforms)
+        """这篇算不算发布候选：``platforms`` 非空、**且不是分类页**（06 规格 §3.2）。
+
+        分类页（``kind == "category"``）是站点的东西——一级目录的落地页，
+        不是要发给平台的稿子。
+        """
+        return is_publish_candidate(self)
+
+
+def is_publish_candidate(contract) -> bool:
+    """这篇算不算发布候选：``platforms`` 非空、**且不是分类页**（06 规格 §3.2）。
+
+    分类页（``kind == "category"``）是站点的东西——一级目录的落地页，
+    不是要发给平台的稿子。
+
+    **规则只有这一份**：契约层的属性
+    :attr:`ContentContract.is_publish_candidate` 与调度层都调它——
+    调度层**不许**自己抄一份「不是分类页」的判断（抄一份就有两处会走偏）。
+    """
+    return bool(contract.platforms) and contract.kind != "category"
 
 
 def contract_from_fields(fields: dict, *, path=None) -> ContentContract:
