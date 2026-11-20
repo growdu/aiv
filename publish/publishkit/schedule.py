@@ -515,12 +515,15 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
     # 不在这里排除，分类页就会进发布候选集（然后被当成一篇稿子发出去）。
     #
     # kind 在 ``unit.contract.kind`` 上——``ContentUnit`` 自己没有 kind 属性。
-    candidates = [
-        unit
-        for unit in units
-        if platform in unit.platforms and unit.contract.kind != "category"
-    ]
+    matched = [unit for unit in units if platform in unit.platforms]
+    candidates = [unit for unit in matched if unit.contract.kind != "category"]
     if not candidates:
+        if matched:
+            # 有内容单元、只是它们**都是分类页**——分类页是站点的东西，
+            # 不是要发给平台的稿子。这跟「一个都没有」不是一回事。
+            return None, "候选集是空的：{!r} 这个平台下只有分类页，没有要发的稿子".format(
+                platform
+            )
         return None, "候选集是空的：没有内容单元的 platforms 里包含 {!r}".format(
             platform
         )

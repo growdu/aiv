@@ -429,6 +429,20 @@ def test_a_category_page_is_not_a_publish_candidate():
     assert chosen.content_id == "a/doc"
 
 
+def test_the_empty_candidate_reason_says_the_pages_are_categories():
+    """只有分类页时，那句理由要**说真话**——不是「一个内容单元都没有」。
+
+    分类页是站点的东西（它是一级目录的落地页），不是要发给平台的稿子。
+    候选集把它排除掉之后，「为什么是空的」得有个**对的**答案。
+    """
+    units = [make_unit("a/_index", kind="category", day=date(2026, 7, 27))]
+
+    chosen, reason = select_for_platform(units, "wechat", window=THIS_WEEK)
+
+    assert chosen is None
+    assert "分类页" in reason
+
+
 def test_a_unit_without_any_date_still_can_be_chosen():
     """两个日期都没有时排序键也得存在——不能抛异常。"""
     units = [make_unit("no-date"), make_unit("dated", day=date(2020, 1, 1))]

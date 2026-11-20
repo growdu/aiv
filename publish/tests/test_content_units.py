@@ -13,11 +13,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 def _run_the_compiler(docs: Path, units: Path) -> None:
     """真跑一遍编译器（子进程，跟 CI 里跑的同一条命令）。"""
-    subprocess.run(
+    result = subprocess.run(
         [sys.executable, str(REPO_ROOT / "tools" / "build-content-units.py")],
-        cwd=REPO_ROOT, check=True, capture_output=True, text=True,
+        cwd=REPO_ROOT, capture_output=True, text=True,
         env={**os.environ, "AIV_DOCS": str(docs), "AIV_CONTENT_UNITS": str(units)},
     )
+    # ⚠️ 失败时要把编译器的 stderr 带上：`capture_output=True` 会把它吃掉，
+    # 只剩一个 `CalledProcessError`——看不出是缺依赖、语料坏了，还是编译器崩了。
+    assert result.returncode == 0, result.stderr
 
 
 def test_the_contract_layer_sees_exactly_the_units_the_compiler_produced(tmp_path):
@@ -41,4 +44,7 @@ def test_the_contract_layer_sees_exactly_the_units_the_compiler_produced(tmp_pat
     assert not errors, f"契约层读出了坏单元：{errors}"
     produced = {p.relative_to(units).with_suffix("").as_posix()
                 for p in units.rglob("*.md")}
+    # ⚠️ 先钉住「编译器确实产出了这两篇」——不然两边**同时为空**时，
+    # 下面那条相等断言会**空过**，而这正是这条用例要守的那条接口。
+    assert produced == {"a/_index", "a/doc"}
     assert {u.content_id for u in found} == produced
