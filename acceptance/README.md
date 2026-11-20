@@ -21,7 +21,7 @@
 | --- | --- | --- | --- |
 | 母稿 / review | `docs/` `tools/review-*.py` | `python3 -m pytest tests/ -q` | 母稿层自己的规矩（审校信号、审校记录） |
 | 内容单元仓库 | `content/units/` | ——（见下方「内容单元仓库没有自己的套件」） | 单元齐、id 唯一、front matter 合契约 |
-| 站点 | `platforms/blog/site/` | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点自己构建得出来 |
+| 站点 | `platforms/blog/site/` | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点自己构建得出来 |
 | publish 契约层 | `publish/` | `cd publish && python3 -m pytest tests/ -q` | 读得懂内容单元 |
 | 头条 adapter | `platforms/toutiao/` | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 读得懂内容单元、出包不丢图 |
 | 微信 adapter | `platforms/wechat/` | `cd platforms/wechat && python3 -m pytest tests/ -q` | 同上 |
@@ -43,9 +43,9 @@
 `content/units/` 是**构建产物**（`.gitignore` 里的 `/content/units/`），不入库，
 因此没有「自己的测试目录」可跑。它的契约由下面三条守住：
 
-- **I1**——站点拿到的那份是逐字节副本（`diff -r`）；
 - **I2**——契约层从 `content/units/` 读出的 `content_id` 集合与单元 id 集合相等；
-- **I3**——两个 adapter 默认的文章目录 == 内容单元仓库。
+- **I3**——两个 adapter 默认的文章目录 == 内容单元仓库；
+- **I4**（新）——站点读到的那批文章 == 内容单元仓库。
 
 > ⚠️ **I2 现在没有测试钉着。** 原来钉它的是
 > `publish/tests/test_episode.py` 的一条集成用例（真跑一遍 hexo 时代的
@@ -60,31 +60,34 @@
 
 | 接口 | 从 → 到 | 怎么验 | Expected |
 | --- | --- | --- | --- |
-| I1 内容单元 → 站点 | `content/units/` → `platforms/blog/site/src/content/units/` | `diff -r content/units platforms/blog/site/src/content/units` | 无输出（逐字节副本） |
 | I2 内容单元 → publish 契约层 | `content/units/` → `publish/` | 契约层从 `content/units/` 读出的 `content_id` 集合 == 单元 id 集合 | 集合相等 |
 | I3 内容单元 → toutiao / wechat | `content/units/` → 两个 adapter | 两个 adapter 默认的文章目录 == 内容单元仓库 | 相等 |
+| I4 内容单元 → 站点 | `content/units/` → `platforms/blog/site/` | 站点 `tools/build-posts.py` 读的文章目录 == 内容单元仓库 | 相等 |
 
-**I3 现在是欠账**——两个 adapter 读的是**站点的副本**，
-不是 `content/units/`（Ruling 14：图片还住在站点的 `source/images/`，
-解析基准是「文章目录的上一级」，一换就丢图）。
-这笔账归**编译器抽取**那个模块：图片落成 `content/units/images/`，
+**I1 作废了**（2026-11-20，站点换成 hexo 那轮）——原来那条是
+「站点拿到的那份是逐字节副本」（`diff -r content/units platforms/blog/site/src/content/units`）。
+**副本没有了**：站点与两个 adapter 都**直接读 `content/units/`**。
+副本是字节级重复，而仓库早就把它记成欠账——这轮把它兑现了。
+
+**I3 现在是欠账**——两个 adapter 默认的文章目录已经是内容单元仓库了，
+但**图片**还住在 `docs/`（Ruling 14），解析基准是「文章目录的上一级」，
+一换就丢图。这笔账归**编译器抽取**那个模块：图片落成 `content/units/images/`，
 同时把解析基准从「文章目录的上一级」改成显式的图片根。**在那之前，
-I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能验
-「adapter 直接读内容单元」。**
+I3 只能验「默认文章目录 == 内容单元仓库」，不能验「图片也一起搬过去」。**
 ——**这条欠账要写明，不能装作没有。**
 
 ---
 
 ## 三、每条命令跑什么、Expected 是什么
 
-数字是 **2026-11-19** 在 `main` 上**逐条单独跑**量出来的。
+数字是 **2026-11-20** 在 `main` 上**逐条单独跑**量出来的。
 **归位之后，总数必须与合并跑时一致**——少一条就是某条用例消失了，
 多一条就是某个目录被收集了两次。
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
 | 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录 | 81 passed | 81 passed |
-| 2 | `cd platforms/blog/site && python3 -m pytest tests/ -q` | 站点：学习流归属、死链、页面齐全 | 51 passed / 1 skipped | 51 passed / 1 skipped |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏 | 79 passed | 79 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度 | 338 passed / 1 skipped | 338 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 394 passed / 2 skipped | 394 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 504 passed / 1 skipped | 504 passed / 1 skipped |
@@ -101,6 +104,7 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 | 2026-11-18（归位那轮） | 196 / 3 skip | 26 | 411 / 1 skip | 394 / 2 skip | 504 / 1 skip | 119 / 12 skip | 1269 / 23 skip / 3 red |
 | 2026-11-19（清库那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1052 / 60 skip |
 | 2026-11-19（视频线不发布那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip |
+| 2026-11-20（站点换 hexo 那轮） | 81 | 79 | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip |
 
 变红的是**被测对象没了**，不是逻辑坏了：
 
@@ -109,7 +113,10 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
   并把**依赖仓库内容**的用例改成在 `tmp_path` 里造语料。
 - publish 411 → 338：删掉的是测 hexo 时代 `sync-hexo.py` 的集成用例；
   母稿相关的用例改成在临时目录里造稿子，不再依赖仓库里曾经有过的内容。
-- 站点 26 → 51：站点重做之后补的守卫（学习流归属、围栏、死链）。
+- 站点 26 → 51 → 79：站点重做之后补的守卫（学习流归属、围栏、死链）；
+  换 hexo 那轮又补了一批（身份通用性、地址形状、目录页、首页一屏、
+  mermaid 渲染、分类退休、`<nav>` 误用、`/all/` 跳转、性能按需加载），
+  同时删掉了 Astro 时代的活动账本与占位符那几套。
 - video 1269 → 1052：视频线清空重来，期目录的用例随内容一起少了；
   清库那轮剩的 1 条红（品牌文案与文档不同步）也补掉了——文案搬进
   `video/config.toml` 之后，那条用例改成钉「文案来自配置键」这条**关系**，
@@ -134,6 +141,26 @@ I3 只能验「副本与内容单元逐字节相同」（等于 I1），不能�
 
 > **规律：一条用例如果依赖「仓库里曾经有过的内容」，它迟早会因为
 > 内容被清掉而变成假红。** 新的用例一律在自己造语料。
+
+**「站点换 hexo」那轮（2026-11-20）**：站点从 Astro 换成 Hexo + matery。
+守卫整套重写——不是改，是**删掉旧的、另起一套**：
+
+| 套件 | 变动 | 为什么 |
+| --- | --- | --- |
+| 站点 | 51 / 1 skip → 79 | 删掉 Astro 时代的活动账本、占位符、侧栏那几套；补上身份通用性、地址形状、目录页、首页一屏、mermaid 渲染、分类与标签退休、`<nav>` 误用、`/all/` 跳转、资源本地化与重库按需加载、图片残留清理 |
+| publish | 338 → 338 | 不变 |
+| 别的套件 | 全不变 | 站点换了实现，但**跨模块接口没动**：地址形状仍是 `/docs/<id>/`，内容单元仍是那一半，`capability.toml` 一个字没改 |
+
+> **图片残留也是这轮查出来的。** `build-posts.py` 清掉了撤掉的**文章**，
+> 却只往 `source/images/` 里**搬**、不**清**——源稿删了一张图，产物里
+> 那张图就永远留着，而构建日志还在说「图片 0 张」，看不出异样。
+> 修法是让图片跟文章守同一个规矩（撤掉的不许留在磁盘上），
+> 并补一条自造语料的用例钉住它。
+
+> 这轮还顺手修了一条**与站点无关**的红：`publish/tests/test_real_declarations.py`
+> 把 `platforms/` 下每个目录都当平台看，而会话工具的 `.remember/` 临时目录
+> 正好落在 `platforms/` 里 → 那条守卫红了。修法是**在仓库根的 `.gitignore`
+> 里挡掉 `.remember/`**（不是改守卫——守卫没错，是仓库里混进了不该有的目录）。
 
 ### 「两个 adapter 补进矩阵」那轮（2026-11-19 夜）
 
@@ -183,7 +210,7 @@ B站与视频号两个 adapter 之前**既不在验收矩阵里，也不在任�
 | 工作流 | 跑哪几个模块 |
 | --- | --- |
 | `.github/workflows/contracts.yml` | 母稿 / review 层、publish 契约层、头条 adapter、微信 adapter、抖音 adapter——**每个模块一条 step**，每条带 `if: ${{ !cancelled() }}`，一个模块红不挡住别的模块 |
-| `.github/workflows/site.yml` | 站点模块：`verify` job 守约束（内容单元 / 围栏 / 学习流数据），`build` job 出产物 + 跑站点守卫测试（带 `::error::` 注解，不登录也能看到是哪条挂了） |
+| `.github/workflows/site.yml` | 站点模块：`verify` job 守约束（内容单元 / 围栏 / 学习流数据），`build` job 出产物（`npm ci` + `npm run build`）+ 跑站点守卫测试（带 `::error::` 注解，不登录也能看到是哪条挂了） |
 | `.github/workflows/video-pipeline.yml` | 视频流水线 |
 
 **每个模块只在一个地方跑一次**——不重复收集，也就不会「多出一条用例」。
