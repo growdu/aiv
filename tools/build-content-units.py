@@ -84,11 +84,11 @@ class Unit:
     author: str
     description: str
     kind: str  # document | category
-    #: 分类**名**（`categories`）对应的分类内容单元 **id**，与 `categories` 同序同长。
-    #: 平台层要的是分类页的**地址**，地址由 id 推导（如 `source-tracks/_index`），
-    #: 展示名推不出来——所以这层映射由编译器算出来写进去。
-    category_ids: list[str] = field(default_factory=list)
     categories: list[str] = field(default_factory=list)
+    # 分类**名**（`categories`）对应的分类内容单元 **id**，与 `categories` 同序同长。
+    # 平台层要的是分类页的**地址**，地址由 id 推导（如 `source-tracks/_index`），
+    # 展示名推不出来——所以这层映射由编译器算出来写进去。
+    category_ids: list[str] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
     body: str = ""
     extra: dict = field(default_factory=dict)
@@ -188,7 +188,7 @@ def read_index_chain(rel: Path) -> tuple[list[str], list[str], list[str]]:
         fm, _ = split_front_matter(idx_path.read_text(encoding="utf-8"))
         cascade = fm.get(CASCADE_KEY) or {}
         # 祖先自己的内容单元 id：路径去掉 `.md`（`a/_index.md` → `a/_index`）。
-        idx_id = idx.as_posix()[:-3]
+        idx_id = idx.as_posix().removesuffix(".md")
         for name in cascade.get("categories") or []:
             if name not in categories:
                 categories.append(name)
@@ -264,8 +264,8 @@ def build_unit(path: Path) -> Unit:
         author=str(fm.get("author") or "growdu"),
         description=description,
         kind="category" if is_index else "document",
-        category_ids=category_ids,
         categories=categories,
+        category_ids=category_ids,
         tags=tags,
         body=body,
         extra=extra,

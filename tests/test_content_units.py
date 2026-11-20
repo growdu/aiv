@@ -188,3 +188,39 @@ def test_the_two_category_lists_stay_aligned(compiler):
     unit = compiler.build_unit(compiler.DOCS / "a" / "b" / "doc.md")
     assert unit.categories == ["甲", "乙"]
     assert unit.category_ids == ["a/_index", "a/b/_index"]
+
+
+def test_the_category_ids_reach_the_front_matter(compiler):
+    """分类 id 要落进**落盘产物**——平台层读的就是 front matter，不是对象属性。
+
+    只断言 `unit.category_ids` 的话，把编译器里写 front matter 的那一行删掉
+    也测不出来（内容单元里就没这个字段了，映射直接没了）。
+    """
+    (compiler.DOCS / "a" / "b").mkdir(parents=True)
+    (compiler.DOCS / "a" / "_index.md").write_text(
+        "---\ntitle: 甲\ncascade:\n  categories: [甲]\n---\n\n# 甲\n", encoding="utf-8")
+    (compiler.DOCS / "a" / "b" / "_index.md").write_text(
+        "---\ntitle: 乙\ncascade:\n  categories: [乙]\n---\n\n# 乙\n", encoding="utf-8")
+    (compiler.DOCS / "a" / "b" / "doc.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n", encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "a" / "b" / "doc.md")
+    text = compiler.render(unit)
+    assert "category_ids:" in text
+    assert "- a/_index" in text
+    assert "- a/b/_index" in text
+    # 名字在前、id 在后，两列逐项配对——顺序错了就配错分类的地址。
+    assert "categories:\n- 甲\n- 乙\ncategory_ids:\n- a/_index\n- a/b/_index\n" in text
+
+
+def test_the_compile_only_result_carries_the_category_ids(compiler):
+    """`compile_only()` 的返回 dict 也要带 `category_ids`——平台层问的是它。"""
+    (compiler.DOCS / "a" / "b").mkdir(parents=True)
+    (compiler.DOCS / "a" / "_index.md").write_text(
+        "---\ntitle: 甲\ncascade:\n  categories: [甲]\n---\n\n# 甲\n", encoding="utf-8")
+    (compiler.DOCS / "a" / "b" / "_index.md").write_text(
+        "---\ntitle: 乙\ncascade:\n  categories: [乙]\n---\n\n# 乙\n", encoding="utf-8")
+    (compiler.DOCS / "a" / "b" / "doc.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n", encoding="utf-8")
+    result = compiler.compile_only("a/b/doc.md")
+    assert "category_ids" in result
+    assert result["category_ids"] == ["a/_index", "a/b/_index"]
