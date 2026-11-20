@@ -191,9 +191,9 @@ def category_id_for(posts, name: str) -> str | None:
 
     同一个分类名可能落在两个**互不为祖先**的目录上：编译器只在**一篇之内**
     的目录链上去重（``if name not in categories`` 守的是这一篇自己的链），
-    不跨篇——于是两个 id 都「对」。取**层级最浅**的那个（那是列出文章最多的
-    那个页面，与老代码 ``build_category_paths`` 同一口径），同深度时按 id
-    字典序取小的：**结果与文件顺序无关**。
+    不跨篇——于是两个 id 都「对」。取**层级最浅**的那个（**规则本身**：与老代码
+    ``build_category_paths`` 同一口径——不是「哪个页面列出文章最多」的推论），
+    同深度时按 id 字典序取小的：**结果与文件顺序无关**。
     """
     candidates = []
     for post in posts:
