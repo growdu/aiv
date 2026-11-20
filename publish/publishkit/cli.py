@@ -799,7 +799,7 @@ def cmd_schedule_candidates(args) -> int:
         if categories:
             print("  （候选集是空的：这些内容单元都是分类页，没有要发的稿子）")
         else:
-            print("  （候选集是空的：没有内容单元声明 platforms）")
+            print("  （候选集是空的：没有内容单元声明 platforms，或没有一个声明目标平台）")
     return EXIT_OK
 
 

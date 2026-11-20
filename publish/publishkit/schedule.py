@@ -511,10 +511,6 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
     index = outbox if outbox is not None else OutboxIndex()
     # 候选集 = ``platforms`` 里含这个平台的内容单元，**但不含分类页**。
     #
-    # 分类页（``kind == "category"``）是**站点**的东西——它是一级目录的
-    # 落地页，不是要发给平台的文章。契约层一旦认了 ``category`` 这个 kind，
-    # 不在这里排除，分类页就会进发布候选集（然后被当成一篇稿子发出去）。
-    #
     # 「什么算候选」住在契约层的 ``is_publish_candidate`` 里（那里也认了分类页）。
     matched = [unit for unit in units if platform in unit.platforms]
     candidates = [unit for unit in matched if is_publish_candidate(unit.contract)]
