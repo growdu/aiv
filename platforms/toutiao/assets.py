@@ -62,7 +62,7 @@ class RemoteAsset(ValueError):
 
 
 class AssetNotFound(ValueError):
-    """The asset path does not resolve to a file inside the site."""
+    """The asset path does not resolve to a file inside the image repository."""
 
 
 class UnreadableImage(ValueError):
@@ -100,38 +100,33 @@ def is_remote(path: str) -> bool:
     return path.strip().lower().startswith(("http://", "https://"))
 
 
-def resolve_asset(path: str, posts_dir: Path) -> Path:
+def resolve_asset(path: str, images_root: Path, unit_dir: str = "") -> Path:
     """Resolve an asset path from a post to a real file.
 
-    站点的图片走 ``/images/<docs 相对路径>``：
-    ``platforms/blog/site/tools/sync-content.py`` 把 ``docs/`` 里的图片按
-    **docs 的相对路径**落进站点的 ``public/images/``。
-
-    ⚠️ **这个解析基准已经过时**：它按「文章目录的上一级」推，而文章目录现在
-    在 ``site/src/content/units/``，它的上一级不是图片所在。
-    这条接口缺口记在
-    ``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 3 条
-    （「adapter 读的是站点的副本，不是内容单元仓库」）。
+    一张图落在 ``图片根/单元目录/正文里的相对路径``——**全局一条规则**，
+    站点与两个 adapter 都用它（站点那边是它的图片副本 ``public/images/``）。
+    ``unit_dir`` 是内容单元 id 的**目录部分**（``db/x/_index`` 的目录是
+    ``db/x``；顶层单元是空串）。
 
     Three things are refused here, and each of them says what went wrong:
 
     - a remote URL: the package must not depend on the network;
     - a path that resolves to no file: a silent fallback would ship a
       package with a missing picture and no word about it;
-    - a path that leaves the site root: an asset path is a relative path
-      inside the site, never a way out of it.
+    - a path that leaves the image root: an asset path is a relative path
+      inside the image repository, never a way out of it.
     """
     if is_remote(path):
         raise RemoteAsset("外链图不在本地：{}".format(path))
-    site_root = Path(posts_dir).parent.resolve()
+    root = Path(images_root).resolve()
     candidate = Path(path)
-    resolved = candidate.resolve() if candidate.is_absolute() else (site_root / candidate).resolve()
-    if resolved != site_root and site_root not in resolved.parents:
+    resolved = candidate.resolve() if candidate.is_absolute() else (root / unit_dir / candidate).resolve()
+    if resolved != root and root not in resolved.parents:
         raise AssetNotFound(
-            "图路径跑出了站点根目录 {}：{}".format(site_root, path)
+            "图路径跑出了图片根目录 {}：{}".format(root, path)
         )
     if not resolved.is_file():
-        raise AssetNotFound("找不到图文件：{}（按 {} 解析）".format(path, site_root))
+        raise AssetNotFound("找不到图文件：{}（按 {} 解析）".format(path, root / unit_dir))
     return resolved
 
 

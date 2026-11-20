@@ -27,6 +27,15 @@ DOCS = REPO_ROOT / "docs"
 # 内容单元仓库：所有平台共用的那一半。站点只是它的一个消费者。
 CONTENT_UNITS = REPO_ROOT / "content" / "units"
 
+#: 内容单元仓库里的**图片**副本。编译器按 docs 相对路径把图片拷进来，
+#: 站点与两个 adapter 都从这儿拿图（正文里的一张图落在
+#: ``图片根/单元目录/正文里的相对路径``）。
+CONTENT_UNIT_IMAGES = CONTENT_UNITS / "images"
+
+#: 算「图片」的后缀。站点的 ``sync-content.py`` 原来自己有一份，
+#: 搬到这儿——一处。
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif"}
+
 # 站点（第六个平台）的家
 SITE = REPO_ROOT / "platforms" / "blog" / "site"
 

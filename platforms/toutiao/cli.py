@@ -41,7 +41,7 @@ from .state import StateStore, fingerprint, needs_publish
 # 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
-from paths import SITE_POSTS  # noqa: E402
+from paths import CONTENT_UNITS, CONTENT_UNIT_IMAGES  # noqa: E402
 
 __all__ = [
     "EXIT_ERROR", "EXIT_INELIGIBLE", "EXIT_OK", "EXIT_USAGE", "main",
@@ -56,10 +56,12 @@ EXIT_USAGE = 1
 EXIT_INELIGIBLE = 2
 EXIT_ERROR = 3
 
-# 文章目录：站点拿到的那份内容单元副本（`platforms/blog/site/source/_posts/`）。
-# **不是** `content/units/`——图片按「文章目录的上一级」解析，
-# 图片还住在站点的 `source/images/` 里（它们进内容单元仓库是下一个模块的事）。
-DEFAULT_POSTS_DIR = SITE_POSTS
+# 文章目录：**内容单元仓库**（`content/units/`）——adapter 直接读它，
+# 不再读站点的副本。
+DEFAULT_POSTS_DIR = CONTENT_UNITS
+# 图片根：内容单元仓库里的那份图片副本（`content/units/images/`）。
+# 正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``。
+DEFAULT_IMAGES_DIR = CONTENT_UNIT_IMAGES
 DEFAULT_OUT_DIR = _REPO_ROOT / "platforms" / "toutiao" / "out"
 DEFAULT_OUTBOX_DIR = _REPO_ROOT / "platforms" / "toutiao" / "outbox"
 DEFAULT_CAPABILITY = default_capability_path()
@@ -73,6 +75,7 @@ DEFAULT_STATE_FILE = _REPO_ROOT / "platforms" / "toutiao" / "out" / "state.json"
 #: overwrite the value that was given before the command name.
 _DEFAULTS = {
     "posts_dir": DEFAULT_POSTS_DIR,
+    "images_dir": DEFAULT_IMAGES_DIR,
     "out_dir": DEFAULT_OUT_DIR,
     "outbox_dir": DEFAULT_OUTBOX_DIR,
     "capability": DEFAULT_CAPABILITY,
@@ -164,8 +167,7 @@ def _resolve_post(posts_dir: Path, slug: str):
     posts_dir = Path(posts_dir)
     if not posts_dir.is_dir():
         raise FileNotFoundError(
-            "找不到 {}。先跑 `python3 tools/build-content-units.py` 产出内容单元，"
-            "再跑 `python3 platforms/blog/site/tools/sync-content.py` 同步进站点。"
+            "找不到 {}。先跑 `python3 tools/build-content-units.py` 产出内容单元。"
             .format(posts_dir)
         )
     direct = posts_dir / (slug + ".md")
@@ -257,7 +259,7 @@ def _package_and_record(args, capability, article, store):
     if getattr(args, "packages_only", False):
         # 只出包：指纹门在这里不起作用——包没了就得重出，与内容变没变无关。
         package = write_package(
-            article, capability, args.out_dir, args.posts_dir, args.source_url,
+            article, capability, args.out_dir, args.images_dir, args.source_url,
             fetch_remote=getattr(args, "fetch_remote", False),
         )
         return package, None, store.get(article.content_id)
@@ -267,7 +269,7 @@ def _package_and_record(args, capability, article, store):
         return None, None, state
 
     package = write_package(
-        article, capability, args.out_dir, args.posts_dir, args.source_url,
+        article, capability, args.out_dir, args.images_dir, args.source_url,
         fetch_remote=getattr(args, "fetch_remote", False),
     )
     snapshot = write_snapshot(package, args.outbox_dir)
@@ -553,7 +555,9 @@ def _add_common_options(parser: argparse.ArgumentParser) -> None:
     the value that was given before the command name.
     """
     parser.add_argument("--posts-dir", type=Path, default=argparse.SUPPRESS,
-                        help="站点文章目录（默认：platforms/blog/site/source/_posts）")
+                        help="内容单元目录（默认：content/units）")
+    parser.add_argument("--images-dir", type=Path, default=argparse.SUPPRESS,
+                        help="图片根目录（默认：content/units/images）")
     parser.add_argument("--out-dir", type=Path, default=argparse.SUPPRESS,
                         help="发布包目录（默认：platforms/toutiao/out）")
     parser.add_argument("--outbox-dir", type=Path, default=argparse.SUPPRESS,

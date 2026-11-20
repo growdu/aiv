@@ -172,10 +172,16 @@ cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli status
 例如 `source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc`。
 
 每个命令都能把落盘位置指到别处，**但要把每一处都指走**，否则还是会写进仓库：
-`--posts-dir` / `--out-dir` / `--outbox-dir` / `--state-file` / `--capability`。
+`--posts-dir`（内容单元目录，默认 `content/units`）/ `--images-dir`
+（图片根目录，默认 `content/units/images`）/ `--out-dir` / `--outbox-dir` /
+`--state-file` / `--capability`。
 另外三个选项管内容与通知：`--source-url`（正文末尾署名的站点地址）、
 `--notify`（通知通道：serverchan / wechat_work / webhook）、`--notify-key`（通知凭据）。
 选项写在命令名前后都行。
+
+正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``——单元目录是内容单元
+id 的目录部分（`db/x/_index` 的目录是 `db/x`，顶层单元是空串）。这条规则跟站点、
+跟公众号 adapter 是同一条。
 
 ⚠️ **只指 `--out-dir` 是不够的**：`convert` 会把状态快照写进仓库里的
 `platforms/toutiao/outbox/<slug>__toutiao.json`——**那个文件是被 git 跟踪的**，

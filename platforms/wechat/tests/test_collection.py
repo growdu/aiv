@@ -19,7 +19,7 @@ def _post(slug, title, categories, date="2026-11-09 15:00:00", category_ids=()):
         slug=slug,
         title=title,
         digest="摘要：" + title,
-        permalink=build_permalink(slug, date),
+        permalink=build_permalink(slug),
         body="正文",
         categories=tuple(categories),
         date=date,

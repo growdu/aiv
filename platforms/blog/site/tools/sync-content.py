@@ -5,7 +5,7 @@
 
 1. `content/units/` → `src/content/units/`（Astro 的 content collection 读的副本）。
    **构建产物，不入库**——内容单元本身不入库，副本更不该入库。
-2. `docs/` 里的图片 → `public/images/`（按 docs/ 相对路径落盘，不转码）。
+2. `content/units/images/` 里的图片 → `public/images/`（按 docs/ 相对路径落盘，不转码）。
    站点里图片走 `/images/<docs 相对路径>`。
 3. `node_modules/mermaid/dist/mermaid.esm.min.mjs` → `public/js/`。
    流程图在**客户端**渲染（理由见 design 文档 §七），自托管，不走 CDN。
@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "tools"))
 
-from paths import CONTENT_UNITS, DOCS  # noqa: E402
+from paths import CONTENT_UNITS, IMAGE_EXTENSIONS  # noqa: E402
 
 SITE = Path(__file__).resolve().parents[1]
 UNITS_DST = SITE / "src" / "content" / "units"
@@ -34,7 +34,10 @@ PUBLIC = SITE / "public"
 IMAGES_DST = PUBLIC / "images"
 JS_DST = PUBLIC / "js"
 
-IMG_EXT = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif"}
+#: 图片的来源——**内容单元仓库**里的那份图片副本。
+#: 编译器按 docs 相对路径把它拷进 `content/units/images/`，
+#: 站点不再读 `docs/`。
+IMAGES_SRC = CONTENT_UNITS / "images"
 
 MERMAID_SRC = SITE / "node_modules" / "mermaid" / "dist" / "mermaid.esm.min.mjs"
 MERMAID_DST = JS_DST / "mermaid.esm.min.mjs"
@@ -70,12 +73,12 @@ def sync_units(check: bool) -> list[str]:
 
 
 def sync_images(check: bool) -> list[str]:
-    """docs/ 里的图片 → public/images/。"""
+    """内容单元仓库里的图片 → public/images/。"""
     problems: list[str] = []
     want = {
-        p.relative_to(DOCS).as_posix(): p.read_bytes()
-        for p in sorted(DOCS.rglob("*"))
-        if p.is_file() and p.suffix.lower() in IMG_EXT
+        p.relative_to(IMAGES_SRC).as_posix(): p.read_bytes()
+        for p in sorted(IMAGES_SRC.rglob("*"))
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
     }
     have = {
         p.relative_to(IMAGES_DST).as_posix(): p.read_bytes()

@@ -26,11 +26,15 @@ from toutiao.state import PublishState, StateStore
 
 
 def _site(tmp_path):
-    """A throwaway site: one post with one picture."""
+    """A throwaway content-unit repository: one post with one picture.
+
+    The picture lives in the **image repository** -- ``图片根/单元目录/正文里的
+    相对路径`` -- the same rule the site uses.
+    """
     site = tmp_path / "source"
     posts = site / "_posts" / "db"
     posts.mkdir(parents=True)
-    image = site / "images" / "demo.png"
+    image = site / "images" / "db" / "images" / "demo.png"
     image.parent.mkdir(parents=True)
     Image.new("RGB", (1200, 900), (10, 20, 30)).save(image, "PNG")
     (posts / "demo.md").write_text(
@@ -50,6 +54,7 @@ def _args(tmp_path, command, slug=None):
         argv.append(slug)
     argv += [
         "--posts-dir", str(tmp_path / "source" / "_posts"),
+        "--images-dir", str(tmp_path / "source" / "images"),
         "--out-dir", str(tmp_path / "out"),
         "--outbox-dir", str(tmp_path / "outbox"),
         "--state-file", str(tmp_path / "out" / "state.json"),

@@ -111,11 +111,14 @@ export default defineConfig({
           remarkSiteLinks,
           {
             unitsBase: path.join(here, 'src', 'content', 'units'),
-            docsBase: path.join(here, '..', '..', '..', 'docs'),
+            // 图片的基准：站点的**图片副本**（public/images/）。
+            // 站点不读 docs/——图片由编译器拷进内容单元仓库，
+            // 再由 sync-content.py 同步进这里。
+            imagesBase: path.join(here, 'public', 'images'),
             // 共享 URL 规则（仓库根那一份，全仓库唯一）。
             // 插件**不自己找**规则文件——路径从这里递进去，
-            // 跟 unitsBase / docsBase 一个路子。
-            // （`here` 往上三级是仓库根，跟 docsBase 同一个基准。）
+            // 跟 unitsBase / imagesBase 一个路子。
+            // （`here` 往上三级是仓库根。）
             rulesPath: path.join(here, '..', '..', '..', 'rules', 'urls.json'),
           },
         ],

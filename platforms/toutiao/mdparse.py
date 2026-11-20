@@ -177,8 +177,7 @@ def discover(posts_dir: Path) -> list[SourcePost]:
     posts_dir = Path(posts_dir)
     if not posts_dir.is_dir():
         raise FileNotFoundError(
-            "找不到 {}。先跑 `python3 tools/build-content-units.py` 产出内容单元，"
-            "再跑 `python3 platforms/blog/site/tools/sync-content.py` 同步进站点。"
+            "找不到 {}。先跑 `python3 tools/build-content-units.py` 产出内容单元。"
             .format(posts_dir)
         )
     return [load_post(path, posts_dir) for path in sorted(posts_dir.rglob("*.md"))]

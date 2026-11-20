@@ -14,7 +14,7 @@
  *
  * **URL 形状不在这里定**：形状在仓库根的 `rules/urls.json`（全仓库唯一的那份），
  * 由 `astro.config.mjs` 把路径递进来（`rulesPath`）——插件**不自己找**规则文件，
- * 跟 `unitsBase` / `docsBase` 一个路子。
+ * 跟 `unitsBase` / `imagesBase` 一个路子。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -69,11 +69,14 @@ function loadRules(rulesPath) {
 
 export default function remarkSiteLinks(options = {}) {
   const unitsBase = options.unitsBase;
-  const docsBase = options.docsBase;
+  const imagesBase = options.imagesBase;
   const rulesPath = options.rulesPath;
 
   if (!unitsBase) {
     throw new Error('remark-site-links: 缺 unitsBase 选项');
+  }
+  if (!imagesBase) {
+    throw new Error('remark-site-links: 缺 imagesBase 选项');
   }
   if (!rulesPath) {
     throw new Error('remark-site-links: 缺 rulesPath 选项');
@@ -94,7 +97,8 @@ export default function remarkSiteLinks(options = {}) {
     if (!filePath) return;
 
     const unitRel = path.relative(unitsBase, filePath);
-    // 内容单元的目录结构与 docs/ 同构，图片按 docs/ 的相对路径解析。
+    // 内容单元的目录结构与 docs/ 同构，图片按 docs/ 的相对路径解析——
+    // 基准是站点的**图片副本**（public/images/），不是 docs/。
     const unitDir = path.dirname(unitRel);
     const isVideo =
       unitRel.startsWith(videoDir + path.sep) || unitRel.startsWith(rules.video_id_prefix);
@@ -107,8 +111,8 @@ export default function remarkSiteLinks(options = {}) {
       if (node.type === 'image') {
         if (!IMAGE_EXT.test(url)) return;
         if (isVideo) return; // 视频单元的图片暂不在站内托管
-        const abs = path.resolve(docsBase, unitDir, url);
-        const rel = path.relative(docsBase, abs);
+        const abs = path.resolve(imagesBase, unitDir, url);
+        const rel = path.relative(imagesBase, abs);
         if (rel.startsWith('..')) return;
         if (!fs.existsSync(abs)) return;
         node.url = '/images/' + rel.split(path.sep).join('/');

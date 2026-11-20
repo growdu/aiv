@@ -1,11 +1,10 @@
 """Discover blog posts and validate them against WeChat's hard limits.
 
-Input is the site's posts directory: the copy of the content units the
-site keeps (``platforms/blog/site/src/content/units/``).  That copy is
-produced by ``tools/build-content-units.py`` (the platform-agnostic
-compiler, ``docs/`` → ``content/units/``) and copied in by
-``platforms/blog/site/tools/sync-content.py``.  This module only reads
-what the compile produced and adds the metadata WeChat needs: digest,
+Input is the **content-unit repository** (``content/units/``), produced
+by ``tools/build-content-units.py`` (the platform-agnostic compiler,
+``docs/`` → ``content/units/``).  The adapter reads that repository
+directly -- it does not read a copy of it.  This module only reads what
+the compile produced and adds the metadata WeChat needs: digest,
 permalink and eligibility.
 """
 
@@ -14,12 +13,20 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import quote
 
 from .digest import DIGEST_LIMIT, make_digest
 from .titles import TITLE_LIMIT
+
+# 共享 URL 规则住在仓库根的 tools/ 下（读取器 `url_rules.py`，规则
+# `rules/urls.json`）。本模块按**文件**读它——模块之间不互相 import。
+# platforms/wechat/posts.py → parents[0]=wechat、parents[1]=platforms、
+# parents[2]=仓库根。
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from url_rules import doc_url  # noqa: E402
 
 AUTHOR_LIMIT = 16
 
@@ -173,17 +180,15 @@ def parse_front_matter(text: str):
     return fields, text[match.end():]
 
 
-def build_permalink(slug: str, date: str) -> str:
+def build_permalink(unit_id: str) -> str:
     """Build the canonical site URL of a post.
 
-    Hexo's ``permalink: :year/:month/:day/:title/`` expands ``:title`` to
-    the post path relative to the posts directory (verified against the
-    published sitemap), so the permalink mirrors that path exactly.
+    文章地址 = **共享规则**算出来的那个（``/docs/<单元 id>/``）——
+    与契约层、站点用的是同一条规则，地址形状只有一份。
+
+    口径是「地址逐字照抄单元 id」：**不 percent-encode**。
     """
-    parts = date[:10].split("-")
-    if len(parts) != 3 or not all(part.isdigit() for part in parts):
-        parts = ["2024", "01", "01"]
-    return "/{}/{}/{}/{}/".format(parts[0], parts[1], parts[2], quote(slug))
+    return doc_url(unit_id)
 
 
 def _string_list(value) -> tuple:
@@ -220,7 +225,7 @@ def load_post(path: Path, posts_dir: Path) -> Post:
         slug=slug,
         title=title,
         digest=make_digest(body),
-        permalink=build_permalink(slug, date),
+        permalink=build_permalink(slug),
         body=body,
         categories=categories,
         date=date,
@@ -234,8 +239,7 @@ def discover(posts_dir: Path) -> list:
     if not posts_dir.is_dir():
         raise FileNotFoundError(
             "posts directory not found at {}. Run "
-            "`python3 tools/build-content-units.py` and then "
-            "`python3 platforms/blog/site/tools/sync-content.py` first "
+            "`python3 tools/build-content-units.py` first "
             "(the compile takes about three minutes).".format(posts_dir)
         )
     return [load_post(path, posts_dir) for path in sorted(posts_dir.rglob("*.md"))]

@@ -104,8 +104,14 @@ cd platforms && python3 -m wechat.cli convert <slug>
 `<slug>` 是文章相对 `content/units/` 的路径去掉 `.md`（就是内容单元 id），例如
 `source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc`。
 
-全局选项（`--posts-dir` / `--out-dir` / `--source-url` / `--category-tag` /
-`--max-length`）写在子命令前后都行。
+全局选项（`--posts-dir` / `--images-dir` / `--out-dir` / `--source-url` /
+`--category-tag` / `--max-length`）写在子命令前后都行。
+
+`--posts-dir` 是内容单元目录（默认 `content/units`），`--images-dir` 是图片根目录
+（默认 `content/units/images`）。正文里的一张图落在
+``图片根/单元目录/正文里的相对路径``——单元目录是内容单元 id 的目录部分
+（`db/x/_index` 的目录是 `db/x`，顶层单元是空串）。这条规则跟站点、跟头条号
+adapter 是同一条。
 
 ## 环境变量
 

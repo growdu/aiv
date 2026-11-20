@@ -21,6 +21,7 @@ import atexit
 import hashlib
 import json
 import os
+import posixpath
 import subprocess
 import sys
 import time
@@ -53,20 +54,20 @@ from .state import PublishState, StateStore, needs_submit
 # 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
-from paths import REPO_ROOT, ROOT_TOOLS, SITE_POSTS, SITE_TOOLS  # noqa: E402
+from paths import (CONTENT_UNITS, CONTENT_UNIT_IMAGES, REPO_ROOT,
+                   ROOT_TOOLS)  # noqa: E402
 
-# 文章目录：站点拿到的那份内容单元副本
-# （`platforms/blog/site/src/content/units/`）——**不是** `content/units/`。
-# 它是构建产物，由 `platforms/blog/site/tools/sync-content.py` 同步进来。
-DEFAULT_POSTS_DIR = SITE_POSTS
+# 文章目录：**内容单元仓库**（`content/units/`）——adapter 直接读它，
+# 不再读站点的副本。
+DEFAULT_POSTS_DIR = CONTENT_UNITS
+# 图片根：内容单元仓库里的那份图片副本（`content/units/images/`）。
+# 正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``。
+DEFAULT_IMAGES_DIR = CONTENT_UNIT_IMAGES
 DEFAULT_OUT_DIR = Path(__file__).resolve().parents[0] / "out"
 DEFAULT_SOURCE_URL = "https://growdu.cn"
 DEFAULT_SECRETS_FILE = Path(__file__).resolve().parents[0] / "secrets.json"
 DEFAULT_COLLECTIONS_FILE = Path(__file__).resolve().parents[0] / "collections.json"
 DEFAULT_REPO_DIR = REPO_ROOT
-# 站点工具目录相对仓库根的那一段（``platforms/blog/site/tools``）。
-# ``--repo-dir`` 指到别的检出时，编译器跟着走。
-SITE_TOOLS_REL = SITE_TOOLS.relative_to(REPO_ROOT)
 # 根工具目录相对仓库根的那一段（``tools``）。同上：跟着 ``--repo-dir`` 走。
 ROOT_TOOLS_REL = ROOT_TOOLS.relative_to(REPO_ROOT)
 DEFAULT_STAMP_FILE = Path(__file__).resolve().parents[0] / "out" / ".auto-draft-stamp"
@@ -371,35 +372,34 @@ class CoverRequired(RuntimeError):
     """The article has no image and no cover was configured."""
 
 
-def _resolve_asset(path: str, posts_dir: Path) -> Path:
+def _resolve_asset(path: str, images_root: Path, unit_dir: str = "") -> Path:
     """Resolve an asset path from the article to a real file.
 
-    The content units keep the body verbatim, so an image reference still
-    points at ``images/<path relative to docs/>``.  Those files live in the
-    site's ``public/images/`` now -- ``platforms/blog/site/tools/sync-content.py``
-    copies them there.
+    一张图落在 ``图片根/单元目录/正文里的相对路径``——**全局一条规则**，
+    站点与两个 adapter 都用它（站点那边是它的图片副本 ``public/images/``）。
+    ``unit_dir`` 是内容单元 id 的**目录部分**：``db/x/_index`` 的目录是
+    ``db/x``，顶层单元是空串。
 
-    ⚠️ TODO: the site moved, so "the parent of the posts directory" -- what
-    this function looks in -- is no longer where the images are.  Fixing it
-    means deciding where the adapter reads images from (the site's
-    ``public/images/``, or the ``docs/`` tree itself); that is a cross-module
-    decision, not a one-line change.  The rule below is unchanged for now.
+    绝对路径原样返回；相对路径找不到文件时，返回**没解析的那个候选**——
+    调用方自己判 ``is_file()``。
     """
     candidate = Path(path)
     if candidate.is_absolute():
         return candidate
-    site_root = Path(posts_dir).parent
-    resolved = site_root / candidate
+    resolved = Path(images_root) / unit_dir / candidate
     if resolved.is_file():
         return resolved
     return candidate
 
 
-def _upload_assets(client, result, args):
-    """Upload every local asset and return the URLs in placeholder order."""
+def _upload_assets(client, result, args, unit_dir=""):
+    """Upload every local asset and return the URLs in placeholder order.
+
+    ``unit_dir`` 是**这一篇**的单元目录——它上传的是这一篇的图。
+    """
     urls = []
     for asset_path in result.assets:
-        resolved = _resolve_asset(asset_path, args.posts_dir)
+        resolved = _resolve_asset(asset_path, args.images_dir, unit_dir)
         if not resolved.is_file():
             raise AssetNotFound("图片不存在: {} (文章引用 {})".format(resolved, asset_path))
         try:
@@ -458,7 +458,7 @@ class CoverUpload:
 
 
 def _upload_cover(client, result, args, external_prepared=None, card=None,
-                  cache=None, use_cache=True) -> CoverUpload:
+                  cache=None, use_cache=True, unit_dir="") -> CoverUpload:
     """Upload the cover image and return what was sent to WeChat.
 
     WeChat requires a cover, so there is always an answer:
@@ -486,14 +486,17 @@ def _upload_cover(client, result, args, external_prepared=None, card=None,
     the first refresh cycle.  A permanent material can be used by any
     number of drafts, so the media id is looked up in
     :class:`wechat.material.MaterialCache` first.
+
+    ``unit_dir`` 是**这一篇**的单元目录：用户给的 ``--cover`` 相对**图片根**
+    （单元目录是空的），正文的首图相对**这一篇**的单元目录。
     """
     if args.cover:
-        resolved = _resolve_asset(args.cover, args.posts_dir)
+        resolved = _resolve_asset(args.cover, args.images_dir)
         if not resolved.is_file():
             raise AssetNotFound("封面图不存在: {}".format(resolved))
         prepared = _prepare_cover_image(resolved)
     elif result.assets:
-        resolved = _resolve_asset(result.assets[0], args.posts_dir)
+        resolved = _resolve_asset(result.assets[0], args.images_dir, unit_dir)
         if not resolved.is_file():
             raise AssetNotFound("图片不存在: {}".format(resolved))
         prepared = _prepare_cover_image(resolved)
@@ -952,8 +955,10 @@ def _draft_parts(client, store, post, args) -> list:
 def _draft_part(client, store, post, part, fingerprint, args) -> DraftResult:
     """Put one part of an article into the draft box."""
     result = part.result
+    # 这一篇的单元目录（内容单元 id 的目录部分）——它上传的是这一篇的图。
+    unit_dir = posixpath.dirname(post.slug)
 
-    urls = _upload_assets(client, result, args)
+    urls = _upload_assets(client, result, args, unit_dir)
     html = result.substitute(urls)
 
     external_failures = []
@@ -966,7 +971,8 @@ def _draft_part(client, store, post, part, fingerprint, args) -> DraftResult:
 
     card = _cover_card(post, part, args)
     cache = material_module.MaterialCache(Path(args.out_dir) / "materials.json")
-    cover = _upload_cover(client, result, args, external_prepared, card, cache)
+    cover = _upload_cover(client, result, args, external_prepared, card, cache,
+                           unit_dir=unit_dir)
 
     # Every part describes itself: the same summary on every row of the
     # draft box would tell the reader nothing.
@@ -1004,7 +1010,7 @@ def _draft_part(client, store, post, part, fingerprint, args) -> DraftResult:
               file=sys.stderr)
         cache.forget(cover.digest)
         again = _upload_cover(client, result, args, external_prepared, card,
-                              cache, use_cache=False)
+                              cache, use_cache=False, unit_dir=unit_dir)
         article["thumb_media_id"] = again.media_id
         article["cover_info"] = {"crop_percent_list": again.crop_percent_list}
         state, action = _create_draft(client, store, part.key, fingerprint, article,
@@ -1222,24 +1228,16 @@ def _docs_changed(repo_dir: Path, stamp_path: Path) -> bool:
 def _run_sync(repo_dir: Path) -> int:
     """Rebuild the content units from ``docs/``.
 
-    The site moved into ``platforms/blog/site/``, and the compile is two
-    steps now:
+    **一步**：``tools/build-content-units.py`` -- 平台无关的编译器，
+    ``docs/`` 变成 ``content/units/``（内容单元与图片都在里面）。
 
-    1. ``tools/build-content-units.py`` -- the platform-agnostic
-       compiler: ``docs/`` becomes ``content/units/``.
-    2. ``platforms/blog/site/tools/sync-content.py`` -- copies the
-       content units into the Astro project
-       (``platforms/blog/site/src/content/units/``) and refreshes the
-       static assets.
+    本模块读的就是**内容单元仓库**（``CONTENT_UNITS``），不是站点的副本——
+    所以不再需要 ``platforms/blog/site/tools/sync-content.py`` 那一步。
 
-    **This module reads the site's copy** (``SITE_POSTS``), so both steps
-    have to run.
-
-    Returns the exit code of the first step that failed.
+    Returns the exit code of the step that failed.
     """
     steps = (
         (repo_dir / ROOT_TOOLS_REL / "build-content-units.py", "编译内容单元"),
-        (repo_dir / SITE_TOOLS_REL / "sync-content.py", "同步内容单元进站点"),
     )
     for script, what in steps:
         if not script.is_file():
@@ -1683,7 +1681,7 @@ def cmd_collections(args) -> int:
     return EXIT_OK
 
 
-def _collection_cover(collection, posts, args) -> str:
+def _collection_cover(collection, posts, args) -> tuple:
     """Find the cover image of a collection's index article.
 
     The collection's own articles supply it: the first picture of the
@@ -1694,9 +1692,13 @@ def _collection_cover(collection, posts, args) -> str:
     The search stops at the first article that yields a picture, so a
     collection whose leading articles are text-only costs nothing.
     Falls back to the default cover.
+
+    返回 ``(路径, 单元目录)``——光有路径不知道它相对**哪一篇**的目录：
+    合集封面取自某一篇的图，单元目录是**那一篇**的。
+    用户给的 ``--cover`` 相对**图片根**（单元目录是空的）。
     """
     if args.cover:
-        return args.cover
+        return args.cover, ""
     by_slug = {post.slug: post for post in posts}
     for ref in collection.articles:
         post = by_slug.get(ref.slug)
@@ -1706,8 +1708,8 @@ def _collection_cover(collection, posts, args) -> str:
         result = render_module.render(
             parse(post.body), resolver=_Resolver(assets), highlight=False)
         if result.assets:
-            return result.assets[0]
-    return str(DEFAULT_COVER)
+            return result.assets[0], posixpath.dirname(post.slug)
+    return str(DEFAULT_COVER), ""
 
 
 def cmd_publish_collection(args) -> int:
@@ -1757,7 +1759,8 @@ def cmd_publish_collection(args) -> int:
         _report_collection(collection, title, len(html), archive, state, action, published, args)
         return EXIT_OK
 
-    cover_path = _resolve_asset(_collection_cover(collection, posts, args), args.posts_dir)
+    cover, unit_dir = _collection_cover(collection, posts, args)
+    cover_path = _resolve_asset(cover, args.images_dir, unit_dir)
     if not cover_path.is_file():
         raise AssetNotFound("封面图不存在: {}".format(cover_path))
     prepared = _prepare_cover_image(cover_path)
@@ -1935,7 +1938,9 @@ def _add_common_options(parser, *, suppress: bool) -> None:
         return argparse.SUPPRESS if suppress else value
 
     parser.add_argument("--posts-dir", type=Path, default=default(DEFAULT_POSTS_DIR),
-                        help="站点文章目录，默认 platforms/blog/site/src/content/units")
+                        help="内容单元目录，默认 content/units")
+    parser.add_argument("--images-dir", type=Path, default=default(DEFAULT_IMAGES_DIR),
+                        help="图片根目录，默认 content/units/images")
     parser.add_argument("--out-dir", type=Path, default=default(DEFAULT_OUT_DIR),
                         help="产物目录，默认 out")
     parser.add_argument("--source-url", default=default(DEFAULT_SOURCE_URL),

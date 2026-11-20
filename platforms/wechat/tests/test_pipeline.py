@@ -179,12 +179,14 @@ def sample_post(tmp_path):
     target = posts_dir / "database" / "demo.md"
     target.parent.mkdir(parents=True)
     target.write_text(SAMPLE, encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "demo.png")
+    _write_png(tmp_path / "source" / "images" / "database" / "images" / "demo.png")
     return posts_dir, "database/demo"
 
 
 def _args(posts_dir, out_dir, slug=None, server=None, max_length=0):
-    args = ["--posts-dir", str(posts_dir), "--out-dir", str(out_dir)]
+    images_dir = posts_dir.parent / "images"
+    args = ["--posts-dir", str(posts_dir), "--images-dir", str(images_dir),
+            "--out-dir", str(out_dir)]
     if server:
         args += ["--api-base", server]
     if max_length:
@@ -319,7 +321,7 @@ def test_publish_creates_draft_with_expected_payload(sample_post, tmp_path, serv
     payload = json.loads(_Handler.bodies["/cgi-bin/draft/add"])
     article = payload["articles"][0]
     assert article["title"] == "演示文章"
-    assert article["content_source_url"] == "https://growdu.cn/2026/11/09/database/demo/"
+    assert article["content_source_url"] == "https://growdu.cn/docs/database/demo/"
     assert article["thumb_media_id"] == "COVER_ID"
     assert len(article["digest"]) <= 120
     assert "参考链接" in article["content"]
@@ -492,7 +494,7 @@ def test_publish_reports_missing_image(sample_post, tmp_path, server, monkeypatc
     posts_dir, slug = sample_post
     monkeypatch.setenv("WX_APPID", "appid")
     monkeypatch.setenv("WX_APPSECRET", "secret")
-    (tmp_path / "source" / "images" / "demo.png").unlink()
+    (tmp_path / "source" / "images" / "database" / "images" / "demo.png").unlink()
 
     code = main(["publish", slug] + _args(posts_dir, tmp_path / "out", server=server))
     assert code == 2
@@ -572,12 +574,13 @@ def test_publish_rehosts_an_external_image(tmp_path, server, monkeypatch):
         "---\ntitle: \"外链图\"\ndate: 2026-11-09 15:00:00\n---\n\n"
         "正文。\n\n![封面](images/cover.png)\n\n![图]({}/a.png)\n".format(image_base),
         encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "cover.png")
+    _write_png(tmp_path / "source" / "images" / "images" / "cover.png")
 
     monkeypatch.setenv("WX_APPID", "appid")
     monkeypatch.setenv("WX_APPSECRET", "secret")
 
     code = main(["publish", "ext", "--posts-dir", str(posts_dir),
+                 "--images-dir", str(tmp_path / "source" / "images"),
                  "--out-dir", str(tmp_path / "out"), "--api-base", server,
                  "--secrets-file", str(tmp_path / "absent.json")])
     image_httpd.shutdown()
@@ -598,12 +601,13 @@ def test_publish_leaves_a_note_when_an_external_image_cannot_be_fetched(
         "正文。\n\n![封面](images/cover.png)\n\n"
         "![图](http://127.0.0.1:1/nope.png)\n",
         encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "cover.png")
+    _write_png(tmp_path / "source" / "images" / "images" / "cover.png")
 
     monkeypatch.setenv("WX_APPID", "appid")
     monkeypatch.setenv("WX_APPSECRET", "secret")
 
     code = main(["publish", "ext", "--posts-dir", str(posts_dir),
+                 "--images-dir", str(tmp_path / "source" / "images"),
                  "--out-dir", str(tmp_path / "out"), "--api-base", server,
                  "--secrets-file", str(tmp_path / "absent.json")])
     assert code == 0
@@ -703,7 +707,7 @@ def _series_posts(tmp_path):
             "---\n\n正文一段。\n\n![图](images/demo.png)\n".format(
                 title, "1" if name == "one" else "2"),
             encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "demo.png")
+    _write_png(tmp_path / "source" / "images" / "database" / "images" / "demo.png")
     return posts_dir
 
 
@@ -1001,7 +1005,7 @@ def _batch_posts(tmp_path, count=3):
             "categories:\n  - 数据库\n---\n\n正文一段。\n\n![图](images/demo.png)\n".format(
                 index, index + 1),
             encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "demo.png")
+    _write_png(tmp_path / "source" / "images" / "database" / "images" / "demo.png")
     return posts_dir
 
 
@@ -1397,6 +1401,7 @@ def test_an_external_picture_can_serve_as_the_cover(tmp_path, server, monkeypatc
     monkeypatch.setenv("WX_APPSECRET", "secret")
 
     code = main(["publish", "ext", "--posts-dir", str(posts_dir),
+                 "--images-dir", str(tmp_path / "source" / "images"),
                  "--out-dir", str(tmp_path / "out"), "--api-base", server,
                  "--secrets-file", str(tmp_path / "absent.json")])
     image_httpd.shutdown()
@@ -1675,7 +1680,7 @@ def test_an_unreadable_image_skips_the_article_instead_of_crashing_the_batch(
         "---\ntitle: \"带坏图的文章\"\ndate: 2026-11-09 15:00:00\nauthor: growdu\n"
         "categories:\n  - 数据库\n---\n\n正文。\n\n![图](images/notes.txt)\n",
         encoding="utf-8")
-    image = posts_dir.parent / "images" / "notes.txt"
+    image = posts_dir.parent / "images" / "database" / "images" / "notes.txt"
     image.parent.mkdir(parents=True, exist_ok=True)
     image.write_text("这根本不是一张图片。", encoding="utf-8")
 
@@ -1703,7 +1708,7 @@ def test_an_article_with_an_svg_is_drafted(tmp_path, server, monkeypatch):
         "---\ntitle: \"带 SVG 的文章\"\ndate: 2026-11-09 15:00:00\nauthor: growdu\n"
         "categories:\n  - 数据库\n---\n\n正文。\n\n![图](images/icon.svg)\n",
         encoding="utf-8")
-    image = posts_dir.parent / "images" / "icon.svg"
+    image = posts_dir.parent / "images" / "database" / "images" / "icon.svg"
     image.parent.mkdir(parents=True, exist_ok=True)
     image.write_text(
         '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50">'

@@ -10,6 +10,10 @@
 - 输入：`docs/` 下的目录文档（只有已过审的才在 `docs/` 里）。
 - 输出：`content/units/` 下**同构**的一份（`docs/source-tracks/a/b.md`
   → `content/units/source-tracks/a/b.md`）。
+- 图片也进内容单元仓库：`docs/` 下的图片按 **docs 相对路径**拷进
+  `content/units/images/`（`docs/a/b.png` → `content/units/images/a/b.png`）。
+  于是正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``——
+  站点与两个 adapter 共用这一条规则。
 - 内容单元 = 一篇 markdown + 一份 front matter。front matter 由母稿的
   front matter、目录链上的 `_index.md`、以及 git 历史推导出来。
 
@@ -36,6 +40,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -45,7 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import yaml  # noqa: E402
 
-from paths import CONTENT_UNITS, DOCS  # noqa: E402
+from paths import CONTENT_UNITS, DOCS, IMAGE_EXTENSIONS  # noqa: E402
 
 #: 母稿 front matter 里属于「期号」的字段——**母稿里唯一往下搬的一组**。
 #: 不在表里的字段不往下传：避免母稿随手写个字段就污染所有平台。
@@ -337,6 +342,81 @@ def compile_units() -> list[Unit]:
     return units
 
 
+def _source_images() -> dict[Path, Path]:
+    """``docs/`` 下的图片：相对路径 → 源文件。
+
+    只有后缀在 :data:`IMAGE_EXTENSIONS` 里的才算图片——markdown、json
+    这些不是图片，不该被拷进图片仓库。
+    """
+    out: dict[Path, Path] = {}
+    if not DOCS.is_dir():
+        return out
+    for path in sorted(DOCS.rglob("*")):
+        if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS:
+            out[path.relative_to(DOCS)] = path
+    return out
+
+
+def _copied_images() -> dict[Path, Path]:
+    """``content/units/images/`` 下已有的图片：相对路径 → 文件。"""
+    root = CONTENT_UNITS / "images"
+    out: dict[Path, Path] = {}
+    if not root.is_dir():
+        return out
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            out[path.relative_to(root)] = path
+    return out
+
+
+def copy_images() -> None:
+    """把 ``docs/`` 下的图片复制进 ``content/units/images/``。
+
+    图片按 **docs 相对路径**落盘——它跟内容单元是同构的：
+    ``docs/db/pg/a.png`` → ``content/units/images/db/pg/a.png``。
+    于是正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``，
+    站点与两个 adapter 用的都是这一条规则。
+
+    **先删后拷**：上一轮的图留在那儿，下一轮就发出去了。
+    清理只碰 ``content/units/images/``——内容单元（含视频单元）不在里面。
+
+    ⚠️ 这里用的是**编译器模块的** ``CONTENT_UNITS``（模块级全局），
+    **不是** ``paths.CONTENT_UNIT_IMAGES``：后者在 import 时算死成真仓库的
+    绝对路径，用它会把图拷进真的仓库（既写脏仓库，又让用例必红）。
+    """
+    root = CONTENT_UNITS / "images"
+    if root.exists():
+        shutil.rmtree(root)
+    for rel, source in _source_images().items():
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
+
+def image_problems() -> list[str]:
+    """图片与 ``docs/`` 不同步的地方——``--check`` 用它。
+
+    缺了、多了、字节不一样，都算不同步：图跟内容单元一样是产物，
+    不同步就该报出来，而不是悄悄发出去。
+    """
+    problems: list[str] = []
+    source_images = _source_images()
+    copied_images = _copied_images()
+    root = CONTENT_UNITS / "images"
+    for rel, source in sorted(source_images.items()):
+        target = root / rel
+        if not target.exists():
+            problems.append(f"images/{rel.as_posix()}：图片不存在（该跑一次 build-content-units.py）")
+        elif target.read_bytes() != source.read_bytes():
+            problems.append(f"images/{rel.as_posix()}：图片与 docs/ 不同步")
+    for rel in sorted(copied_images):
+        if rel not in source_images:
+            problems.append(
+                f"images/{rel.as_posix()}：图片还在，但 docs/ 里已经没有了（撤出的存量没清干净）"
+            )
+    return problems
+
+
 def locate_source(rel_id: str) -> Path:
     """在 `docs/` 里定位一篇稿子。
 
@@ -428,6 +508,8 @@ def main() -> int:
                 continue  # 视频单元由 tools/build-video-pages.py 产出
             if rel not in rendered:
                 problems.append(f"{rel}：内容单元还在，但 docs/ 里已经没有了（撤出的存量没清干净）")
+        # 图跟内容单元一样是产物——不同步也要报出来
+        problems.extend(image_problems())
         if problems:
             for p in problems:
                 print(p, file=sys.stderr)
@@ -457,7 +539,11 @@ def main() -> int:
         if d.is_dir() and not any(d.iterdir()):
             d.rmdir()
 
-    print(f"内容单元：{len(rendered)} 篇（写入 {written}，清理残留 {removed}）")
+    # 图也进内容单元仓库（先删后拷，过期的图不留）
+    copy_images()
+
+    print(f"内容单元：{len(rendered)} 篇（写入 {written}，清理残留 {removed}），"
+          f"图片 {len(_source_images())} 张")
     return 0
 
 

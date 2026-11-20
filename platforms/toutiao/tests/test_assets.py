@@ -43,46 +43,44 @@ def test_is_remote_tells_urls_from_paths():
     assert is_remote("images/a.png") is False
 
 
-def test_resolve_asset_resolves_against_the_site_root(tmp_path):
-    site = tmp_path / "source"
-    target = site / "images" / "a.png"
+def test_resolve_asset_resolves_against_the_image_root(tmp_path):
+    """图落在 ``图片根/单元目录/正文里的路径``——与站点同一条规则。"""
+    images = tmp_path / "images"
+    target = images / "db" / "pg" / "images" / "a.png"
     target.parent.mkdir(parents=True)
     target.write_bytes(b"x")
-    posts = site / "_posts"
-    posts.mkdir()
-    assert resolve_asset("images/a.png", posts) == target.resolve()
+    assert resolve_asset("images/a.png", images, "db/pg") == target.resolve()
 
 
 def test_resolve_asset_keeps_absolute_paths(tmp_path):
-    target = tmp_path / "b.png"
+    """绝对路径原样用它——但它也得在图片根里。"""
+    target = tmp_path / "images" / "b.png"
+    target.parent.mkdir(parents=True)
     target.write_bytes(b"x")
-    assert resolve_asset(str(target), tmp_path / "posts") == target.resolve()
+    assert resolve_asset(str(target), tmp_path / "images") == target.resolve()
 
 
 def test_resolve_asset_refuses_a_remote_url(tmp_path):
     """外链图不下载 —— 出包不能依赖网络。"""
     with pytest.raises(RemoteAsset):
-        resolve_asset("https://example.com/a.png", tmp_path / "posts")
+        resolve_asset("https://example.com/a.png", tmp_path / "images")
 
 
 def test_resolve_asset_says_which_path_is_missing(tmp_path):
     """找不到图要说清是哪个路径，不能静默返回一个相对路径。"""
-    posts = tmp_path / "source" / "_posts"
-    posts.mkdir(parents=True)
     with pytest.raises(AssetNotFound) as error:
-        resolve_asset("images/nope.png", posts)
+        resolve_asset("images/nope.png", tmp_path / "images", "db/pg")
     assert "images/nope.png" in str(error.value)
 
 
-def test_resolve_asset_refuses_a_path_outside_the_site_root(tmp_path):
-    """图路径是站点里的相对路径，不是出站的路。"""
-    site = tmp_path / "source"
-    posts = site / "_posts"
-    posts.mkdir(parents=True)
+def test_resolve_asset_refuses_a_path_outside_the_image_root(tmp_path):
+    """图路径是图片根里的相对路径，不是出站的路。"""
+    images = tmp_path / "images"
+    images.mkdir()
     outside = tmp_path / "secret.png"
     outside.write_bytes(b"x")
     with pytest.raises(AssetNotFound):
-        resolve_asset(str(outside), posts)
+        resolve_asset(str(outside), images)
 
 
 def test_prepare_image_writes_webp_under_the_limit(tmp_path):

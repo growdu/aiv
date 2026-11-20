@@ -40,6 +40,7 @@ place of their own is the next task's business.
 from __future__ import annotations
 
 import json
+import posixpath
 import re
 import tempfile
 from dataclasses import dataclass
@@ -227,11 +228,17 @@ def write_package(
     article: ToutiaoArticle,
     capability: Capability,
     package_root: Path,
-    posts_dir: Path,
+    images_root: Path,
     source_url: str = "https://growdu.cn",
     fetch_remote: bool = False,
 ) -> PackageResult:
     """Write the manual publish package for one article.
+
+    ``images_root`` is the **image repository** -- the picture copy inside
+    the content-unit repository (``content/units/images/``).  A picture is
+    looked up at ``images_root/unit_dir/<path in the body>``, ``unit_dir``
+    being the directory part of the article's content id: the same rule
+    the site and the WeChat adapter use.
 
     A post without a body picture still gets a package: Toutiao has a
     no-picture mode, and 470 of the 542 publishable posts have no picture
@@ -273,6 +280,9 @@ def write_package(
 
     limits = capability.limits
     site = source_url.split("://", 1)[-1].rstrip("/")
+    # 图落在 ``图片根/单元目录/正文里的路径``——单元目录是内容单元 id 的
+    # **目录部分**（``db/x/_index`` 的目录是 ``db/x``；顶层单元是空串）。
+    unit_dir = posixpath.dirname(article.content_id)
 
     rendered = render(article)
     (package_dir / "article.html").write_text(rendered.html + "\n", encoding="utf-8")
@@ -341,7 +351,7 @@ def write_package(
             prepared_numbers.append(number)
             continue
         try:
-            source = resolve_asset(relative, posts_dir)
+            source = resolve_asset(relative, images_root, unit_dir)
         except RemoteAsset:
             # 防御性冗余，不是活代码：``resolve_asset()`` 只对外链抛这个
             # 异常，而外链在上面的 ``is_remote()`` 那里就分走了。留着是

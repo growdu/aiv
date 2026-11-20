@@ -37,11 +37,11 @@ def _article(body="【图1】\n\n段落。", images=(), content_id="db/postgresq
     )
 
 
-def _site(tmp_path):
-    site = tmp_path / "source"
-    posts = site / "_posts"
-    posts.mkdir(parents=True)
-    return site, posts
+def _images_root(tmp_path):
+    """The image repository root -- the same shape as the real one."""
+    root = tmp_path / "content" / "units" / "images"
+    root.mkdir(parents=True)
+    return root
 
 
 @pytest.fixture
@@ -92,9 +92,9 @@ def test_fetch_remote_asset_says_when_it_cannot_download(picture_server):
 
 def test_remote_images_are_not_downloaded_by_default(tmp_path, picture_server):
     """默认不下载：出包不依赖网络，这条不能被悄悄改掉。"""
-    site, posts = _site(tmp_path)
+    images_root = _images_root(tmp_path)
     article = _article(images=(picture_server + "/a.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert not (result.package_dir / "images" / "01.webp").exists()
     readme = (result.package_dir / "README.md").read_text(encoding="utf-8")
     assert "需人工下载" in readme
@@ -102,9 +102,9 @@ def test_remote_images_are_not_downloaded_by_default(tmp_path, picture_server):
 
 def test_fetch_remote_packs_the_downloaded_picture(tmp_path, picture_server):
     """显式要下载时，下载来的图真的打进包里了。"""
-    site, posts = _site(tmp_path)
+    images_root = _images_root(tmp_path)
     article = _article(images=(picture_server + "/a.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn",
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn",
                            fetch_remote=True)
     packed = result.package_dir / "images" / "01.webp"
     assert packed.is_file()
@@ -118,9 +118,9 @@ def test_fetch_remote_packs_the_downloaded_picture(tmp_path, picture_server):
 
 def test_a_picture_that_cannot_be_downloaded_stays_a_human_job(tmp_path, picture_server):
     """下不到的图不算失败 —— 这一篇照样能发，只是少一张图。"""
-    site, posts = _site(tmp_path)
+    images_root = _images_root(tmp_path)
     article = _article(images=(picture_server + "/missing.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn",
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn",
                            fetch_remote=True)
     assert result.status == "packaged"
     assert not (result.package_dir / "images" / "01.webp").exists()

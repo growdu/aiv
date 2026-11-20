@@ -212,6 +212,42 @@ def test_the_category_ids_reach_the_front_matter(compiler):
     assert "categories:\n- 甲\n- 乙\ncategory_ids:\n- a/_index\n- a/b/_index\n" in text
 
 
+def test_the_compiler_copies_the_images_into_the_content_unit_repository(compiler):
+    """图片落进内容单元仓库——站点与 adapter 都从那儿拿图。"""
+    (compiler.DOCS / "fig").mkdir(parents=True)
+    (compiler.DOCS / "fig" / "x.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    compiler.copy_images()
+    copied = compiler.CONTENT_UNITS / "images" / "fig" / "x.png"
+    assert copied.is_file()
+    assert copied.read_bytes() == b"\x89PNG\r\n\x1a\n"
+
+
+def test_the_images_keep_their_path_under_docs(compiler):
+    """图片按 **docs 相对路径**落盘——它跟内容单元是同构的。"""
+    (compiler.DOCS / "db" / "pg").mkdir(parents=True)
+    (compiler.DOCS / "db" / "pg" / "a.png").write_bytes(b"a")
+    compiler.copy_images()
+    assert (compiler.CONTENT_UNITS / "images" / "db" / "pg" / "a.png").is_file()
+
+
+def test_a_stale_image_is_removed_from_the_content_unit_repository(compiler):
+    """上一轮的图留在那儿，下一轮就发出去了。"""
+    stale = compiler.CONTENT_UNITS / "images" / "old.png"
+    stale.parent.mkdir(parents=True, exist_ok=True)
+    stale.write_bytes(b"x")
+    compiler.copy_images()
+    assert not stale.exists()
+
+
+def test_the_check_mode_reports_an_image_that_is_out_of_sync(compiler, monkeypatch):
+    """图跟内容单元一样是产物——不同步要报出来，退出码非零。"""
+    (compiler.DOCS / "x.png").write_bytes(b"x")
+    compiler.copy_images()
+    (compiler.CONTENT_UNITS / "images" / "x.png").write_bytes(b"changed")
+    monkeypatch.setattr(sys, "argv", ["build-content-units.py", "--check"])
+    assert compiler.main() == 1
+
+
 def test_the_compile_only_result_carries_the_category_ids(compiler):
     """`compile_only()` 的返回 dict 也要带 `category_ids`——平台层问的是它。"""
     (compiler.DOCS / "a" / "b").mkdir(parents=True)
