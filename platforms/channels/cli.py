@@ -107,7 +107,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
             package.mark_drafted(target)
     except FileNotFoundError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        print("      没有发布包就回填不了：先出包，再上传，再回填"
+        print("      包不在或不完整就回填不了：先出包，再上传，再回填"
               f"（python -m channels.cli package {args.episode}）",
               file=sys.stderr)
         return 1

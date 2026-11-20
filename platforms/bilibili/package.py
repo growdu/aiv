@@ -54,7 +54,7 @@ _STATUS_LABELS = {
 #
 # **B站这一份是自己的清单**（含 `meta.json`）：各平台缺的东西不一样，
 # 不许互相统一——统一了就等于替别的平台决定它发得出去。
-REQUIRED_FILES = (
+REQUIRED_FILES: tuple[str, ...] = (
     "video.mp4",
     "cover.jpg",
     "title.txt",

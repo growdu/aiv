@@ -50,7 +50,7 @@ _STATUS_LABELS = {
 #
 # **抖音这一份是自己的清单**（不含 `meta.json`）：各平台缺的东西不一样，
 # 不许互相统一——统一了就等于替别的平台决定它发得出去。
-REQUIRED_FILES = (
+REQUIRED_FILES: tuple[str, ...] = (
     "video.mp4",
     "cover.jpg",
     "cover_3x4.jpg",

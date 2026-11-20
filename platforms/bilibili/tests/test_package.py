@@ -721,7 +721,7 @@ def test_marking_drafted_after_published_clears_the_link(episode_dir, tmp_path,
     """**先发出去、再标回草稿**——旧链接要在**三处**都清干净。
 
     视频号与抖音三处都清：包里的 `meta.json`、状态文件 `state.json`、入库快照。
-    B站今天**一处都没清**（`package.mark_drafted` 还不存在，
+    上一版B站**一处都没清**（`package.mark_drafted` 还不存在，
     CLI 的 `current.published_url` 也不清）→「标了草稿却还挂着已发布链接」。
 
     ⚠️ **快照文件名用扁平那个**：`f"{episodes.ep_id(EP_PATH)}__bilibili.json"`。
@@ -737,10 +737,17 @@ def test_marking_drafted_after_published_clears_the_link(episode_dir, tmp_path,
                      "--out", str(out)]) == 0
     assert cli.main(["mark", "drafted", EP_PATH, "--out", str(out)]) == 0
 
+    # 三处之一：包里的 `meta.json`
+    meta_data = json.loads((out / EP_PATH / "meta.json").read_text(encoding="utf-8"))
+    assert meta_data["status"] == "drafted"
+    assert meta_data["published_url"] is None
+
+    # 三处之二：状态文件 `state.json`
     state_data = json.loads((out / "state.json").read_text(encoding="utf-8"))
     assert state_data["episodes"][EP_PATH]["status"] == "drafted"
     assert state_data["episodes"][EP_PATH]["published_url"] is None
 
+    # 三处之三：入库快照
     shot = json.loads(
         (tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__bilibili.json")
         .read_text(encoding="utf-8"))
