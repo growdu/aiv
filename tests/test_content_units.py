@@ -272,11 +272,13 @@ def test_a_category_named_images_is_not_compiled(compiler, monkeypatch, capsys):
     """``images/`` 是图片仓库的位置——那一层不编译成内容单元，而且要**说一声**。
 
     编译器把 ``docs/`` 的树镜像进 ``content/units/``，图片仓库就在
-    ``content/units/images/``。用户建一个叫 ``images`` 的分类目录，
-    那一层的内容单元会在同一轮编译里被 ``copy_images()`` 连锅端——
-    **源文件还在，产物没了**。
+    ``content/units/images/``。用户要是建一个叫 ``images`` 的分类目录，
+    **不跳过它**的话，那一层的内容单元会在同一轮编译里被 ``copy_images()``
+    连锅端——**源文件还在，产物没了**。
 
-    所以 ``images/`` 是保留名（跟 ``video/`` 一个待遇），而且不能静悄悄地吃。
+    正是为了不发生这件事，``images/`` 才是**保留名**：编译时跳过 + 清残留时跳过，
+    **两处都跳**——跟 ``video/`` **不一样**（那个名字不是保留名：
+    只有清残留时跳过，**编译时照编**）。而且不能静悄悄地吃。
     """
     (compiler.DOCS / "images").mkdir(parents=True)
     (compiler.DOCS / "images" / "foo.md").write_text(
