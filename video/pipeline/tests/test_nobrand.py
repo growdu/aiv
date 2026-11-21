@@ -81,8 +81,8 @@ def test_the_remaining_segments_keep_their_order():
     """分段丢掉含品牌词的那一段，**其余按原顺序**保留。"""
     assert brand.strip_brand_word(
         f"{_CONFIG.brand_token.capitalize()} · {_CONFIG.brand_tagline}"
-        " · 分享技术之美") == \
-        f"{_CONFIG.brand_tagline} · 分享技术之美"
+        f" {_CONFIG.brand_share_suffix}") == \
+        f"{_CONFIG.brand_tagline} {_CONFIG.brand_share_suffix}"
 
 
 def test_a_text_that_is_only_the_brand_word_falls_back():
