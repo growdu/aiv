@@ -318,7 +318,7 @@ class DouyinPlan:
     | 封面 | `cover-4x3.jpg` + `cover-3x4.jpg` | `cover.jpg` | **`cover_3x4.jpg`（竖）+ `cover_4x3.jpg`（横）** |
     | 成片 | `video.mp4` | `video.mp4` | `video.mp4`（**竖版 9:16 无品牌版**） |
 
-    抖音这一档要用**竖版无导流版**成片：带品牌字标与 ``growdu.cn`` 胶囊的那版
+    抖音这一档要用**竖版无导流版**成片：带品牌字标与 ``example.invalid`` 胶囊的那版
     会撞在抖音「过度营销 + 站外引流」两条规则上（见 ``platforms/douyin/cli.py``）。
     """
 
