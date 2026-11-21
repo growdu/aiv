@@ -366,7 +366,11 @@ def fix_intro(path):
 
     pill = (995, 696, MARGIN, 830)
     items.append((lambda d, c: draw_pill(d, pill, c, width=3), cyan))
-    w_txt, g_txt = f"{_CONFIG.brand_tagline} · 分享", "技术之美"
+    # 白字 / 金字的**断点由 share_emphasis 给出，别去猜空格**：
+    # 后缀「· 分享技术之美」里「享」与「技」之间没有空格，
+    # rpartition(" ") 会断在「·」后面，画面就变了。
+    g_txt = _CONFIG.brand_share_emphasis
+    w_txt = _CONFIG.brand_tagline + " " + _CONFIG.brand_share_suffix.removesuffix(g_txt)
     f_cn, size = fit_font(
         CJK_W6[0], CJK_W6[1], w_txt + g_txt, pill[2] - pill[0] - 100, 90
     )
@@ -425,10 +429,11 @@ def fix_outro(path):
     gap = 44
     pad_l, pad_r, icon_gap = 30, 34, 18
     icon = 52
+    # 图标按位置配（站点→地球，第一条标签→播放，第二条→拇指）。
+    icons = ["globe", "play", "thumb"]
     specs = [
-        (BRAND_SITE, "globe", AVENIR_MEDIUM, 0),
-        ("订阅关注", "play", CJK_W6, 0),
-        ("点赞支持", "thumb", CJK_W6, 0),
+        (label, kind, AVENIR_MEDIUM if kind == "globe" else CJK_W6, 0)
+        for label, kind in zip([BRAND_SITE, *_CONFIG.brand_outro_labels], icons)
     ]
     f_btn = font(CJK_W6[0], 40, CJK_W6[1])
     f_lat = font(AVENIR_MEDIUM[0], 40, AVENIR_MEDIUM[1])
