@@ -4,15 +4,16 @@
   新文档自动进草稿箱的定时任务。
 
   安装：
-    1. 把本文件复制到 ~/Library/LaunchAgents/com.growdu.weixin.auto-draft.plist
-    2. 把 __REPO__ 换成仓库路径（本机是 /Users/growduduan/code/blog）
+    1. 把本文件复制到 ~/Library/LaunchAgents/com.example.weixin.auto-draft.plist
+       （`com.example` 是**占位**——反 DNS 标签，把 `example` 换成你自己的域）
+    2. 把 __REPO__ 换成仓库根目录
     3. 把 __PYTHON__ 换成跑测试用的那个 python3
        （`python3 -c "import sys; print(sys.executable)"`）
-    4. launchctl load -w ~/Library/LaunchAgents/com.growdu.weixin.auto-draft.plist
+    4. launchctl load -w ~/Library/LaunchAgents/com.example.weixin.auto-draft.plist
 
   查看与卸载：
-    launchctl list | grep growdu.weixin
-    launchctl unload -w ~/Library/LaunchAgents/com.growdu.weixin.auto-draft.plist
+    launchctl list | grep example.weixin
+    launchctl unload -w ~/Library/LaunchAgents/com.example.weixin.auto-draft.plist
     tail -f ~/Library/Logs/weixin-auto-draft.log
 
   为什么用 launchd 而不是 cron：
@@ -41,7 +42,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.growdu.weixin.auto-draft</string>
+    <string>com.example.weixin.auto-draft</string>
 
     <key>ProgramArguments</key>
     <array>

@@ -4,16 +4,17 @@
   把已有草稿刷新到当前的管线版本。
 
   安装：
-    1. 把这个文件复制到 ~/Library/LaunchAgents/com.growdu.weixin.refresh-drafts.plist
+    1. 把这个文件复制到 ~/Library/LaunchAgents/com.example.weixin.refresh-drafts.plist
+       （`com.example` 是**占位**——反 DNS 标签，把 `example` 换成你自己的域）
     2. 把 __PYTHON__ 换成跑测试用的那个 python3
        （`python3 -c "import sys; print(sys.executable)"`）
-    3. 把 __REPO__ 换成仓库路径（本机是 /Users/growduduan/code/blog）
+    3. 把 __REPO__ 换成仓库根目录
     4. 把 __HOME__ 换成用户主目录
-    5. launchctl load -w ~/Library/LaunchAgents/com.growdu.weixin.refresh-drafts.plist
+    5. launchctl load -w ~/Library/LaunchAgents/com.example.weixin.refresh-drafts.plist
 
   查看与卸载：
-    launchctl list | grep growdu.weixin
-    launchctl unload -w ~/Library/LaunchAgents/com.growdu.weixin.refresh-drafts.plist
+    launchctl list | grep example.weixin
+    launchctl unload -w ~/Library/LaunchAgents/com.example.weixin.refresh-drafts.plist
     tail -f ~/Library/Logs/weixin-refresh-drafts.log
 
   为什么需要它：
@@ -23,7 +24,7 @@
   下一次跑批量就会就地更新。
 
   为什么是单独一个任务：
-  com.growdu.weixin.auto-draft 的约定是「只管新增的文档」，不碰存量。
+  com.example.weixin.auto-draft 的约定是「只管新增的文档」，不碰存量。
   这次是一次性的存量刷新，做完就可以把这个任务 unload 掉。
 
   为什么带 limit：
@@ -35,16 +36,11 @@
   一轮约 100 篇、约 360 次调用，四轮一天约 1450 次，
   加上另一个任务（新文档）剩下的量，控制在每日上限之内。
   跑完这一轮（约 553 篇）就可以把这个任务 unload 掉。
-
-  查看与卸载：
-    launchctl list | grep growdu.weixin
-    launchctl unload -w ~/Library/LaunchAgents/com.growdu.weixin.refresh-drafts.plist
-    tail -f ~/Library/Logs/weixin-refresh-drafts.log
 -->
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.growdu.weixin.refresh-drafts</string>
+    <string>com.example.weixin.refresh-drafts</string>
 
     <key>ProgramArguments</key>
     <array>
