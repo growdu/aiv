@@ -79,6 +79,16 @@ python3 -m pyv.cli config <key>
 **内置字体不在配置里**：它是规则级的东西（两台机器用同一份字体文件，
 跨机版式才一致），跟着仓库走。
 
+**品牌文案也在配置里**：片头/片尾的品牌片副标题、成片旁白、片头药丸那句话、
+片尾落版的标题与标签，全都在 `[brand]` 的 `intro_tagline`、`outro_subtitle`、
+`outro_narration`、`intro_line`、`outro_line`、`share_suffix`、`share_emphasis`、
+`outro_title`、`outro_labels` 里——脚本只读这些值，不再把文案写死在自己身上。
+`intro_line` / `outro_line` 里的 `{brand}` / `{site}` 占位由 `build()` 一次性替换成
+上面配的名字与站点地址；`share_emphasis` 是那句后缀拆成两段画时的**金字**，
+断点由它给出（不在空格上），所以别把它整句抄进 `share_suffix`。
+留空 = 用脚本里的通用写法。守这条的是 `pipeline/tests/test_config.py`：
+把配置换成别的站名/标语，画面文案跟着变；没配，脚本里就不该出现站名。
+
 ## 规范
 
 | 文档 | 内容 |

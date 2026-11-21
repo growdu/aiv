@@ -83,6 +83,11 @@ npm run sync       # 只同步内容单元
 （`src/lib/remark-site-links.mjs`），它在 **AST 上**改链接字段——
 不用正则扫全文，所以代码块里的内容一个都不碰。
 
+**URL 形状住在仓库根的共享规则 `rules/urls.json`**——不在站点源码里。
+站点（`src/lib/urls.ts`）与发布层（`publish/publishkit/urls.py`）读的是
+**同一份 JSON** 的 `doc_prefix`，于是「一篇文章的地址是什么」全仓库只有一份答案。
+你**不**在站点里改链接长什么样；要改形状，改 `rules/urls.json`。
+
 **目标页不存在时，链接就原样留下**，于是 404。
 重写认的是「同目录下那个 `.md` 文件在不在」，所以链接得写成 `.md` 结尾的相对路径。
 

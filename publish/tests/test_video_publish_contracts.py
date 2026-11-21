@@ -46,7 +46,8 @@ def test_every_platform_writes_the_same_snapshot_shape():
 def test_the_bilibili_subtitle_events_match_the_timeline_owner():
     """adapter 自己读 storyboard，规则不许和 `pyv.timeline` 漂。
 
-    adapter 只能 import `epmeta` 与 `preflight`（规格 §3.3），
+    adapter 只**读** `pyv.epmeta`、`pyv.preflight` 与 `pyv.episodes`
+    （坐标/路径助手，规格 §3.3），
     所以「字幕从哪来」这条规则写了两遍：一份在 `pyv.timeline`（storyboard
     格式的主人），一份在 `platforms/bilibili/subtitle.py`。这条测试拿真实 storyboard
     对照两边，规则一改就会红。
@@ -54,7 +55,10 @@ def test_the_bilibili_subtitle_events_match_the_timeline_owner():
     from bilibili import subtitle
     from pyv.timeline import Storyboard
 
-    boards = sorted((REPO_ROOT / "video").glob("storyboard_*.json"))
+    from pyv import episodes as episodes_mod
+
+    boards = [episodes_mod.storyboard_path(ep) for ep in episodes_mod.known_eps()]
+    boards = [path for path in boards if path.exists()]
     if not boards:
         pytest.skip("本机没有 storyboard（它们是 gitignore 的本地产物）")
 
