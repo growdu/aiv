@@ -23,10 +23,19 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$OUT"
 
+# 旁白两句是**使用者的**文案：写死在脚本里，换一套品牌就得改代码。
+# 从 video/config.toml 读（占位符已在 build() 里替换成品牌名 / 站点地址）。
+# pyv 包在 video/pipeline 那一层，跟脚本里的 ROOT（video/brand）不是一层。
+PIPE_ROOT="$ROOT/../pipeline"
+pyv_read() {
+  PYTHONPATH="$PIPE_ROOT" python3 -c \
+    "import sys; from pyv.config import config; print(getattr(config(), sys.argv[1]))" "$1"
+}
+
 VOICE="${VOICE:-Sandy (中文（中国大陆）)}"   # macOS 童声，作为「小男孩」音色
 PITCH="${PITCH:-1.5}"                        # 升调半音数，让童声更像小男孩
-INTRO_LINE="深入数据库，分享技术之美。Growdu，与你一起探索数据库的无边世界。"
-OUTRO_LINE="感谢观看。访问 growdu.cn，订阅关注，点赞支持。"
+INTRO_LINE="$(pyv_read brand_intro_line)"
+OUTRO_LINE="$(pyv_read brand_outro_line)"
 
 # ---------------------------------------------------------------- 旁白
 say -v "$VOICE" -r 185 -o "$TMP/intro_voice_raw.aiff" "$INTRO_LINE"
