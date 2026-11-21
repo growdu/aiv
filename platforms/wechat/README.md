@@ -7,7 +7,7 @@
 - 语料：**569 篇**文章、7689 个代码围栏（mermaid 1280）、13512 行表格、568 张图、1208 处站外链接
 - 合规：**558 篇可发布**——标题超长按内容裁剪、正文超长自动拆篇；只有「拆不开」和「正文为空」的 11 篇会被拒
 - 正文上限：**60000 字符**（渲染后的 HTML），可配（`--max-length` / `WX_MAX_LENGTH`，实测天花板 100000）；读者看到约 1.5 万字，草稿总数从 1484 篇降到 736 篇
-- 测试：**484 个**，全绿，不依赖网络；**Windows / macOS / Linux 上都能跑**
+- 测试：**520 个**，不依赖网络；**Windows / macOS / Linux 上都能跑**（Linux/macOS 上 519 passed / 1 skipped，那一条是 Windows 专属的浏览器位置）
 - **发布链路已用真实账号实测**：`stable_token` / `media/uploadimg` /
   `material/add_material` / `draft/add` / `draft/update` 全部通过，草稿已进草稿箱；
   `freepublish/submit` 返回 **48001 api unauthorized**——该账号没有发表权限，
