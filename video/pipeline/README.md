@@ -34,9 +34,18 @@ python3 -m pyv.cli render     --storyboard <contract.json> --out <build>
 python3 -m pyv.cli compose    --storyboard <contract.json> --build <build> --out <out>
 python3 -m pyv.cli persona check --script <口播稿.md>
 python3 -m pyv.cli bgm check    --music <music/tracks/motif.wav>
+python3 -m pyv.cli config <key>       # 读配置里一个值（给脚本用；key 见下）
 ```
 
 期路径 = `系列/合集/文档/档位`，相对 `video/episodes/`。`make` 串起整条（`validate brand render compose`）。
+
+`config <key>` 能读的 key：`path`、`brand_name`、`brand_token`、`brand_tagline`、`brand_site`、
+`mascot`、`mascot_plain`、`avatar`、`music_dir`、`bgm`、`music_library`、
+`brand_clips`、`brand_audio`、`brand_windows`。没配就打印空行（脚本据此「不传这个参数」）。
+
+> **手搓 storyboard 调试时**（正常流程由 `align` 从旁白算出来）：`video.fps` 必须 **24**，
+> 场景 `type` 实际只有 **`code`**（`align` 的产物，配 `renderer` 指向 `pyv/scenes/` 下的模块）。
+> 校验器也认 `h3`/`clip`，但流水线不生成它们。手写后喂给 `validate` 验一道再往下走。
 
 ## 三、AI 如何使用本目录
 
