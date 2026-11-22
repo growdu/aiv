@@ -361,7 +361,7 @@ def _first_paragraph(blocks: list[str]) -> str:
     return ""
 
 
-def slice_post(post: SourcePost, limits: Limits, source_url: str = "https://growdu.cn") -> SliceResult:
+def slice_post(post: SourcePost, limits: Limits, source_url: str = "") -> SliceResult:
     """Cut one source post into the Toutiao version.
 
     The digest falls back through ``description`` -> ``tldr`` -> the first
@@ -370,6 +370,10 @@ def slice_post(post: SourcePost, limits: Limits, source_url: str = "https://grow
     what a picture-led post looks like.  A digest that is still too long
     is cut down and the cut is written into ``notes`` -- nothing is
     shortened silently.
+
+    ``source_url`` is the site's address -- it comes from the environment
+    (``SITE_URL``), not from here.  Without it the body says nothing
+    about the full version: **the whole sentence goes**, not half of it.
     """
     notes: list[str] = []
 
@@ -435,8 +439,10 @@ def slice_post(post: SourcePost, limits: Limits, source_url: str = "https://grow
         digest = digest[: limits.digest_chars]
         notes.append("摘要已裁剪到 {} 字".format(limits.digest_chars))
 
-    site = source_url.split("://", 1)[-1].rstrip("/")
-    tail = "完整版见 {}".format(site)
+    site = source_url.strip().split("://", 1)[-1].rstrip("/")
+    # 没有站点地址 → **整句不放**：留一个「完整版见 」是半句话，
+    # 读者点不开，编辑看着也像出了错。
+    tail = "完整版见 {}".format(site) if site else ""
     budget = max(limits.body_chars - len(tail) - 2, 1)
 
     body_text = "\n\n".join(blocks).strip()
@@ -448,7 +454,8 @@ def slice_post(post: SourcePost, limits: Limits, source_url: str = "https://grow
         body_text = body_text[:cut].rstrip()
         body_truncated = True
         notes.append("正文超过 {} 字，已截断".format(limits.body_chars))
-    body_text = body_text + "\n\n" + tail
+    if tail:
+        body_text = body_text + "\n\n" + tail
 
     article = ToutiaoArticle(
         content_id=post.slug,

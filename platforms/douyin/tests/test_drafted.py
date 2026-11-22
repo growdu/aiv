@@ -30,6 +30,7 @@ import pytest
 
 from conftest import EP_PATH
 from douyin import notify, package, snapshot, state
+from pyv import episodes
 
 
 # --- 回填 -------------------------------------------------------------------
@@ -271,7 +272,7 @@ def test_the_cli_marks_a_draft_and_writes_a_drafted_snapshot(
     assert data["episodes"][EP_PATH]["status"] == "drafted"
     assert data["episodes"][EP_PATH]["published_url"] is None
 
-    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__douyin.json")
+    shot = json.loads((tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__douyin.json")
                       .read_text(encoding="utf-8"))
     assert shot["status"] == "drafted"
     assert shot["published_url"] is None
@@ -297,7 +298,7 @@ def test_marking_drafted_does_not_ask_for_a_url(episode_dir, tmp_path, capsys):
     from douyin import cli
 
     assert cli.main(["mark", "drafted", EP_PATH,
-                     "--out", str(tmp_path / "out")]) == 1
+                     "--out", str(tmp_path / "out")]) == 2
     err = capsys.readouterr().err
     assert "--url" not in err
     assert "发布包不存在" in err
@@ -322,6 +323,6 @@ def test_the_cli_does_not_write_a_snapshot_when_marking_draft_has_no_package(
     monkeypatch.setattr(snapshot, "OUTBOX_DIR", tmp_path / "outbox")
 
     out = tmp_path / "out"
-    assert cli.main(["mark", "drafted", EP_PATH, "--out", str(out)]) == 1
+    assert cli.main(["mark", "drafted", EP_PATH, "--out", str(out)]) == 2
     assert not (out / "state.json").exists()
-    assert not (tmp_path / "outbox" / f"{EP_PATH}__douyin.json").exists()
+    assert not (tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__douyin.json").exists()

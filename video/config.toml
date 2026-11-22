@@ -26,6 +26,20 @@ intro_tagline = "Database · Knowledge · Growth"
 outro_subtitle = "Growdu · 把踩过的坑写成方法"
 outro_narration = "下次卡住的时候，记得回来。"
 
+# 成片里的旁白与落版文案。**占位符在 build() 里替换成品牌名 / 站点地址**，
+# 所以这两句读出来时是同一套写法（画面上印的与念出来的一致）。
+intro_line = "深入数据库，分享技术之美。{brand}，与你一起探索数据库的无边世界。"
+outro_line = "感谢观看。访问 {site}，订阅关注，点赞支持。"
+
+# 片头药丸那句话的后缀。它自带「· 」，所以拼标语时不用再补分隔符。
+# 拆成两段画时的**金字**是 share_emphasis，断点由它给出（不在空格上）。
+share_suffix = "· 分享技术之美"
+share_emphasis = "技术之美"
+
+# 片尾落版：胶囊按钮的**大字**（不是胶囊标签）与两条标签。
+outro_title = "感谢观看"
+outro_labels = ["订阅关注", "点赞支持"]
+
 [character]
 # 角色形象：**你的**素材与描述。规则在这里，值由使用者定。
 #

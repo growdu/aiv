@@ -2,8 +2,8 @@
 
 时间轴是本机产物（跟着本机旁白走），所以字幕文件也是本地产物，不入库。
 
-**不 import `pyv.timeline`**：adapter 只认 `pyv.epmeta` 与 `pyv.preflight`
-两个契约层模块（规格 §3.3）。这里用结构化类型描述「一个有 start/end/text 的事件」，
+**不 import `pyv.timeline`**：adapter 只认 `pyv.epmeta`、`pyv.preflight` 与 `pyv.episodes`（坐标/路径助手）
+三个模块（规格 §3.3）。这里用结构化类型描述「一个有 start/end/text 的事件」，
 这样字幕生成器不依赖时间轴模块的具体实现。
 
 代价是「storyboard 里的字幕从哪来」这条规则写了两遍（这里 + `pyv.timeline`）。

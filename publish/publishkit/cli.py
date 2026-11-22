@@ -17,12 +17,13 @@
     cd publish && python3 -m publishkit.cli schedule weekly
     PYTHONPATH=publish python3 -m publishkit.cli schedule weekly
 
-**退出码沿用 adapter 的约定**（``platforms/toutiao/cli.py`` 那一套）：
+**退出码的语义由契约层定死**（``publish/publishkit/exit_codes.py``），
+这里**从那张表取值**——不是「跟头条同一套」，是同一张表：
 
 ===  ==========================================
 0    成功
-1    参数或配置错误
-2    这一篇不合格
+1    参数或配置写错了
+2    缺前置条件：东西还没有 / 还不够
 3    接口或写盘错误
 ===  ==========================================
 
@@ -47,6 +48,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from . import PublishKitError
+from . import exit_codes
 from .capability import load_capability
 from .schedule import (
     PUBLISHED_STATUSES,
@@ -73,11 +75,13 @@ __all__ = [
     "main",
 ]
 
-#: 退出码是与调用方的约定（与 ``platforms/toutiao/cli.py`` 同一套）。
-EXIT_OK = 0
-EXIT_USAGE = 1
-EXIT_INELIGIBLE = 2
-EXIT_ERROR = 3
+#: 退出码的**出处**：契约层自己那张表（``publish/publishkit/exit_codes.py``）。
+#: 值从那儿取，**名字是 publish 自己的**（``EXIT_INELIGIBLE`` 是这里的话，
+#: 裁决 R17：各平台不统一措辞）。
+EXIT_OK = exit_codes.OK
+EXIT_USAGE = exit_codes.USAGE
+EXIT_INELIGIBLE = exit_codes.PRECONDITION
+EXIT_ERROR = exit_codes.FAILED
 
 #: 调 adapter 的默认超时（秒）。超时不等于失败（§7.1 第三条），
 #: 但也不能无限等下去。
@@ -103,7 +107,7 @@ _REVIEW_MARKERS = (
 class _Parser(argparse.ArgumentParser):
     """参数错了退出码是 1（不是 argparse 默认的 2）。
 
-    2 在这一层的约定里是「这一篇不合格」，参数写错与「不合格」是两回事，
+    2 在这一层的约定里是「缺前置条件」，参数写错与「缺前置条件」是两回事，
     不能共用一个退出码。
     """
 
@@ -522,20 +526,20 @@ def publish_one(
 
     if not adapter_wrote:
         if result.code == EXIT_INELIGIBLE:
-            # 不合格：不是发布尝试，但**要记下来**，否则它会一直霸占
+            # 缺前置条件：不是发布尝试，但**要记下来**，否则它会一直霸占
             # 「最久未发」的位置（§7.4）。不自动重试。
             write_snapshot(
                 config,
                 content_id,
                 platform,
                 status="failed",
-                reason="adapter 报这一篇不合格：{}".format(reason),
+                reason="adapter 报前置条件没满足：{}".format(reason),
                 title=title,
                 automation=capability.automation,
                 retryable=False,
             )
             return EXIT_INELIGIBLE, [
-                "{} → {}：不合格（{}），已记进 outbox，转人工。".format(
+                "{} → {}：前置条件没满足（{}），已记进 outbox，转人工。".format(
                     content_id, platform, reason
                 )
             ]
@@ -592,7 +596,7 @@ def _titles_of(units) -> dict:
 class _Publisher:
     """把「发一篇到某个平台」这件事包起来，顺带记住退出码。
 
-    退出码取最严重的那个：接口错误（3）比「这一篇不合格」（2）严重。
+    退出码取最严重的那个：接口错误（3）比「缺前置条件」（2）严重。
 
     **成功时不说话**：成功的话由调度层那一句「成功」交代（两层各说一遍
     是噪声）；只有出问题时它才开口——那时候要说的是**为什么**。
@@ -761,12 +765,16 @@ def cmd_schedule_candidates(args) -> int:
 
     wanted = {cap.id for cap in capabilities}
     rows = []
+    categories = []
     for unit in units:
         if not unit.platforms:
             continue
         if wanted and not wanted.intersection(unit.platforms):
             continue
         if platform_filter and platform_filter not in unit.platforms:
+            continue
+        if not unit.contract.is_publish_candidate:
+            categories.append(unit)
             continue
         rows.append(unit)
 
@@ -788,7 +796,10 @@ def cmd_schedule_candidates(args) -> int:
             )
         )
     if not rows:
-        print("  （候选集是空的：没有内容单元声明 platforms）")
+        if categories:
+            print("  （候选集是空的：这些内容单元都是分类页，没有要发的稿子）")
+        else:
+            print("  （候选集是空的：没有内容单元声明 platforms，或没有一个声明目标平台）")
     return EXIT_OK
 
 

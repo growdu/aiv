@@ -13,6 +13,7 @@ from PIL import Image
 
 from bilibili import assets, package, snapshot, state
 from conftest import EP_PATH, publish_payload, reprint_payload, write_episode
+from pyv import episodes
 
 
 # --- 产物结构 ----------------------------------------------------------------
@@ -307,6 +308,29 @@ def test_the_package_writes_an_outbox_snapshot(meta, video, tmp_path):
     assert not Path(data["package_dir"]).is_absolute(), f"package_dir 是绝对路径：{data['package_dir']}"
 
 
+def test_the_outbox_snapshot_is_flat(meta, video, tmp_path):
+    """outbox 是**入库目录**——文件名扁平，不许在它下面长出一层一层的目录。
+
+    今天写的是 ``outbox/<系列>/<合集>/<文档>/<档位>__bilibili.json``——
+    于是入库目录里长出四层中文目录，CI 里那条「入库目录里只允许有 git 跟踪的
+    文件」的守卫就红。
+    """
+    outbox = tmp_path / "outbox"
+    episode = "演示系列/演示合集/夹具文档/short"
+    # ⚠️ **元数据的 episode 必须跟着换**（裁决 T8-1）：
+    # `build_package` 会拿 `episode` 去比 `meta.episode`
+    # （`epmeta.check_meta` 的 `contract_episode`，`epmeta.py:214`），
+    # 不一致就是一条 **error** 级的 finding → `build_package` 直接抛
+    # `PackageError`（`package.py:296`）——用例会**因为另一个原因**红。
+    # `EpisodeMeta` 是 `@dataclass(frozen=True)`，用 `dataclasses.replace` 换掉。
+    # （这个测试文件**已经** `import dataclasses`。）
+    meta4 = dataclasses.replace(meta, episode=episode)
+    package.build_package(episode, meta4, video, tmp_path / "out", outbox_dir=outbox)
+    names = sorted(p.relative_to(outbox).as_posix()
+                   for p in outbox.rglob("*") if p.is_file())
+    assert names == ["演示系列-演示合集-夹具文档-short__bilibili.json"]
+
+
 def test_the_snapshot_reads_the_automation_from_the_capability_file(meta, video, tmp_path, outbox):
     """档位由能力声明说了算，不能写死。
 
@@ -505,6 +529,60 @@ def test_marking_published_updates_the_package_meta(meta, video, tmp_path):
     assert data["published_url"] == "https://www.bilibili.com/video/BV1xx"
 
 
+# --- 「包完整才算数」 --------------------------------------------------------
+#
+# 复用、标草稿、标发布走的是**同一套判断**：包里少了必须有的东西，
+# 就不算数。这套判断只有一处——`package.REQUIRED_FILES` 与
+# `package.missing_files()`。
+
+
+def test_missing_files_reports_what_the_package_lacks(meta, video, tmp_path):
+    """「包完整才算数」这条规则得有一个能问的入口——今天没有。"""
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    assert package.missing_files(result.dir) == []
+    (result.dir / "title.txt").unlink()
+    assert package.missing_files(result.dir) == ["title.txt"]
+
+
+def test_a_missing_title_file_in_the_package_forces_a_rebuild(meta, video, tmp_path):
+    """**复用不是「目录还在就算数」。** 包里少了东西就重出。
+
+    这条**今天就是绿的**——三个 adapter 的复用分支本来就查完整性。
+    它是**回归护栏**，不是「先红后绿」的用例。
+    """
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    (result.dir / "title.txt").unlink()
+    again = package.build_package("ep02", meta, video, tmp_path / "out")
+    assert not again.reused, "包里缺了东西还报复用"
+    assert (again.dir / "title.txt").is_file()
+
+
+def test_marking_drafted_requires_a_complete_package(meta, video, tmp_path):
+    """残缺的包不许被标成「已投草稿」。"""
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    (result.dir / "title.txt").unlink()
+    with pytest.raises(FileNotFoundError):
+        package.mark_drafted(result.dir)
+
+
+def test_marking_published_requires_a_complete_package(meta, video, tmp_path):
+    """残缺的包也不许被标成「已发布」。"""
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    (result.dir / "title.txt").unlink()
+    with pytest.raises(FileNotFoundError):
+        package.mark_published(result.dir, "https://example.invalid/bili/1")
+
+
+def test_marking_drafted_clears_the_published_url(meta, video, tmp_path):
+    """标成草稿就不能还挂着已发布链接——视频号与抖音都清了，B站今天没清。"""
+    result = package.build_package("ep02", meta, video, tmp_path / "out")
+    package.mark_published(result.dir, "https://example.invalid/bili/1")
+    package.mark_drafted(result.dir)
+    data = json.loads((result.dir / "meta.json").read_text(encoding="utf-8"))
+    assert data["status"] == "drafted"
+    assert data["published_url"] is None
+
+
 # --- 命令行端到端 ------------------------------------------------------------
 #
 # 本机素材（成片、storyboard）按 **adapter 自己找它们的路径**摆：
@@ -569,7 +647,7 @@ def test_the_cli_packages_and_marks_an_episode(episode_dir, tmp_path, monkeypatc
     assert state_data["episodes"][EP_PATH]["status"] == "published"
     assert state_data["episodes"][EP_PATH]["published_url"] == url
 
-    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__bilibili.json")
+    shot = json.loads((tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__bilibili.json")
                       .read_text(encoding="utf-8"))
     assert shot["status"] == "published"
     assert shot["published_url"] == url
@@ -588,7 +666,7 @@ def test_the_cli_fails_loudly_when_the_video_is_missing(episode_dir, tmp_path,
 
     monkeypatch.setattr(cli, "AIV_ROOT", tmp_path / "video")
 
-    assert cli.main(["package", EP_PATH, "--out", str(tmp_path / "out")]) == 1
+    assert cli.main(["package", EP_PATH, "--out", str(tmp_path / "out")]) == 2
     assert "成片不存在" in capsys.readouterr().err
 
 
@@ -632,8 +710,47 @@ def test_marking_drafted_keeps_it_unpublished(episode_dir, tmp_path, monkeypatch
     assert state_data["episodes"][EP_PATH]["status"] == "drafted"
     assert state_data["episodes"][EP_PATH]["published_url"] is None
 
-    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__bilibili.json")
+    shot = json.loads((tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__bilibili.json")
                       .read_text(encoding="utf-8"))
+    assert shot["status"] == "drafted"
+    assert shot["published_url"] is None
+
+
+def test_marking_drafted_after_published_clears_the_link(episode_dir, tmp_path,
+                                                          monkeypatch, make_video):
+    """**先发出去、再标回草稿**——旧链接要在**三处**都清干净。
+
+    视频号与抖音三处都清：包里的 `meta.json`、状态文件 `state.json`、入库快照。
+    上一版B站**一处都没清**（`package.mark_drafted` 还不存在，
+    CLI 的 `current.published_url` 也不清）→「标了草稿却还挂着已发布链接」。
+
+    ⚠️ **快照文件名用扁平那个**：`f"{episodes.ep_id(EP_PATH)}__bilibili.json"`。
+    """
+    from bilibili import cli
+
+    _stage_video(cli, monkeypatch, tmp_path, make_video)
+
+    out = tmp_path / "out"
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 0
+    url = "https://www.bilibili.com/video/BV1xx"
+    assert cli.main(["mark", "published", EP_PATH, "--url", url,
+                     "--out", str(out)]) == 0
+    assert cli.main(["mark", "drafted", EP_PATH, "--out", str(out)]) == 0
+
+    # 三处之一：包里的 `meta.json`
+    meta_data = json.loads((out / EP_PATH / "meta.json").read_text(encoding="utf-8"))
+    assert meta_data["status"] == "drafted"
+    assert meta_data["published_url"] is None
+
+    # 三处之二：状态文件 `state.json`
+    state_data = json.loads((out / "state.json").read_text(encoding="utf-8"))
+    assert state_data["episodes"][EP_PATH]["status"] == "drafted"
+    assert state_data["episodes"][EP_PATH]["published_url"] is None
+
+    # 三处之三：入库快照
+    shot = json.loads(
+        (tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__bilibili.json")
+        .read_text(encoding="utf-8"))
     assert shot["status"] == "drafted"
     assert shot["published_url"] is None
 
@@ -652,7 +769,7 @@ def test_marking_published_without_a_url_is_refused(episode_dir, tmp_path,
 
     out = tmp_path / "out"
     assert cli.main(["package", EP_PATH, "--out", str(out)]) == 0
-    assert cli.main(["mark", "published", EP_PATH, "--out", str(out)]) == 2
+    assert cli.main(["mark", "published", EP_PATH, "--out", str(out)]) == 1
     assert "--url" in capsys.readouterr().err
 
 
@@ -710,7 +827,7 @@ def test_a_reprint_without_a_source_is_refused(episodes_root, tmp_path,
     _stage_video(cli, monkeypatch, tmp_path, make_video)
 
     out = tmp_path / "out"
-    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 1
+    assert cli.main(["package", EP_PATH, "--out", str(out)]) == 2
     err = capsys.readouterr().err
     assert "source" in err
     assert not (out / EP_PATH).exists(), "预检没过还留下了半个包"

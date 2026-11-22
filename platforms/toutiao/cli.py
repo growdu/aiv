@@ -30,7 +30,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from .capability import default_capability_path, load_capability
+from .capability import default_capability_path, load_capability, load_exit_codes
 from .contract import slice_post
 from .mdparse import discover, discover_unsupported, load_post
 from .notify import build_message, send
@@ -41,29 +41,43 @@ from .state import StateStore, fingerprint, needs_publish
 # 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
-from paths import SITE_POSTS  # noqa: E402
+from paths import CONTENT_UNITS, CONTENT_UNIT_IMAGES  # noqa: E402
 
 __all__ = [
-    "EXIT_ERROR", "EXIT_INELIGIBLE", "EXIT_OK", "EXIT_USAGE", "main",
+    "EXIT_ERROR", "EXIT_INELIGIBLE", "EXIT_NOT_FOUND", "EXIT_OK",
+    "EXIT_USAGE", "main",
 ]
 
-#: The exit codes are the contract with whoever runs the command:
-#: ``0`` success, ``1`` a bad argument or a bad configuration, ``2`` this
-#: post is not eligible for Toutiao, ``3`` an interface, a write or a
-#: source-parsing error.
-EXIT_OK = 0
-EXIT_USAGE = 1
-EXIT_INELIGIBLE = 2
-EXIT_ERROR = 3
-
-# 文章目录：站点拿到的那份内容单元副本（`platforms/blog/site/source/_posts/`）。
-# **不是** `content/units/`——图片按「文章目录的上一级」解析，
-# 图片还住在站点的 `source/images/` 里（它们进内容单元仓库是下一个模块的事）。
-DEFAULT_POSTS_DIR = SITE_POSTS
+# 文章目录：**内容单元仓库**（`content/units/`）——adapter 直接读它，
+# 不再读站点的副本。
+DEFAULT_POSTS_DIR = CONTENT_UNITS
+# 图片根：内容单元仓库里的那份图片副本（`content/units/images/`）。
+# 正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``。
+DEFAULT_IMAGES_DIR = CONTENT_UNIT_IMAGES
 DEFAULT_OUT_DIR = _REPO_ROOT / "platforms" / "toutiao" / "out"
 DEFAULT_OUTBOX_DIR = _REPO_ROOT / "platforms" / "toutiao" / "outbox"
 DEFAULT_CAPABILITY = default_capability_path()
 DEFAULT_STATE_FILE = _REPO_ROOT / "platforms" / "toutiao" / "out" / "state.json"
+
+#: 退出码的**出处**：契约层定死的那张表（`publish/publishkit/exit_codes.py`），
+#: 声明在能力声明的 `[exit]` 段里——数据是数据，规则变了改 TOML。
+#:
+#: 语义（四个码的定义见契约层）：``0`` 成功 / ``1`` 用法错（**你给的参数或
+#: 配置写错了**：命令写错、少给*命令行*必填参数、目录路径配错）/ ``2`` 缺前置条件
+#: （**东西还没有 / 还不够**：文章不存在、快照不存在、目录不存在、内容缺一个
+#: 必填项，这一篇不合格）/ ``3`` 做事失败（接口、写盘或母稿解析出错）。
+#:
+#: 「少给一个*命令行*的必填参数」是 1；「参数没写错，但它指的东西还没有 /
+#: 还不够」是 2。
+_EXIT_CODES = load_exit_codes(DEFAULT_CAPABILITY)
+EXIT_OK = _EXIT_CODES["ok"]
+EXIT_USAGE = _EXIT_CODES["usage"]
+#: 「东西还没有」——文章不存在、快照不存在、目录不存在。
+#: 与 ``EXIT_INELIGIBLE`` 是同一个码，但这个名字说的是这一件事。
+EXIT_NOT_FOUND = _EXIT_CODES["precondition"]
+#: 「这一篇不合格，不该发」——超限之类。
+EXIT_INELIGIBLE = _EXIT_CODES["precondition"]
+EXIT_ERROR = _EXIT_CODES["failed"]
 
 #: The value of every shared option when it was not given.  The options
 #: are attached to the top-level parser *and* to every subcommand, so
@@ -73,11 +87,15 @@ DEFAULT_STATE_FILE = _REPO_ROOT / "platforms" / "toutiao" / "out" / "state.json"
 #: overwrite the value that was given before the command name.
 _DEFAULTS = {
     "posts_dir": DEFAULT_POSTS_DIR,
+    "images_dir": DEFAULT_IMAGES_DIR,
     "out_dir": DEFAULT_OUT_DIR,
     "outbox_dir": DEFAULT_OUTBOX_DIR,
     "capability": DEFAULT_CAPABILITY,
     "state_file": DEFAULT_STATE_FILE,
-    "source_url": "https://growdu.cn",
+    # 站点地址：环境变量 ``SITE_URL``（与站点构建用的是同一个变量）。
+    # 没有它就是空串——框架不写死任何域名，正文末尾那句「完整版见 …」
+    # 也就整句不放。
+    "source_url": os.environ.get("SITE_URL", ""),
     "notify": "",
     "notify_key": "",
 }
@@ -164,8 +182,7 @@ def _resolve_post(posts_dir: Path, slug: str):
     posts_dir = Path(posts_dir)
     if not posts_dir.is_dir():
         raise FileNotFoundError(
-            "找不到 {}。先跑 `python3 tools/build-content-units.py` 产出内容单元，"
-            "再跑 `python3 platforms/blog/site/tools/sync-content.py` 同步进站点。"
+            "找不到 {}。先跑 `python3 tools/build-content-units.py` 产出内容单元。"
             .format(posts_dir)
         )
     direct = posts_dir / (slug + ".md")
@@ -205,7 +222,7 @@ def cmd_scan(args) -> int:
     except FileNotFoundError as error:
         # 目录不存在：错误消息里已经带了「先产出内容单元再同步进站点」的指引。
         print("扫描失败：{}".format(error), file=sys.stderr)
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
     except ValueError as error:
         # 母稿坏掉（front matter 没闭合）：消息里带着出错的文件路径。
         print("扫描失败：{}".format(error), file=sys.stderr)
@@ -257,7 +274,7 @@ def _package_and_record(args, capability, article, store):
     if getattr(args, "packages_only", False):
         # 只出包：指纹门在这里不起作用——包没了就得重出，与内容变没变无关。
         package = write_package(
-            article, capability, args.out_dir, args.posts_dir, args.source_url,
+            article, capability, args.out_dir, args.images_dir, args.source_url,
             fetch_remote=getattr(args, "fetch_remote", False),
         )
         return package, None, store.get(article.content_id)
@@ -267,7 +284,7 @@ def _package_and_record(args, capability, article, store):
         return None, None, state
 
     package = write_package(
-        article, capability, args.out_dir, args.posts_dir, args.source_url,
+        article, capability, args.out_dir, args.images_dir, args.source_url,
         fetch_remote=getattr(args, "fetch_remote", False),
     )
     snapshot = write_snapshot(package, args.outbox_dir)
@@ -289,7 +306,7 @@ def _convert(args) -> tuple:
     post = _resolve_post(args.posts_dir, args.slug)
     if post is None:
         print("找不到文章: {}".format(args.slug), file=sys.stderr)
-        return EXIT_USAGE, None
+        return EXIT_NOT_FOUND, None
 
     result = slice_post(post, capability.limits, args.source_url)
     if result.article is None:
@@ -362,7 +379,7 @@ def cmd_convert_all(args) -> int:
     except FileNotFoundError as error:
         # 目录不存在：错误消息里已经带了「先产出内容单元再同步进站点」的指引。
         print("扫描失败：{}".format(error), file=sys.stderr)
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
     except ValueError as error:
         # 母稿坏掉（front matter 没闭合）：消息里带着出错的文件路径。
         print("扫描失败：{}".format(error), file=sys.stderr)
@@ -471,7 +488,7 @@ def cmd_mark(args) -> int:
     post = _resolve_post(args.posts_dir, args.slug)
     if post is None:
         print("找不到文章: {}".format(args.slug), file=sys.stderr)
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
 
     path = Path(args.outbox_dir) / snapshot_name(post.slug, "toutiao")
     if not path.is_file():
@@ -479,7 +496,7 @@ def cmd_mark(args) -> int:
             "找不到状态快照：{}（先跑一次 convert）".format(path),
             file=sys.stderr,
         )
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -553,7 +570,9 @@ def _add_common_options(parser: argparse.ArgumentParser) -> None:
     the value that was given before the command name.
     """
     parser.add_argument("--posts-dir", type=Path, default=argparse.SUPPRESS,
-                        help="站点文章目录（默认：platforms/blog/site/source/_posts）")
+                        help="内容单元目录（默认：content/units）")
+    parser.add_argument("--images-dir", type=Path, default=argparse.SUPPRESS,
+                        help="图片根目录（默认：content/units/images）")
     parser.add_argument("--out-dir", type=Path, default=argparse.SUPPRESS,
                         help="发布包目录（默认：platforms/toutiao/out）")
     parser.add_argument("--outbox-dir", type=Path, default=argparse.SUPPRESS,
@@ -625,6 +644,7 @@ def _common_parser() -> argparse.ArgumentParser:
 def _fill_defaults(namespace: argparse.Namespace) -> None:
     """Put the default value in for every shared option that was not given."""
     given_outbox_dir = hasattr(namespace, "outbox_dir")
+    given_source_url = hasattr(namespace, "source_url")
     for name, value in _DEFAULTS.items():
         if not hasattr(namespace, name):
             setattr(namespace, name, value)
@@ -632,6 +652,10 @@ def _fill_defaults(namespace: argparse.Namespace) -> None:
         # The command line option wins over the environment variable, which
         # wins over the repository default.
         namespace.outbox_dir = _default_outbox_dir()
+    if not given_source_url:
+        # 站点地址**运行时**再读一次：``_DEFAULTS`` 里那份是导入时求的，
+        # 而环境变量可能在导入之后才设上（测试夹具就是那样做的）。
+        namespace.source_url = os.environ.get("SITE_URL", "")
 
 
 def main(argv=None) -> int:
@@ -651,7 +675,7 @@ def main(argv=None) -> int:
         return EXIT_USAGE
     except FileNotFoundError as error:
         print(str(error), file=sys.stderr)
-        return EXIT_USAGE
+        return EXIT_NOT_FOUND
     except Exception as error:                      # noqa: BLE001 -- 错误不吞
         print("失败：{}".format(error), file=sys.stderr)
         return EXIT_ERROR

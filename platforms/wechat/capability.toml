@@ -57,3 +57,11 @@ digest_chars = 120
 # `python3 -m wechat.cli publish <content_id>`。
 package = "wechat"
 command = ["python3", "-m", "wechat.cli"]
+
+[exit]
+# 退出码语义由契约层定义（publish/publishkit/exit_codes.py）：
+# 0 成功 / 1 用法错 / 2 缺前置条件 / 3 做事失败。
+ok = 0
+usage = 1
+precondition = 2
+failed = 3

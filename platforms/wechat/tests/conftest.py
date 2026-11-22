@@ -21,8 +21,13 @@ def isolated_credentials(monkeypatch):
     """
     monkeypatch.delenv("WX_APPID", raising=False)
     monkeypatch.delenv("WX_APPSECRET", raising=False)
-    monkeypatch.delenv("WX_SOURCE_URL", raising=False)
     monkeypatch.delenv("WX_COVER", raising=False)
+    # 站点地址：夹具**注入**一个，而不是把它删掉。公众号的「阅读原文」
+    # 需要它——没有它就退 2（缺前置条件），整个套件会整片变红。
+    # setenv 顺带把开发者本机真设的 ``SITE_URL`` 盖掉：那个值也不该
+    # 改写任何一条用例。域名取 ``https://growdu.cn``——与这套件今天用的
+    # 硬编码默认值是同一个，那些断言前后都成立。
+    monkeypatch.setenv("SITE_URL", "https://growdu.cn")
 
 
 @pytest.fixture(autouse=True)

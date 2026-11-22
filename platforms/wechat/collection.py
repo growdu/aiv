@@ -20,25 +20,20 @@ automates the content around it: the category tag printed on an
 article, the ordered plan of articles that belong to a collection, and
 the index article that leads into one.
 
-⚠️ **TODO —— 分类归档页的地址在现在的站点上不存在。**
+**分类归档页的地址现在指向站点上真实存在的页面。**
 
-``category_archive_url()`` 拼出来的是 ``{站点}/categories/{slug}/``，
-那是 hexo 时代的规则。站点换成 Astro 之后**没有 ``/categories/`` 这条路由**
-（站点自己的 URL 规则只有一处，在
-``platforms/blog/site/src/lib/urls.ts``）：文档与分类页都走
-``/docs/<内容单元 id>/``，分类页的 id 是那个目录的 ``_index``（尾巴被抹掉）。
+``category_archive_url()`` 拼出来的是 ``{站点}/docs/<分类内容单元 id>/``——
+站点现在的规则是文档页与分类页都走这一条（分类页的 id 尾巴带
+``_index``，地址里那个尾巴被抹掉）。
 
-也就是说，公众号文章里印出来的那个归档链接，现在点进去是 404。
+**地址形状不在本模块写死**：全仓库只有一份规则（仓库根的
+``rules/urls.json``），它的读取器是根 ``tools/url_rules.py`` 的
+``doc_url()``——本模块按文件读那份规则，不自己拼前缀。
 
-**可能的修法**：做一张「分类名 → 分类内容单元 id」的映射表，分类名取自
-目录链上 ``_index.md`` 的 ``cascade.categories``（这正是
-``tools/build-content-units.py`` 推导出来的东西），于是归档地址变成
-``{站点}/docs/<id>/``。
-
-**为什么现在不动**：那张映射表归谁、放在哪一层（内容编译器？平台层？站点
-的 ``data/``？），是一次**跨模块的接口决定**，不是本模块能自己定的。而且
-``category_archive_url()`` 的输出形状有测试守着，改它就是改契约——所以
-这里只把缺口记下来，不偷偷改形状。
+**分类名 → 分类内容单元 id 的映射来自内容编译器**：编译器
+（``tools/build-content-units.py``）把每个分类名对应的那个分类内容单元 id
+写进每篇稿子的 front matter（``category_ids``，与 ``categories``
+**同序、同长**的两个平行列表），adapter 从那儿查。
 """
 
 from __future__ import annotations
@@ -46,20 +41,27 @@ from __future__ import annotations
 import html as html_lib
 import json
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import quote
 
-from .slugs import slugize
 from .render import BODY_FONT, H2_STYLE, MUTED_STYLE, css
+
+# 共享 URL 规则住在仓库根的 tools/ 下（读取器 `url_rules.py`，规则
+# `rules/urls.json`）。本模块按**文件**读它——模块之间不互相 import。
+# platforms/wechat/collection.py → parents[0]=wechat、parents[1]=platforms、
+# parents[2]=仓库根。
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
+from url_rules import doc_url  # noqa: E402
 
 __all__ = [
     "ArticleRef",
     "Collection",
     "build_categories",
-    "build_category_paths",
     "build_collections",
     "category_archive_url",
+    "category_id_for",
     "collection_digest",
     "load_spec",
     "render_category_tag",
@@ -104,7 +106,7 @@ class Collection:
     description: str
     articles: tuple
     categories: tuple = ()
-    path: str = ""
+    category_id: str = ""
 
     @property
     def slug(self) -> str:
@@ -123,8 +125,8 @@ class Collection:
         spans several categories and has no such page, so it points at
         the blog's home page instead.
         """
-        if self.path:
-            return category_archive_url(source_url, self.title, self.path)
+        if self.category_id:
+            return category_archive_url(source_url, self.category_id)
         return source_url.rstrip("/") + "/"
 
 
@@ -164,46 +166,44 @@ def build_categories(posts) -> dict:
     return {name: tuple(items) for name, items in ordered}
 
 
-def category_archive_url(source_url: str, category: str, path: str | None = None) -> str:
+def category_archive_url(source_url: str, category_id: str) -> str:
     """The blog's own archive page for a category.
 
-    Hexo's category generator is enabled with unlimited paging, so the
-    page lists every article of that category.  It is the one clickable
-    target a WeChat reader can reach from an article, because
-    「阅读原文」 is the only link WeChat keeps in the body.
-
-    ⚠️ The site has no ``/categories/`` route any more -- see the TODO
-    in the module docstring.  The shape is kept as it is until the
-    cross-module decision is made.
+    The category is identified by the id of its **content unit** -- the
+    one the compiler writes into the front matter as ``category_ids``.
+    The address itself comes from the shared URL rule, so the shape
+    lives in exactly one place in the repository.
     """
-    if path is None:
-        path = slugize(category)
-    return "{}/categories/{}/".format(source_url.rstrip("/"), quote(path))
+    return source_url.rstrip("/") + doc_url(category_id)
 
 
-def build_category_paths(posts) -> dict:
-    """The site's archive path for every category in the corpus.
+def _id_order(category_id: str) -> tuple:
+    """候选分类单元 id 的排序键：层级最浅的在前，同深度按字典序。
 
-    A post's categories run from the root of the tree to the leaf, and
-    Hexo puts the archive page of a category under its ancestors: a
-    post filed under 「数据库深入 / 数据库 / PostgreSQL 源码修炼之路」
-    has its page at
-    ``/categories/数据库深入/数据库/PostgreSQL-源码修炼之路/``.
-
-    The same name can sit at two depths -- 「数据库」 is a root
-    category in its own right and a child of 「数据库深入」 -- so the
-    shallowest path is kept: that is the page listing the most
-    articles, and the one the site's own category index links to.
+    段数 = id 里的斜杠数 + 1（分类页的 id 尾巴都带 ``_index``），
+    所以斜杠少的那个就是层级浅的那个。
     """
-    candidates = {}
+    return (category_id.count("/"), category_id)
+
+
+def category_id_for(posts, name: str) -> str | None:
+    """分类名 → 分类内容单元 id。找不到返回 None。
+
+    同一个分类名可能落在两个**互不为祖先**的目录上：编译器只在**一篇之内**
+    的目录链上去重（``if name not in categories`` 守的是这一篇自己的链），
+    不跨篇——于是两个 id 都「对」。取**层级最浅**的那个（**规则本身**：与老代码
+    ``build_category_paths`` 同一口径——不是「哪个页面列出文章最多」的推论），
+    同深度时按 id 字典序取小的：**结果与文件顺序无关**。
+    """
+    candidates = []
     for post in posts:
-        chain = list(post.categories)
-        for index, name in enumerate(chain):
-            path = "/".join(slugize(part) for part in chain[:index + 1])
-            current = candidates.get(name)
-            if current is None or path.count("/") < current.count("/"):
-                candidates[name] = path
-    return candidates
+        ids = post.category_ids
+        for index, category in enumerate(post.categories):
+            if category == name and index < len(ids):
+                candidates.append(ids[index])
+    if not candidates:
+        return None
+    return min(candidates, key=_id_order)
 
 
 def load_spec(path: Path) -> list:
@@ -240,7 +240,6 @@ def build_collections(posts, spec=None, min_articles: int = 2) -> list:
 
 
 def _collections_from_categories(posts, min_articles: int) -> list:
-    paths = build_category_paths(posts)
     collections = []
     for name, refs in build_categories(posts).items():
         if len(refs) < min_articles:
@@ -253,7 +252,7 @@ def _collections_from_categories(posts, min_articles: int) -> list:
             description="「{}」分类下的 {} 篇文章。".format(name, len(refs)),
             articles=ordered,
             categories=(name,),
-            path=paths.get(name, ""),
+            category_id=category_id_for(posts, name) or "",
         ))
     return collections
 
@@ -298,36 +297,36 @@ def _collections_from_spec(posts, spec) -> list:
         if str(entry.get("order", "asc")).lower() == "desc":
             articles = list(reversed(articles))
 
-        path = str(entry.get("path") or "").strip()
-        if not path:
-            path = _path_for_chain(posts, wanted, selected)
+        category_id = str(entry.get("category_id") or "").strip()
+        if not category_id:
+            category_id = _category_id_for_chain(posts, wanted, selected)
 
         collections.append(Collection(
             title=title,
             description=str(entry.get("description") or ""),
             articles=tuple(articles),
             categories=tuple(sorted(wanted)),
-            path=path,
+            category_id=category_id,
         ))
 
     return collections
 
 
-def _path_for_chain(posts, wanted, selected) -> str:
-    """The archive path of a curated collection.
+def _category_id_for_chain(posts, wanted, selected) -> str:
+    """The category unit id of a curated collection.
 
     The collection has no page of its own, so it borrows the one of the
-    first category it covers: the path of that category in the chain of
-    the first article that carries it.
+    first category it covers: the unit id of that category in the
+    first article that carries it.
     """
     chosen = set(selected)
     for post in posts:
         if post.slug not in chosen:
             continue
-        chain = list(post.categories)
-        for index, name in enumerate(chain):
-            if name in wanted:
-                return "/".join(slugize(part) for part in chain[:index + 1])
+        ids = post.category_ids
+        for index, category in enumerate(post.categories):
+            if category in wanted and index < len(ids):
+                return ids[index]
     return ""
 
 

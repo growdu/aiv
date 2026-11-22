@@ -21,7 +21,7 @@ import pytest
 
 from conftest import EP_PATH, publish_payload, write_episode
 from douyin import contract, package
-from pyv import epmeta, preflight
+from pyv import epmeta, episodes, preflight
 
 #: 三个档位：同一篇文档的三档是三期，各有各的文案。
 TIERS = ("short", "mid", "full")
@@ -82,7 +82,7 @@ def test_a_synthetic_episode_packages_end_to_end(episode_dir, on_disk_meta,
         contract.build_text(copy)
 
     # 快照写对了，而且写进的是本次测试的临时目录（没往仓库里写）
-    shot = json.loads((outbox / f"{EP_PATH}__douyin.json")
+    shot = json.loads((outbox / f"{episodes.ep_id(EP_PATH)}__douyin.json")
                       .read_text(encoding="utf-8"))
     assert shot["platform"] == "douyin"
     assert shot["content_id"] == EP_PATH

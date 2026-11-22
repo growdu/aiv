@@ -334,7 +334,7 @@ npm run sync          # 学习流编译 + 文章编译 + 身份注入 + 库本�
 npm run build         # sync + clean + hexo generate（产物在 site/dist/）
 npm run server        # 本地预览
 npm run clean         # 清掉上一次的产物
-python3 -m pytest tests/ -q   # 站点自己的守卫测试（79 个用例）
+python3 -m pytest tests/ -q   # 站点自己的守卫测试
 
 # AIV 视频（cd video/pipeline）
 make test             # 全量测试
@@ -369,7 +369,7 @@ python3 tools/check-content-contract.py   # 按内容契约校验内容单元，
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements/publish.txt        # 契约层与调度层（零运行时依赖）
+pip install -r requirements/publish.txt        # 契约层与调度层（publishkit 零运行时依赖；测试要 pyyaml）
 pip install -r requirements/wechat.txt         # 公众号 adapter
 pip install -r requirements/site.txt           # 站点模块与根编译器（含 pyyaml）
 pip install -r requirements/video-pipeline.txt # AIV 视频生产线
@@ -408,7 +408,8 @@ ffmpeg 这套系统依赖，失败模式是「渲染不出片」而不是「契�
 
 ### 给一篇文章声明发布平台
 
-发布候选集的**唯一依据**是母稿 front matter 里的 `platforms`：
+发布候选集看两样东西：母稿 front matter 里的 `platforms`（这篇要发到哪些平台），
+以及这篇**是不是分类页**（`kind: category` 是站点的一级目录落地页，不进候选集）：
 
 ```yaml
 ---
@@ -440,7 +441,7 @@ cd publish && python3 -m publishkit.cli schedule weekly --dry-run
 | 视频号 / B 站 | 出包 + 人工发布清单；B 站 `ARC_BASE` 未开通 |
 | AIV | **六期已清空重来**，只留规则与坐标；契约化流程在，语料不在 |
 | 审校 | 文档侧（`review/`）与视频侧（`video/review/`）两套机制都落地了；**现在没有内容可审**，机制等新内容进来再起 |
-| 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；候选集由母稿 `platforms` 决定 |
+| 发布调度 | 契约层与 CLI 已落地，周键幂等已接上；候选集看母稿 `platforms`（非空）且排除分类页 |
 | 顶层设计 | 2026-11-18 定了主题 → 草稿箱 → 两条流水线 → 六个平台；站点已登记进平台层（`platforms/blog/`）。2026-11-19 补了**模块边界**（九个模块、四处缝）与**十一条接口缺口**——见 [`review/specs/2026-11-19-整体架构与模块边界.md`](review/specs/2026-11-19-整体架构与模块边界.md) |
 
 **平台与契约层的关系**（六个平台，三个档位）：

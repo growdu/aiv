@@ -74,3 +74,28 @@ def test_build_and_out_dirs_are_split_per_episode():
         out = result.stdout
         assert f"build/{slug}" in out, f"{slug} 的片段目录指错了"
         assert f"out/{slug}.mp4" in out, f"{slug} 的成片名不对"
+
+
+def test_the_finished_cut_lands_in_a_directory_per_episode():
+    """成片分目录：out/<系列>/<合集>/<文档>/<档位>.mp4——一眼看出成片属于哪一期。
+
+    今天压平成 ``out/<压平期号>.mp4``，一期视频在磁盘上只有一个连字符串，
+    看不出它属于哪个系列的哪一集。
+    """
+    ep = "演示系列/演示合集/夹具文档/short"
+    result = _make("-n", f"EP={ep}", "compose")
+    assert result.returncode == 0, result.stderr
+    assert f"out/{ep}.mp4" in result.stdout
+
+
+def test_make_clean_removes_the_nested_cut():
+    """``make clean`` 要删的是**新**的成片路径。
+
+    ``clean`` 目标今天写死 ``out/<压平期号>.mp4``——成片改成分目录之后，
+    它删的还是那个**旧**的扁平路径，新路径下的成片**留在磁盘上**，
+    而命令**照样返回 0**（静默不干活）。
+    """
+    ep = "演示系列/演示合集/夹具文档/short"
+    result = _make("-n", f"EP={ep}", "clean")
+    assert result.returncode == 0, result.stderr
+    assert f"out/{ep}.mp4" in result.stdout

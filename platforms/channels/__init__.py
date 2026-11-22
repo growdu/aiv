@@ -6,7 +6,8 @@
 本包与 `platforms/bilibili/` 平级、互不引用，也不 import 契约层或 `platforms/wechat/` 的包。
 
 `pyv` 住在 `video/pipeline/` 下面，没有装成 wheel，所以这里把它挂上 `sys.path`——
-adapter 只**读** `pyv.epmeta` 与 `pyv.preflight`，不修改 video 侧的任何东西。
+adapter 只**读** `pyv.epmeta`、`pyv.preflight` 与 `pyv.episodes`（坐标/路径助手），
+不修改 video 侧的任何东西。
 """
 from __future__ import annotations
 

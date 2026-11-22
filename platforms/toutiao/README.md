@@ -47,10 +47,10 @@
   （灌草稿走的是浏览器里的后台接口，**不是开放平台的 API** ——
   账号仍未认证，`automation` 那一栏维持 `manual`）
 - **实现状态**：切片、渲染、出包、幂等状态、通知、批量出包、命令行**都已实现**
-  （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**396 条用例**。
+  （[docs/11-实施计划.md](docs/11-实施计划.md) 的 Task 1~10），**401 条用例**。
   其中 2 条是**语料级回归**——内容单元 `content/units` 不入库，
-  干净检出里它们是 `skipped`（394 passed / 2 skipped），
-  本地有母稿时才会真跑（396 passed）。
+  干净检出里它们是 `skipped`（399 passed / 2 skipped），
+  本地有母稿时才会真跑（401 passed）。
   逐条任务见 [docs/00-设计.md](docs/00-设计.md)
 
 ## 为什么是「裁」而不是「搬」
@@ -146,7 +146,12 @@ cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli mark p
 cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli status
 ```
 
-退出码：`0` 成功 / `1` 参数或配置错误 / `2` 该篇不合格 / `3` 接口或写盘错误。
+退出码：`0` 成功 / `1` 参数或配置写错了（少给*命令行*必填参数也是这一档）/
+`2` 东西不存在（文章 / 快照 / 目录不在）或该篇不合格 / `3` 接口或写盘错误。
+这四个码的**语义由契约层定死**（`publish/publishkit/exit_codes.py`），本 adapter
+读自己能力声明里的 `[exit]` 段——五个平台是同一张表。
+分界一句话：**「少给一个*命令行*的必填参数」是 1；「参数没写错，但它指的东西还没有 /
+还够」是 2。**
 
 `mark` 有两档，各带各的凭据：
 
@@ -172,10 +177,16 @@ cd "$(git rev-parse --show-toplevel)"/platforms && python3 -m toutiao.cli status
 例如 `source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc`。
 
 每个命令都能把落盘位置指到别处，**但要把每一处都指走**，否则还是会写进仓库：
-`--posts-dir` / `--out-dir` / `--outbox-dir` / `--state-file` / `--capability`。
+`--posts-dir`（内容单元目录，默认 `content/units`）/ `--images-dir`
+（图片根目录，默认 `content/units/images`）/ `--out-dir` / `--outbox-dir` /
+`--state-file` / `--capability`。
 另外三个选项管内容与通知：`--source-url`（正文末尾署名的站点地址）、
 `--notify`（通知通道：serverchan / wechat_work / webhook）、`--notify-key`（通知凭据）。
 选项写在命令名前后都行。
+
+正文里的一张图落在 ``图片根/单元目录/正文里的相对路径``——单元目录是内容单元
+id 的目录部分（`db/x/_index` 的目录是 `db/x`，顶层单元是空串）。这条规则跟站点、
+跟公众号 adapter 是同一条。
 
 ⚠️ **只指 `--out-dir` 是不够的**：`convert` 会把状态快照写进仓库里的
 `platforms/toutiao/outbox/<slug>__toutiao.json`——**那个文件是被 git 跟踪的**，

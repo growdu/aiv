@@ -6,6 +6,13 @@
 
 只做「把包准备好」这一件事。发布在人工手里（`manual` 档）——
 真发出去之后用 `mark published` 回填链接，状态与快照才跟着变成 `published`。
+
+**退出码**由契约层定死（`publish/publishkit/exit_codes.py`），声明在
+`platforms/bilibili/capability.toml` 的 `[exit]` 段里：
+
+    0 成功 / 1 用法错（参数不对、命令写错）
+    2 缺前置条件（读不到元数据、包不存在、成片不在、预检没过）
+    3 做事失败（打包、写盘失败）
 """
 from __future__ import annotations
 
@@ -15,7 +22,7 @@ import os
 import sys
 from pathlib import Path
 
-from pyv import epmeta
+from pyv import epmeta, episodes
 
 from bilibili import notify, package, snapshot, state, subtitle
 
@@ -23,13 +30,26 @@ AIV_ROOT = Path(__file__).resolve().parents[2] / "video"
 DEFAULT_OUT = Path(__file__).resolve().parents[0] / "out"
 WEBHOOK_ENV = "BILIBILI_WEBHOOK"
 
+#: 退出码的**出处**：契约层定死的那张表，声明在本平台的能力声明里——
+#: 数据是数据，规则变了改 TOML，不改 Python。
+_EXIT_CODES = epmeta.load_exit_codes("bilibili")
+EXIT_OK = _EXIT_CODES["ok"]
+EXIT_USAGE = _EXIT_CODES["usage"]
+EXIT_PRECONDITION = _EXIT_CODES["precondition"]
+EXIT_FAILED = _EXIT_CODES["failed"]
+
 
 def _video_path(episode: str) -> Path:
     return AIV_ROOT / "out" / f"{episode}.mp4"
 
 
 def _storyboard_path(episode: str) -> Path:
-    return AIV_ROOT / f"storyboard_{episode}.json"
+    """时间轴在**期目录里**：流水线写在那里（`align` 的产物）。
+
+    以前找的是 `video/storyboard_<期路径>.json`——那个地方流水线从来不写，
+    于是 B站的字幕轨**永远出不来**。
+    """
+    return AIV_ROOT / "episodes" / episode / "storyboard.json"
 
 
 def _title_of(meta) -> str:
@@ -42,9 +62,9 @@ def _subtitle_events(episode: str):
     **没有就返回空列表**，不是报错：字幕是加分项，
     没有字幕的片子照样能发（只是没字幕轨）。
 
-    这里不 import `pyv.timeline`——adapter 只 import `epmeta` 与 `preflight`
-    （规格 §3.3）。storyboard 是本机产物，读它不违反「只读元数据与能力声明」，
-    因为它不是另一个平台的接口。
+    这里不 import `pyv.timeline`——adapter 只 import `epmeta`、`preflight`
+    与 `episodes`（坐标/路径助手，规格 §3.3）。storyboard 是本机产物，
+    读它不违反「只读元数据与能力声明」，因为它不是另一个平台的接口。
     """
     path = _storyboard_path(episode)
     if not path.is_file():
@@ -63,12 +83,12 @@ def cmd_package(args: argparse.Namespace) -> int:
         meta = epmeta.load_meta(args.episode)
     except epmeta.MetaError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
 
     video = Path(args.video) if args.video else _video_path(args.episode)
     if not video.is_file():
         print(f"ERROR 成片不存在：{video}（先跑 make all 出片）", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
 
     try:
         result = package.build_package(
@@ -79,13 +99,13 @@ def cmd_package(args: argparse.Namespace) -> int:
         for finding in error.findings:
             print(f"ERROR  {finding.rule_id}  {finding.message}", file=sys.stderr)
         print("FAIL 预检没过，不出包", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
     except epmeta.MetaError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
     except FileNotFoundError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
 
     for warning in result.warnings:
         print(f"WARNING {warning}")
@@ -93,7 +113,7 @@ def cmd_package(args: argparse.Namespace) -> int:
                   str(result.dir), os.environ.get(WEBHOOK_ENV))
     print(f"OK 发布包 → {result.dir}"
           + ("（成片没变，复用已有的包）" if result.reused else ""))
-    return 0
+    return EXIT_OK
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -107,7 +127,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     if current.reject_reason:
         print(f"驳回原因 {current.reject_reason}")
     print(f"通知措辞：{notify.phrase(current.status)}")
-    return 0
+    return EXIT_OK
 
 
 def cmd_mark(args: argparse.Namespace) -> int:
@@ -125,14 +145,14 @@ def cmd_mark(args: argparse.Namespace) -> int:
     if args.state == "published" and not args.url:
         print("ERROR 标成 published 必须给 --url——"
               "没有公开链接就不该说「已发布」。", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
 
     # 1. 元数据：读不到就退出（这一期压根没配 B站文案）
     try:
         meta = epmeta.load_meta(args.episode)
     except epmeta.MetaError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
     title = _title_of(meta)
 
     # 2. 发布包：没有包就没有「发出去的是哪一版」——不许回填
@@ -141,18 +161,15 @@ def cmd_mark(args: argparse.Namespace) -> int:
         if args.state == "published":
             package.mark_published(target, args.url)
         else:
-            # B站这一档没有「草稿」要写进包里的 meta.json，
-            # 但包**必须在**：草稿是拿这个包投出去的。
-            if not (target / "meta.json").is_file():
-                raise FileNotFoundError(f"发布包不存在：{target}")
-            # 清单要跟着状态改：它还写「待你上传」，人会再传一遍。
-            package.rewrite_status_block(target / "publish.md", args.state)
+            # 草稿是拿这个包投出去的，所以包**必须完整**——
+            # 判断只有 `package` 那一处（「包完整才算数」）。
+            package.mark_drafted(target)
     except FileNotFoundError as error:
         print(f"ERROR {error}", file=sys.stderr)
-        print("      没有发布包就回填不了：先出包，再投稿，再回填"
+        print("      包不在或不完整就回填不了：先出包，再投稿，再回填"
               f"（python -m bilibili.cli package {args.episode}）",
               file=sys.stderr)
-        return 1
+        return EXIT_PRECONDITION
 
     # 3. 到这儿才算成了：状态与快照一起落
     store = state.StateStore(Path(args.out) / "state.json")
@@ -160,17 +177,23 @@ def cmd_mark(args: argparse.Namespace) -> int:
     current.status = args.state
     if args.state == "published":
         current.published_url = args.url
+        published_url = args.url
+    else:
+        # 草稿还没发出去：链接必须清空，
+        # 留着旧链接会让人以为这条已经发出去了。
+        current.published_url = None
+        published_url = None
     store.save(args.episode, current)
 
     outbox = Path(args.outbox) if args.outbox else snapshot.OUTBOX_DIR
     reason = ("人工发布后回填" if args.state == "published"
               else "已存草稿，未投稿")
     snapshot.write_snapshot(
-        outbox / f"{args.episode}__bilibili.json",
+        outbox / f"{episodes.ep_id(args.episode)}__bilibili.json",
         episode=args.episode, status=args.state, title=title,
         # 相对路径：快照要入库，绝对路径换台机器就对不上
         package_dir=package.repo_relative(target),
-        published_url=current.published_url,
+        published_url=published_url,
         reason=reason,
     )
     notify.notify(args.episode, args.state, title, str(target),
@@ -179,7 +202,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
         print(f"OK {args.episode} 已回填发布链接")
     else:
         print(f"OK {args.episode} 已标成「{args.state}」（还没公开）")
-    return 0
+    return EXIT_OK
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -209,8 +232,19 @@ def main(argv: list[str] | None = None) -> int:
                         help="状态快照目录，默认 platforms/bilibili/outbox")
     p_mark.set_defaults(func=cmd_mark)
 
-    args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as error:
+        # argparse 已经把用法和错误打印出来了。``--help`` 的退出码是 0，
+        # 其余都是用法错误 —— 本命令约定用法错误是 1（契约层那张表）。
+        return EXIT_OK if error.code == 0 else EXIT_USAGE
+    try:
+        return args.func(args)
+    except Exception as error:                      # noqa: BLE001 -- 错误不吞
+        # 做事失败：动手了，没成（打包、写盘、接口）。别把 traceback 甩到
+        # 终端上——那看着像崩溃，不像「这一条没成」。
+        print(f"ERROR {error}", file=sys.stderr)
+        return EXIT_FAILED
 
 
 if __name__ == "__main__":

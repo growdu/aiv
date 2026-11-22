@@ -92,7 +92,10 @@ npm run server     # 本地起一个 hexo 服务器
 它在 **AST 上**（remark）定位链接节点，再按节点位置**外科式**替换原文的
 那一小段，**不用正则扫全文**，所以代码块里的内容一个都不碰。
 
-**地址形状只有一处说了算**：`tools/urls.py`（它读仓库根的 `rules/urls.json`），
+**URL 形状住在仓库根的共享规则 `rules/urls.json`**——不在站点源码里。
+站点（`tools/urls.py`）与发布层（`publish/publishkit/urls.py`）读的是
+**同一份 JSON** 的 `doc_prefix`，于是「一篇文章的地址是什么」全仓库只有一份答案。
+你**不**在站点里改链接长什么样；要改形状，改 `rules/urls.json`。
 编出来的对照表落在 `source/_data/urls.json`，重写器读它。
 
 **目标页不存在时，链接就原样留下**，于是 404。
@@ -123,7 +126,8 @@ npm run server     # 本地起一个 hexo 服务器
 
 ## 五、边界
 
-- **站点只读 `content/units/`**（上游产物）。草稿箱、仓库的旧历史都不在它的视野里。
+- **站点只读 `content/units/`**（内容单元与图片都从那儿来）。草稿箱、
+  仓库的旧历史都不在它的视野里。
 - 内容单元是**上游的产物**：改内容在 `docs/` 里改，然后跑仓库根的
   `tools/build-content-units.py`。站点这边只管渲染。
 - 站点不挖仓库的旧历史——往后的数据是**攒**出来的。

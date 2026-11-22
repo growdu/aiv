@@ -1,13 +1,13 @@
 # wechat — 博客到公众号的转换与自动发布
 
-把站点的内容单元副本（`platforms/blog/site/src/content/units/`）转换成公众号可直接发布的 HTML，并推送到公众号草稿箱。
+把内容单元仓库（`content/units/`）转换成公众号可直接发布的 HTML，并推送到公众号草稿箱。
 
 ## 现状
 
 - 语料：**569 篇**文章、7689 个代码围栏（mermaid 1280）、13512 行表格、568 张图、1208 处站外链接
 - 合规：**558 篇可发布**——标题超长按内容裁剪、正文超长自动拆篇；只有「拆不开」和「正文为空」的 11 篇会被拒
 - 正文上限：**60000 字符**（渲染后的 HTML），可配（`--max-length` / `WX_MAX_LENGTH`，实测天花板 100000）；读者看到约 1.5 万字，草稿总数从 1484 篇降到 736 篇
-- 测试：**484 个**，全绿，不依赖网络；**Windows / macOS / Linux 上都能跑**
+- 测试：**522 个**，不依赖网络；**Windows / macOS / Linux 上都能跑**（Linux/macOS 上 521 passed / 1 skipped，那一条是 Windows 专属的浏览器位置）
 - **发布链路已用真实账号实测**：`stable_token` / `media/uploadimg` /
   `material/add_material` / `draft/add` / `draft/update` 全部通过，草稿已进草稿箱；
   `freepublish/submit` 返回 **48001 api unauthorized**——该账号没有发表权限，
@@ -70,9 +70,9 @@
 ## 快速开始
 
 ```bash
-# 1. 生成内容单元并同步进站点（首次或改动 docs/ 后，约 3 分钟）
+# 1. 生成内容单元（首次或改动 docs/ 后，约 3 分钟）
+#    公众号 adapter 直接读 content/units/，不需要先同步进站点
 python3 tools/build-content-units.py
-python3 platforms/blog/site/tools/sync-content.py
 
 # 2. 盘点：哪些文章能发，哪些不能，为什么
 cd platforms && python3 -m wechat.cli scan
@@ -83,6 +83,10 @@ cd platforms && python3 -m wechat.cli audit
 # 4. 转换（不调接口，只产出 HTML）
 cd platforms && python3 -m wechat.cli convert <slug>
 ```
+
+**发布前先重跑编译器**：`content/units/` 是**构建产物**（不进仓库）。
+编译器改了而单元没重跑，单元里会留着旧的署名 → 署名进了内容指纹 →
+**整个草稿箱重发一遍**（正文一个字都没变）。
 
 ## 命令
 
@@ -104,8 +108,14 @@ cd platforms && python3 -m wechat.cli convert <slug>
 `<slug>` 是文章相对 `content/units/` 的路径去掉 `.md`（就是内容单元 id），例如
 `source-tracks/postgresql/logical-replication/postgresql-logical-replication-add-guc`。
 
-全局选项（`--posts-dir` / `--out-dir` / `--source-url` / `--category-tag` /
-`--max-length`）写在子命令前后都行。
+全局选项（`--posts-dir` / `--images-dir` / `--out-dir` / `--source-url` /
+`--category-tag` / `--max-length`）写在子命令前后都行。
+
+`--posts-dir` 是内容单元目录（默认 `content/units`），`--images-dir` 是图片根目录
+（默认 `content/units/images`）。正文里的一张图落在
+``图片根/单元目录/正文里的相对路径``——单元目录是内容单元 id 的目录部分
+（`db/x/_index` 的目录是 `db/x`，顶层单元是空串）。这条规则跟站点、跟头条号
+adapter 是同一条。
 
 ## 环境变量
 
@@ -113,7 +123,7 @@ cd platforms && python3 -m wechat.cli convert <slug>
 | --- | --- |
 | `WX_APPID` | 公众号 AppID |
 | `WX_APPSECRET` | 公众号 AppSecret（**不要提交到仓库**） |
-| `WX_SOURCE_URL` | 站点根 URL，用于拼「阅读原文」，默认 `https://growdu.cn` |
+| `SITE_URL` | 站点根 URL，用于拼「阅读原文」（与站点构建用的是同一个变量）；**没有它就拒绝发布**（退出码 2，缺前置条件） |
 | `WX_COVER` | 封面图路径（未指定时依次取文章首张本地图、首张外链图、**本地生成的封面卡**、仓库自带默认封面） |
 | `WX_NOTIFY` | 通知通道：`serverchan` / `wechat_work` / `webhook` |
 | `WX_NOTIFY_KEY` | 通知凭据：SendKey / webhook key / 完整 URL |
@@ -187,7 +197,7 @@ export WX_NOTIFY_KEY=SCTxxxxxxxx     # https://sct.ftqq.com 扫码登录即可�
 | 幂等 | `state.py` | ✅ 三层键（正文指纹含分类标签） |
 | 通知 | `notify.py` | ✅ Server酱 / 企业微信 / 通用 webhook |
 | 分类 / 合集 | `collection.py` | ✅ 分类标签、合集计划、导览文章、勾选清单（**平台上的归属仍是人工**） |
-| slug | `slugs.py` | ✅ adapter 自己的 slug 规则（分类归档路径的每一段） |
+| slug | `slugs.py` | ✅ adapter 自己的 slug 规则（**不再参与归档地址**：地址形状归仓库根的 `rules/urls.json` 那份共享规则管） |
 | 批量 / 定时 | `cli.py` | ✅ `batch` 批量建草稿、`auto-draft` 定时自动进草稿（launchd 模板在 `deploy/`） |
 | 拆分 | `split.py` | ✅ 超上限的文章按标题边界拆成多篇，编号 + 衔接；上限可配（`--max-length`） |
 | 审计 | `audit.py` | ✅ 复算全语料统计与 HTML 合规检查 |

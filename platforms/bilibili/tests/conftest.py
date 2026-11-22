@@ -154,9 +154,10 @@ def _the_repo_outbox_stays_untouched():
     def _on_disk():
         if not repo_outbox.is_dir():
             return {}
-        # **要递归找。** B站的快照文件名是 `<期路径>__bilibili.json`，
-        # 而期路径本身带斜杠（`系列/合集/文档/档位`）——
-        # 快照落在入库目录的**子目录**里，只看第一层就漏了。
+        # **递归找。** 快照文件名是 `<压平期路径>__bilibili.json`
+        # （期路径压平：斜杠换连字符），落在入库目录的**第一层**——
+        # 递归着找更保险：第一层的东西本来就该被看见，
+        # 将来若又有人在下面长出子目录，也不会漏。
         return {path.relative_to(repo_outbox).as_posix(): path.read_bytes()
                 for path in sorted(repo_outbox.rglob("*.json"))}
 

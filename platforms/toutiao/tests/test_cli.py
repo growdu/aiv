@@ -21,16 +21,21 @@ from PIL import Image
 
 from toutiao import cli
 from toutiao import state as state_module
-from toutiao.cli import EXIT_ERROR, EXIT_INELIGIBLE, EXIT_OK, EXIT_USAGE, main
+from toutiao.cli import (EXIT_ERROR, EXIT_INELIGIBLE, EXIT_NOT_FOUND, EXIT_OK,
+                         EXIT_USAGE, main)
 from toutiao.state import PublishState, StateStore
 
 
 def _site(tmp_path):
-    """A throwaway site: one post with one picture."""
+    """A throwaway content-unit repository: one post with one picture.
+
+    The picture lives in the **image repository** -- ``图片根/单元目录/正文里的
+    相对路径`` -- the same rule the site uses.
+    """
     site = tmp_path / "source"
     posts = site / "_posts" / "db"
     posts.mkdir(parents=True)
-    image = site / "images" / "demo.png"
+    image = site / "images" / "db" / "images" / "demo.png"
     image.parent.mkdir(parents=True)
     Image.new("RGB", (1200, 900), (10, 20, 30)).save(image, "PNG")
     (posts / "demo.md").write_text(
@@ -50,6 +55,7 @@ def _args(tmp_path, command, slug=None):
         argv.append(slug)
     argv += [
         "--posts-dir", str(tmp_path / "source" / "_posts"),
+        "--images-dir", str(tmp_path / "source" / "images"),
         "--out-dir", str(tmp_path / "out"),
         "--outbox-dir", str(tmp_path / "outbox"),
         "--state-file", str(tmp_path / "out" / "state.json"),
@@ -493,19 +499,39 @@ def test_mark_published_without_a_url_is_refused(tmp_path):
 
 
 def test_mark_without_a_snapshot_is_refused(tmp_path):
-    """没出包就没有快照可改。"""
+    """没出包就没有快照可改。
+
+    快照不存在 = **东西还没有** = 2（不是用法错 1：命令没写错，
+    它指的那份快照不在）。
+    """
     _site(tmp_path)
     code = main(
         _args(tmp_path, "mark", "published")
         + ["db/demo", "--url", "https://www.toutiao.com/article/1/"]
     )
-    assert code == EXIT_USAGE
+    assert code == EXIT_NOT_FOUND
 
 
 def test_mark_of_an_unknown_article_is_refused(tmp_path):
+    """文章不存在 = 东西还没有 = 2（同上：命令没写错，东西不在）。"""
     _site(tmp_path)
     code = main(
         _args(tmp_path, "mark", "published")
         + ["db/nope", "--url", "https://www.toutiao.com/article/1/"]
     )
-    assert code == EXIT_USAGE
+    assert code == EXIT_NOT_FOUND
+
+
+def test_the_exit_codes_come_from_the_declaration():
+    """退出码从能力声明的 `[exit]` 段读——语义由契约层定死。
+
+    写死在 Python 里的那四个数字，改 TOML 就改不动了。
+    """
+    from toutiao.capability import default_capability_path, load_exit_codes
+    from toutiao.cli import (EXIT_ERROR, EXIT_INELIGIBLE, EXIT_OK,
+                             EXIT_USAGE)
+
+    codes = load_exit_codes(default_capability_path())
+    assert codes == {"ok": 0, "usage": 1, "precondition": 2, "failed": 3}
+    assert (EXIT_OK, EXIT_USAGE, EXIT_INELIGIBLE, EXIT_ERROR) == (
+        codes["ok"], codes["usage"], codes["precondition"], codes["failed"])

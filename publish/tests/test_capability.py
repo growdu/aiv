@@ -377,3 +377,38 @@ def test_repository_capabilities_all_parse():
         assert cap.automation in AUTOMATIONS
         assert cap.review in REVIEWS
         assert cap.limits.get("title_chars", 1) > 0
+
+
+# --- 退出码声明（[exit]）---------------------------------------------------
+
+
+def test_the_exit_section_is_accepted_when_it_matches_the_contract_layer(
+        tmp_path):
+    """平台声明的退出码必须与契约层那张表一致。"""
+    path = write_toml(
+        tmp_path,
+        "x.toml",
+        'id = "x"\nname = "x"\nkind = "document"\nautomation = "manual"\n'
+        'review = "none"\n'
+        '[exit]\nok = 0\nusage = 1\nprecondition = 2\nfailed = 3\n',
+    )
+
+    cap = load_capability_file(path)
+
+    assert cap.id == "x"
+
+
+def test_an_exit_section_that_does_not_match_the_contract_layer_is_rejected(
+        tmp_path):
+    """平台不许自己另编一套退出码——调用方要统一处理它们。"""
+    path = write_toml(
+        tmp_path,
+        "x.toml",
+        'id = "x"\nname = "x"\nkind = "document"\nautomation = "manual"\n'
+        'review = "none"\n'
+        '[exit]\nok = 0\nusage = 2\nprecondition = 3\nfailed = 4\n',
+    )
+
+    with pytest.raises(CapabilityFieldError) as excinfo:
+        load_capability_file(path)
+    assert "不一致" in str(excinfo.value)

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from conftest import EP_PATH
 from channels import notify, package, snapshot, state
+from pyv import episodes
 
 
 # --- 回填 -------------------------------------------------------------------
@@ -140,7 +141,7 @@ def test_the_cli_marks_a_draft_and_writes_a_drafted_snapshot(
     assert data["episodes"][EP_PATH]["status"] == "drafted"
     assert data["episodes"][EP_PATH]["published_url"] is None
 
-    shot = json.loads((tmp_path / "outbox" / f"{EP_PATH}__channels.json")
+    shot = json.loads((tmp_path / "outbox" / f"{episodes.ep_id(EP_PATH)}__channels.json")
                       .read_text(encoding="utf-8"))
     assert shot["status"] == "drafted"
     assert shot["published_url"] is None

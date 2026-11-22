@@ -337,7 +337,7 @@ def cmd_publish(args: argparse.Namespace) -> int:
         from pyv import contract as contract_mod
         contract_episode = contract_mod.load_contract(contract_path).episode
 
-    video = epmeta.AIV_ROOT / "out" / f"{episodes.ep_id(args.episode)}.mp4"
+    video = episodes.cut_path(args.episode)
     info = None
     duration = None
     if video.is_file():

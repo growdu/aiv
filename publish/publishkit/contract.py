@@ -49,7 +49,7 @@ description  str             ≤ 150 字
 difficulty   int             1–5
 cover        str             相对文章目录
 reprintPolicy str            主题支持的转载枚举
-kind         str             ``post``（默认）/ ``video``
+kind         str             ``document``（默认）/ ``category`` / ``video``
 platforms    list[str]       平台 id 列表
 publish_on   str             ``YYYY-MM-DD``
 date         str             ``YYYY-MM-DD`` 或 ``YYYY-MM-DD HH:MM:SS``
@@ -67,7 +67,8 @@ date         str             ``YYYY-MM-DD`` 或 ``YYYY-MM-DD HH:MM:SS``
 （06 规格 §3.3「按 ``publish_on``（缺省用 ``date``）升序」），所以这一层得认它。
 
 但它**不在透传白名单里**：``PASSTHROUGH_FIELDS`` 是**契约层自己**的清单
-（编译器那份是 ``tools/build-content-units.py`` 的 ``PASSTHROUGH``），
+（编译器那边搬的是期号字段——``tools/build-content-units.py`` 的
+``EPISODE_FIELDS``——同样不含 ``date``），
 加进去会改变站点渲染结果——内容单元里的 ``date`` 决定站点的地址。
 ``date`` 只是被**读**，不被**搬**。
 """
@@ -93,15 +94,20 @@ __all__ = [
     "ContractFieldError",
     "ContractFileError",
     "contract_from_fields",
+    "is_publish_candidate",
     "parse_content_date",
     "parse_front_matter",
     "read_contract",
     "validate_fields",
 ]
 
-#: 内容单元类型（§4.1）。注意与能力模型的 ``kind``（document / video）
-#: 不是同一套取值：这里说的是「这篇是什么」，那边说的是「这个平台发什么」。
-CONTENT_KINDS = ("post", "video")
+#: 内容单元类型（§4.1）。能力模型说的是「**这个平台发什么**」，
+#: 这里说的是「**这篇是什么**」——两套词表，取值上 ``document`` / ``video``
+#: 两边同名，分类页的 ``category`` **只在内容契约里**。
+#:
+#: 编译器（``tools/build-content-units.py``）写的就是这三个值：
+#: ``document``（一篇稿子）/ ``category``（分类页）/ ``video``（视频页）。
+CONTENT_KINDS = ("document", "category", "video")
 
 #: 转载声明的取值域（契约一 §4.1）。
 #: 这组枚举沿用旧 Hexo 主题（matery）支持的取值；2026-11-18 的站点重做
@@ -445,8 +451,25 @@ class ContentContract:
 
     @property
     def is_publish_candidate(self) -> bool:
-        """``platforms`` 非空即进入发布候选集（06 规格 §3.2）。"""
-        return bool(self.platforms)
+        """这篇算不算发布候选。
+
+        规则只有一份，在 :func:`is_publish_candidate` 里——本属性是它在
+        内容契约自己身上的那一层壳，**别处不许再抄一份判断**。
+        """
+        return is_publish_candidate(self)
+
+
+def is_publish_candidate(contract) -> bool:
+    """这篇算不算发布候选：``platforms`` 非空、**且不是分类页**（06 规格 §3.2）。
+
+    分类页（``kind == "category"``）是站点的东西——一级目录的落地页，
+    不是要发给平台的稿子。
+
+    **规则只有这一份**：契约层的属性
+    :attr:`ContentContract.is_publish_candidate` 与调度层都调它——
+    调度层**不许**自己抄一份「不是分类页」的判断（抄一份就有两处会走偏）。
+    """
+    return bool(contract.platforms) and contract.kind != "category"
 
 
 def contract_from_fields(fields: dict, *, path=None) -> ContentContract:
@@ -471,7 +494,7 @@ def contract_from_fields(fields: dict, *, path=None) -> ContentContract:
     return ContentContract(
         path=Path(path) if path is not None else None,
         title=text("title") or "",
-        kind=text("kind") or "post",
+        kind=text("kind") or "document",
         platforms=tuple(platforms) if isinstance(platforms, list) else (),
         publish_on=text("publish_on"),
         date=text("date"),

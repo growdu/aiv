@@ -1,10 +1,9 @@
 """Convert blog posts into WeChat official account articles.
 
-The package turns the site's posts directory -- the copy of the content
-units the site keeps (``platforms/blog/site/src/content/units/``, produced
-by ``tools/build-content-units.py`` and copied in by
-``platforms/blog/site/tools/sync-content.py``) -- into WeChat-ready HTML
-and pushes it to the official account draft box.
+The package turns the **content-unit repository** (``content/units/``,
+produced by ``tools/build-content-units.py``) -- into WeChat-ready HTML
+and pushes it to the official account draft box.  The adapter reads that
+repository directly; it does not read the site's copy of it.
 
 Modules are layered so each one can be tested on its own:
 

@@ -34,6 +34,7 @@ from .capability import list_capabilities
 from .contract import (
     ContentContract,
     ContractError,
+    is_publish_candidate,
     parse_content_date,
     read_contract,
 )
@@ -348,7 +349,7 @@ class OutboxIndex:
 
         - 已经发过的（成功态）→ 不再发；
         - 结果未知（超时，§7.1 第三条）→ **不能自动重发**，可能已经发出去了；
-        - 失败且不自动重试的（这一篇不合格 / 平台审核不通过）→ 转人工，
+        - 失败且不自动重试的（前置条件没满足 / 平台审核不通过）→ 转人工，
           而且它不该继续霸占「最久未发」的位置（§7.4）；
         - 失败但可重试的 → 不在这里挡（它由重试那一路处理）。
         """
@@ -494,7 +495,8 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
 
     规则（§3.3）：
 
-    1. 候选集 = ``platforms`` 里含这个平台的内容单元；
+    1. 候选集 = ``platforms`` 里含这个平台的内容单元（**排除分类页**——
+       ``kind == "category"`` 的是站点的东西，不是要发给平台的文章）；
     2. 其中有 ``publish_on`` 落在本周的 → 选它（``publish_on`` 最早的；
        再并列按 ``content_id`` 字典序，保证确定性）；
     3. 没有 → 剔除**已发过的**（outbox 里有同 ``(content_id, platform)``
@@ -507,8 +509,18 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
     理由是一句人话——「本周没有可发的」不是错误，是一个事实。
     """
     index = outbox if outbox is not None else OutboxIndex()
-    candidates = [unit for unit in units if platform in unit.platforms]
+    # 候选集 = ``platforms`` 里含这个平台的内容单元，**但不含分类页**。
+    #
+    # 「什么算候选」住在契约层的 ``is_publish_candidate`` 里（那里也认了分类页）。
+    matched = [unit for unit in units if platform in unit.platforms]
+    candidates = [unit for unit in matched if is_publish_candidate(unit.contract)]
     if not candidates:
+        if matched:
+            # 有内容单元、只是它们**都是分类页**——分类页是站点的东西，
+            # 不是要发给平台的稿子。这跟「一个都没有」不是一回事。
+            return None, "候选集是空的：{!r} 这个平台下只有分类页，没有要发的稿子".format(
+                platform
+            )
         return None, "候选集是空的：没有内容单元的 platforms 里包含 {!r}".format(
             platform
         )
@@ -747,7 +759,7 @@ def retry_failed(
     """把 outbox 里「失败且可重试」的记录重试一次（§7.2）。
 
     - ``status = "failed"`` 且 ``retryable`` 不是 False 的记录：重试一次；
-    - ``retryable = False`` 的（这一篇不合格 / 平台审核不通过）：
+    - ``retryable = False`` 的（前置条件没满足 / 平台审核不通过）：
       **永不自动重试**；
     - 已经试够 ``max_attempts`` 次的：转人工，不再自动重试。
 
@@ -973,7 +985,7 @@ def _publish_to_platforms(config, content_id, platforms, publisher, dry_run, ski
             and record.status == "failed"
             and record.data.get("retryable") is False
         ):
-            # 不合格 / 审核不通过：转人工，不自动重试（§7.1）。
+            # 前置条件没满足 / 审核不通过：转人工，不自动重试（§7.1）。
             messages.append(
                 "{} → {}：转人工（不自动重试），跳过。".format(content_id, platform)
             )

@@ -62,7 +62,7 @@ class RemoteAsset(ValueError):
 
 
 class AssetNotFound(ValueError):
-    """The asset path does not resolve to a file inside the site."""
+    """The asset path does not resolve to a file inside the image repository."""
 
 
 class UnreadableImage(ValueError):
@@ -100,38 +100,36 @@ def is_remote(path: str) -> bool:
     return path.strip().lower().startswith(("http://", "https://"))
 
 
-def resolve_asset(path: str, posts_dir: Path) -> Path:
+def resolve_asset(path: str, images_root: Path, unit_dir: str = "") -> Path:
     """Resolve an asset path from a post to a real file.
 
-    站点的图片走 ``/images/<docs 相对路径>``：
-    ``platforms/blog/site/tools/sync-content.py`` 把 ``docs/`` 里的图片按
-    **docs 的相对路径**落进站点的 ``public/images/``。
-
-    ⚠️ **这个解析基准已经过时**：它按「文章目录的上一级」推，而文章目录现在
-    在 ``site/src/content/units/``，它的上一级不是图片所在。
-    这条接口缺口记在
-    ``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 3 条
-    （「adapter 读的是站点的副本，不是内容单元仓库」）。
+    一张图落在 ``图片根/单元目录/正文里的相对路径``——**全局一条规则**，
+    站点与两个 adapter 都用它（站点那边是它的图片副本 ``public/images/``）。
+    ``unit_dir`` 是内容单元 id 的**目录部分**（``db/x/_index`` 的目录是
+    ``db/x``；顶层单元是空串）。
 
     Three things are refused here, and each of them says what went wrong:
 
     - a remote URL: the package must not depend on the network;
     - a path that resolves to no file: a silent fallback would ship a
       package with a missing picture and no word about it;
-    - a path that leaves the site root: an asset path is a relative path
-      inside the site, never a way out of it.
+    - a path that leaves the image root: an asset path is a relative path
+      inside the image repository, never a way out of it.
+
+    **绝对路径也按图片根判**——不像微信那边（那边原样返回绝对路径，因为
+    ``--cover`` 就是给绝对路径用的；那边只拒**相对路径**越界）。
     """
     if is_remote(path):
         raise RemoteAsset("外链图不在本地：{}".format(path))
-    site_root = Path(posts_dir).parent.resolve()
+    root = Path(images_root).resolve()
     candidate = Path(path)
-    resolved = candidate.resolve() if candidate.is_absolute() else (site_root / candidate).resolve()
-    if resolved != site_root and site_root not in resolved.parents:
+    resolved = candidate.resolve() if candidate.is_absolute() else (root / unit_dir / candidate).resolve()
+    if resolved != root and root not in resolved.parents:
         raise AssetNotFound(
-            "图路径跑出了站点根目录 {}：{}".format(site_root, path)
+            "图路径跑出了图片根目录 {}：{}".format(root, path)
         )
     if not resolved.is_file():
-        raise AssetNotFound("找不到图文件：{}（按 {} 解析）".format(path, site_root))
+        raise AssetNotFound("找不到图文件：{}（按 {} 解析）".format(path, root / unit_dir))
     return resolved
 
 
@@ -211,9 +209,10 @@ def fetch_remote_asset(url: str, timeout: float = 15.0) -> bytes:
     这一条是给「显式要下载」的那一档用的。实测（2026-11-17）：
     116 张外链图里 85 张能下到，31 张是死链或防盗链（403）。
 
-    **只有 403 才换 Referer 再试一遍**：防盗链的图换个 Referer 常常能通，
-    而死链（404）再试一次也是死链——每一张死链都白等一个超时，
-    一百多张图加起来就是几十分钟。
+    **框架不替请求指定 Referer**：防盗链是**站点的**事，编一个 Referer
+    替它说「我是从你那儿来的」是框架替使用者撒谎。403 就是**下不到**，
+    跟 404 一样：如实说，别重试——重试的请求跟第一次一模一样，
+    只是白等一个超时。
 
     下不到就抛 :class:`AssetUnreachable`——**调用方要把它当「这张图还得人工处理」**，
     不是当失败：一张图下不到，这篇文章照样能发，只是少一张图。
@@ -229,25 +228,11 @@ def fetch_remote_asset(url: str, timeout: float = 15.0) -> bytes:
             return data
         raise AssetUnreachable("外链图下载下来是空的：{}".format(url))
     except urllib.error.HTTPError as error:
-        if error.code != 403:
-            raise AssetUnreachable(
-                "外链图下载不下来（HTTP {}）：{}".format(error.code, url)
-            ) from error
+        raise AssetUnreachable(
+            "外链图下载不下来（HTTP {}）：{}".format(error.code, url)
+        ) from error
     except (urllib.error.URLError, OSError) as error:
         raise AssetUnreachable("外链图下载不下来：{}（{}）".format(url, error)) from error
-
-    # 到这儿是 403：换个 Referer 再试一次（防盗链常常就松口了）。
-    retry = urllib.request.Request(
-        url, headers={"User-Agent": _FETCH_UA, "Referer": "https://growdu.cn/"}
-    )
-    try:
-        with urllib.request.urlopen(retry, timeout=timeout) as response:
-            data = response.read()
-    except (urllib.error.URLError, OSError) as error:
-        raise AssetUnreachable("外链图下载不下来：{}（{}）".format(url, error)) from error
-    if not data:
-        raise AssetUnreachable("外链图下载下来是空的：{}".format(url))
-    return data
 
 
 def prepare_image(src: Path, dst: Path, max_bytes: int) -> PreparedImage:

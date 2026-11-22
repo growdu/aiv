@@ -111,6 +111,18 @@ class Config:
     character_source: Path | None
     #: 配置里**写明了但文件不在**的路径（doctor 拿它区分「配错」与「没配」）
     declared_missing: list[tuple[str, Path]] = field(default_factory=list)
+    #: 成片片头旁白（`{brand}` 已换成品牌名）。没配 = 空串
+    brand_intro_line: str = ""
+    #: 成片片尾旁白（`{site}` 已换成片尾落版地址）。没配 = 空串
+    brand_outro_line: str = ""
+    #: 片头药丸那句话的后缀（自带「· 」，拼标语不用再补分隔符）
+    brand_share_suffix: str = ""
+    #: 药丸里那段金字：白字/金字的**断点**由它给出。必须是 share_suffix 的尾巴
+    brand_share_emphasis: str = ""
+    #: 片尾落版的大字（不是胶囊标签，所以单独一项）
+    brand_outro_title: str = ""
+    #: 片尾落版的两条胶囊标签（标签条数固定，落版胶囊行只有三项：站点 + 这两条）
+    brand_outro_labels: tuple[str, ...] = ()
 
 
 def _load_toml(path: Path) -> dict:
@@ -134,6 +146,30 @@ def _dig(data: dict, *keys: str) -> dict:
 def _text(table: dict, key: str, default: str = "") -> str:
     value = table.get(key, default)
     return str(value).strip() if value is not None else default
+
+
+def _list(table: dict, key: str) -> tuple[str, ...]:
+    """配置里的数组 → 字符串元组。不是列表就当空；空串元素丢掉。
+
+    非字符串元素先 `str()` 再 strip，免得 TOML 里写了数字就静默通过。
+    """
+    value = table.get(key)
+    if not isinstance(value, (list, tuple)):
+        return ()
+    items = []
+    for element in value:
+        text = str(element).strip()
+        if text:
+            items.append(text)
+    return tuple(items)
+
+
+def _fill(text: str, *, brand: str, site: str) -> str:
+    """占位符替换：``{brand}`` → 品牌名，``{site}`` → 片尾落版地址。
+
+    替换只在这里做一份——shell 与 Python 拿到的是同一句成话。
+    """
+    return text.replace("{brand}", brand).replace("{site}", site)
 
 
 def build(data: dict, *, path: Path | None, base: Path) -> Config:
@@ -170,6 +206,20 @@ def build(data: dict, *, path: Path | None, base: Path) -> Config:
         or f"{_text(brand, 'name', 'Your Name')} · {_text(brand, 'tagline', 'Your Tagline')}",
         brand_outro_narration=_text(brand, "outro_narration"),
         character_slug=_text(character, "slug", "mascot"),
+        brand_intro_line=_fill(
+            _text(brand, "intro_line"),
+            brand=_text(brand, "name", "Your Name"),
+            site=_text(brand, "site", "example.com"),
+        ),
+        brand_outro_line=_fill(
+            _text(brand, "outro_line"),
+            brand=_text(brand, "name", "Your Name"),
+            site=_text(brand, "site", "example.com"),
+        ),
+        brand_share_suffix=_text(brand, "share_suffix"),
+        brand_share_emphasis=_text(brand, "share_emphasis"),
+        brand_outro_title=_text(brand, "outro_title"),
+        brand_outro_labels=_list(brand, "outro_labels"),
         character_look=_text(character, "look"),
         character_source=_as_path(base, _text(character, "source")),
     )

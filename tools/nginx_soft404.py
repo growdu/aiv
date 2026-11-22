@@ -6,7 +6,7 @@ The bug
 site it means *every* unknown URL answers ``200`` with the homepage::
 
     $ curl -s -o /dev/null -w "%{http_code} %{size_download}" \\
-        https://growdu.cn/this-page-does-not-exist-xyz/
+        https://example.invalid/this-page-does-not-exist-xyz/
     200 120526
 
 The response is byte-identical to ``/`` -- same length, same etag -- so

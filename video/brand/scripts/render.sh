@@ -3,6 +3,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$ROOT/video"
 
+# 底板名 / 成片名带角色 slug（仓库既有约定，见 pyv/config.py 的 character_slug）。
+# slug 取配置：产出的文件名跟配 slug 之前一模一样，
+# 素材不用改名、脚本不用重跑。
+PIPE_ROOT="$ROOT/../pipeline"
+SLUG="$(PYTHONPATH="$PIPE_ROOT" python3 -c \
+  'from pyv.config import config; print(config().character_slug)')"
+
 # 从静态底板渲染 8 秒 Ken Burns 片段；若 audio/ 下存在成品音轨则一并封装
 render() {
   local input="$1" output="$2" audio="$3"
@@ -19,6 +26,6 @@ render() {
   fi
 }
 
-render "$ROOT/assets/plates/growdu_intro_1080p.png" "$ROOT/video/growdu_intro_8s_1080p.mp4" "$ROOT/audio/intro_mix.wav"
-render "$ROOT/assets/plates/growdu_outro_1080p.png" "$ROOT/video/growdu_outro_8s_1080p.mp4" "$ROOT/audio/outro_mix.wav"
-echo "Rendered Growdu intro/outro."
+render "$ROOT/assets/plates/${SLUG}_intro_1080p.png" "$ROOT/video/${SLUG}_intro_8s_1080p.mp4" "$ROOT/audio/intro_mix.wav"
+render "$ROOT/assets/plates/${SLUG}_outro_1080p.png" "$ROOT/video/${SLUG}_outro_8s_1080p.mp4" "$ROOT/audio/outro_mix.wav"
+echo "Rendered ${SLUG} intro/outro."

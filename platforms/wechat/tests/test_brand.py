@@ -192,10 +192,34 @@ def test_the_card_escapes_the_html_of_the_description():
 
 
 def test_the_signature_names_the_author():
-    signature = signature_html()
+    """署名在的时候，它得**原样出现**（`SIGNATURE_TEXT` 那个形状原封不动）。"""
+    signature = signature_html("growdu")
 
     assert "growdu" in signature
     assert SIGNATURE_TEXT.format(author="growdu") in signature
+
+
+def test_the_signature_without_an_author_has_no_empty_slot():
+    """**没有署名就别留一个空着的「本文作者： ｜」。**
+
+    署名是**内容**：母稿没写 `author:`，内容单元里就是空的。
+    这时候那行要是还照印，公众号里就多一句「本文作者： ｜」——一个洞。
+    """
+    signature = signature_html()
+
+    assert "本文作者" not in signature
+    assert "阅读原文" in signature
+
+
+def test_the_card_without_an_author_does_not_leave_a_stray_separator():
+    """卡片抬头那一行是「署名 ｜ 日期」——署名空了还照拼，就是「 ｜ 2026-09-29」。"""
+    card = byline_html(title_page_of(_blocks(
+        "| 编写人 | 编写内容 | 编写时间 |\n| --- | --- | --- |\n"
+        "|  | 初稿，面向 PostgreSQL 内核开发 / DBA / 内核爱好者，"
+        "把「一张表的元数据到底存在哪里」完整拆开。 | 2026-09-29 |\n")))
+
+    assert "｜" not in card
+    assert "2026-09-29" in card
 
 
 def test_the_signature_uses_the_author_it_is_given():

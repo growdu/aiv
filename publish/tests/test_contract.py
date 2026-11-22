@@ -6,7 +6,7 @@
    ——CRLF（weixin 那份不认）与缩进标量（weixin 那份读成空列表）——
    都是钉死的有意为之，各由下面一条用例显式断言；
 2. 坏字段必须以 ``ContractFieldError`` 明确失败，不漏出裸 KeyError / TypeError；
-3. ``platforms`` 非空即进入发布候选集（06 规格 §3.2）。
+3. 候选集判定：``platforms`` 非空、**且不是分类页**（06 规格 §3.2）。
 """
 
 from datetime import date
@@ -40,7 +40,7 @@ description: "讲清楚大事务同步为什么慢。"
 difficulty: 3
 cover: images/cover.jpg
 reprintPolicy: cc_by_nd
-kind: post
+kind: document
 platforms:
   - wechat
   - toutiao
@@ -66,7 +66,7 @@ def test_parse_front_matter_scalars_and_lists():
     assert fields["difficulty"] == "3"
     assert fields["cover"] == "images/cover.jpg"
     assert fields["reprintPolicy"] == "cc_by_nd"
-    assert fields["kind"] == "post"
+    assert fields["kind"] == "document"
     assert fields["publish_on"] == "2026-11-13"
     assert fields["platforms"] == ["wechat", "toutiao"]
     assert body.lstrip().startswith("# 逻辑复制大事务同步要 30 分钟？")
@@ -200,7 +200,7 @@ def test_read_contract_reads_platforms_and_publish_on(tmp_path):
     assert contract.platforms == ("wechat", "toutiao")
     assert contract.publish_on == "2026-11-13"
     assert contract.title == "逻辑复制大事务同步要 30 分钟？"
-    assert contract.kind == "post"
+    assert contract.kind == "document"
     assert contract.difficulty == 3
     assert contract.short_title == "大事务同步"
     assert contract.tldr == "大事务同步把 WAL 推满了。"
@@ -210,11 +210,11 @@ def test_read_contract_reads_platforms_and_publish_on(tmp_path):
     assert contract.path == path
 
 
-def test_contract_defaults_kind_to_post(tmp_path):
+def test_contract_defaults_kind_to_document(tmp_path):
     path = tmp_path / "post.md"
     path.write_text("---\ntitle: x\n---\n\n正文\n", encoding="utf-8")
 
-    assert read_contract(path).kind == "post"
+    assert read_contract(path).kind == "document"
 
 
 def test_contract_reports_a_missing_file(tmp_path):
@@ -332,6 +332,17 @@ def test_empty_platforms_list_is_not_a_publish_candidate(tmp_path):
     assert contract.is_publish_candidate is False
 
 
+def test_a_category_page_is_not_a_publish_candidate(tmp_path):
+    """分类页也是站点的东西——它声明了 platforms 也不进候选集。"""
+    path = tmp_path / "post.md"
+    path.write_text(
+        "---\ntitle: x\nkind: category\nplatforms:\n  - wechat\n---\n\n正文\n",
+        encoding="utf-8",
+    )
+
+    assert read_contract(path).is_publish_candidate is False
+
+
 # --- 坏输入 -------------------------------------------------------------
 
 
@@ -395,14 +406,18 @@ def test_publish_on_accepts_a_real_date(tmp_path):
 
 
 def test_kind_must_be_in_the_content_domain(tmp_path):
-    """内容契约的 kind 是 post / video——不是能力模型的 document / video。"""
+    """内容契约的 kind 是 document / category / video——词表外的一律拒。
+
+    ⚠️ 坏值是 ``text``：**``document`` 现在是合法值**了，拿它当坏值的话，
+    这条用例就从「拒绝坏值」变成「拒绝合法值」，红的理由都变了。
+    """
     path = tmp_path / "post.md"
-    path.write_text("---\ntitle: x\nkind: document\n---\n\n正文\n", encoding="utf-8")
+    path.write_text("---\ntitle: x\nkind: text\n---\n\n正文\n", encoding="utf-8")
 
     with pytest.raises(ContractFieldError) as excinfo:
         read_contract(path)
     assert "kind" in str(excinfo.value)
-    assert set(CONTENT_KINDS) == {"post", "video"}
+    assert set(CONTENT_KINDS) == {"document", "category", "video"}
 
 
 @pytest.mark.parametrize("bad_difficulty", ["0", "6", "高", "3.5", "-1"])
@@ -472,7 +487,7 @@ def test_validate_fields_collects_every_violation_at_once():
         "platforms": "wechat",
         "publish_on": "2026-02-30",
         "difficulty": "9",
-        "kind": "document",
+        "kind": "text",
     }
 
     violations = validate_fields(fields)
@@ -490,7 +505,7 @@ def test_validate_fields_accepts_a_clean_draft():
             "platforms": ["wechat"],
             "publish_on": "2026-11-13",
             "difficulty": "1",
-            "kind": "post",
+            "kind": "document",
         }
     ) == []
 

@@ -255,7 +255,7 @@ def strip_brand_word(text: str) -> str:
     剥完空了用 `NEUTRAL_LABEL` 兜底。
 
     **两边都比小写**：只把待比较的那段小写化、配置值原样留着的话，
-    配置成 ``token = "GrowDu"`` 的使用者会永远匹配不上——「去品牌」
+    配置成 ``token = "YourBrand"`` 的使用者会永远匹配不上——「去品牌」
     静悄悄地不生效，还不报错。
     """
     parts = [part.strip() for part in text.split("·")]

@@ -499,14 +499,36 @@ def test_long_body_is_truncated_and_noted():
 
 
 def test_body_ends_with_the_plain_site_mention():
-    result = slice_post(_post(body="正文。"), LIMITS)
+    result = slice_post(_post(body="正文。"), LIMITS, source_url="https://growdu.cn")
     assert result.article.body.endswith("完整版见 growdu.cn")
     assert "http" not in result.article.body
+
+
+def test_no_site_url_means_no_half_a_sentence():
+    """没有站点地址时，「完整版见」后面不能空着一截。
+
+    今天 ``source_url`` 写死成 ``https://growdu.cn``；改成从缝里取之后，
+    没配 ``SITE_URL`` 就得**整句不放**——不能留一个「完整版见 」。
+    """
+    result = slice_post(_post(body="正文。"), LIMITS, source_url="")
+
+    assert "完整版见" not in result.article.body
 
 
 def test_source_url_scheme_is_stripped():
     result = slice_post(_post(body="正文。"), LIMITS, source_url="https://example.com/")
     assert result.article.body.endswith("完整版见 example.com")
+
+
+def test_a_blank_site_url_means_no_half_a_sentence():
+    """只有空格的站点地址 = 没有站点地址。
+
+    ``"   ".strip()`` 是空串——不 strip 的话，「完整版见」后面就空着一截，
+    正是这个 Task 要消灭的那种半句话。
+    """
+    result = slice_post(_post(body="正文。"), LIMITS, source_url="   ")
+
+    assert "完整版见" not in result.article.body
 
 
 # ---- 不可发 ----

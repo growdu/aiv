@@ -7,7 +7,8 @@
 发布状态在 ``platforms/<平台>/outbox/*.json``。
 
 生成的是**内容单元**（``content/units/video/<期号>.md``），不是页面：
-视频和文章走同一套渲染、同一个 permalink、同一条「已发布到」通道。
+视频和文章走同一套渲染、同一套 permalink 规则（文章走文档前缀，
+视频走视频前缀）、同一条「已发布到」通道。
 这也补上了规格 §9.3 说的那句话——站点是内容谱系的根，而视频此前
 在站上零呈现（video widget 关着、菜单无入口）。
 
@@ -43,6 +44,7 @@ from pathlib import Path
 # 路径常量统一从根 tools/paths.py 取——那儿是唯一出处。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from paths import CONTENT_UNITS, REPO_ROOT, SITE_DATA  # noqa: E402
+from url_rules import video_url  # noqa: E402
 
 AIV_ROOT = REPO_ROOT / "video"
 EPISODES_DIR = AIV_ROOT / "episodes"
@@ -144,25 +146,15 @@ def read_outbox():
     return records
 
 
-def permalink(date_text, slug):
-    """The site's permalink for one content unit.
+def permalink(unit_id: str) -> str:
+    """视频页在站上的地址。
 
-    Mirrors the site's permalink rule (``:year/:month/:day/:title/``): the
-    date comes from the front matter, the title part is the path under
-    ``content/units``.
-
-    ⚠️ **这个形状已经过时**：站点 2026-11-18 换成了 Astro，URL 规则现在在
-    ``platforms/blog/site/src/lib/urls.ts``（视频页是 ``/videos/<slug>/``），
-    站点**没有重定向**——所以这里拼出来的链接在站上是死的。
-    这条接口缺口记在
-    ``review/specs/2026-11-19-整体架构与模块边界.md`` §五 第 10 条。
+    地址来自共享规则（仓库根 ``rules/urls.json`` 里的视频前缀），
+    单元 id 形如 ``video/<期号>``，规则会抹掉开头的 ``video/``。
+    站点 ``platforms/blog/site/src/lib/urls.ts`` 读的是同一份规则，
+    两边拼出来的是同一个字符串。
     """
-    match = re.match(r"(\d{4})-(\d{2})-(\d{2})", date_text or "")
-    if not match:
-        # 没有日期就没有年/月/日，但路径形状不变。
-        return f"/{slug}/"
-    year, month, day = match.groups()
-    return f"/{year}/{month}/{day}/{slug}/"
+    return video_url(unit_id)
 
 
 def rewrite_links(body, script_to_permalink):
@@ -274,7 +266,7 @@ def main(argv=None) -> int:
         # 内容单元的身份是**期号**（front matter 的 episode_number）——
         # 播放顺序那一串。期路径会随目录重排变，期号是站上认得的那个。
         content_id = fields.get("episode_number") or episode.replace("/", "-")
-        url = permalink(date, f"video/{content_id}")
+        url = permalink(f"video/{content_id}")
         # 兄弟期之间的链接：相对期根的路径与带 ./ 的写法都认。
         rel = script_file.relative_to(EPISODES_DIR).as_posix()
         script_to_permalink[f"./{rel}"] = url

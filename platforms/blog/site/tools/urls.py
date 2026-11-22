@@ -1,23 +1,23 @@
 """站点这一侧的 URL 形状规则。
 
-**形状只有一份**。优先读仓库根的 `rules/urls.json`（那是全仓库的规则表，
-根 `tools/url_rules.py` 是它的另一个读取器）；这个文件不在的时候用**同样的
-默认值**兜底——两边的口径逐字相同，所以合并了规则表也不用改站点。
+**形状只有一份**。读仓库根的 `rules/urls.json`（那是全仓库的规则表，
+根 `tools/url_rules.py` 是它的另一个读取器）。规则表不在 = 仓库不完整，
+直接报错，不拿默认值兜底（默认值就是第二份真相）。
 
 **单元 id 是什么**：内容单元相对 `content/units/` 的路径，不带 `.md`。
 两处形状要在拼地址时抹掉：
 
-- 分类页的 id 尾巴带 `_index` → 地址是它所在目录（`/docs/<目录>/`）；
-- 视频单元的 id 开头带 `video/` → 地址是 `/videos/<slug>/`。
+- 分类页的 id 尾巴带 `_index` → 地址是它所在目录 + 文档前缀；
+- 视频单元的 id 开头带 `video/` → 地址是视频前缀 + slug。
 
 **不 percent-encode**：拼出来的地址逐字照抄单元 id。
 
 用法::
 
     from urls import unit_url
-    unit_url("source-tracks/postgresql/x", "document")  # '/docs/source-tracks/postgresql/x/'
-    unit_url("source-tracks/postgresql/_index", "category")  # '/docs/source-tracks/postgresql/'
-    unit_url("video/row-lock", "video")  # '/videos/row-lock/'
+    unit_url("source-tracks/postgresql/x", "document")
+    unit_url("source-tracks/postgresql/_index", "category")
+    unit_url("video/row-lock", "video")
 """
 
 from __future__ import annotations
@@ -30,19 +30,8 @@ from pathlib import Path
 SITE = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
-#: 全仓库的规则表。**不在的时候用默认值**（跟那份 JSON 逐字相同）。
+#: 全仓库的规则表。
 RULES_FILE = REPO_ROOT / "rules" / "urls.json"
-
-#: 兜底口径。与 `rules/urls.json` 逐字相同——
-#: 规则表还没合过来时，站点拼出来的地址跟合过来之后一样。
-DEFAULT_RULES: dict = {
-    "version": 1,
-    "doc_prefix": "/docs/",
-    "video_prefix": "/videos/",
-    "video_id_prefix": "video/",
-    "category_suffix": "_index",
-    "trailing_slash": True,
-}
 
 REQUIRED_KEYS = (
     "version",
@@ -56,9 +45,9 @@ REQUIRED_KEYS = (
 
 @lru_cache(maxsize=1)
 def load_rules() -> dict:
-    """读规则表；不在就用默认值。**坏的规则表不许悄悄用默认值**——报错。"""
+    """读规则表。缺失或坏掉的规则表都不许悄悄兜底——报错。"""
     if not RULES_FILE.exists():
-        return dict(DEFAULT_RULES)
+        raise FileNotFoundError(f"规则表不在：{RULES_FILE}")
     try:
         rules = json.loads(RULES_FILE.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:

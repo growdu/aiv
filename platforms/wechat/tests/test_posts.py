@@ -91,15 +91,16 @@ def test_make_digest_returns_empty_for_body_without_paragraph():
     assert make_digest("## 只有标题\n\n```sql\nSELECT 1;\n```\n") == ""
 
 
-def test_build_permalink_uses_date_and_quoted_slug():
-    assert build_permalink("database/postgresql-row-lock", "2026-11-09 15:00:00") == \
-        "/2026/11/09/database/postgresql-row-lock/"
-    assert build_permalink("db/postgresql/常用压缩算法", "2023-05-22 10:00:00") == \
-        "/2023/05/22/db/postgresql/%E5%B8%B8%E7%94%A8%E5%8E%8B%E7%BC%A9%E7%AE%97%E6%B3%95/"
+def test_build_permalink_is_the_shared_doc_url():
+    """文章地址 = 共享规则算出来的那个（``/docs/<id>/``）。"""
+    assert build_permalink("database/postgresql-row-lock") == \
+        "/docs/database/postgresql-row-lock/"
 
 
-def test_build_permalink_falls_back_on_bad_date():
-    assert build_permalink("a/b", "not-a-date") == "/2024/01/01/a/b/"
+def test_build_permalink_does_not_percent_encode():
+    """共享规则的口径是「地址逐字照抄单元 id」——不 percent-encode。"""
+    assert build_permalink("db/postgresql/常用压缩算法") == \
+        "/docs/db/postgresql/常用压缩算法/"
 
 
 def test_load_post_builds_slug_permalink_and_fingerprint(tmp_path):
@@ -108,10 +109,23 @@ def test_load_post_builds_slug_permalink_and_fingerprint(tmp_path):
     post = load_post(target, posts_dir)
 
     assert post.slug == "database/postgresql-row-lock"
-    assert post.permalink == "/2026/11/09/database/postgresql-row-lock/"
+    assert post.permalink == "/docs/database/postgresql-row-lock/"
     assert post.categories == ("数据库",)
     assert len(post.fingerprint) == 64
     assert post.fingerprint == load_post(target, posts_dir).fingerprint
+
+
+def test_load_post_reads_an_empty_category_list_as_no_category(tmp_path):
+    """编译器写空列表用的是**内联** `[]`——它不是「一个名叫 `[]` 的分类」。"""
+    posts_dir = tmp_path / "_posts"
+    posts_dir.mkdir()
+    target = posts_dir / "a.md"
+    target.write_text(
+        "---\ntitle: \"x\"\ndate: 2026-11-09 15:00:00\n"
+        "categories: []\ncategory_ids: []\n---\n\n正文\n", encoding="utf-8")
+    post = load_post(target, posts_dir)
+    assert post.categories == ()
+    assert post.category_ids == ()
 
 
 def test_discover_lists_every_markdown_post(tmp_path):
@@ -129,7 +143,6 @@ def test_discover_raises_with_actionable_message(tmp_path):
         discover(missing)
     except FileNotFoundError as error:
         assert "build-content-units.py" in str(error)
-        assert "sync-content.py" in str(error)
     else:
         raise AssertionError("expected FileNotFoundError")
 

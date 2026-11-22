@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 
 from wechat.collection import (ArticleRef, Collection, build_categories,
-                               build_category_paths, build_collections,
-                               category_archive_url, collection_digest,
+                               build_collections, category_archive_url,
+                               category_id_for, collection_digest,
                                load_spec, render_category_tag,
                                render_collection_index, render_collection_plan,
                                safe_name)
@@ -13,16 +13,17 @@ from wechat.slugs import slugize
 from wechat.posts import Post, build_permalink
 
 
-def _post(slug, title, categories, date="2026-11-09 15:00:00"):
+def _post(slug, title, categories, date="2026-11-09 15:00:00", category_ids=()):
     return Post(
         path=Path("/tmp") / (slug + ".md"),
         slug=slug,
         title=title,
         digest="摘要：" + title,
-        permalink=build_permalink(slug, date),
+        permalink=build_permalink(slug),
         body="正文",
         categories=tuple(categories),
         date=date,
+        category_ids=tuple(category_ids),
     )
 
 
@@ -52,37 +53,57 @@ def test_build_categories_ignores_posts_without_a_category():
     assert build_categories(posts) == {}
 
 
-# --- category archive paths ------------------------------------------------
+# --- category archive pages ------------------------------------------------
 
 
-def test_build_category_paths_nests_a_category_under_its_ancestors():
-    """Hexo puts the page of a category under the categories above it."""
-    posts = [_post("a", "A", ["数据库深入", "数据库", "PostgreSQL 源码修炼之路"])]
-    paths = build_category_paths(posts)
-    assert paths["数据库深入"] == "数据库深入"
-    assert paths["数据库"] == "数据库深入/数据库"
-    assert paths["PostgreSQL 源码修炼之路"] == \
-        "数据库深入/数据库/PostgreSQL-源码修炼之路"
+def test_category_archive_url_takes_the_category_unit_id():
+    """分类归档地址按**分类内容单元 id** 算——共享规则去掉 `_index` 尾巴。"""
+    url = category_archive_url("https://growdu.cn", "数据库深入/数据库/_index")
+    assert url == "https://growdu.cn/docs/数据库深入/数据库/"
 
 
-def test_build_category_paths_keeps_the_shallowest_path_of_a_repeated_name():
-    """「数据库」 is both a root category and a child of 「数据库深入」."""
+def test_category_archive_url_uses_the_shared_rule():
+    """地址形状来自共享规则，不许在 adapter 里写死。"""
+    import re
+    from pathlib import Path
+    text = Path(__file__).resolve().parents[2].joinpath(
+        "wechat", "collection.py").read_text(encoding="utf-8")
+    assert "url_rules" in text, "分类地址应该走共享规则（tools/url_rules.py）"
+    assert not re.search(r"""['"]/docs/""", text), "分类地址不许写死 '/docs/'"
+
+
+def test_category_id_for_finds_the_unit_id_of_a_category():
+    """分类名 → 分类单元 id 的查表：名字在两个平行列表里对得上。"""
+    posts = [_post("a", "A", ["数据库深入", "数据库"],
+                   category_ids=["数据库深入/_index", "数据库深入/数据库/_index"])]
+    assert category_id_for(posts, "数据库深入") == "数据库深入/_index"
+    assert category_id_for(posts, "数据库") == "数据库深入/数据库/_index"
+    assert category_id_for(posts, "没有这个分类") is None
+
+
+def test_category_id_for_takes_the_shallowest_id_of_a_repeated_name():
+    """同一个分类名落在两个互不为祖先的目录上 → 取**层级最浅**的那个。
+
+    编译器只在**一篇之内**的目录链上去重，不跨篇——所以两个 id 都「对」。
+    老代码（`build_category_paths`）取的是最浅的那个，这里保持同一口径。
+    """
     posts = [
-        _post("a", "A", ["数据库深入", "数据库"]),
-        _post("b", "B", ["数据库"]),
+        _post("a", "A", ["数据库"], category_ids=["数据库深入/数据库/_index"]),
+        _post("b", "B", ["数据库"], category_ids=["数据库/_index"]),
     ]
-    paths = build_category_paths(posts)
-    assert paths["数据库"] == "数据库"
+    assert category_id_for(posts, "数据库") == "数据库/_index"
+    # 结果与文件顺序无关
+    assert category_id_for(list(reversed(posts)), "数据库") == "数据库/_index"
 
 
-def test_category_archive_url_keeps_the_slashes_and_encodes_the_rest():
-    url = category_archive_url("https://growdu.cn", "数据库", "数据库深入/数据库")
-    assert url == "https://growdu.cn/categories/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%B7%B1%E5%85%A5/%E6%95%B0%E6%8D%AE%E5%BA%93/"
-
-
-def test_category_archive_url_falls_back_to_the_slug_of_the_name():
-    assert category_archive_url("https://growdu.cn", "Go Web") == \
-        "https://growdu.cn/categories/Go-Web/"
+def test_category_id_for_breaks_a_tie_by_the_id_itself():
+    """同样深时按 id 字典序取小的——结果与文件顺序无关。"""
+    posts = [
+        _post("a", "A", ["数据库"], category_ids=["集群/_index"]),
+        _post("b", "B", ["数据库"], category_ids=["数据库深入/_index"]),
+    ]
+    assert category_id_for(posts, "数据库") == "数据库深入/_index"
+    assert category_id_for(list(reversed(posts)), "数据库") == "数据库深入/_index"
 
 
 def test_slugize_replaces_spaces_with_dashes():
@@ -144,15 +165,18 @@ def test_build_collections_honours_the_minimum_article_count():
     assert len(build_collections(posts, min_articles=2)) == 1
 
 
-def test_build_collections_carries_the_archive_path():
+def test_build_collections_carries_the_category_id():
+    """合集记住的是**分类内容单元 id**，不是 hexo 归档路径。"""
     posts = [
-        _post("a", "A", ["数据库深入", "数据库"]),
-        _post("b", "B", ["数据库深入", "数据库"]),
+        _post("a", "A", ["数据库深入", "数据库"],
+              category_ids=["数据库深入/_index", "数据库深入/数据库/_index"]),
+        _post("b", "B", ["数据库深入", "数据库"],
+              category_ids=["数据库深入/_index", "数据库深入/数据库/_index"]),
     ]
     collection = build_collections(posts)[0]
-    assert collection.path == "数据库深入/数据库"
+    assert collection.category_id == "数据库深入/数据库/_index"
     assert collection.archive_url("https://growdu.cn") == \
-        "https://growdu.cn/categories/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%B7%B1%E5%85%A5/%E6%95%B0%E6%8D%AE%E5%BA%93/"
+        "https://growdu.cn/docs/数据库深入/数据库/"
 
 
 def test_build_collections_reads_a_specification():
@@ -168,6 +192,24 @@ def test_build_collections_reads_a_specification():
     assert collections[0].title == "数据库精选"
     assert collections[0].description == "挑几篇"
     assert [ref.slug for ref in collections[0].articles] == ["a"]
+
+
+def test_build_collections_reads_the_category_id_from_a_specification():
+    """合集配置里的键是 `category_id`——拼错就落回 fallback。
+
+    键名写错时 `_category_id_for_chain` 的 fallback 照样给得出一个 id，
+    所以这条用例专门钉住**键名**。
+    """
+    posts = [
+        _post("a", "A", ["数据库"], date="2026-01-01 00:00:00"),
+        _post("b", "B", ["数据库"], date="2026-02-01 00:00:00"),
+    ]
+    spec = [{"title": "数据库精选", "categories": ["数据库"],
+             "category_id": "数据库/_index"}]
+    collection = build_collections(posts, spec)[0]
+    assert collection.category_id == "数据库/_index"
+    assert collection.archive_url("https://growdu.cn") == \
+        "https://growdu.cn/docs/数据库/"
 
 
 def test_build_collections_adds_extra_articles_from_a_specification():
@@ -260,7 +302,7 @@ def _collection():
             ArticleRef("b", "文章二", "摘要二", "/2026/01/02/b/", "2026-01-02 00:00:00"),
         ),
         categories=("数据库",),
-        path="数据库",
+        category_id="数据库/_index",
     )
 
 

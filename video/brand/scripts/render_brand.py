@@ -71,8 +71,12 @@ TIMESCALE = FPS * 1000    # 与流水线一致：concat 要求各片段时间基
 # 文案本身是**参数**：写在 `video/config.toml` 的 `[brand]` 里，
 # 语气按《人格规范》走（不喊口号，讲现场验证与可复现的方法）。
 INTRO_TAGLINE = _CONFIG.brand_intro_tagline
-INTRO_CAPTION = f"{_CONFIG.brand_tagline} · 分享技术之美"
+# 药丸那句来自配置：标语 + 后缀（后缀自带「· 」，所以不用另补分隔符）。
+INTRO_CAPTION = f"{_CONFIG.brand_tagline} {_CONFIG.brand_share_suffix}"
 OUTRO_SUBTITLE = _CONFIG.brand_outro_subtitle
+# 片尾落版的大字与两条胶囊标签。文案归使用者，脚本里不写死。
+OUTRO_TITLE = _CONFIG.brand_outro_title
+OUTRO_LABELS = _CONFIG.brand_outro_labels
 
 # 旁白台词。音色与参数见《形象与音色规范》§2.2；
 # 重新合成：python3 ../voice/scripts/synthesize_narration.py --text "<台词>" --out <路径>
@@ -338,12 +342,12 @@ def render_outro_frame(t: float, bg: Image.Image,
     tx = W * 0.455 + (1 - tw) * W * 0.03
     ty = H * 0.325 + (1 - tw) * H * 0.022
 
-    text(ctx, "感谢观看", tx, ty, 126, DEEP, bold=True, alpha=tw)
+    text(ctx, OUTRO_TITLE, tx, ty, 126, DEEP, bold=True, alpha=tw)
     text(ctx, OUTRO_SUBTITLE, tx, ty + 64, 38,
          DEEP, alpha=tw * 0.92)
 
-    # 三个胶囊按钮
-    items = [BRAND_SITE, "订阅关注", "点赞支持"]
+    # 胶囊行：站点地址 + 配置里的两条标签，恰好三项（delays 也只有三项）。
+    items = [BRAND_SITE, *OUTRO_LABELS]
     delays = [0.00, 0.07, 0.14]
     gap = 22
     fonts.select_font(ctx, FONT, bold=True)

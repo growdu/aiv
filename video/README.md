@@ -79,6 +79,16 @@ python3 -m pyv.cli config <key>
 **内置字体不在配置里**：它是规则级的东西（两台机器用同一份字体文件，
 跨机版式才一致），跟着仓库走。
 
+**品牌文案也在配置里**：片头/片尾的品牌片副标题、成片旁白、片头药丸那句话、
+片尾落版的标题与标签，全都在 `[brand]` 的 `intro_tagline`、`outro_subtitle`、
+`outro_narration`、`intro_line`、`outro_line`、`share_suffix`、`share_emphasis`、
+`outro_title`、`outro_labels` 里——脚本只读这些值，不再把文案写死在自己身上。
+`intro_line` / `outro_line` 里的 `{brand}` / `{site}` 占位由 `build()` 一次性替换成
+上面配的名字与站点地址；`share_emphasis` 是那句后缀拆成两段画时的**金字**，
+断点由它给出（不在空格上），所以别把它整句抄进 `share_suffix`。
+留空 = 用脚本里的通用写法。守这条的是 `pipeline/tests/test_config.py`：
+把配置换成别的站名/标语，画面文案跟着变；没配，脚本里就不该出现站名。
+
 ## 规范
 
 | 文档 | 内容 |
@@ -192,7 +202,7 @@ make EP=<期路径> vertical           # 9:16 竖版
 三件事要记住：
 
 - **片段目录与成片都另起一份**
-  （`build/<期路径压平>__nobrand/`、`out/<期路径压平>__nobrand.mp4`），
+  （`build/<期路径压平>__nobrand/`、`out/<期路径>__nobrand.mp4`），
   不跟带品牌的版本共用——共用会让增量渲染把带品牌片的片段当成可复用的。
 - **竖版本来就不套品牌片**：品牌片素材是横版的，贴到竖版画布上会被拉变形，
   `pyv.cli brand` 会直接拒绝。
@@ -267,12 +277,15 @@ make EP=<系列>/<合集>/<文档>/<档位> all     # validate → brand → ren
 `review.md`（这一期的审校记录）、`frames.md`（抽帧清单）、
 `frames/`（抽出来的帧）。哪些入库、哪些是产物，看下面这张表。
 
-期路径会**压平**成一个文件名片段（斜杠换连字符），`out/` 与 `build/` 里用的就是它：
+期路径会**压平**成一个文件名片段（斜杠换连字符），**片段目录**（`build/`）里用的就是它：
 
 ```
 <系列>/<合集>/<文档>/<档位>
 → <系列>-<合集>-<文档>-<档位>
 ```
+
+**成片不用压平名**：成片按期分目录（`out/<系列>/<合集>/<文档>/<档位>.mp4`），
+一眼看出它属于哪一期。
 
 片段目录也按期分开（`build/<期路径压平>/`）：各期的段 id 会重名（`s01`…），
 共用一个目录会互相覆盖。
@@ -282,7 +295,7 @@ make EP=<系列>/<合集>/<文档>/<档位> all     # validate → brand → ren
 | `episodes/<期路径>/口播稿.md` 口播稿与字幕表 | `episodes/<期路径>/storyboard.json` 时间轴 |
 | `episodes/<期路径>/contract.json` 视觉分镜契约 | `episodes/<期路径>/narration.mp3` 旁白（TTS 合成，本机素材） |
 | `episodes/<期路径>/publish.json` 发布元数据 | `build/<期路径压平>/*.mp4` 片段 |
-| `episodes/<期路径>/review.md` 审校记录 | `out/<期路径压平>.mp4` 成片 |
+| `episodes/<期路径>/review.md` 审校记录 | `out/<期路径>.mp4` 成片 |
 | `episodes/<期路径>/frames.md` 抽帧清单 | `episodes/<期路径>/frames/*.png` 抽出来的帧 |
 | `episodes/<文档路径>/skeleton.yaml` 讲稿骨架（三档共用） | 发布包 |
 | `pipeline/pyv/scenes/*.py` 场景代码 | 立绘、曲库、品牌片（用户素材，位置在 `config.toml`） |
@@ -310,7 +323,7 @@ make EP=<系列>/<合集>/<文档>/<档位> all     # validate → brand → ren
 ```bash
 cd video/pipeline
 make review-text   EP=<期路径>   # 文本层
-make review-video  EP=<期路径>   # 成片层（需要本机有 out/<期路径压平>.mp4）
+make review-video  EP=<期路径>   # 成片层（需要本机有 out/<期路径>.mp4）
 make review-frames EP=<期路径>   # 抽帧 + 清单（帧不入库，清单入库）
 ```
 

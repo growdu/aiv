@@ -8,8 +8,10 @@ Two layers:
   ``load_post`` -> ``slice_post`` -> ``render`` -> ``write_package`` ->
   ``write_snapshot``, and what lands on disk is checked for real.
 
-The mother posts are written into ``tmp_path`` -- never into
-``source/_posts``, which is gitignored and absent from a clean checkout.
+The mother posts are written into ``tmp_path`` -- never into the real
+``content/units/``, which is gitignored and absent from a clean checkout.
+The pictures live in the **image repository** (``content/units/images/``),
+under the unit's own directory -- the same rule the site uses.
 """
 
 import dataclasses
@@ -51,50 +53,53 @@ def _article(body="段落。", images=(), content_id="db/postgresql/demo", **kwa
     )
 
 
+#: 文章的**单元目录**——``_article()`` 的默认 content_id 是
+#: ``db/postgresql/demo``，它的目录部分就是 ``db/postgresql``。
+#: 图片按 ``图片根/单元目录/正文里的路径`` 落着（与站点同一条规则）。
+_UNIT_DIR = "db/postgresql"
+
+
+def _image_root(tmp_path):
+    """The image repository root -- the same shape as the real one."""
+    return tmp_path / "content" / "units" / "images"
+
+
 def _site(tmp_path):
-    """A fake site root with one post directory and one picture."""
-    site = tmp_path / "source"
-    posts = site / "_posts"
-    posts.mkdir(parents=True)
-    image = site / "images" / "demo.png"
-    image.parent.mkdir(parents=True)
-    Image.new("RGB", (1200, 900), (10, 20, 30)).save(image, "PNG")
-    return site, posts
+    """A fake content-unit repository with one picture."""
+    posts = tmp_path / "content" / "units"
+    images = _image_root(tmp_path) / _UNIT_DIR / "images"
+    images.mkdir(parents=True)
+    Image.new("RGB", (1200, 900), (10, 20, 30)).save(images / "demo.png", "PNG")
+    return posts, _image_root(tmp_path)
 
 
 def _site_with_two_images(tmp_path):
     """A site whose first picture is too small for a cover, and whose second one fits."""
-    site = tmp_path / "source"
-    posts = site / "_posts"
-    posts.mkdir(parents=True)
-    images = site / "images"
+    posts = tmp_path / "content" / "units"
+    images = _image_root(tmp_path) / _UNIT_DIR / "images"
     images.mkdir(parents=True)
     Image.new("RGB", (400, 300), (10, 20, 30)).save(images / "small.png", "PNG")
     Image.new("RGB", (1200, 900), (10, 20, 30)).save(images / "good.png", "PNG")
-    return site, posts
+    return posts, _image_root(tmp_path)
 
 
 def _site_with_image(tmp_path, size, name="pic.png"):
     """A site with one picture of the given size."""
-    site = tmp_path / "source"
-    posts = site / "_posts"
-    posts.mkdir(parents=True)
-    images = site / "images"
+    posts = tmp_path / "content" / "units"
+    images = _image_root(tmp_path) / _UNIT_DIR / "images"
     images.mkdir(parents=True)
     Image.new("RGB", size, (10, 20, 30)).save(images / name, "PNG")
-    return site, posts
+    return posts, _image_root(tmp_path)
 
 
 def _site_with_three_images(tmp_path):
     """A site with three usable pictures."""
-    site = tmp_path / "source"
-    posts = site / "_posts"
-    posts.mkdir(parents=True)
-    images = site / "images"
+    posts = tmp_path / "content" / "units"
+    images = _image_root(tmp_path) / _UNIT_DIR / "images"
     images.mkdir(parents=True)
     for name in ("one.png", "two.png", "three.png"):
         Image.new("RGB", (1200, 900), (10, 20, 30)).save(images / name, "PNG")
-    return site, posts
+    return posts, _image_root(tmp_path)
 
 
 def _cap_with_image_bytes(size):
@@ -163,7 +168,7 @@ def test_a_dangerous_content_id_writes_and_deletes_nothing(tmp_path, content_id)
     包根的上一层先放一个「上一次出包」留下的 cover.webp 和
     images/01.webp：id 是 ``..`` 时，那正是会被清掉的地方。
     """
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     package_root = tmp_path / "out"
 
     outside_cover = tmp_path / "cover.webp"
@@ -176,7 +181,7 @@ def test_a_dangerous_content_id_writes_and_deletes_nothing(tmp_path, content_id)
         body="【图1】\n\n段落。", images=("images/demo.png",), content_id=content_id
     )
     with pytest.raises(ValueError):
-        write_package(article, CAP, package_root, posts, "https://growdu.cn")
+        write_package(article, CAP, package_root, images_root, "https://growdu.cn")
 
     # 包根之外：文件既没被删，也没被改
     assert outside_cover.read_bytes() == b"keep me"
@@ -202,9 +207,9 @@ def test_write_snapshot_refuses_a_dangerous_content_id(tmp_path):
 
 
 def test_write_package_produces_the_expected_files(tmp_path):
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("images/demo.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert result.status == "packaged"
     names = {p.name for p in result.package_dir.iterdir()}
     assert {"article.html", "article.txt", "title.txt", "README.md", "cover.webp"} <= names
@@ -214,9 +219,9 @@ def test_write_package_produces_the_expected_files(tmp_path):
 
 
 def test_the_package_result_describes_what_was_written(tmp_path):
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("images/demo.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert result.content_id == "db/postgresql/demo"
     assert result.platform == "toutiao"
     assert result.automation == "manual"
@@ -231,9 +236,9 @@ def test_the_package_result_describes_what_was_written(tmp_path):
 
 
 def test_the_package_has_no_files_beyond_the_ones_it_declares(tmp_path):
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("images/demo.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     on_disk = {
         path.relative_to(result.package_dir).as_posix()
         for path in result.package_dir.rglob("*")
@@ -243,8 +248,8 @@ def test_the_package_has_no_files_beyond_the_ones_it_declares(tmp_path):
 
 
 def test_package_readme_lists_the_manual_steps(tmp_path):
-    site, posts = _site(tmp_path)
-    result = write_package(_article(), CAP, tmp_path / "out", posts, "https://growdu.cn")
+    posts, images_root = _site(tmp_path)
+    result = write_package(_article(), CAP, tmp_path / "out", images_root, "https://growdu.cn")
     readme = _readme(result)
     assert "- [ ]" in readme
     assert "封面" in readme
@@ -262,8 +267,8 @@ def test_the_checklist_says_the_footer_must_stay_plain_text(tmp_path):
     这一行是清单里唯一防「末尾变成超链接」的提示。删了它，上传者就会
     把末尾那句「完整版见 growdu.cn」当成普通链接贴出去。
     """
-    site, posts = _site(tmp_path)
-    result = write_package(_article(), CAP, tmp_path / "out", posts, "https://growdu.cn")
+    posts, images_root = _site(tmp_path)
+    result = write_package(_article(), CAP, tmp_path / "out", images_root, "https://growdu.cn")
     lines = [
         line for line in _readme(result).splitlines()
         if line.startswith("- [ ] 检查正文末尾")
@@ -273,6 +278,21 @@ def test_the_checklist_says_the_footer_must_stay_plain_text(tmp_path):
     assert "不是超链接" in lines[0]
 
 
+def test_a_blank_site_url_leaves_the_footer_line_out(tmp_path):
+    """只有空格的站点地址 → 清单里不该有「检查正文末尾」那一行。
+
+    那一行是提醒上传者去核对正文的结尾；正文里没有那句「完整版见 …」，
+    这行就是让人去找一个不存在的句子。
+    """
+    posts, images_root = _site(tmp_path)
+    result = write_package(_article(), CAP, tmp_path / "out", images_root, "   ")
+    lines = [
+        line for line in _readme(result).splitlines()
+        if line.startswith("- [ ] 检查正文末尾")
+    ]
+    assert lines == [], lines
+
+
 def test_the_checklist_says_the_publish_is_two_steps(tmp_path):
     """清单要写清「发表」是**两步**，不是点一下就完事。
 
@@ -280,8 +300,8 @@ def test_the_checklist_says_the_publish_is_two_steps(tmp_path):
     面板里的「确认发布」才是真的发表。清单原来只写「- [ ] 发表」，
     照着做的人点完第一下就以为发出去了，文章其实还在面板里没出去。
     """
-    site, posts = _site(tmp_path)
-    result = write_package(_article(), CAP, tmp_path / "out", posts, "https://growdu.cn")
+    posts, images_root = _site(tmp_path)
+    result = write_package(_article(), CAP, tmp_path / "out", images_root, "https://growdu.cn")
     lines = [
         line for line in _readme(result).splitlines()
         if line.startswith("- [ ] 发表")
@@ -299,8 +319,8 @@ def test_the_checklist_says_a_failed_autosave_is_not_a_failed_publish(tmp_path):
     那是**自动存草稿**那个分支被平台拒了（save=0），发表走的是另一个分支，通着。
     不写清楚，操作的人会以为没发成功——2026-11-13 就这么**重发成了两篇**。
     """
-    site, posts = _site(tmp_path)
-    result = write_package(_article(), CAP, tmp_path / "out", posts, "https://growdu.cn")
+    posts, images_root = _site(tmp_path)
+    result = write_package(_article(), CAP, tmp_path / "out", images_root, "https://growdu.cn")
     lines = [
         line for line in _readme(result).splitlines()
         if "保存失败" in line
@@ -318,11 +338,11 @@ def test_write_package_refuses_a_tier_it_does_not_serve(tmp_path):
     ``status="packaged"`` + ``reason=null`` 的快照 —— 看起来完全正常，
     档位却是错的。这正是「不静默成功」要防的形状。
     """
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     api_draft = dataclasses.replace(CAP, automation="api_draft")
     article = _article(body="【图1】\n\n段落。", images=("images/demo.png",))
     with pytest.raises(ValueError) as excinfo:
-        write_package(article, api_draft, tmp_path / "out", posts, "https://growdu.cn")
+        write_package(article, api_draft, tmp_path / "out", images_root, "https://growdu.cn")
     message = str(excinfo.value)
     assert "api_draft" in message
     assert "manual" in message
@@ -339,8 +359,8 @@ def test_package_without_a_cover_still_produces_a_package(tmp_path):
     硬失败会让 470/542 篇（86.7%）可发布文章出不了包；
     清单里那一行要明写「按无图模式发布」。
     """
-    site, posts = _site(tmp_path)
-    result = write_package(_article(), CAP, tmp_path / "out", posts, "https://growdu.cn")
+    posts, images_root = _site(tmp_path)
+    result = write_package(_article(), CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert result.status == "packaged"
     assert not (result.package_dir / "cover.webp").exists()
     readme = _readme(result)
@@ -353,9 +373,9 @@ def test_package_without_a_cover_still_produces_a_package(tmp_path):
 
 def test_remote_images_are_listed_for_manual_download(tmp_path):
     """外链图不下载 —— 清单里列出来，附上 URL。"""
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("https://example.com/a.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     readme = _readme(result)
     assert "https://example.com/a.png" in readme
     assert not (result.package_dir / "images" / "01.webp").exists()
@@ -363,9 +383,9 @@ def test_remote_images_are_listed_for_manual_download(tmp_path):
 
 def test_a_missing_image_is_listed_for_manual_checking(tmp_path):
     """找不到的图不静默丢 —— 路径收进清单，附上路径。"""
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("images/gone.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert result.status == "packaged"
     readme = _readme(result)
     assert "images/gone.png" in readme
@@ -378,11 +398,11 @@ def test_an_unreadable_image_does_not_break_the_package(tmp_path):
 
     真实语料里就有一张 SVG：不管它，这一篇的整包会直接崩掉。
     """
-    site, posts = _site(tmp_path)
-    svg = site / "images" / "logo.svg"
+    posts, images_root = _site(tmp_path)
+    svg = images_root / _UNIT_DIR / "images" / "logo.svg"
     svg.write_text("<svg></svg>", encoding="utf-8")
     article = _article(body="【图1】\n\n段落。", images=("images/logo.svg",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert result.status == "packaged"
     readme = _readme(result)
     assert "读不了的图" in readme
@@ -396,10 +416,10 @@ def test_an_oversized_image_does_not_break_the_package(tmp_path):
     ``prepare_image()`` 压到最小还超限时抛 ``ImageTooLarge``：这一篇
     照样能发，只是这张图得人工处理。
     """
-    site, posts = _site_with_image(tmp_path, (4000, 3000), "huge.png")
+    posts, images_root = _site_with_image(tmp_path, (4000, 3000), "huge.png")
     article = _article(body="【图1】\n\n段落。", images=("images/huge.png",))
     result = write_package(
-        article, _cap_with_image_bytes(100), tmp_path / "out", posts, "https://growdu.cn"
+        article, _cap_with_image_bytes(100), tmp_path / "out", images_root, "https://growdu.cn"
     )
     assert result.status == "packaged"
     readme = _readme(result)
@@ -410,8 +430,8 @@ def test_an_oversized_image_does_not_break_the_package(tmp_path):
 
 def test_the_four_image_problems_are_not_merged_into_one_line(tmp_path):
     """四种图的问题各有各的行，不能并成一句「图有问题」。"""
-    site, posts = _site(tmp_path)
-    svg = site / "images" / "logo.svg"
+    posts, images_root = _site(tmp_path)
+    svg = images_root / _UNIT_DIR / "images" / "logo.svg"
     svg.write_text("<svg></svg>", encoding="utf-8")
     article = _article(
         body="【图1】\n\n【图2】\n\n【图3】\n\n【图4】\n\n段落。",
@@ -422,7 +442,7 @@ def test_the_four_image_problems_are_not_merged_into_one_line(tmp_path):
             "images/demo.png",
         ),
     )
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     readme = _readme(result)
     for marker in ("远程图", "缺图", "读不了的图"):
         assert marker in readme, marker
@@ -442,13 +462,13 @@ def test_remote_images_never_reach_the_asset_resolver(tmp_path, monkeypatch):
     """
     import toutiao.publish as publish_module
 
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     calls = []
     original = publish_module.resolve_asset
 
-    def spy(path, posts_dir):
+    def spy(path, images_root, unit_dir=""):
         calls.append(path)
-        return original(path, posts_dir)
+        return original(path, images_root, unit_dir)
 
     monkeypatch.setattr(publish_module, "resolve_asset", spy)
 
@@ -456,7 +476,7 @@ def test_remote_images_never_reach_the_asset_resolver(tmp_path, monkeypatch):
         body="【图1】\n\n【图2】\n\n段落。",
         images=("https://example.com/a.png", "images/demo.png"),
     )
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert calls == ["images/demo.png"]
     readme = _readme(result)
     assert "远程图" in readme
@@ -472,12 +492,12 @@ def test_only_the_pictures_the_body_points_at_are_packaged(tmp_path):
     ``article.images`` 里多出来的那几张在正文里没有占位符：打进去的
     文件编号在正文里找不到对应，人工还得多传一张没人要的图。
     """
-    site, posts = _site_with_three_images(tmp_path)
+    posts, images_root = _site_with_three_images(tmp_path)
     article = _article(
         body="【图1】\n\n段落。",
         images=("images/one.png", "images/two.png", "images/three.png"),
     )
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert _image_names(result) == ["01.webp"]
     assert "【图1】" in _readme(result)
     assert "【图2】" not in _readme(result)
@@ -489,24 +509,24 @@ def test_the_file_number_follows_the_placeholder_not_the_packing_order(tmp_path)
     按打包顺序编号的话，【图2】会指向不存在的文件：正文里的占位符和
     包里的文件对不上。
     """
-    site, posts = _site_with_image(tmp_path, (1200, 900), "good.png")
+    posts, images_root = _site_with_image(tmp_path, (1200, 900), "good.png")
     article = _article(
         body="【图1】\n\n【图2】\n\n段落。",
         images=("images/gone.png", "images/good.png"),
     )
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert _image_names(result) == ["02.webp"]
     assert "images/gone.png" in _readme(result)
 
 
 def test_a_remote_picture_keeps_its_number(tmp_path):
     """外链图不下载，但它的序号照样留着 —— 后面的图不能往前挪。"""
-    site, posts = _site_with_image(tmp_path, (1200, 900), "good.png")
+    posts, images_root = _site_with_image(tmp_path, (1200, 900), "good.png")
     article = _article(
         body="【图1】\n\n【图2】\n\n段落。",
         images=("https://example.com/a.png", "images/good.png"),
     )
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert _image_names(result) == ["02.webp"]
     readme = _readme(result)
     assert "https://example.com/a.png" in readme
@@ -521,9 +541,9 @@ def test_placeholder_zero_does_not_pick_the_last_picture(tmp_path):
     的【图0】悄悄变成了另一张图。切片器不会编号到 0，但这个函数是导出
     的公共接口，手搓的 article 就能触发。
     """
-    site, posts = _site_with_two_images(tmp_path)
+    posts, images_root = _site_with_two_images(tmp_path)
     article = _article(body="【图0】\n\n段落。", images=("images/good.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     # 没有打包任何图（0 号不是 good.png）
     assert _image_names(result) == []
     readme = _readme(result)
@@ -533,8 +553,8 @@ def test_placeholder_zero_does_not_pick_the_last_picture(tmp_path):
 
 def test_every_placeholder_in_the_body_has_a_file_or_an_explanation(tmp_path):
     """正文里的每个占位符，要么有文件，要么在清单里说清楚为什么没有。"""
-    site, posts = _site(tmp_path)
-    svg = site / "images" / "logo.svg"
+    posts, images_root = _site(tmp_path)
+    svg = images_root / _UNIT_DIR / "images" / "logo.svg"
     svg.write_text("<svg></svg>", encoding="utf-8")
     article = _article(
         body="【图1】\n\n【图2】\n\n【图3】\n\n【图4】\n\n段落。",
@@ -545,7 +565,7 @@ def test_every_placeholder_in_the_body_has_a_file_or_an_explanation(tmp_path):
             "images/demo.png",
         ),
     )
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     readme = _readme(result)
     for number in (1, 2, 3, 4):
         marker = "【图{}】".format(number)
@@ -561,8 +581,8 @@ def test_every_placeholder_without_a_file_is_explained_on_its_own_line(tmp_path)
     或 URL，否则上传者不知道要处理哪一张。占位符符号本身出现在清单里
     是不够的 —— 它总是出现在「图片」那一行，哪张图缺文件并不能看出来。
     """
-    site, posts = _site(tmp_path)
-    svg = site / "images" / "logo.svg"
+    posts, images_root = _site(tmp_path)
+    svg = images_root / _UNIT_DIR / "images" / "logo.svg"
     svg.write_text("<svg></svg>", encoding="utf-8")
     article = _article(
         body="【图1】\n\n【图2】\n\n【图3】\n\n【图4】\n\n段落。",
@@ -573,7 +593,7 @@ def test_every_placeholder_without_a_file_is_explained_on_its_own_line(tmp_path)
             "images/demo.png",
         ),
     )
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     lines = _readme(result).splitlines()
 
     picture_line = next(line for line in lines if line.startswith("- [ ] 图片："))
@@ -601,10 +621,10 @@ def test_the_cover_is_cut_from_the_converted_webp(tmp_path):
     2260×1760 —— 两者不一样，这条才有鉴别力。默认限额下原图根本不会被压缩，
     两者裁出来逐字节相同，这条会恒真。
     """
-    site, posts = _site_with_image(tmp_path, (2400, 1800), "big.png")
+    posts, images_root = _site_with_image(tmp_path, (2400, 1800), "big.png")
     article = _article(body="【图1】\n\n段落。", images=("images/big.png",))
     result = write_package(
-        article, _cap_with_image_bytes(2500), tmp_path / "out", posts, "https://growdu.cn"
+        article, _cap_with_image_bytes(2500), tmp_path / "out", images_root, "https://growdu.cn"
     )
     assert (result.package_dir / "cover.webp").is_file()
     expected = tmp_path / "expected.webp"
@@ -626,10 +646,10 @@ def test_the_cover_comes_from_the_first_image_that_can_be_cropped(tmp_path):
     真实语料里 60 张本地图只有 20 张裁得出合规封面，「只试第一张」
     会把剩下那 40 张的封面也一起丢掉。
     """
-    site, posts = _site_with_two_images(tmp_path)
+    posts, images_root = _site_with_two_images(tmp_path)
     article = _article(body="【图1】\n\n【图2】\n\n段落。",
                        images=("images/small.png", "images/good.png"))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert (result.package_dir / "cover.webp").is_file()
     expected = tmp_path / "expected.webp"
     make_cover(
@@ -652,17 +672,17 @@ def test_the_three_reasons_for_no_cover_are_worded_differently(tmp_path):
     ``test_a_local_picture_that_never_became_a_file_is_not_called_uncroppable``
     单独守——它要的是「缺文件 / 读不了」的素材，不是本用例的三种。
     """
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
 
     # ① 正文没有图
-    without = write_package(_article(), CAP, tmp_path / "out", posts, "https://growdu.cn")
+    without = write_package(_article(), CAP, tmp_path / "out", images_root, "https://growdu.cn")
     line = _cover_line(_readme(without))
     assert "这篇没有正文图" in line
 
     # ② 正文图全是外链
     remote = write_package(
         _article(body="【图1】\n\n段落。", images=("https://example.com/a.png",)),
-        CAP, tmp_path / "out", posts, "https://growdu.cn",
+        CAP, tmp_path / "out", images_root, "https://growdu.cn",
     )
     line = _cover_line(_readme(remote))
     assert "外链" in line
@@ -670,11 +690,11 @@ def test_the_three_reasons_for_no_cover_are_worded_differently(tmp_path):
     assert "这篇没有正文图" not in line
 
     # ③ 有本地图但都裁不出
-    small = site / "images" / "small.png"
+    small = images_root / _UNIT_DIR / "images" / "small.png"
     Image.new("RGB", (400, 300), (10, 20, 30)).save(small, "PNG")
     local = write_package(
         _article(body="【图1】\n\n段落。", images=("images/small.png",)),
-        CAP, tmp_path / "out", posts, "https://growdu.cn",
+        CAP, tmp_path / "out", images_root, "https://growdu.cn",
     )
     line = _cover_line(_readme(local))
     assert "裁不出合规封面" in line
@@ -688,10 +708,10 @@ def test_a_paragraph_over_the_platform_limit_is_recorded(tmp_path):
     算在**渲染之后**的每一段上：216 个原始字符的中英混排段落平台计 178 字，
     按字符数去判就会误报。
     """
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="段落。\n\n" + "测" * 250)
 
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
 
     readme = _readme(result)
     assert "段落字数过多" in readme
@@ -701,10 +721,10 @@ def test_a_paragraph_over_the_platform_limit_is_recorded(tmp_path):
 
 def test_a_paragraph_at_the_limit_is_not_recorded(tmp_path):
     """正好 200 平台字不告警 —— 实测：200 不报，201 报。"""
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="段落。\n\n" + "测" * 200)
 
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
 
     assert "段落字数过多" not in _readme(result)
 
@@ -715,10 +735,10 @@ def test_the_package_carries_the_platform_word_count(tmp_path):
     编辑器底部显示的「共 N 字」就是这个数，而它跟字符数不是一回事：
     2717 个字符的文章，平台显示 1866 字（口径见 ``wordcount.py``）。
     """
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="段落。\n\n" + "测" * 250)
 
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
 
     assert result.platform_chars == platform_word_count("段落。\n\n" + "测" * 250)
     assert result.platform_chars == 253
@@ -741,13 +761,13 @@ def test_a_local_picture_that_never_became_a_file_is_not_called_uncroppable(
     规尺寸」不是一回事。套用 ③ 的措辞，会让人以为图在、只是尺寸不够，
     于是去改尺寸而不是去补文件。
     """
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     if svg:
-        (site / "images" / "logo.svg").write_text("<svg></svg>", encoding="utf-8")
+        (images_root / _UNIT_DIR / "images" / "logo.svg").write_text("<svg></svg>", encoding="utf-8")
 
     result = write_package(
         _article(body="【图1】\n\n段落。", images=(relative,)),
-        CAP, tmp_path / "out", posts, "https://growdu.cn",
+        CAP, tmp_path / "out", images_root, "https://growdu.cn",
     )
     line = _cover_line(_readme(result))
     # 不是 ③：那儿说的是「裁不出合规封面」
@@ -769,16 +789,16 @@ def test_the_cover_decision_follows_the_converted_webp(tmp_path):
     （高度 300 不到下限 352，根本裁不出来）。判定拿原图判就会多出一个
     平台根本没见过的封面。
     """
-    site, posts = _site_with_image(tmp_path, (1200, 600), "wide.png")
+    posts, images_root = _site_with_image(tmp_path, (1200, 600), "wide.png")
     article = _article(body="【图1】\n\n段落。", images=("images/wide.png",))
     result = write_package(
-        article, _cap_with_image_bytes(800), tmp_path / "out", posts, "https://growdu.cn"
+        article, _cap_with_image_bytes(800), tmp_path / "out", images_root, "https://growdu.cn"
     )
     assert result.status == "packaged"
 
     # 前提：原图裁得出来，缩过的 webp 裁不出来 —— 两者必须真的不同。
     assert can_make_cover(
-        site / "images" / "wide.png", CAP.limits.cover_ratio, CAP.limits.cover_min_pixels
+        images_root / _UNIT_DIR / "images" / "wide.png", CAP.limits.cover_ratio, CAP.limits.cover_min_pixels
     )
     assert not can_make_cover(
         result.package_dir / "images" / "01.webp",
@@ -797,18 +817,18 @@ def test_repackaging_does_not_leave_stale_files_behind(tmp_path):
     母稿改了（或者图被截掉了），旧文件留在包里，人工就会上传一张
     正文里根本没有的图，或者传一个这一版不该有的封面。
     """
-    site, posts = _site_with_three_images(tmp_path)
+    posts, images_root = _site_with_three_images(tmp_path)
     article = _article(
         body="【图1】\n\n【图2】\n\n段落。",
         images=("images/one.png", "images/two.png"),
     )
-    first = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    first = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert _image_names(first) == ["01.webp", "02.webp"]
     assert (first.package_dir / "cover.webp").is_file()
 
     fewer = _article(body="【图1】\n\n段落。", images=("images/small.png",))
-    Image.new("RGB", (400, 300), (10, 20, 30)).save(site / "images" / "small.png", "PNG")
-    second = write_package(fewer, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    Image.new("RGB", (400, 300), (10, 20, 30)).save(images_root / _UNIT_DIR / "images" / "small.png", "PNG")
+    second = write_package(fewer, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert _image_names(second) == ["01.webp"]
     # 这一版裁不出封面 —— 上一版的封面不能留着
     assert not (second.package_dir / "cover.webp").exists()
@@ -818,9 +838,9 @@ def test_repackaging_does_not_leave_stale_files_behind(tmp_path):
 
 
 def test_write_snapshot_writes_public_json(tmp_path):
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("images/demo.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     path = write_snapshot(result, tmp_path / "outbox")
     assert path.name == "db-postgresql-demo__toutiao.json"
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -844,9 +864,9 @@ def test_the_snapshot_timestamp_carries_a_timezone_offset(tmp_path):
     不带偏移的时间戳，同一个瞬间在别的机器上读出来是几点全看读它的人
     在哪。站点索引要拿它排序，光有「本地时间」是不够的。
     """
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("images/demo.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     path = write_snapshot(result, tmp_path / "outbox")
     data = json.loads(path.read_text(encoding="utf-8"))
     assert re.search(r"[+-]\d{2}:\d{2}$", data["updated_at"])
@@ -860,11 +880,11 @@ def test_the_snapshot_package_dir_is_relative_to_the_repository(tmp_path, monkey
     """
     import toutiao.publish as publish_module
 
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     monkeypatch.setattr(publish_module, "_REPO_ROOT", tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("images/demo.png",))
     result = write_package(
-        article, CAP, tmp_path / "platforms" / "toutiao" / "out", posts, "https://growdu.cn"
+        article, CAP, tmp_path / "platforms" / "toutiao" / "out", images_root, "https://growdu.cn"
     )
     path = write_snapshot(result, tmp_path / "publish" / "outbox")
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -874,9 +894,9 @@ def test_the_snapshot_package_dir_is_relative_to_the_repository(tmp_path, monkey
 
 def test_the_snapshot_says_the_article_is_waiting_for_a_human(tmp_path):
     """``packaged`` 不是「已发布」—— 快照里要写清楚在等人工上传。"""
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     article = _article(body="【图1】\n\n段落。", images=("images/demo.png",))
-    result = write_package(article, CAP, tmp_path / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "out", images_root, "https://growdu.cn")
     path = write_snapshot(result, tmp_path / "outbox")
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["status"] == "packaged"
@@ -905,7 +925,7 @@ description: "母稿的摘要"
 """
 
 
-def _write_mother(posts, name="db/demo.md", body=_MOTHER):
+def _write_mother(posts, name="db/postgresql/demo.md", body=_MOTHER):
     path = posts / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body, encoding="utf-8")
@@ -914,7 +934,7 @@ def _write_mother(posts, name="db/demo.md", body=_MOTHER):
 
 def test_the_whole_chain_from_a_markdown_mother_post(tmp_path):
     """母稿 → front matter → 切片 → 渲染 → 出包 → 快照，落盘的产物要合理。"""
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     path = _write_mother(posts)
 
     post = load_post(path, posts)
@@ -924,10 +944,10 @@ def test_the_whole_chain_from_a_markdown_mother_post(tmp_path):
     sliced = slice_post(post, CAP.limits, "https://growdu.cn")
     assert sliced.article is not None
     article = sliced.article
-    assert article.content_id == "db/demo"
+    assert article.content_id == "db/postgresql/demo"
     assert article.images == ("images/demo.png",)
 
-    result = write_package(article, CAP, tmp_path / "platforms" / "toutiao" / "out", posts, "https://growdu.cn")
+    result = write_package(article, CAP, tmp_path / "platforms" / "toutiao" / "out", images_root, "https://growdu.cn")
     assert result.status == "packaged"
 
     # 正文：切片 → 渲染 → HTML，末尾是纯文本的完整版提示
@@ -956,9 +976,9 @@ def test_the_whole_chain_from_a_markdown_mother_post(tmp_path):
 
     # 快照
     snapshot = write_snapshot(result, tmp_path / "publish" / "outbox")
-    assert snapshot.name == "db-demo__toutiao.json"
+    assert snapshot.name == "db-postgresql-demo__toutiao.json"
     data = json.loads(snapshot.read_text(encoding="utf-8"))
-    assert data["content_id"] == "db/demo"
+    assert data["content_id"] == "db/postgresql/demo"
     assert data["platform"] == "toutiao"
     assert data["status"] == "packaged"
     assert data["automation"] == "manual"
@@ -969,7 +989,7 @@ def test_the_whole_chain_from_a_markdown_mother_post(tmp_path):
 
 def test_the_whole_chain_for_a_post_without_any_picture(tmp_path):
     """没有正文图的母稿照样出包 —— 这是绝大多数文章的情况。"""
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     path = _write_mother(
         posts,
         body="""---
@@ -990,7 +1010,7 @@ description: "摘要"
     assert sliced.article.images == ()
 
     result = write_package(
-        sliced.article, CAP, tmp_path / "platforms" / "toutiao" / "out", posts, "https://growdu.cn"
+        sliced.article, CAP, tmp_path / "platforms" / "toutiao" / "out", images_root, "https://growdu.cn"
     )
     assert result.status == "packaged"
     assert not (result.package_dir / "cover.webp").exists()
@@ -1004,7 +1024,7 @@ def test_the_whole_chain_for_a_post_whose_body_is_cut(tmp_path):
     这是图编号最容易错的地方：切片里还留着那张图，正文里却没有它的
     【图N】了。按打包顺序出包会多出一张正文里没人引用的图。
     """
-    site, posts = _site_with_three_images(tmp_path)
+    posts, images_root = _site_with_three_images(tmp_path)
     filler = "这是用来把正文撑过三千字的段落。" * 250
     path = _write_mother(
         posts,
@@ -1036,7 +1056,7 @@ description: "摘要"
     assert sorted(set(_MARKER.findall(article.body))) == ["1"]
 
     result = write_package(
-        article, CAP, tmp_path / "platforms" / "toutiao" / "out", posts, "https://growdu.cn"
+        article, CAP, tmp_path / "platforms" / "toutiao" / "out", images_root, "https://growdu.cn"
     )
     assert result.status == "packaged"
     html = (result.package_dir / "article.html").read_text(encoding="utf-8")
@@ -1050,7 +1070,7 @@ description: "摘要"
 
 def test_the_whole_chain_with_a_remote_picture(tmp_path):
     """外链图的母稿：出包不下载，图进清单，文章照样出包。"""
-    site, posts = _site(tmp_path)
+    posts, images_root = _site(tmp_path)
     path = _write_mother(
         posts,
         body="""---
@@ -1070,7 +1090,7 @@ description: "摘要"
     assert sliced.article is not None
 
     result = write_package(
-        sliced.article, CAP, tmp_path / "platforms" / "toutiao" / "out", posts, "https://growdu.cn"
+        sliced.article, CAP, tmp_path / "platforms" / "toutiao" / "out", images_root, "https://growdu.cn"
     )
     assert result.status == "packaged"
     assert _image_names(result) == []
@@ -1088,8 +1108,8 @@ def test_the_package_result_is_a_frozen_dataclass(tmp_path):
     """结果是不可变的 —— 快照写出去之后不该有人改它。"""
     import dataclasses
 
-    site, posts = _site(tmp_path)
-    result = write_package(_article(), CAP, tmp_path / "out", posts, "https://growdu.cn")
+    posts, images_root = _site(tmp_path)
+    result = write_package(_article(), CAP, tmp_path / "out", images_root, "https://growdu.cn")
     assert dataclasses.is_dataclass(result)
     with pytest.raises(dataclasses.FrozenInstanceError):
         result.status = "published"

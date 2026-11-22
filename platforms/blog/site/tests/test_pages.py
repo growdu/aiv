@@ -29,6 +29,7 @@ from pathlib import Path
 import pytest
 
 from paths import CONTENT_UNITS, SITE
+from url_shape import is_category_id
 
 SITE_ROOT = SITE
 DIST = SITE_ROOT / "dist"
@@ -52,15 +53,12 @@ def _unit_kinds() -> list[tuple[str, str]]:
     out = []
     for path in sorted(CONTENT_UNITS.rglob("*.md")):
         rel = path.relative_to(CONTENT_UNITS).as_posix()
-        text = path.read_text(encoding="utf-8")
-        kind = "document"
-        if text.startswith("---"):
-            end = text.find("\n---", 3)
-            if end != -1:
-                for line in text[3:end].splitlines():
-                    if line.startswith("kind:"):
-                        kind = line.split(":", 1)[1].strip()
-        out.append((rel[: -len(".md")], kind))
+        unit_id = rel.removesuffix(".md")
+        if is_category_id(unit_id):
+            kind = "category"
+        else:
+            kind = _front_matter_kind(path)
+        out.append((unit_id, kind))
     return out
 
 
@@ -73,6 +71,13 @@ def _dist_target(dist: Path, url: str) -> Path:
     elif target.is_dir():
         target = target / "index.html"
     return target
+
+
+def _front_matter_kind(path: Path) -> str:
+    """从 front matter 里读 kind（读不到就按文档算）。"""
+    head = path.read_text(encoding="utf-8", errors="ignore")[:2000]
+    match = re.search(r"^kind:\s*(\S+)\s*$", head, re.M)
+    return match.group(1).strip("\"'") if match else "document"
 
 
 # ── 每个内容单元都有页面 ───────────────────────────────────

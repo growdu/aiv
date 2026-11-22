@@ -98,6 +98,14 @@ from .schedule import (  # noqa: E402
     week_window,
 )
 
+# 共享 URL 规则的读取器。规则本身是仓库根的 `rules/urls.json`——
+# 接缝是**文件**，不是 import（见 `publish/publishkit/urls.py` 的说明）。
+from . import urls  # noqa: E402
+
+# 退出码语义：这一层定义，各 adapter 读自己能力声明的 `[exit]` 段
+# （接缝还是**文件**，不是 import）。
+from . import exit_codes  # noqa: E402
+
 # **不 import .cli**：``python3 -m publishkit.cli`` 走的是 runpy，它先把父包
 # ``publishkit`` import 进来；父包在这里再 import 一次 ``publishkit.cli``，
 # runpy 就会警告「模块在 import 之后才被执行」，而且那个模块会被跑两遍。
@@ -148,6 +156,7 @@ __all__ = [
     "discover_episodes",
     "discover_units",
     "episode_from_fields",
+    "exit_codes",
     "find_episode",
     "flatten_content_id",
     "landing_url",
@@ -165,6 +174,7 @@ __all__ = [
     "select_for_platform",
     "snapshot_name",
     "target_platforms",
+    "urls",
     "validate_episode_fields",
     "validate_episode_series",
     "validate_fields",

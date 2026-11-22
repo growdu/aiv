@@ -22,7 +22,20 @@ def _load() -> dict:
 
 
 def test_the_job_has_the_expected_label():
-    assert _load()["Label"] == "com.growdu.weixin.auto-draft"
+    """Label 是**反 DNS 串**，域那段是占位（使用者换成自己的域）。
+
+    跟发布层的模板一样用 ``com.example.*``——``example`` 只是形状示例。
+    """
+    assert _load()["Label"] == "com.example.weixin.auto-draft"
+
+
+def test_the_template_mentions_no_instance_name():
+    """模板里不许再出现实例名——标签是占位，仓库路径也是占位。
+
+    断言 Label 只钉住正文那一处；注释里的 ``launchctl list | grep growdu.weixin``
+    与 ``/Users/growduduan/...`` 得有人看着。
+    """
+    assert "growdu" not in TEMPLATE.read_text(encoding="utf-8").lower()
 
 
 def test_the_job_only_drafts_new_articles():

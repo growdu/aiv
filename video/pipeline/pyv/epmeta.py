@@ -202,6 +202,48 @@ def load_limits(platform: str, platforms_dir: Path | None = None) -> dict:
     return data.get("limits", {}) or {}
 
 
+#: [exit] 段的四个键——退出码的词汇。**契约层定义**
+#: （publish/publishkit/exit_codes.py），这里只认这四个名字。
+EXIT_KEYS = ("ok", "usage", "precondition", "failed")
+
+
+def load_exit_codes(platform: str, platforms_dir: Path | None = None) -> dict[str, int]:
+    """读平台能力声明的 [exit] 段。
+
+    退出码的**语义**由契约层定死（publish/publishkit/exit_codes.py），
+    声明写在平台自己的能力声明里——接缝是**文件**，不是 import。
+
+    段缺了、缺键、多了没听说过的键、值不是整数，当场报错：adapter 的退出码
+    是它与调用方之间的契约，一份写坏的声明（比如 ``ok = "0"``）会让这一档
+    退成**字符串**——三个 reader 在这一点上必须一样。
+    """
+    base = Path(platforms_dir) if platforms_dir else PLATFORMS_DIR
+    path = base / platform / "capability.toml"
+    if not path.is_file():
+        raise MetaError(f"能力声明不存在：{path}")
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    table = data.get("exit", {}) or {}
+    if not isinstance(table, dict):
+        raise MetaError(f"能力声明的 [exit] 段不是表：{path}")
+    missing = [key for key in EXIT_KEYS if key not in table]
+    if missing:
+        raise MetaError(
+            f"能力声明的 [exit] 段缺：{'、'.join(missing)}（{path}）")
+    unknown = [key for key in table if key not in EXIT_KEYS]
+    if unknown:
+        raise MetaError(
+            f"能力声明的 [exit] 段出现未知字段 exit."
+            f"{'、'.join(unknown)}（{path}）")
+    codes: dict[str, int] = {}
+    for key in EXIT_KEYS:
+        value = table[key]
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise MetaError(
+                f"能力声明的 [exit].{key} 不合法：不是整数（{path}）")
+        codes[key] = value
+    return codes
+
+
 def check_meta(meta: EpisodeMeta, contract_episode: str | None = None,
                duration: float | None = None,
                limits_loader=load_limits) -> list[Finding]:

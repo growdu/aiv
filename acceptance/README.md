@@ -44,15 +44,11 @@
 因此没有「自己的测试目录」可跑。它的契约由下面三条守住：
 
 - **I2**——契约层从 `content/units/` 读出的 `content_id` 集合与单元 id 集合相等；
-- **I3**——两个 adapter 默认的文章目录 == 内容单元仓库；
+  **有测试钉着了**——编译器自己住在仓库根套件的 `tests/test_content_units.py`
+  里（§五 第 9 条还账：真跑一遍 `tools/build-content-units.py`，比对两边集合）；
+- **I3**——两个 adapter 默认的文章目录 == 内容单元仓库；**已还**（§五 第 3 条：
+  adapter 默认目录 == `content/units/`，不再各读站点的副本）；
 - **I4**（新）——站点读到的那批文章 == 内容单元仓库。
-
-> ⚠️ **I2 现在没有测试钉着。** 原来钉它的是
-> `publish/tests/test_episode.py` 的一条集成用例（真跑一遍 hexo 时代的
-> `sync-hexo.py`），那个脚本随站点重做一起删了，用例也一并删掉了
-> （`d90fba7e`）。**这条接口现在靠约定，没有靠机器。** 重做它的时候，
-> 照着现在的编译器写一条新的：真跑一遍 `tools/build-content-units.py`，
-> 比对契约层读出的 `content_id` 集合与产物里的单元 id 集合。
 
 ---
 
@@ -60,8 +56,8 @@
 
 | 接口 | 从 → 到 | 怎么验 | Expected |
 | --- | --- | --- | --- |
-| I2 内容单元 → publish 契约层 | `content/units/` → `publish/` | 契约层从 `content/units/` 读出的 `content_id` 集合 == 单元 id 集合 | 集合相等 |
-| I3 内容单元 → toutiao / wechat | `content/units/` → 两个 adapter | 两个 adapter 默认的文章目录 == 内容单元仓库 | 相等 |
+| I2 内容单元 → publish 契约层 | `content/units/` → `publish/` | 契约层从 `content/units/` 读出的 `content_id` 集合 == 单元 id 集合 | 集合相等（有测试钉着：`tests/test_content_units.py` 在根套件里） |
+| I3 内容单元 → toutiao / wechat | `content/units/` → 两个 adapter | 两个 adapter 默认的文章目录 == 内容单元仓库 | 相等（**已还**：adapter 默认目录 == `content/units/`） |
 | I4 内容单元 → 站点 | `content/units/` → `platforms/blog/site/` | 站点 `tools/build-posts.py` 读的文章目录 == 内容单元仓库 | 相等 |
 
 **I1 作废了**（2026-11-20，站点换成 hexo 那轮）——原来那条是
@@ -69,42 +65,65 @@
 **副本没有了**：站点与两个 adapter 都**直接读 `content/units/`**。
 副本是字节级重复，而仓库早就把它记成欠账——这轮把它兑现了。
 
-**I3 现在是欠账**——两个 adapter 默认的文章目录已经是内容单元仓库了，
-但**图片**还住在 `docs/`（Ruling 14），解析基准是「文章目录的上一级」，
-一换就丢图。这笔账归**编译器抽取**那个模块：图片落成 `content/units/images/`，
-同时把解析基准从「文章目录的上一级」改成显式的图片根。**在那之前，
-I3 只能验「默认文章目录 == 内容单元仓库」，不能验「图片也一起搬过去」。**
-——**这条欠账要写明，不能装作没有。**
+**I3 已还**（§五 第 3 条）——两个 adapter 现在直接读 `content/units/`，
+不再读站点的副本。图片由编译器拷进 `content/units/images/`，
+解析基准是显式的图片根；adapter 默认文章目录 == `content/units/`，
+可以真验「adapter 直接读内容单元」。
 
 ---
 
 ## 三、每条命令跑什么、Expected 是什么
 
-数字是 **2026-11-20** 在 `main` 上**逐条单独跑**量出来的。
+数字是 **2026-11-22** 合并 `feature/interfaces-debts`（站点以 hexo+matery 为准）
+之后**逐条单独跑**量出来的。
 **归位之后，总数必须与合并跑时一致**——少一条就是某条用例消失了，
 多一条就是某个目录被收集了两次。
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
-| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录 | 81 passed | 81 passed |
-| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏 | 79 passed | 79 passed |
-| 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度 | 338 passed / 1 skipped | 338 passed / 1 skipped |
-| 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 394 passed / 2 skipped | 394 passed / 2 skipped |
-| 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 504 passed / 1 skipped | 504 passed / 1 skipped |
-| 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 115 passed | 115 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1050 passed / 60 skipped | 1050 passed / 60 skipped |
-| 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 68 passed | 68 passed |
-| 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 55 passed | 55 passed |
-| 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 99 passed / 64 skipped / 1 failed | 99 passed / 64 skipped / 1 failed |
+| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 114 passed | 114 passed |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏 | 86 passed | 86 passed |
+| 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 348 passed / 1 skipped | 348 passed / 1 skipped |
+| 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
+| 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
+| 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 119 passed | 119 passed |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1060 passed / 60 skipped | 1060 passed / 60 skipped |
+| 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
+| 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
+| 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
 
 ### 数字为什么变过（别拿旧基线来对账）
 
-| 时间 | 根 | 站点 | publish | toutiao | wechat | douyin | video |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-11-18（归位那轮） | 196 / 3 skip | 26 | 411 / 1 skip | 394 / 2 skip | 504 / 1 skip | 119 / 12 skip | 1269 / 23 skip / 3 red |
-| 2026-11-19（清库那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1052 / 60 skip |
-| 2026-11-19（视频线不发布那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip |
-| 2026-11-20（站点换 hexo 那轮） | 81 | 79 | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip |
+| 时间 | 根 | 站点 | publish | toutiao | wechat | douyin | video | bilibili | channels |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-18（归位那轮） | 196 / 3 skip | 26 | 411 / 1 skip | 394 / 2 skip | 504 / 1 skip | 119 / 12 skip | 1269 / 23 skip / 3 red | 68 | 55 |
+| 2026-11-19（清库那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1052 / 60 skip | 68 | 55 |
+| 2026-11-19（视频线不发布那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip | 68 | 55 |
+| 2026-11-20（站点换 hexo 那轮） | 81 | 79 | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip | 68 | 55 |
+| 2026-11-19（还 §五 欠账那轮） | 114 | 59 / 1 skip | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
+
+> 口径说明：站点换 hexo 那轮与还 §五 欠账那轮在两条分支上**并行**发生。
+> 合并后站点以 hexo+matery 为准：hexo 的 79 条 + 还欠账那轮里仍适用的
+> URL 形状、图片基准、身份守卫共 7 条，合起来 **86**（§三 第 2 行）。
+
+### 还 §五 欠账那轮（2026-11-19 晚）
+
+把 [整体架构与模块边界](../../review/specs/2026-11-19-整体架构与模块边界.md) §五 列的 1~4、9~14
+条接口欠账按 §七 的拍板全部还掉。各套件变动：
+
+| 套件 | 变动 | 为什么 |
+| --- | --- | --- |
+| 根 | 81 → 114 | 新增身份守卫 `tests/test_instance_identity.py`（§五 第 12 条：全仓库扫实例身份）；编译器抽取的 `tests/test_content_units.py` 钉住「I2：契约层读出的 `content_id` 集合 == 单元 id 集合」（§五 第 9 条）；外加退出码、内容契约、能力模型的守卫 |
+| 站点 | 26 → 59 | URL 形状改读共享规则 `rules/urls.json` 之后的守卫（§五 第 10 条：落地地址与站点逐字相同）；分类归档地址改 `/docs/<id>/` 的守卫（§七 第 3 条） |
+| publish | 338 → 348 | 退出码语义（§五 第 14 条：`publishkit/exit_codes.py` + `tests/test_exit_codes.py`）、落地地址派生（§五 第 10 条）的守卫；`test_video_publish_contracts.py` 的字幕守卫从空转（指一个从来没过的路径）改成真扫 `video/episodes/` |
+| toutiao | 394 → 399 | adapter 默认文章目录接上内容单元仓库、退出码与分类归档地址按新口径的守卫 |
+| wechat | 504 → 521 | `WX_SOURCE_URL` → `SITE_URL`（缝 3 取值）、分类归档地址改 `/docs/<id>/` 之后的守卫补齐 |
+| douyin | 115 → 119 | 成片分目录（`out/<系列>/<合集>/<文档>/<档位>.mp4`）、期身份四层、退出码的守卫 |
+| video | 1050 → 1060 | 品牌文案搬进 `config.toml`（缝 3）、成片分目录、`episodes.cut_path` 等的守卫 |
+| bilibili | 68 → 77 | 成片分目录、storyboard 真路径（字幕守卫不再空转）、期身份四层的守卫 |
+| channels | 55 → 59 | 同 bilibili |
+
+> 这一轮**没有一条用例是因为逻辑坏了而红**——全是新增守卫 + 把空转的守卫接上真路径。
 
 变红的是**被测对象没了**，不是逻辑坏了：
 

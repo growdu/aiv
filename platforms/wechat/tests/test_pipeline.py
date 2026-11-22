@@ -16,7 +16,7 @@ from wechat.cli import (_docs_changed, _drop_batch_lock, _fingerprint, _git,
                        _render_parts, _take_batch_lock, main)
 from wechat.assets import prepare_image
 from wechat.material import MaterialCache
-from wechat.posts import CONTENT_LIMIT, DEFAULT_AUTHOR, load_post
+from wechat.posts import CONTENT_LIMIT, load_post
 from wechat.publish import WeChatClient
 
 # The tests below are about how an article is cut, so they pin the
@@ -179,12 +179,14 @@ def sample_post(tmp_path):
     target = posts_dir / "database" / "demo.md"
     target.parent.mkdir(parents=True)
     target.write_text(SAMPLE, encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "demo.png")
+    _write_png(tmp_path / "source" / "images" / "database" / "images" / "demo.png")
     return posts_dir, "database/demo"
 
 
 def _args(posts_dir, out_dir, slug=None, server=None, max_length=0):
-    args = ["--posts-dir", str(posts_dir), "--out-dir", str(out_dir)]
+    images_dir = posts_dir.parent / "images"
+    args = ["--posts-dir", str(posts_dir), "--images-dir", str(images_dir),
+            "--out-dir", str(out_dir)]
     if server:
         args += ["--api-base", server]
     if max_length:
@@ -228,7 +230,7 @@ def test_convert_writes_html_without_touching_network(sample_post, tmp_path):
 def test_convert_reports_missing_post(sample_post, tmp_path, capsys):
     posts_dir, _ = sample_post
     code = main(["convert", "no/such/post"] + _args(posts_dir, tmp_path / "out"))
-    assert code == 1
+    assert code == 2
 
 
 def test_convert_shortens_a_long_title_instead_of_refusing(tmp_path, capsys):
@@ -289,13 +291,13 @@ def test_the_fingerprint_of_an_untouched_article_does_not_move(tmp_path):
     send.  If the fingerprint of an article whose title did not change
     moves, all of them are sent again for no reason.
 
-    The default author is left out of the hash for the same reason: the
-    drafts in the box were made with it, and counting it would move the
-    hash of every article in the corpus.
+    The empty byline is left out of the hash for the same reason: the
+    drafts in the box were made without one, and counting it would move
+    the hash of every article in the corpus.
     """
     post = _post_with_title(tmp_path, "一个短标题")
     tag = "<p>分类</p>"
-    assert _fingerprint(post, tag, CONTENT_LIMIT, DEFAULT_AUTHOR) == _legacy_fingerprint(
+    assert _fingerprint(post, tag, CONTENT_LIMIT, "") == _legacy_fingerprint(
         post, tag, CONTENT_LIMIT)
 
 
@@ -303,7 +305,7 @@ def test_the_fingerprint_moves_when_the_title_is_shortened(tmp_path):
     """A title that was cut has to reach the drafts that carry it."""
     post = _post_with_title(tmp_path, "主标题在这里：{}".format("副标题" * 20))
     tag = "<p>分类</p>"
-    assert _fingerprint(post, tag, CONTENT_LIMIT, DEFAULT_AUTHOR) != _legacy_fingerprint(
+    assert _fingerprint(post, tag, CONTENT_LIMIT, "") != _legacy_fingerprint(
         post, tag, CONTENT_LIMIT)
 
 
@@ -311,7 +313,7 @@ def test_publish_creates_draft_with_expected_payload(sample_post, tmp_path, serv
     posts_dir, slug = sample_post
     monkeypatch.setenv("WX_APPID", "appid")
     monkeypatch.setenv("WX_APPSECRET", "secret")
-    monkeypatch.setenv("WX_SOURCE_URL", "https://growdu.cn")
+    monkeypatch.setenv("SITE_URL", "https://growdu.cn")
 
     code = main(["publish", slug] + _args(posts_dir, tmp_path / "out", server=server))
     assert code == 0
@@ -319,10 +321,40 @@ def test_publish_creates_draft_with_expected_payload(sample_post, tmp_path, serv
     payload = json.loads(_Handler.bodies["/cgi-bin/draft/add"])
     article = payload["articles"][0]
     assert article["title"] == "演示文章"
-    assert article["content_source_url"] == "https://growdu.cn/2026/11/09/database/demo/"
+    assert article["content_source_url"] == "https://growdu.cn/docs/database/demo/"
     assert article["thumb_media_id"] == "COVER_ID"
     assert len(article["digest"]) <= 120
     assert "参考链接" in article["content"]
+
+
+def test_no_site_url_means_the_draft_is_refused(sample_post, tmp_path, server, monkeypatch, capsys):
+    """公众号的「阅读原文」需要站点地址；没有就响亮地拒绝。
+
+    少了它，``content_source_url`` 会变成 ``/docs/xxx/``——一个相对路径，
+    公众号那边点不开。所以这是**缺前置条件**（退出码 2），不是「发出去再说」。
+    """
+    posts_dir, slug = sample_post
+    monkeypatch.setenv("WX_APPID", "appid")
+    monkeypatch.setenv("WX_APPSECRET", "secret")
+    monkeypatch.delenv("SITE_URL", raising=False)
+
+    code = main(["publish", slug] + _args(posts_dir, tmp_path / "out", server=server))
+    assert code == 2, "缺站点地址还把草稿发出去了"
+    assert "SITE_URL" in capsys.readouterr().err
+
+
+def test_the_site_url_is_not_captured_at_import(monkeypatch):
+    """站点地址必须**运行时**读。
+
+    导入时读到的是进程启动那一刻的快照——开发者 shell 里 export 的值
+    会混进来，测试夹具（导入之后才设的）更是根本救不了它。
+    """
+    import importlib
+    import wechat.cli as wechat_cli
+
+    monkeypatch.setenv("SITE_URL", "https://from-the-shell.example/")
+    reloaded = importlib.reload(wechat_cli)
+    assert reloaded.DEFAULT_SOURCE_URL == ""
 
 
 def test_get_draft_reads_the_body_back(sample_post, tmp_path, server, monkeypatch):
@@ -492,7 +524,7 @@ def test_publish_reports_missing_image(sample_post, tmp_path, server, monkeypatc
     posts_dir, slug = sample_post
     monkeypatch.setenv("WX_APPID", "appid")
     monkeypatch.setenv("WX_APPSECRET", "secret")
-    (tmp_path / "source" / "images" / "demo.png").unlink()
+    (tmp_path / "source" / "images" / "database" / "images" / "demo.png").unlink()
 
     code = main(["publish", slug] + _args(posts_dir, tmp_path / "out", server=server))
     assert code == 2
@@ -572,12 +604,13 @@ def test_publish_rehosts_an_external_image(tmp_path, server, monkeypatch):
         "---\ntitle: \"外链图\"\ndate: 2026-11-09 15:00:00\n---\n\n"
         "正文。\n\n![封面](images/cover.png)\n\n![图]({}/a.png)\n".format(image_base),
         encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "cover.png")
+    _write_png(tmp_path / "source" / "images" / "images" / "cover.png")
 
     monkeypatch.setenv("WX_APPID", "appid")
     monkeypatch.setenv("WX_APPSECRET", "secret")
 
     code = main(["publish", "ext", "--posts-dir", str(posts_dir),
+                 "--images-dir", str(tmp_path / "source" / "images"),
                  "--out-dir", str(tmp_path / "out"), "--api-base", server,
                  "--secrets-file", str(tmp_path / "absent.json")])
     image_httpd.shutdown()
@@ -598,12 +631,13 @@ def test_publish_leaves_a_note_when_an_external_image_cannot_be_fetched(
         "正文。\n\n![封面](images/cover.png)\n\n"
         "![图](http://127.0.0.1:1/nope.png)\n",
         encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "cover.png")
+    _write_png(tmp_path / "source" / "images" / "images" / "cover.png")
 
     monkeypatch.setenv("WX_APPID", "appid")
     monkeypatch.setenv("WX_APPSECRET", "secret")
 
     code = main(["publish", "ext", "--posts-dir", str(posts_dir),
+                 "--images-dir", str(tmp_path / "source" / "images"),
                  "--out-dir", str(tmp_path / "out"), "--api-base", server,
                  "--secrets-file", str(tmp_path / "absent.json")])
     assert code == 0
@@ -699,10 +733,11 @@ def _series_posts(tmp_path):
     for name, title in (("one", "第一篇"), ("two", "第二篇")):
         (target / (name + ".md")).write_text(
             "---\ntitle: \"{}\"\ndate: 2026-11-0{} 15:00:00\nauthor: growdu\n"
-            "categories:\n  - 数据库\n---\n\n正文一段。\n\n![图](images/demo.png)\n".format(
+            "categories:\n  - 数据库\ncategory_ids:\n  - 数据库/_index\n"
+            "---\n\n正文一段。\n\n![图](images/demo.png)\n".format(
                 title, "1" if name == "one" else "2"),
             encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "demo.png")
+    _write_png(tmp_path / "source" / "images" / "database" / "images" / "demo.png")
     return posts_dir
 
 
@@ -722,12 +757,28 @@ def test_categories_lists_the_articles_of_one_category(tmp_path, capsys):
     assert code == 0
     assert "第一篇" in out
     assert "第二篇" in out
+    assert "https://growdu.cn/docs/数据库/" in out
+
+
+def test_categories_says_the_page_is_missing_without_a_category_id(tmp_path, capsys):
+    """语料里没有 `category_ids` → 分类照样列出来，只是站点上还没有这一页。"""
+    posts_dir = tmp_path / "source" / "_posts"
+    target = posts_dir / "database"
+    target.mkdir(parents=True)
+    (target / "one.md").write_text(
+        "---\ntitle: \"第一篇\"\ndate: 2026-11-01 15:00:00\nauthor: growdu\n"
+        "categories:\n  - 数据库\n---\n\n正文一段。\n", encoding="utf-8")
+    code = main(["categories", "数据库"] + _args(posts_dir, tmp_path / "out"))
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "第一篇" in out
+    assert "没有分类单元 id" in out
 
 
 def test_categories_reports_an_unknown_category(tmp_path, capsys):
     posts_dir = _series_posts(tmp_path)
     code = main(["categories", "没有这个分类"] + _args(posts_dir, tmp_path / "out"))
-    assert code == 1
+    assert code == 2
     assert "找不到分类" in capsys.readouterr().err
 
 
@@ -756,7 +807,7 @@ def test_collections_writes_the_index_article_and_the_checklist(tmp_path, capsys
 def test_collections_reports_an_unknown_collection(tmp_path, capsys):
     posts_dir = _series_posts(tmp_path)
     code = main(["collections", "没有这个合集"] + _args(posts_dir, tmp_path / "out"))
-    assert code == 1
+    assert code == 2
     assert "找不到合集" in capsys.readouterr().err
 
 
@@ -774,7 +825,7 @@ def test_publish_collection_creates_a_draft(tmp_path, server, monkeypatch):
     assert "第一篇" in article["content"]
     assert "第二篇" in article["content"]
     assert article["thumb_media_id"] == "COVER_ID"
-    assert article["content_source_url"].startswith("https://growdu.cn/categories/")
+    assert article["content_source_url"] == "https://growdu.cn/docs/数据库/"
 
 
 def test_publish_collection_is_idempotent(tmp_path, server, monkeypatch):
@@ -801,6 +852,25 @@ def test_publish_collection_requires_credentials(tmp_path, server, monkeypatch, 
     assert "/cgi-bin/draft/add" not in _Handler.calls
 
 
+def test_publish_collection_refuses_without_a_site_url(tmp_path, server, monkeypatch, capsys):
+    """合集导览的「阅读原文」也要站点地址——缺了就退 2，一个字节都不上传。
+
+    少了它，归档地址就是一条相对路径（``/docs/…/``），公众号那边点不开。
+    README 承诺过「没有它就拒绝发布」——合集这条路也得兑现。
+    """
+    posts_dir = _series_posts(tmp_path)
+    monkeypatch.setenv("WX_APPID", "appid")
+    monkeypatch.setenv("WX_APPSECRET", "secret")
+    monkeypatch.delenv("SITE_URL", raising=False)
+
+    code = main(["publish-collection", "数据库"]
+                + _args(posts_dir, tmp_path / "out", server=server))
+    assert code == 2, "缺站点地址还把合集导览发出去了"
+    assert "SITE_URL" in capsys.readouterr().err
+    assert "/cgi-bin/draft/add" not in _Handler.calls
+    assert "/cgi-bin/material/add_material" not in _Handler.calls
+
+
 def test_publish_collection_reports_an_unknown_collection(tmp_path, server, monkeypatch, capsys):
     posts_dir = _series_posts(tmp_path)
     monkeypatch.setenv("WX_APPID", "appid")
@@ -808,7 +878,7 @@ def test_publish_collection_reports_an_unknown_collection(tmp_path, server, monk
 
     code = main(["publish-collection", "没有这个合集"]
                 + _args(posts_dir, tmp_path / "out", server=server))
-    assert code == 1
+    assert code == 2
     assert "/cgi-bin/draft/add" not in _Handler.calls
 
 
@@ -984,7 +1054,7 @@ def _batch_posts(tmp_path, count=3):
             "categories:\n  - 数据库\n---\n\n正文一段。\n\n![图](images/demo.png)\n".format(
                 index, index + 1),
             encoding="utf-8")
-    _write_png(tmp_path / "source" / "images" / "demo.png")
+    _write_png(tmp_path / "source" / "images" / "database" / "images" / "demo.png")
     return posts_dir
 
 
@@ -1380,6 +1450,7 @@ def test_an_external_picture_can_serve_as_the_cover(tmp_path, server, monkeypatc
     monkeypatch.setenv("WX_APPSECRET", "secret")
 
     code = main(["publish", "ext", "--posts-dir", str(posts_dir),
+                 "--images-dir", str(tmp_path / "source" / "images"),
                  "--out-dir", str(tmp_path / "out"), "--api-base", server,
                  "--secrets-file", str(tmp_path / "absent.json")])
     image_httpd.shutdown()
@@ -1658,7 +1729,7 @@ def test_an_unreadable_image_skips_the_article_instead_of_crashing_the_batch(
         "---\ntitle: \"带坏图的文章\"\ndate: 2026-11-09 15:00:00\nauthor: growdu\n"
         "categories:\n  - 数据库\n---\n\n正文。\n\n![图](images/notes.txt)\n",
         encoding="utf-8")
-    image = posts_dir.parent / "images" / "notes.txt"
+    image = posts_dir.parent / "images" / "database" / "images" / "notes.txt"
     image.parent.mkdir(parents=True, exist_ok=True)
     image.write_text("这根本不是一张图片。", encoding="utf-8")
 
@@ -1686,7 +1757,7 @@ def test_an_article_with_an_svg_is_drafted(tmp_path, server, monkeypatch):
         "---\ntitle: \"带 SVG 的文章\"\ndate: 2026-11-09 15:00:00\nauthor: growdu\n"
         "categories:\n  - 数据库\n---\n\n正文。\n\n![图](images/icon.svg)\n",
         encoding="utf-8")
-    image = posts_dir.parent / "images" / "icon.svg"
+    image = posts_dir.parent / "images" / "database" / "images" / "icon.svg"
     image.parent.mkdir(parents=True, exist_ok=True)
     image.write_text(
         '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50">'

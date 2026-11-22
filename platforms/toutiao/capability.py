@@ -27,7 +27,7 @@ from pathlib import Path
 
 __all__ = [
     "AUTOMATIONS", "Capability", "Limits", "default_capability_path",
-    "load_capability",
+    "load_capability", "load_exit_codes",
 ]
 
 AUTOMATIONS = ("manual", "api_draft", "api_publish")
@@ -53,6 +53,7 @@ _TOP_KEYS = (
     "review",
     "adapter",
     "auth",
+    "exit",
     "ip_allowlist",
     "limits",
     "media",
@@ -60,6 +61,10 @@ _TOP_KEYS = (
     "requires_min_followers",
     "verified",
 )
+
+#: ``[exit]`` 段的四个键——退出码的词汇。**契约层定义**
+#: （``publish/publishkit/exit_codes.py``），这里只认这四个名字。
+_EXIT_KEYS = ("ok", "usage", "precondition", "failed")
 
 #: ``verified`` 的取值域：一次实测的日期；日期未定的那天允许写 XX。
 _VERIFIED_RE = re.compile(r"^\d{4}-\d{2}-(\d{2}|XX)$")
@@ -105,6 +110,31 @@ class Capability:
 def default_capability_path() -> Path:
     """The declaration shipped with the repository."""
     return _REPO_ROOT / "platforms" / "toutiao" / "capability.toml"
+
+
+def load_exit_codes(path: Path) -> dict[str, int]:
+    """Read the ``[exit]`` section: the exit codes of this adapter.
+
+    **The exit codes are defined by the contract layer**
+    (``publish/publishkit/exit_codes.py``); this adapter only *reads* the
+    table its own declaration carries -- the seam is the file, not an
+    import (spec §11.1).
+
+    They deliberately do **not** live in the ``Capability`` dataclass: a
+    frozen dataclass generates ``__hash__``, and a ``dict`` field would
+    make ``hash(capability)`` raise ``TypeError``.
+
+    The declaration is external input, so the section is validated the
+    same way the rest of it is: a missing section, a missing key or a
+    non-integer value raises ``ValueError`` naming the offending field.
+    """
+    path = Path(path)
+    with path.open("rb") as handle:
+        data = tomllib.load(handle)
+
+    table = _table(data, "exit")
+    _reject_unknown(table, _EXIT_KEYS, "exit")
+    return {key: _field(table, key, "exit", _as_int) for key in _EXIT_KEYS}
 
 
 # --- 字段校验 -----------------------------------------------------------

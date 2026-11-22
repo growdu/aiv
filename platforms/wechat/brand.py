@@ -11,7 +11,7 @@ dive articles open with a block the author wrote for exactly that
 purpose::
 
     | 编写人 | 编写内容 | 编写时间 |
-    | growdu | 初稿，面向 PostgreSQL 内核开发 / DBA / 内核爱好者，把"一张表的
+    | YourBrand | 初稿，面向 PostgreSQL 内核开发 / DBA / 内核爱好者，把"一张表的
       元数据到底存在哪里..."完整拆开。配套源码版本：PostgreSQL 18 dev。 | 2026-09-29 |
 
     > 本文是「PostgreSQL 源码系列」元数据与缓存篇。同系列前文：...
@@ -33,8 +33,8 @@ from dataclasses import dataclass
 
 from .mdparse import Paragraph, Quote, Table, block_text, inline_text
 
-__all__ = ["Byline", "SIGNATURE_TEXT", "byline_html", "purpose_of",
-           "series_note_of", "signature_html", "strip_title_page",
+__all__ = ["Byline", "SIGNATURE_TEXT", "SIGNATURE_TEXT_NO_AUTHOR", "byline_html",
+           "purpose_of", "series_note_of", "signature_html", "strip_title_page",
            "title_page_of"]
 
 # The header cells a "purpose table" may carry.  The author has used
@@ -70,6 +70,12 @@ _SENTENCE_END = "。！？!?"
 # The signature that closes every part.  It says who wrote it and where
 # the complete version is; the platform's own byline says only the name.
 SIGNATURE_TEXT = ("本文作者：{author} ｜ 完整版、勘误与后续更新见文末「阅读原文」")
+
+# The same line without a byline.  The byline is **content**: the mother
+# draft either names an author or it does not, and the framework does not
+# make one up.  Without one there is no 「本文作者： ｜」 hole either --
+# only the half that says where the complete version is.
+SIGNATURE_TEXT_NO_AUTHOR = "完整版、勘误与后续更新见文末「阅读原文」"
 
 _BYLINE_STYLE = (
     "margin:0 0 18px;padding:12px 14px;border-left:3px solid #3d7ea6;"
@@ -265,9 +271,12 @@ def byline_html(byline: Byline) -> str:
     text = byline.purpose or byline.series
     if not text:
         return ""
-    name = byline.author or "growdu"
+    # 署名是**内容**：母稿没写就是空的，框架不替使用者决定。
+    name = byline.author
     if byline.date:
-        name = "{} ｜ {}".format(name, byline.date)
+        # 署名与日期**都有**才拼那个分隔符——署名空了还照拼，
+        # 卡上就多一个孤零零的「 ｜ 2026-09-29」。
+        name = "{} ｜ {}".format(name, byline.date) if name else byline.date
     return (
         '<section style="{box}">'
         '<p style="{name}">{name_text}</p>'
@@ -279,8 +288,13 @@ def byline_html(byline: Byline) -> str:
     )
 
 
-def signature_html(author: str = "growdu") -> str:
-    """The line that closes every part."""
+def signature_html(author: str = "") -> str:
+    """The line that closes every part.
+
+    An author that is not there is not printed: the line then says only
+    where the complete version is.
+    """
+    text = SIGNATURE_TEXT.format(author=author) if author else SIGNATURE_TEXT_NO_AUTHOR
     return '<p style="{style}">{text}</p>'.format(
         style=_SIGNATURE_STYLE,
-        text=_escape(SIGNATURE_TEXT.format(author=author)))
+        text=_escape(text))

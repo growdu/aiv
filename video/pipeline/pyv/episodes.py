@@ -19,13 +19,14 @@ video/episodes/<系列>/<合集>/<文档>/<档位>/
 
 期身份 = **期目录相对期根的路径**，例如
 `<系列>/<合集>/<文档>/short`。
-文件名前缀（`out/`、`build/`）用压平后的 `ep_id()`——斜杠换成连字符。
+**成片**用期路径原样（`out/<系列>/<合集>/<文档>/<档位>.mp4`），
+**片段目录**用压平后的 `ep_id()`（`build/<系列>-<合集>-<文档>-<档位>/`）。
 
 **两个名字，别混**：
 
 | | 是什么 | 落在哪 |
 | --- | --- | --- |
-| **文档路径** | `系列/合集/文档`——母稿的身份 | 口播稿与契约的 front matter `episode` |
+| **文档路径** | `系列/合集/文档`——母稿的身份 | 口播稿 front matter `episode`（**契约**的 `episode` 记的是四层**期路径**） |
 | **期号** | 播放顺序（`ep01`） | 口播稿 front matter `episode_number` |
 | **档位** | 三档里的哪一档 | 口播稿 front matter `tier`，也是目录名 |
 
@@ -141,6 +142,16 @@ def doc_root(doc: str) -> Path:
 def ep_id(ep: str) -> str:
     """期路径压平成一个文件名片段（斜杠 → 连字符）。"""
     return ep.replace("/", "-")
+
+
+def cut_path(ep: str) -> Path:
+    """成片的路径：out/<系列>/<合集>/<文档>/<档位>.mp4。
+
+    **一处算，两处用**——``pyv/cli.py`` 的 preflight 与 ``pyv/review.py``
+    的成片层**原来**各算一遍（两处都写着 ``episodes.ep_id(...)``），
+    改的时候漏一处就找不到成片了。现在两处都调它。
+    """
+    return AIV_ROOT / "out" / f"{ep}.mp4"
 
 
 def known_eps_at(root: str | Path) -> list[str]:

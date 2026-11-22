@@ -132,8 +132,19 @@ def test_skeleton_lives_in_the_document_dir(tmp_path, monkeypatch):
 
 
 def test_ep_id_flattens_the_coordinate_into_one_filename(tmp_path, monkeypatch):
-    """期路径压平成一个文件名片段——`out/` 下面不留嵌套目录。"""
+    """期路径压平成一个文件名片段——**片段目录**与 outbox 快照文件名用它。"""
     assert episodes_mod.ep_id(EP) == "系列甲-合集甲-文档甲-short"
+
+
+def test_the_cut_path_is_nested_under_the_episode(tmp_path, monkeypatch):
+    """成片的路径由**一处**算出来：out/<系列>/<合集>/<文档>/<档位>.mp4。
+
+    preflight 与 review 今天各算一遍（两处都写着 ``episodes.ep_id(...)``），
+    改的时候漏一处就找不到成片了——所以收进 ``episodes.cut_path``。
+    """
+    monkeypatch.setattr(episodes_mod, "AIV_ROOT", tmp_path)
+    assert episodes_mod.cut_path("演示系列/演示合集/夹具文档/short") == \
+        tmp_path / "out" / "演示系列/演示合集/夹具文档/short.mp4"
 
 
 def test_episode_at_accepts_any_root(fixture_episode_dir):
