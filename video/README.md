@@ -12,6 +12,18 @@
 照样出片；**配了但文件不在**才是错，`make doctor` 会单独报出来。
 见[上机指南.md](上机指南.md)。
 
+## 用户怎么用（通过 AI）
+
+用户**不直接敲命令**，而是用一句话告诉 AI，AI 照本 README 与 [`episodes/README.md`](episodes/README.md) 去驱动：
+
+| 用户说 | AI 做的事 |
+| --- | --- |
+| 「给 AIV 加一期讲 X 的短视频」 | 在 `episodes/AIV/<合集>/<文档>/<档位>/` 建四层目录（建目录即登记），放 `口播稿.md` + `contract.json`，合成旁白 |
+| 「这期出片 / 出个竖版给抖音」 | `cd pipeline && make EP=<期路径> align`，再 `make EP=... all`（抖音 `vertical`、无品牌 `nobrand`） |
+| 「这期发 B站/视频号/抖音」 | 对应平台 adapter `manual` 档出包，**上传与点发表留给人** |
+
+入口总览见 [`../AGENTS.md`](../AGENTS.md) §五。**忘了 `EP=` 会退出 2**，不会拿空路径跑。
+
 ## 目录
 
 | 目录 | 内容 |

@@ -142,8 +142,23 @@ outbox/<系列>-<合集>-<文档>-<档位>__<平台>.json  发布快照（入库
 - 「改一下站点的配色」→ AI 读 `platforms/blog/site/README.md`、`platforms/blog/site/themes/matery/`，
   改主题文件，跑 `npm run build`，报告构建结果。
 
+**视频流（AIV 品牌系列）**同样用自然语言驱动，但**没有登记表、坐标就是接口**：
+
+- 「给 AIV 加一期讲 PostgreSQL 行锁的短视频」→ AI 读 [`video/episodes/README.md`](video/episodes/README.md)，在
+  `video/episodes/AIV/<合集>/<文档>/<档位>/` 建四层目录（建目录即登记），放 `口播稿.md`（front matter 记 `episode`/`episode_number`/`tier`）
+  与 `contract.json`（其 `episode` 记**四层期路径**），再跑 `video/voice/scripts/synthesize_narration.py` 合成旁白。
+- 「把这期出片（或出个竖版给抖音）」→ AI 进 `video/pipeline/`，先 `make EP=<系列>/<合集>/<文档>/<档位> align`，再
+  `make EP=... all`（抖音竖版用 `vertical`、无品牌导流版用 `nobrand`）。**忘了 `EP=` 会退出 2**，不会拿空路径跑。
+- 「这期发 B站 / 视频号 / 抖音」→ adapter 是 `manual` 档：AI 只 `python3 -m <平台>.cli package <期号>` 出包并报告，
+  **上传与点发表在人工手里**（可逆的 prepare / 不可逆的 submit 见 [`browser/README.md`](browser/README.md)）。
+
+> ⚠️ **现状**：AIV 系列当前是**空壳**——`video/episodes/` 下只有 `README.md`，没有 `AIV/` 目录。
+> 所以现在能交互的是「建一期 / 跑空流水线 / `make doctor` 查环境」，**还出不了真成片**：
+> 先按 `make doctor` 配好环境与素材（[`video/config.toml`](video/config.toml)），并由使用者建出入库的期目录。
+
 **AI**通过**模块 README** 与**契约文档**理解边界，通过**验收命令**验证改动，通过**缝**（`content/units/`、`capability.toml`、
-`rules/urls.json`）跨模块通信，**不 import 其他模块的代码**。
+`rules/urls.json`）跨模块通信，**不 import 其他模块的代码**。视频流的坐标口径在 `publish/publishkit/episode.py` 与
+`video/pipeline/pyv/episodes.py` **两处对齐**，改一处两处一起改。
 
 ---
 
