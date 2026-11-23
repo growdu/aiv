@@ -125,7 +125,7 @@ def video_build(episode: str) -> Command:
 
 
 def video_vertical(episode: str) -> Command:
-    """竖版 9:16（抖音那一档）。"""
+    """竖版 9:16（短视频平台那一档）。"""
     return Command(argv=["make", f"EP={episode}", "vertical"], cwd=PIPELINE_DIR,
                    key=f"vertical:{episode}")
 
