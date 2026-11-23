@@ -17,11 +17,10 @@ import json
 import subprocess
 import threading
 import time
-from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterator
 
 from .commands import Command
 
@@ -73,6 +72,18 @@ class Job:
             "log": list(self.log),
         }
 
+    def note(self, text: str) -> None:
+        """往日志里加一行。
+
+        **作业里的 Python 步骤用它说话**（比如「这一期没有旁白」）。
+        """
+        self.log.append(text)
+
+
+#: 一步作业。要么是一条命令，要么是一段 Python（自己往 `Job` 的日志里写）。
+#: Python 步骤返回**退出码**——非零就停在那一步，后面不跑。
+Step = Command | Callable[[Job], int]
+
 
 class JobRunner:
     """跑作业的地方。
@@ -93,7 +104,7 @@ class JobRunner:
         command = Command(argv=list(argv), cwd=Path(cwd), key=key or kind)
         return self.submit_steps(kind, [command], key=key)
 
-    def submit_steps(self, kind: str, steps: list[Command], *,
+    def submit_steps(self, kind: str, steps: list[Step], *,
                      key: str | None = None) -> Job:
         """起一个**串行**的作业：一步不成功，后面的不跑。"""
         effective_key = key or (steps[0].key if steps else kind)
@@ -154,11 +165,11 @@ class JobRunner:
             if len(job.log) > LOG_CAPACITY:
                 del job.log[: len(job.log) - LOG_CAPACITY]
 
-    def _run(self, job: Job, steps: list[Command]) -> None:
+    def _run(self, job: Job, steps: list[Step]) -> None:
         job.status = "running"
         try:
-            for command in steps:
-                code = self._run_one(job, command)
+            for step in steps:
+                code = self._run_step(job, step)
                 if code != 0:
                     job.exit_code = code
                     job.status = "failed"
@@ -173,6 +184,17 @@ class JobRunner:
                 for key, job_id in list(self._by_key.items()):
                     if job_id == job.id:
                         del self._by_key[key]
+
+    def _run_step(self, job: Job, step: Step) -> int:
+        """跑一步。命令 → 起进程；Python → 直接调。"""
+        if isinstance(step, Command):
+            return self._run_one(job, step)
+        try:
+            return int(step(job))
+        except Exception as exc:                      # noqa: BLE001
+            # 作业里炸了要**报出来**，不能变成一句「失败了」。
+            job.note(f"这一步炸了：{exc!r}")
+            return 3
 
     def _run_one(self, job: Job, command: Command) -> int:
         """跑一条命令，逐行收日志。**不用 shell**。"""
@@ -198,3 +220,34 @@ class JobRunner:
             self._append(job, line.rstrip("\n"))
         process.wait()
         return process.returncode
+
+
+#: 门面只有一个进程、一个用户——**一个共用的作业池**就够了。
+RUNNER = JobRunner()
+
+
+def capture(command: Command, *, timeout: float = 60.0) -> tuple[int, str]:
+    """跑一条命令，**把输出收回来**。返回 `(退出码, stdout)`。
+
+    **只给「读输出」的场合用**（审校信号）。要留日志的场合用 `JobRunner`。
+
+    超时或起不来 → `(2, 一句人话)`——退出码 2 的意思是「前置条件没满足」。
+    **不用 shell**：argv 逐个传参，期路径里的中文与空格才不会被拆词。
+    """
+    try:
+        process = subprocess.run(
+            command.argv,
+            cwd=str(command.cwd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            shell=False,
+        )
+    except subprocess.TimeoutExpired:
+        return 2, "命令超时了"
+    except OSError as exc:
+        return 2, f"起不来：{exc}"
+    return process.returncode, process.stdout or ""
