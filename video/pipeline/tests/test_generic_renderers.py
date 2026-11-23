@@ -137,10 +137,14 @@ def test_no_text_overlaps_another_text(module, params, size, monkeypatch):
 ])
 @pytest.mark.parametrize("size", CANVASES)
 def test_every_text_stays_inside_its_block(module, params, size, monkeypatch):
-    """字不许从托着它的那块底色上溢出去。
+    """字不许从托着它的那块底色上溢出去，也不许跑出画布。
 
     溢出去的字落在画布白底上——浅色的字压白底就是看不见，
     而画面照样生成、时长照样对。
+
+    **跑出画布也要抓**：场景探针的 `overflows` 只查「字落在哪块底色
+    里面」——一个字要是**整块跑到所有底色之外**（比如画到了画布边上），
+    它就没有「托着它的底色」，探针一个都报不出来。画布边界是兜底。
     """
     w, h = size
     probe = _frame(module.render, params, w, h, monkeypatch)
@@ -149,6 +153,13 @@ def test_every_text_stays_inside_its_block(module, params, size, monkeypatch):
         "这些字从自己的底色上溢出去了："
         + "；".join(f"{text}（超出 {over:.1f}px）" for text, _, over in hits)
     )
+    for text in probe.texts:
+        assert text.x0 >= 0 and text.x1 <= w, (
+            f"{text} 跑出画布了（左右 {text.x0:.0f}→{text.x1:.0f}，画布 {w}）"
+        )
+        assert text.y0 >= 0 and text.y1 <= h, (
+            f"{text} 跑出画布了（上下 {text.y0:.0f}→{text.y1:.0f}，画布 {h}）"
+        )
 
 
 def test_every_drawn_character_is_in_the_bundled_font(monkeypatch):
@@ -253,6 +264,33 @@ def test_the_code_renderer_keeps_every_character(monkeypatch):
         if not line.strip():
             continue
         assert line in drawn, f"这一行拼不回去了：{line!r}（画出来的是 {drawn}）"
+
+
+def test_the_code_renderer_keeps_the_gap_after_every_space(monkeypatch):
+    """空格要**留出空隙**——不只是「画了一个空格」。
+
+    实测踩过的坑：按「墨迹宽度」推进游标（`text_extents().width` 是
+    墨迹包围盒，空格的墨迹宽是 0），「SELECT id」就排成「SELECTid」。
+
+    **光看画出去的字看不出来**（每一段都对），要量**位置**：空格那一段
+    与下一段之间必须留得出空隙。阈值写成字面量（字号的 10%）。
+    """
+    calls = _draw_calls(monkeypatch, gen_code,
+                        {"content": SQL, "lang": "sql"}, 1920, 1080)
+    rows: dict[int, list] = {}
+    for label, x, y in calls:
+        rows.setdefault(round(y), []).append((x, label))
+    gaps = 0
+    for items in rows.values():
+        items.sort()
+        for (x, label), (next_x, _) in zip(items, items[1:]):
+            if label == " ":
+                gaps += 1
+                assert next_x - x >= 0.1 * common.BASE_SIZE, (
+                    f"空格后面没有空隙（{next_x - x:.1f}px）——"
+                    f"「SELECT id」被排成了「SELECTid」"
+                )
+    assert gaps, "这一帧里一个空格都没有——夹具没画出来，查守卫本身"
 
 
 def test_the_code_renderer_says_how_many_lines_did_not_fit(monkeypatch):
