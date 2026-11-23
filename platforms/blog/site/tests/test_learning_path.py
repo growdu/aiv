@@ -137,6 +137,111 @@ def test_every_track_has_exactly_one_lane_color(rules):
     )
 
 
+# ── 筹备中（status: planned）────────────────────────────────
+
+
+def test_the_status_field_is_known(rules):
+    """状态位只有两种意思：缺省（active）与 `planned`（筹备中）。
+
+    写错的状态位不会有人报错——它只是**静默地**按 active 处理，
+    于是那条赛道的「筹备中」标记不出现，而页面上一个赛道四个空阶段，
+    读者以为课程烂尾了。
+    """
+    for track in rules["tracks"]:
+        status = track.get("status")
+        assert status in (None, "active", "planned"), (
+            f"{track['id']} 的 status 是 {status!r}，"
+            "只认 active / planned"
+        )
+
+
+def test_a_planned_track_declares_its_syllabus(rules):
+    """筹备中的赛道是**公开宣布的课程大纲**，不是洞。
+
+    所以它得把大纲写出来：阶段不少于两段（两段才叫课程，
+    一段是单篇），每段都有标题、有「读完能做什么」、
+    有**明确写着将来收什么的规则**。
+    """
+    planned = [t for t in rules["tracks"] if t.get("status") == "planned"]
+    assert planned, "至少有一条筹备中的赛道（ceph）"
+
+    for track in planned:
+        assert len(track["stages"]) >= 2, (
+            f"{track['id']} 是筹备中，却只声明了 {len(track['stages'])} 个阶段——"
+            "一段不算课程大纲"
+        )
+        for stage in track["stages"]:
+            assert stage.get("title"), f"{track['id']}/{stage['id']} 没有标题"
+            assert stage.get("goal"), (
+                f"{track['id']}/{stage['id']} 没写「读完能做什么」——"
+                "宣布的大纲要说得清每段学完会什么"
+            )
+            assert stage.get("match"), (
+                f"{track['id']}/{stage['id']} 没声明将来收什么"
+            )
+
+
+def test_a_planned_stage_lives_inside_its_own_track(rules):
+    """筹备中赛道的每个阶段都得落在**自己这条赛道**的范围内。
+
+    阶段的前缀写着 `source-tracks/ceph/`，赛道的 `track_match` 却写着别的——
+    那这条赛道永远收不到文章，而页面上四个阶段全是空的，
+    看着像「还没写」，其实是规则写错了地方。
+    """
+    for track in rules["tracks"]:
+        if track.get("status") != "planned":
+            continue
+        scope = [
+            rule["path_prefix"]
+            for rule in track.get("track_match", [])
+            if "path_prefix" in rule
+        ]
+        assert scope, f"{track['id']} 没有 track_match，收不到任何内容"
+        for stage in track["stages"]:
+            for rule in stage.get("match", []):
+                prefix = rule.get("path_prefix")
+                if not prefix:
+                    continue
+                assert any(prefix.startswith(s) for s in scope), (
+                    f"{track['id']}/{stage['id']} 的规则 {prefix} "
+                    f"不在本赛道范围内 {scope}"
+                )
+
+
+def test_a_planned_track_has_no_fallback_bucket(rules):
+    """筹备中的赛道**不设兜底阶段**。
+
+    兜底桶的作用是「先别让构建崩」——但它同时会把
+    「内容没有专属规则」这件事**藏起来**。筹备中的赛道还没有内容，
+    兜底桶只会让人以为规则写全了；等第一篇文章来了，
+    没有专属规则就该在编译期炸出来（漏归类），而不是悄悄落进兜底。
+    """
+    for track in rules["tracks"]:
+        if track.get("status") != "planned":
+            continue
+        assert not track.get("fallback_stage"), (
+            f"{track['id']} 是筹备中，不该有兜底阶段 "
+            f"{track.get('fallback_stage')}"
+        )
+
+
+def test_every_stage_declares_where_its_articles_come_from(rules):
+    """每个阶段都得写清楚「我的文章从哪来」。
+
+    没有匹配规则的阶段**永远收不到文章**——那是课程里的一个洞：
+    页面上它占一行，读者点进去是空的。
+
+    这条对筹备中的赛道也一样：筹备中允许**规则指向还不存在的目录**
+    （文章还没写），不允许**规则缺失**（那不是「还没写」，是「漏了」）。
+    """
+    for track in rules["tracks"]:
+        for stage in track["stages"]:
+            assert stage.get("match"), (
+                f"{track['id']}/{stage['id']} 没有匹配规则——"
+                "它收不到任何文章"
+            )
+
+
 def test_stage_ids_increase_within_a_track(rules):
     for track in rules["tracks"]:
         numbers = [int(s["id"][1:]) for s in track["stages"]]

@@ -1,8 +1,8 @@
 {
   "version": 2,
   "enabled": true,
-  "updated": "2026-11-18",
-  "note": "学习路径的分类规则表。**这里是人工策展的部分**，site/tools/build-learning-path.py 按它把每篇内容单元落到「赛道 + 阶段」。\n\n规则从上往下第一条命中即生效；track_match 决定内容单元属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**规则匹配的是内容单元的路径**（相对 content/units/，不带 .md）：\n\n- path_prefix —— 前缀匹配，目录用（source-tracks/postgresql/）\n- path_exact —— 全等匹配，单篇用（video/row-lock）\n- path_regex —— 正则匹配\n- category / tag / title_contains —— 其它匹配键\n- catch_all —— 无条件匹配，只能写在最后一个阶段\n\n**映射的是内容单元里的文档与视频**（kind = document / video）。分类页（kind = category，目录的 _index.md）不进学习流——它是目录导航，站点另有分类浏览。\n\n**drafts/ 不参与映射**：草稿还没过审，不在 docs/ 里，也就不在站上。\n\n每篇内容都该有一条自己的规则：fallback_stage 只是防崩溃的兜底（没有专属规则的内容单元会落进去），守卫测试 site/tests/test_learning_path.py 钉住它是空的 —— 加了新内容，就得给它写规则。",
+  "updated": "2026-11-23",
+  "note": "学习路径的分类规则表。**这里是人工策展的部分**，site/tools/build-learning-path.py 按它把每篇内容单元落到「赛道 + 阶段」。\n\n规则从上往下第一条命中即生效；track_match 决定内容单元属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**规则匹配的是内容单元的路径**（相对 content/units/，不带 .md）：\n\n- path_prefix —— 前缀匹配，目录用（source-tracks/postgresql/）\n- path_exact —— 全等匹配，单篇用（video/row-lock）\n- path_regex —— 正则匹配\n- category / tag / title_contains —— 其它匹配键\n- catch_all —— 无条件匹配，只能写在最后一个阶段\n\n**映射的是内容单元里的文档与视频**（kind = document / video）。分类页（kind = category，目录的 _index.md）不进学习流——它是目录导航，站点另有分类浏览。\n\n**drafts/ 不参与映射**：草稿还没过审，不在 docs/ 里，也就不在站上。\n\n每篇内容都该有一条自己的规则：fallback_stage 只是防崩溃的兜底（没有专属规则的内容单元会落进去），守卫测试 site/tests/test_learning_path.py 钉住它是空的 —— 加了新内容，就得给它写规则。\n\n**status 字段**：赛道对象上可以写 status（缺省是 active）。planned = 筹备中——这条赛道的阶段是**公开宣布的课程大纲**，文章还没写。筹备中的赛道允许一个阶段都没有文章；其余赛道出现空阶段就是课程里留了洞（守卫会红）。「筹备中」和「规则缺失」在数据上长得一样（都是 0 篇），靠这个状态位区分。",
   "tracks": [
     {
       "id": "postgresql",
@@ -303,6 +303,62 @@
           "match": [
             {
               "path_prefix": "source-tracks/dpdk/testing-and-perf/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ceph",
+      "title": "分布式存储：Ceph",
+      "icon": "fas fa-hdd",
+      "summary": "对象布局、副本放置与故障恢复 —— 从「跑起来」到「说得清它怎么放的」",
+      "audience": "想读 Ceph 源码、或者要把 Ceph 用进生产的人。默认你会用 Linux 命令行。",
+      "goal": "走完这条线，你能说清楚一次读写在 Ceph 里经过哪些层，能定位一次慢请求，能按自己的容量与一致性需求设计副本放置。",
+      "status": "planned",
+      "track_match": [
+        {
+          "path_prefix": "source-tracks/ceph/"
+        }
+      ],
+      "stages": [
+        {
+          "id": "L1",
+          "title": "环境与入门",
+          "goal": "先把集群搭起来，跑通一次读写。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/ceph/getting-started/"
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "title": "存储原理",
+          "goal": "RADOS 的对象布局、CRUSH 与 PG 的来龙去脉。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/ceph/storage-internals/"
+            }
+          ]
+        },
+        {
+          "id": "L3",
+          "title": "集群与一致性",
+          "goal": "数据分布、副本放置与故障恢复。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/ceph/consistency/"
+            }
+          ]
+        },
+        {
+          "id": "L4",
+          "title": "生产实践",
+          "goal": "容量规划、慢请求排查与性能调优。",
+          "match": [
+            {
+              "path_prefix": "source-tracks/ceph/operations/"
             }
           ]
         }

@@ -81,7 +81,7 @@
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
 | 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 121 passed | 121 passed |
-| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 107 passed | 107 passed |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 115 passed | 115 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
@@ -104,6 +104,17 @@
 | 2026-11-23（发布意图透传那轮） | 121 | 86 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
 | 2026-11-23（第一篇稿子进 `docs/` 那轮） | 121 | 89 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
 | 2026-11-23（`epmeta` 变通用加载器那轮） | 121 | 107 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1071 / 60 skip | 77 | 59 |
+| 2026-11-23（赛道改名 + Ceph 筹备中那轮） | 121 | 115 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1071 / 60 skip | 77 | 59 |
+
+> 2026-11-23（赛道改名 + Ceph 筹备中那轮）：**站点 +8 条**——① 赛道改名
+> （`db-internals` → `postgresql`、`linux-network` → `linux`、
+> `dataplane` → `dpdk`）：三条守卫钉住「赛道 id 是方向名」「id 是合法 slug」
+> 「赛道配色与赛道 id 一一对应」（不钉住的话，改名后那条赛道**掉回默认色**，
+> 页面看上去还是好的，只是几条赛道撞了色）；② Ceph 赛道（`status: "planned"`，
+> 四个阶段骨架）：五条守卫钉住「状态位只认 active / planned」
+> 「筹备中的赛道必须把大纲写出来」「阶段得落在本赛道范围内」
+> 「筹备中的赛道不设兜底桶」「每个阶段都得声明将来收什么」。
+> **其余九套件一条没动。**
 
 > 2026-11-23 最后一轮：**站点 +3 条**——目录页的 layout 渲染出错被 Hexo 吞成
 > **0 字节的空页面**（`site.posts` 是 Query 不是数组、`permalink` 两种形状

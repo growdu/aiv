@@ -212,6 +212,9 @@ def compile_learning_path() -> tuple[dict, list[str]]:
                 "summary": track.get("summary", ""),
                 "audience": track.get("audience", ""),
                 "goal": track.get("goal", ""),
+                # 状态位：**筹备中**（planned）的赛道允许空阶段——
+                # 那是公开宣布的课程大纲，不是洞。渲染层靠它打「筹备中」标记。
+                "status": track.get("status", "active"),
                 "fallback_stage": fallback_id,
                 "stages": stages_out,
                 "count": sum(s["count"] for s in stages_out),
@@ -300,6 +303,8 @@ def site_view(result: dict, units: list[dict]) -> dict:
                 "summary": track.get("summary", ""),
                 "audience": track.get("audience", ""),
                 "goal": track.get("goal", ""),
+                # 筹备中的赛道把状态位带到站上——页面据此打「筹备中」标记。
+                "status": track.get("status", "active"),
                 "stages": stages,
                 "count": track_total,
             }
