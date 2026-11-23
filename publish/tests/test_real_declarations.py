@@ -237,3 +237,37 @@ def test_the_platform_dirs_keep_the_repo_root_at_the_right_depth():
             if directory.is_dir():
                 assert directory.resolve().parents[2] == repo_root, (
                     f"{package.name}/{sub}/ 的仓库根深度变了")
+
+
+# --- 档位声明 ---------------------------------------------------------------
+#
+# **平台能收哪几档，是数据不是印象**：写在各自的 `capability.toml` 里，
+# 契约层只负责读与校验。这条测试盯住三个视频平台的实际声明值——
+# 它们是**内容判断**（哪些场景吃哪一档），改动要连着理由一起改。
+
+
+def test_video_platforms_declare_their_tiers():
+    """三个视频平台都声明了档位，且声明的值与规格 §四 的矩阵一致。"""
+    caps = {cap.id: cap for cap in list_capabilities()}
+    assert caps["douyin"].tiers == ("short",)
+    assert caps["channels"].tiers == ("short",)
+    assert caps["bilibili"].tiers == ("short", "mid", "full")
+
+
+def test_document_platforms_do_not_declare_tiers():
+    """文档类平台不吃视频档位——它们**不该**有这个键。
+
+    写上一个空数组看着无害，实则是「我声明过档位这件事」——
+    将来有人按「有 tiers 字段」去筛平台，就会把公众号算进去。
+    """
+    caps = {cap.id: cap for cap in list_capabilities()}
+    for platform in ("wechat", "toutiao", "blog"):
+        assert caps[platform].kind == "document"
+        assert caps[platform].tiers == ()
+
+
+def test_every_video_platform_declares_at_least_one_tier():
+    """一个档位都不收的视频平台，说明它不该被登记成视频平台。"""
+    for cap in list_capabilities():
+        if cap.kind == "video":
+            assert cap.tiers, f"{cap.id} 是视频平台，却一个档位都没收"

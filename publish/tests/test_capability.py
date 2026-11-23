@@ -408,3 +408,80 @@ def test_an_exit_section_that_does_not_match_the_contract_layer_is_rejected(tmp_
     with pytest.raises(CapabilityFieldError) as excinfo:
         load_capability_file(path)
     assert "不一致" in str(excinfo.value)
+
+
+# --- tiers：这个平台能收哪几档视频 -------------------------------------------
+#
+# **档位是坐标的一部分**：期目录的第四层（`video/episodes/<系列>/<合集>/<文档>/<档位>/`）。
+# 平台声明里写它能收哪几档，是为了让「这一档能不能发这个平台」有**数据**可查，
+# 而不是散落在代码与脑瓜里的印象。
+
+
+def test_tiers_defaults_to_empty(tmp_path):
+    """没写这个键 = 空的元组。
+
+    **不是「全都收」**：一个没声明档位的视频平台，不该被当成
+    「什么档位都能发」——那会让发片那一步少一道闸。
+    """
+    path = write_toml(
+        tmp_path,
+        "x.toml",
+        'id = "x"\nname = "x"\nkind = "video"\nautomation = "manual"\n'
+        'review = "none"\n',
+    )
+    cap = load_capability_file(path)
+    assert cap.tiers == ()
+
+
+def test_tiers_are_read_as_a_tuple(tmp_path):
+    path = write_toml(
+        tmp_path,
+        "x.toml",
+        'id = "x"\nname = "x"\nkind = "video"\nautomation = "manual"\n'
+        'review = "none"\ntiers = ["short", "mid"]\n',
+    )
+    cap = load_capability_file(path)
+    assert cap.tiers == ("short", "mid")
+
+
+def test_tiers_must_be_a_list_of_strings(tmp_path):
+    """写成字符串（``tiers = "short"``）当场报错。
+
+    字符串在 Python 里也是可迭代的——不拦的话，`"short"` 会被读成
+    五个档位字母，每一段都成了「一个档位」。这类错必须在这里死掉。
+    """
+    path = write_toml(
+        tmp_path,
+        "x.toml",
+        'id = "x"\nname = "x"\nkind = "video"\nautomation = "manual"\n'
+        'review = "none"\ntiers = "short"\n',
+    )
+    with pytest.raises(CapabilityFieldError) as excinfo:
+        load_capability_file(path)
+    assert "tiers" in str(excinfo.value)
+
+
+def test_tiers_values_must_be_known(tmp_path):
+    """档位名是坐标的一部分——写一个没听说过的名字等于发明了一个坐标。"""
+    path = write_toml(
+        tmp_path,
+        "x.toml",
+        'id = "x"\nname = "x"\nkind = "video"\nautomation = "manual"\n'
+        'review = "none"\ntiers = ["medium"]\n',
+    )
+    with pytest.raises(CapabilityFieldError) as excinfo:
+        load_capability_file(path)
+    assert "tiers" in str(excinfo.value)
+    assert "medium" in str(excinfo.value)
+
+
+def test_to_dict_carries_the_tiers(tmp_path):
+    """快照里也得有——CLI 打印与索引读的是它。"""
+    path = write_toml(
+        tmp_path,
+        "x.toml",
+        'id = "x"\nname = "x"\nkind = "video"\nautomation = "manual"\n'
+        'review = "none"\ntiers = ["short"]\n',
+    )
+    cap = load_capability_file(path)
+    assert cap.to_dict()["tiers"] == ["short"]

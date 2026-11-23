@@ -80,6 +80,7 @@ __all__ = [
     "KINDS",
     "PLATFORM_ID_RE",
     "REVIEWS",
+    "TIERS",
     "Capability",
     "CapabilityError",
     "CapabilityFieldError",
@@ -93,6 +94,15 @@ __all__ = [
 
 #: 内容单元类型（§5）。
 KINDS = ("document", "video")
+
+#: 视频档位（§5）。**取值域封闭**：档位名是坐标的一部分
+#: （``video/episodes/<系列>/<合集>/<文档>/<档位>/`` 的第四层），
+#: 平台声明能收哪几档，用的就是这三个名字。
+#:
+#: **文档类平台不写这个键**——它们不吃视频档位。缺省是空的元组，
+#: 不是「全都收」也不是「一个都不收」：**没声明就是没声明**，
+#: 谁想按档位发片，先去把声明写上。
+TIERS = ("short", "mid", "full")
 
 #: 自动化停在哪一步（§5、§6.4「三档 automation」）。
 AUTOMATIONS = ("api_draft", "api_publish", "manual")
@@ -114,6 +124,7 @@ _TOP_KEYS = _REQUIRED_TOP_KEYS + (
     "media",
     "requires_certification",
     "requires_min_followers",
+    "tiers",
     "verified",
 )
 
@@ -165,6 +176,10 @@ class Capability:
     adapter: dict
     media: dict
     path: Path
+    #: 这个平台能收哪几档视频（``short`` / ``mid`` / ``full``）。
+    #: 没写就是空的元组——**不是「全都收」**。文档类平台不吃档位，
+    #: 它们的声明里压根没有这个键。
+    tiers: tuple[str, ...] = ()
 
     @property
     def adapter_package(self) -> str | None:
@@ -198,6 +213,7 @@ class Capability:
             "limits": dict(self.limits),
             "adapter": dict(self.adapter),
             "media": dict(self.media),
+            "tiers": list(self.tiers),
             "path": str(self.path),
         }
 
@@ -389,6 +405,23 @@ def _validate_verified(value: object) -> str:
     return text
 
 
+def _validate_tiers(value: object) -> tuple[str, ...]:
+    """``tiers`` 是这个平台能收的档位。
+
+    **取值域封闭**：档位名是坐标的一部分（期目录的第四层），
+    写一个没听说过的名字，等于发明了一个坐标——出包时没人认得它。
+    """
+    tiers = _convert(value, "tiers", _as_str_list)
+    for tier in tiers:
+        if tier not in TIERS:
+            raise CapabilityFieldError(
+                "能力模型字段 tiers 只能取 {} 之一，实际是 {!r}".format(
+                    " / ".join(TIERS), tier
+                )
+            )
+    return tuple(tiers)
+
+
 def default_platforms_dir() -> Path:
     """平台目录（``<仓库>/platforms/``）——每个平台一个子目录。"""
     return Path(__file__).resolve().parents[2] / "platforms"
@@ -487,6 +520,7 @@ def load_capability_file(path) -> Capability:
     adapter = _validate_adapter(_table(data, "adapter"))
     media = _table(data, "media")
     _validate_exit(_table(data, "exit"))
+    tiers = _optional(data, "tiers", "", _validate_tiers, ())
 
     return Capability(
         id=platform_id,
@@ -503,6 +537,7 @@ def load_capability_file(path) -> Capability:
         adapter=adapter,
         media=media,
         path=path,
+        tiers=tiers,
     )
 
 

@@ -24,6 +24,7 @@ from .capability import (  # noqa: E402
     KINDS,
     PLATFORM_ID_RE,
     REVIEWS,
+    TIERS,
     Capability,
     CapabilityError,
     CapabilityFieldError,
