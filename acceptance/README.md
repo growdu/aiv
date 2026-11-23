@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1170 passed / 60 skipped | 1170 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1234 passed / 60 skipped | 1234 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -118,6 +118,26 @@
 | 2026-11-23（骨架依赖与形状守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1133 / 60 skip | 77 | 59 |
 | 2026-11-23（骨架派生三元组那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1148 / 60 skip | 77 | 59 |
 | 2026-11-23（三档档位守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1170 / 60 skip | 77 | 59 |
+| 2026-11-23（通用渲染器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1234 / 60 skip | 77 | 59 |
+
+> 2026-11-23（通用渲染器那轮）：**video +64 条**——新模块
+> `video/pipeline/pyv/generic/`（四个通用渲染器：`gen_code` / `gen_table` /
+> `gen_card` / `gen_mermaid` + 共用件 `common.py`）、`video/pipeline/pyv/mermaid.py`
+> （视频侧自持的 mermaid → PNG），新测试 `video/pipeline/tests/test_generic_renderers.py`
+> 与 `video/pipeline/tests/test_mermaid.py`。
+> **通用渲染器不进 `pyv/scenes/`**（偏离规格 §6.1，记在计划二的 D2）：
+> `scenes/` 里每个模块都被逐像素基准与字体探针**按目录扫**着，
+> 而通用渲染器的基准要一期真实的期目录才抓得出来（视频线今天没有期，
+> 内容不入库）。所以它们自带一套**元素级**守卫：字不压字、字在自己那块底色里、
+> 字不跑出画布、字与底色对比度够、字在字体子集里、放不下要明说还差几行、
+> mermaid 失败要看得见地降级。
+> **十条注入缺陷都验过会红**（高亮失效 / 墨迹宽度推进（空格丢了）/
+> 代码静默截断 / 表格静默截断 / 深底深字 / 字画出面板 / mermaid 静默跳过 /
+> 画出子集外的字 / 重渲染输入清单漏登记 / 渲染器名不存在）。
+> ⚠️ 视频侧**自持**一份 mermaid 渲染器（层间零 import，平台层不许被视频线 import）：
+> 两份实现的版本号与关键参数用 `ast` **读文件**对拍，不 import 那个模块。
+> ⚠️ 通用渲染器的**逐像素基准**与「母稿里的汉字在不在字体子集里」仍是遗留项
+> （前者要真实期目录，后者要真实母稿）。
 
 > 2026-11-23（三档档位守卫那轮）：**video +22 条**——新文件
 > `video/pipeline/tests/test_tiers.py` 与新模块 `video/pipeline/pyv/tiers.py`：
