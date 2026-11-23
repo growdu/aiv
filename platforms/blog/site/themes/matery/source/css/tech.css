@@ -65,7 +65,7 @@ header .brand-logo h1.logo-span {
    tools/build-learning-path.py 生成的 Markdown。这里只管**索引页特有**的
    那几件事：面包屑、阶段标题、以及「一篇文章一行」的长清单分两栏排。
 
-   为什么清单要分两栏：db-internals 的 L7（逻辑复制与流式）有 85 篇，
+   为什么清单要分两栏：postgresql 的 L7（逻辑复制与流式）有 85 篇，
    一栏排下来是一屏接一屏 —— 读者根本看不到这条赛道到底有多厚，
    更看不到「我读到第几篇了」。
    ------------------------------------------------------------------------- */
@@ -251,10 +251,10 @@ body.DarkMode .learning-page__crumb a:focus-visible {
 }
 
 /* 赛道配色：每条赛道一个色（--lane-color 描边/图标/链接，--lane-tint 淡底） */
-.lane-card--db-internals   { --lane-color: #00796b; --lane-tint: rgba(0, 121, 107, .12); }
+.lane-card--postgresql   { --lane-color: #00796b; --lane-tint: rgba(0, 121, 107, .12); }
 .lane-card--distributed    { --lane-color: #6a1b9a; --lane-tint: rgba(106, 27, 154, .12); }
-.lane-card--linux-network  { --lane-color: #1565c0; --lane-tint: rgba(21, 101, 192, .12); }
-.lane-card--dataplane      { --lane-color: #ef6c00; --lane-tint: rgba(239, 108, 0, .12); }
+.lane-card--linux         { --lane-color: #1565c0; --lane-tint: rgba(21, 101, 192, .12); }
+.lane-card--dpdk          { --lane-color: #ef6c00; --lane-tint: rgba(239, 108, 0, .12); }
 .lane-card--ai-tools       { --lane-color: #c2185b; --lane-tint: rgba(194, 24, 91, .12); }
 .lane-card--engineering    { --lane-color: #2e7d32; --lane-tint: rgba(46, 125, 50, .12); }
 .lane-card--life           { --lane-color: #6d4c41; --lane-tint: rgba(109, 76, 65, .12); }

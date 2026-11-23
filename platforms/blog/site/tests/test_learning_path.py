@@ -41,6 +41,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -97,6 +98,43 @@ def _unit_ids() -> list[str]:
 def test_track_ids_are_unique(rules):
     ids = [t["id"] for t in rules["tracks"]]
     assert len(ids) == len(set(ids)), f"赛道 id 重复：{ids}"
+
+
+def test_source_tracks_are_named_after_their_direction(rules):
+    """赛道 id 是**方向名**，不是搬内容时的内部叫法。
+
+    `db-internals` / `linux-network` / `dataplane` 是搬家时用的内部叫法，
+    而赛道 id 进了 URL（`/learning/<id>/`）与 CSS class——**读者看得到**。
+    """
+    ids = {t["id"] for t in rules["tracks"]}
+    assert {"postgresql", "linux", "dpdk"} <= ids
+    assert not ({"db-internals", "linux-network", "dataplane"} & ids), (
+        "赛道 id 还是搬家时的内部叫法——它进 URL，读者看得到"
+    )
+
+
+def test_every_track_id_is_a_legal_slug(rules):
+    """赛道 id 进了 URL，也进了 CSS class——它必须是合法 slug。"""
+    for track in rules["tracks"]:
+        assert re.fullmatch(r"[a-z0-9-]+", track["id"]), track["id"]
+
+
+def test_every_track_has_exactly_one_lane_color(rules):
+    """赛道 id 换了名，CSS 里的 class 名也得跟着换。
+
+    不换的后果很具体：那条赛道**掉回默认色**
+    （`var(--lane-color, #009688)`）——页面看上去还是好的，
+    只是几条赛道撞了色，谁也说不清哪条是哪条。
+    """
+    css = (SITE_ROOT / "themes" / "matery" / "source" / "css"
+           / "tech.css").read_text(encoding="utf-8")
+    classes = set(re.findall(r"\.lane-card--([a-z0-9-]+)", css))
+    ids = {t["id"] for t in rules["tracks"]}
+    assert classes == ids, (
+        "赛道配色与赛道 id 对不上："
+        f"CSS 里有而规则表里没有 {sorted(classes - ids)}；"
+        f"规则表里有而 CSS 里没有 {sorted(ids - classes)}"
+    )
 
 
 def test_stage_ids_increase_within_a_track(rules):

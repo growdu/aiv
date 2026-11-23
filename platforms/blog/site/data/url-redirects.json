@@ -1,1 +1,5 @@
-{}
+{
+  "/learning/db-internals/": "/learning/postgresql/",
+  "/learning/linux-network/": "/learning/linux/",
+  "/learning/dataplane/": "/learning/dpdk/"
+}
