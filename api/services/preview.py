@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import socket
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
@@ -22,6 +23,10 @@ RULES_PATH = REPO_ROOT / "rules" / "urls.json"
 #: 站点 dev server 的默认地址与端口。
 HOST = "127.0.0.1"
 PORT = 4000
+
+#: dev server 的日志落点。**在仓库之外**——平台的唯一写点是 `drafts/`，
+#: 站点目录是别的模块的地盘（规格 §十一：平台只是观察窗）。
+DEV_SERVER_LOG = Path(tempfile.gettempdir()) / "creation-platform-site-dev-server.log"
 
 
 def load_rules(path: Path = RULES_PATH) -> dict:
@@ -73,7 +78,8 @@ def ensure_site_server(*, port: int = PORT, host: str = HOST,
     if not (SITE_DIR / "node_modules" / "hexo-server").exists():
         return False, "站点还没装 hexo-server：cd platforms/blog/site && npm install"
 
-    log_path = SITE_DIR / ".dev-server.log"
+    # 日志**不落在仓库里**——平台的唯一写点是 `drafts/`。
+    log_path = DEV_SERVER_LOG
     try:
         log = open(log_path, "ab")
     except OSError as exc:

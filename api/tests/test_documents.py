@@ -75,3 +75,13 @@ def test_the_preview_route_reports_whether_the_server_is_up(client, monkeypatch)
     body = client.get("/api/documents/a/b/preview").json()
     assert body["url"] == "http://127.0.0.1:4000/docs/a/b/"
     assert body["running"] is True
+
+
+def test_the_dev_server_log_does_not_land_in_the_repo():
+    """dev server 的日志**不写进仓库**。
+
+    平台的唯一写点是 `drafts/`——站点目录是别的模块的地盘，
+    往里扔一个日志文件就等于在别人的目录里留东西。
+    """
+    repo = preview.REPO_ROOT.resolve()
+    assert not preview.DEV_SERVER_LOG.resolve().is_relative_to(repo)
