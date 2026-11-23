@@ -27,10 +27,10 @@
 | 模块 | 一级目录 | 二级目录（如有） | 它拥有 | 验收命令 |
 |------|----------|------------------|--------|----------|
 | **草稿层** | `drafts/` | —— | 在改的稿子（未过审） | ——（无测试，靠 `review/` 守） |
-| **母稿层** | `docs/` | —— | 已过审的文档母稿 | `cd tools && python3 -m pytest tests/ -q` |
+| **母稿层** | `docs/` | —— | 已过审的文档母稿 | `cd . && python3 -m pytest tests/ -q`（编译器在根 `tests/` 里测） |
 | **视频母稿层** | `video/` | `episodes/`、`pipeline/`、`brand/`、`character/`、`music/`、`voice/`、`scripts/`、`review/` | 视频生产全链 | `cd video/pipeline && python3 -m pytest tests/ -q` |
 | **审校层** | `review/` | `specs/`、`plans/`、`scope/` | 什么算「已过审」的判据 | ——（判据是文档，不是测试） |
-| **编译器** | `tools/` | —— | `docs/` → `content/units/`；`video/` → `content/units/video/` | `cd tools && python3 -m pytest tests/ -q` |
+| **编译器** | `tools/` | —— | `docs/` → `content/units/`；`video/` → `content/units/video/` | `cd . && python3 -m pytest tests/ -q`（编译器在根 `tests/` 里测） |
 | **站点** | `platforms/blog/` | `site/`（hexo+matery 工程）、`docs/` | 站点平台 adapter + hexo 构建链 | `cd platforms/blog/site && python3 -m pytest tests/ -q` |
 | **平台适配层** | `platforms/` | `wechat/`、`toutiao/`、`bilibili/`、`channels/`、`douyin/` | 五个第三方平台 adapter | 各自目录内 `python3 -m pytest tests/ -q` |
 | **契约与发布层** | `publish/` | `publishkit/`、`spec/`、`deploy/`、`plans/` | 能力模型、内容契约、发布清单、调度、规格 | `cd publish && python3 -m pytest tests/ -q` |
@@ -85,11 +85,11 @@ publish/publishkit/                  契约层：出包、调度、快照
   │
 platforms/bilibili/ channels/ douyin/ 三个视频平台 adapter
   │
-outbox/<系列>-<合集>-<文档>-<档位>__<平台>.json  发布快照（入库）
+platforms/<平台>/outbox/<系列>-<合集>-<文档>-<档位>__<平台>.json  发布快照（入库）
 ```
 
 **关键缝**：期目录（`video/episodes/`）、`video/config.toml`（身份与素材路径）、
-`outbox/*.json`（扁平快照目录）、`content/units/video/`（视频内容单元）。
+`platforms/<平台>/outbox/*.json`（扁平快照目录，每个视频平台各一份）、`content/units/video/`（视频内容单元）。
 
 ---
 

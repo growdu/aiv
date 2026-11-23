@@ -3,6 +3,7 @@
 **规则是谁的**：本模块的。它以前不是——早先 `wechat/hexo.py` 用
 `importlib` 去加载站点的 `sync-hexo.py`，只为了借用它里面的 `slugize`。
 那个脚本在 2026-11-18 站点重做（hexo → Astro）时删掉了，规则留在了这里。
+（站点 2026-11-20 又换回 Hexo + matery，但那是**重写**过的一套，没把这个脚本搬回来。）
 
 **规则没变**：搬过来的是一个字都没改的实现，跟被删掉的那个脚本逐字一致
 （NFKD 归一化 → 去掉组合记号 → 去掉控制字符 → 特殊字符折叠成分隔符 →
@@ -12,8 +13,9 @@
     slugize("PostgreSQL 源码修炼之路")    == "PostgreSQL-源码修炼之路"
     slugize("Hello, World!")             == "Hello-World"
 
-⚠️ **这是 adapter 的规则，不是站点的规则。** 站点（Astro）自己的 URL 规则
-在 `platforms/blog/site/src/lib/urls.ts` 里，只有一处，两边不要互相模仿。
+⚠️ **这是 adapter 的规则，不是站点的规则。** 站点自己的 URL 规则在
+`platforms/blog/site/tools/urls.py` 里（读全仓库唯一那份 `rules/urls.json`），
+只有一处，两边不要互相模仿。
 """
 
 from __future__ import annotations

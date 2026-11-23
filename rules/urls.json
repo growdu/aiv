@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "全仓库唯一的 URL 形状规则。站点（TypeScript）、根 tools/ 与契约层（Python）都读这一份——**形状只有一份，读取器各归各层**。改这里要连带改站点的路由目录与导航（见 rules/README.md）。",
+  "note": "全仓库唯一的 URL 形状规则。站点（platforms/blog/site/tools/urls.py，Python）、根 tools/ 与契约层（Python）都读这一份——**形状只有一份，读取器各归各层**。改这里要连带改站点的路由目录与导航（见 rules/README.md）。",
   "doc_prefix": "/docs/",
   "video_prefix": "/videos/",
   "video_id_prefix": "video/",

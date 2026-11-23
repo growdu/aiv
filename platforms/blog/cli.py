@@ -61,7 +61,7 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 from url_rules import unit_url  # noqa: E402
 
 #: 站点在公开互联网上的地址。**由使用者给**，框架不写死：
-#: 环境变量 `SITE_URL`（Astro 构建与 CI 用的也是同一个变量）。
+#: 环境变量 `SITE_URL`（Hexo 构建与 CI 用的也是同一个变量）。
 #: 没配 = 还没上线，status 里如实说「未配置」。
 SITE_URL_ENV = "SITE_URL"
 
@@ -263,7 +263,7 @@ def _check(content_id: str) -> int:
 
     1. **母稿在不在** —— `docs/` 里（已过审）还是在 `drafts/` 里（在改，没过审）；
     2. **编译器收不收** —— `tools/build-content-units.py --only`；
-    3. **地址是什么** —— `site/src/lib/urls.ts` 的规则；
+    3. **地址是什么** —— 共享规则 `rules/urls.json`（站点侧 `site/tools/urls.py` 读同一份）；
     4. **归到学习流的哪一格** —— 归不上就是**构建断掉**（漏归类不许静默）。
     """
     unit_id = content_id.strip().lstrip("/")
@@ -271,7 +271,8 @@ def _check(content_id: str) -> int:
         unit_id = unit_id[:-3]
 
     # 视频单元不是从 docs/ 编译的——它是视频线自己的产物
-    # （母稿在 `video/字幕-<主题>.md`，见 `tools/build-video-pages.py`）。
+    # （母稿在 `video/episodes/<系列>/<合集>/<文档>/<档位>/口播稿.md`，
+    # 见 `tools/build-video-pages.py`）。
     if unit_id.startswith("video/"):
         return _check_video(unit_id)
 
@@ -331,7 +332,8 @@ def _check_video(unit_id: str) -> int:
     """预检一期视频能不能进站。
 
     视频单元的母稿不在 `docs/`，在视频线自己的目录里
-    （`video/字幕-<主题>.md`），由 `tools/build-video-pages.py` 编成内容单元。
+    （`video/episodes/<系列>/<合集>/<文档>/<档位>/口播稿.md`），
+    由 `tools/build-video-pages.py` 编成内容单元。
     """
     path = CONTENT_UNITS_DIR / (unit_id + ".md")
     if not path.is_file():
