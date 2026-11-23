@@ -4,7 +4,7 @@
 # 自己编译容易踩坑：
 #
 #   sudo apt-get install -y python3-cairo python3-numpy python3-pil \
-#                          python3-scipy python3-pytest
+#                          python3-scipy python3-yaml python3-pytest
 #
 # 系统包装不上时再走 pip：
 #
@@ -18,3 +18,5 @@ numpy>=1.21
 Pillow>=9.0
 scipy>=1.7
 pytest>=7.0
+# 讲稿骨架是 YAML（`pyv/skeleton.py`）。
+PyYAML>=6.0

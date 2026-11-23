@@ -12,10 +12,11 @@
 video/pipeline/
 ├── Makefile         # validate → brand → render → compose（默认 all）
 ├── requirements.txt
-├── pyv/             # 渲染引擎（29 个模块）
+├── pyv/             # 渲染引擎（30 个模块）
 │   ├── cli.py       # 命令行入口
 │   ├── episodes.py  # 期坐标（四层：系列/合集/文档/档位）
 │   ├── epmeta.py    # 元数据/退出码读取
+│   ├── skeleton.py  # 讲稿骨架（文档级）+ 三档裁剪
 │   ├── contract.py  # 画面契约校验
 │   ├── align.py timeline.py compose.py render.py draw.py ...
 │   ├── scenes/      # 各场景绘制（s01_intro.py、s02_*、s03_*…）

@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1071 passed / 60 skipped | 1071 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1085 passed / 60 skipped | 1085 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -105,6 +105,15 @@
 | 2026-11-23（第一篇稿子进 `docs/` 那轮） | 121 | 89 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
 | 2026-11-23（`epmeta` 变通用加载器那轮） | 121 | 107 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1071 / 60 skip | 77 | 59 |
 | 2026-11-23（赛道改名 + Ceph 筹备中那轮） | 121 | 115 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1071 / 60 skip | 77 | 59 |
+| 2026-11-23（讲稿骨架那轮） | 121 | 115 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
+
+> 2026-11-23（讲稿骨架那轮）：**视频线 +14 条**——`pyv/skeleton.py` 落地
+> （骨架解析 + 按 role 裁三档）：一条守卫钉住 `ROLE_TIERS` 是《长视频三档》§5.2
+> 那张表的**逐格照抄**（自己发挥的话，裁出来的片子跟规格说的不是一回事，
+> 而片子看上去仍然是「正常的视频」）；一条钉住段序不动；
+> 一条钉住**不认识的 role 要报错**（`mechanim` 少个 s，那一段会在三档里
+> 同时消失，而页面上看不出来）；一条钉住不按字数截断。
+> **其余九套件一条没动。**
 
 > 2026-11-23（赛道改名 + Ceph 筹备中那轮）：**站点 +8 条**——① 赛道改名
 > （`db-internals` → `postgresql`、`linux-network` → `linux`、
