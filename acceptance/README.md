@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1109 passed / 60 skipped | 1109 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1115 passed / 60 skipped | 1115 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -113,6 +113,16 @@
 | 2026-11-23（BGM 铺底循环那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1101 / 60 skip | 77 | 59 |
 | 2026-11-23（混音不重编码那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1103 / 60 skip | 77 | 59 |
 | 2026-11-23（align DP 剪枝那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1109 / 60 skip | 77 | 59 |
+| 2026-11-23（字幕改二分那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1115 / 60 skip | 77 | 59 |
+
+> 2026-11-23（字幕改二分那轮）：**video +6 条**——新文件
+> `video/pipeline/tests/test_subtitle_lookup.py`：字幕事件定位从「每帧从头扫」改成二分。
+> 完整版 600 条字幕 × 5 万帧 = 3,000 万次比较。
+> ⚠️ 计划里那条**计时守卫抓不住东西**——本机线性扫 5 万次只要 0.54 秒，
+> 落在 2 秒阈值里，换不换实现都绿。所以另加一条**数属性访问次数**的守卫：
+> 1000 次查找允许读 1 万次，线性扫读了 111550 次，二分只读约 2000 次。
+> 另有守卫盯着「事件重叠时语义不许变」——二分挑的是「最后一条起点不晚于 t 的」，
+> 与线性扫的「第一条命中的」在重叠时不一样，所以那种输入退回线性扫。
 
 > 2026-11-23（align DP 剪枝那轮）：**video +6 条**——新文件
 > `video/pipeline/tests/test_align_scaling.py`：旁白对齐的 DP 从
