@@ -80,13 +80,13 @@
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
-| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 121 passed | 121 passed |
-| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 119 passed | 119 passed |
+| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫、内容坐标与层间边界 | 125 passed / 3 skipped | 125 passed / 3 skipped |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 125 passed / 1 skipped | 125 passed / 1 skipped |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1085 passed / 60 skipped | 1085 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1092 passed / 60 skipped | 1092 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -108,6 +108,20 @@
 | 2026-11-23（讲稿骨架那轮） | 121 | 115 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
 | 2026-11-23（学习流视频条目那轮） | 121 | 116 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
 | 2026-11-23（筹备中标记那轮） | 121 | 119 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
+| 2026-11-23（总验收那轮） | 125 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
+
+> 2026-11-23（总验收那轮）：**坐标系的 19 条验收逐条落成守卫**。
+>
+> | 套件 | 变化 | 落了什么 |
+> | --- | --- | --- |
+> | 根 `tests/` | +4 | 新文件 `test_coordinate_system.py`：期号与内容单元一一对应（**编译器撞了期号当场退出 1**）、每一期都有内容单元、内容单元仓库不在任何平台目录里、上游不伸手进平台目录也不 import 平台包 |
+> | 站点 | +6 | 源码方向的「阶段 = 系列目录」一一对应（正向 + 反向）、学习流里一个视频单元只出现一次、旧地址逐条有跳转（**手工验过的那条变成守卫**）、跳转目标得有页面、跳转页要真发出去 |
+> | 视频流水线 | +7 | 坐标与口播稿对得上：`tier` 对目录第四层、`episode` 对目录前三层、期号不重复、每篇文档都有 short 档 |
+> | 其余六套件 | 一条没动 | —— |
+>
+> **三处「跳过」是有原因的**（不是用例消失了）：
+> 根的三条要**有期**才有话说（视频线今天还是空的），
+> 站点的一条要 `docs/source-tracks/` 在（源码方向的内容还没搬进来）。
 
 > 2026-11-23（筹备中标记那轮）：**站点 +3 条**——筹备中的赛道在
 > 总览页、赛道页与首页赛道卡上都挂「筹备中」徽标（虚线顶边 + 灰调徽标）：
