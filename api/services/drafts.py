@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 from .paths import (
@@ -14,6 +16,7 @@ from .paths import (
     DRAFTS_DIR,
     EPISODE_FACT_FILES,
     PUBLISH_NAME,
+    REPO_ROOT,
     SCRIPT_NAME,
     SKELETON_NAME,
     TIERS,
@@ -29,6 +32,10 @@ class DraftNotFound(LookupError):
 
 class DraftExists(ValueError):
     """这一号已经在草稿箱里了。"""
+
+
+class PromoteError(ValueError):
+    """这一稿不能过审（形状不对，或没到能过审的时候）。"""
 
 
 def _safe_child(unit_path: Path, name: str) -> Path:
@@ -150,3 +157,106 @@ def create_unit(kind: str, *, draft_id: str, title: str = "",
                          files=(SKELETON_NAME,))
 
     raise ValueError(f"不认识的单元种类：{kind!r}")
+
+
+# ── 过审 = 只复制 ───────────────────────────────────────────────────────
+
+#: 复制之后**还要人手工做的三步**。门面不做，也不许假装做了。
+MANUAL_STEPS = (
+    "建/更新审校记录（review/<镜像路径>.md 或期目录下的 review.md）",
+    "补 review/INDEX.md 与 video/review/INDEX.md 的行（两个守卫要求与磁盘集合相等）",
+    "提交（文档流的守卫 G-01 要求 docs/ 里每一篇都有 status: 已合入 的记录）",
+)
+
+
+@dataclass(frozen=True)
+class PromoteResult:
+    """过审的结果：复制了哪些文件，还欠人做哪几步。"""
+
+    kind: str
+    targets: tuple[str, ...]
+    overwritten: tuple[str, ...]
+    manual_steps: tuple[str, ...]
+
+
+def _copy_fact(source: Path, target: Path, repo_root: Path) -> tuple[str, bool]:
+    """复制一个入库事实。
+
+    返回 `(相对仓库根的 posix 路径, 是不是覆盖了不同的旧内容)`。
+    """
+    existed = target.exists()
+    differs = existed and target.read_bytes() != source.read_bytes()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, target)
+    return target.relative_to(repo_root).as_posix(), differs
+
+
+def promote_unit(unit: DraftUnit, *, repo_root: Path = REPO_ROOT) -> PromoteResult:
+    """把草稿**复制**进母稿层。
+
+    **只复制入库事实**（全局约束 5）：
+
+    - `document` → `docs/<draft_id>.md`
+    - `skeleton` → `video/episodes/<文档路径>/skeleton.yaml`
+    - `episode` → `video/episodes/<期路径>/{口播稿.md,contract.json,publish.json}`
+
+    **不复制**旁白、时间轴、渲染帧——它们是产物，跟过去会撞
+    `EPISODE_PRODUCT_PATTERNS` 守卫。
+
+    **复制不是移动**：草稿留在原地。**不写审校记录、不补 INDEX、不 commit**
+    ——那三步由人做（`MANUAL_STEPS`）。
+
+    `index` / `bundle` / `unknown` / `readme` → `PromoteError`：
+    索引页照抄会造站内死链，bundle 稿要引用解析器，形状对不上就没法过。
+    """
+    repo_root = Path(repo_root)
+    targets: list[str] = []
+    overwritten: list[str] = []
+
+    def copy_one(source: Path, target: Path) -> None:
+        rel, differs = _copy_fact(source, target, repo_root)
+        targets.append(rel)
+        if differs:
+            overwritten.append(rel)
+
+    if unit.kind == "document":
+        names = [n for n in unit.files if n.endswith(".md")]
+        if not names:
+            raise PromoteError(f"{unit.draft_id} 里没有 .md 文件，没什么可复制的")
+        for name in names:
+            source = unit.path / name
+            if not source.is_file():
+                continue
+            copy_one(source, repo_root / "docs" / f"{unit.draft_id}.md")
+
+    elif unit.kind == "skeleton":
+        source = unit.path / SKELETON_NAME
+        if not source.is_file():
+            raise PromoteError(f"{unit.draft_id} 里没有 {SKELETON_NAME}")
+        doc_path = unit.draft_id
+        if doc_path.startswith(f"{VIDEO_DRAFT_PREFIX}/"):
+            doc_path = doc_path[len(VIDEO_DRAFT_PREFIX) + 1:]
+        copy_one(source, repo_root / "video" / "episodes" / doc_path / SKELETON_NAME)
+
+    elif unit.kind == "episode":
+        episode = unit.draft_id
+        if episode.startswith(f"{VIDEO_DRAFT_PREFIX}/"):
+            episode = episode[len(VIDEO_DRAFT_PREFIX) + 1:]
+        for name in EPISODE_FACT_FILES:
+            source = unit.path / name
+            if not source.is_file():
+                continue
+            copy_one(source, repo_root / "video" / "episodes" / episode / name)
+        if not targets:
+            raise PromoteError(f"{unit.draft_id} 里没有入库事实（{EPISODE_FACT_FILES}）")
+
+    else:
+        raise PromoteError(
+            f"{unit.kind} 形态的稿子这一版不能过审："
+            "索引页照抄会造站内死链，bundle 稿要引用解析器，"
+            "形状对不上的东西就没法进母稿层"
+        )
+
+    return PromoteResult(kind=unit.kind, targets=tuple(targets),
+                         overwritten=tuple(overwritten),
+                         manual_steps=MANUAL_STEPS)
