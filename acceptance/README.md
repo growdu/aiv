@@ -74,15 +74,14 @@
 
 ## 三、每条命令跑什么、Expected 是什么
 
-数字是 **2026-11-22** 合并 `feature/interfaces-debts`（站点以 hexo+matery 为准）
-之后**逐条单独跑**量出来的。
+数字是 **2026-11-23**（站点以 hexo+matery 为准）**逐条单独跑**量出来的。
 **归位之后，总数必须与合并跑时一致**——少一条就是某条用例消失了，
 多一条就是某个目录被收集了两次。
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
 | 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 121 passed | 121 passed |
-| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏 | 86 passed | 86 passed |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染 | 89 passed | 89 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 348 passed / 1 skipped | 348 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
@@ -103,6 +102,12 @@
 | 2026-11-19（还 §五 欠账那轮） | 114 | 59 / 1 skip | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
 | 2026-11-23（README 保留名那轮） | 117 | 86 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
 | 2026-11-23（发布意图透传那轮） | 121 | 86 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
+| 2026-11-23（第一篇稿子进 `docs/` 那轮） | 121 | 89 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
+
+> 2026-11-23 最后一轮：**站点 +3 条**——目录页的 layout 渲染出错被 Hexo 吞成
+> **0 字节的空页面**（`site.posts` 是 Query 不是数组、`permalink` 两种形状
+> 对不上），新守卫钉住「产物里不许有空页面 / 不许有不是完整 HTML 的页面 /
+> 目录页必须列得出自己的直接子级」。其余九套件一条没动。
 
 > 口径说明：站点换 hexo 那轮与还 §五 欠账那轮在两条分支上**并行**发生。
 > 合并后站点以 hexo+matery 为准：hexo 的 79 条 + 还欠账那轮里仍适用的
