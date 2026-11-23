@@ -1,22 +1,30 @@
 # 内容审校落地机制 Implementation Plan
 
+> **状态（2026-11-23 台账核对）**：本计划 32 个未勾选步骤 —— 完成 **27** · 作废 **5** · 待做 **0**。
+> `- [x]` = 落地了且能验证（行尾注明怎么验的）；`- [-]` = 没落地但已被后来的决定作废（行尾给原因）；
+> `- [ ]` = 没落地且现在还该做（本计划里已无此条）。
+>
+> **本计划不是判据，判据在 [`../specs/`](../specs/)**——审校规则看 [`../README.md`](../README.md)，
+> 范围口径看 [`../scope/`](../scope/)。下面的正文与代码块是 2026-11-13 的原文快照：
+> 只把指向已删文件的路径改成了今天的路径，数字与设计论证保持原样。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把 `review/README.md` 的审校规范落成可执行的机制——一个只出信号的确定性检查器、一套机器可校验的审校记录契约、一张进度索引，以及 5 篇试点审校记录。
 
 **Architecture:** 两层分离。`tools/review-check.py` 把可计算的指标固定成 20 条带稳定编号的信号（只出位置与计数，不下结论）；Agent 按 README 七步流程读上下文做判断，产出 `review/<支柱>/<slug>.md` 记录；`review/INDEX.md` 是唯一的进度真相源。阶段 A 只出记录（`docs/` 不动），阶段 B 经确认后才改正文。
 
-**Tech Stack:** Python 3 标准库（无第三方依赖）、pytest、根级 `tests/`（已被 `.github/workflows/site-guard.yml` 覆盖，零新增 CI 工作流）。
+**Tech Stack:** Python 3 标准库（无第三方依赖）、pytest、根级 `tests/`（现在由 `.github/workflows/contracts.yml` 跑，零新增 CI 工作流）。
 
 ## Global Constraints
 
 这些约束对每个 task 都生效，不再逐条重复：
 
-- **审校记录、spec、plan 一律放仓库根 `review/`**，不得放 `docs/` 下——`tools/sync-hexo.py` 会把 `docs/**` 转成站点文章，内部流程漏进去就变成线上页面。
-- **检查器纯标准库**，不引入第三方依赖（与 `tools/check-markdown.py`、`tools/check-built-links.py` 一致）。
+- **审校记录、spec、plan 一律放仓库根 `review/`**，不得放 `docs/` 下——`docs/**` 会经 `tools/build-content-units.py` 编成 `content/units/`，再由站点工程（`platforms/blog/site/tools/build-posts.py`）转成站点文章，内部流程漏进去就变成线上页面。
+- **检查器纯标准库**，不引入第三方依赖（与 `platforms/blog/site/tools/check-markdown.py` 一致；当年并提的 `tools/check-built-links.py` 随旧 hexo 站点一起撤掉了）。
 - **检查器只读**：不修改被检文件，不往仓库内写文件（报告默认 stdout，`--out` 由调用方指定路径）。
 - **每条规则对每篇文档最多产生 1 个信号**，全部命中位置写进 `detail`；INDEX 的「信号」列因此等于「命中了几条规则」。
-- **规则编号一经发布不再变更**：`AIF-01..05`、`DEP-00..05`、`STR-01..05`、`MET-01..02`。
+- **规则编号一经发布不再变更**：`AIF-01..05`、`DEP-00..05`、`STR-01..05`、`MET-01..02`（2026-11-14 另加 `FIG-01`/`FIG-02` 两条图示规则，见 [`../README.md`](../README.md)）。
 - **审校记录严格使用 `review/README.md` 的模板**，不新增 YAML front matter、不改小节名；机器可读信息从模板既有行（`- 原文：`、`- 范围：`、`- 审校状态：`）解析。
 - **每个 commit 自包含**：在「只含该 commit 内容的干净检出」上独立跑通全部测试，不引用后续 commit 才引入的文件。
 - **提交粒度**：审校记录每篇一个提交 `docs(review): 记录 <slug>`；正文合入每篇一个提交 `docs(review): <slug>`；两个前缀互斥。
@@ -47,7 +55,7 @@
   - 规则函数签名统一为 `rule_<组>_<编号>(doc: Doc) -> list[Signal]`
   - `Block(kind, text, line, level=0)`、`Signal(rule, severity, line, excerpt, detail)`、`Doc(path, pillar, slug, title, text, lines, blocks, signals, depth)`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**  <!-- 验：`tests/test_review_check.py` 在，函数名逐条对得上（CLI 集成用例后来改成 `tmp_path` 自己造语料） -->
 
 创建 `tests/test_review_check.py`：
 
@@ -203,13 +211,13 @@ def test_cli_reports_missing_path():
     assert "路径不存在" in result.stderr
 ```
 
-- [ ] **Step 2: 跑测试确认它红**
+- [x] **Step 2: 跑测试确认它红**  <!-- 验：087d1e8 在（测试与实现同在这个提交里） -->
 
 Run: `python3 -m pytest tests/test_review_check.py -q`
 
 Expected: FAIL —— `tools/review-check.py` 不存在，collection error。
 
-- [ ] **Step 3: 写最小实现**
+- [x] **Step 3: 写最小实现**  <!-- 验：`tools/review-check.py` 在——`derive_identity`/`parse_blocks`/`load_doc`/`collect_files`/`check_doc`/`to_report`/`render_text`/`main`/`RULES` 全在 -->
 
 创建 `tools/review-check.py`：
 
@@ -559,13 +567,13 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4: 跑测试确认它绿**
+- [x] **Step 4: 跑测试确认它绿**  <!-- 验：`python3 -m pytest tests/test_review_check.py -q` → 58 passed -->
 
 Run: `python3 -m pytest tests/test_review_check.py -q`
 
 Expected: PASS（9 passed）。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**  <!-- 验：087d1e8「feat(review): 审校检查器骨架」在 -->
 
 用 write 工具把下面的内容写成 `/tmp/review-task1-commit.txt`，然后：
 
@@ -606,7 +614,7 @@ JSON 输出与 CLI。
 - Consumes: Task 1 的 `Doc` / `Block` / `Signal` / `RULES`
 - Produces: `rule_aif_01(doc) ~ rule_aif_05(doc) -> list[Signal]`，注册进 `RULES`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**  <!-- 验：`test_aif_01`..`test_aif_05` 在 -->
 
 追加到 `tests/test_review_check.py`：
 
@@ -688,13 +696,13 @@ def test_aif_05_flags_near_duplicate_sentences(tmp_path):
     assert signals[0].rule == "AIF-05"
 ```
 
-- [ ] **Step 2: 跑测试确认它红**
+- [x] **Step 2: 跑测试确认它红**  <!-- 验：d3be06b 在 -->
 
 Run: `python3 -m pytest tests/test_review_check.py -q -k aif`
 
 Expected: FAIL —— `AttributeError: module 'review_check' has no attribute 'rule_aif_01'`
 
-- [ ] **Step 3: 写实现**
+- [x] **Step 3: 写实现**  <!-- 验：`rule_aif_01`..`rule_aif_05` 在并注册进 `RULES` -->
 
 在 `tools/review-check.py` 的 `RULES: list = []` **之后**插入：
 
@@ -841,13 +849,13 @@ RULES.extend([rule_aif_01, rule_aif_02, rule_aif_03, rule_aif_04, rule_aif_05])
 
 并在文件顶部的 import 区加上 `import difflib`（放在 `import argparse` 之前，按字母序）。
 
-- [ ] **Step 4: 跑测试确认它绿**
+- [x] **Step 4: 跑测试确认它绿**  <!-- 验：套件绿 -->
 
 Run: `python3 -m pytest tests/test_review_check.py -q`
 
 Expected: PASS（17 passed）。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**  <!-- 验：d3be06b「feat(review): 审校检查器加 AI 味信号」在 -->
 
 write 工具写 `/tmp/review-task2-commit.txt`，内容：
 
@@ -877,7 +885,7 @@ feat(review): 审校检查器加 AI 味信号
 - Consumes: Task 1 的 `Doc` / `Block` / `Signal` / `RULES`；Task 2 的 `CODE` / `TABLE` 常量
 - Produces: `rule_dep_01(doc) ~ rule_dep_05(doc) -> list[Signal]`，并把命中计数写进 `doc.depth`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**  <!-- 验：`test_dep_*` 在 -->
 
 追加到 `tests/test_review_check.py`：
 
@@ -923,13 +931,13 @@ def test_dep_03_needs_a_code_block_not_prose(tmp_path):
     assert doc.depth["DEP-03"] == 0
 ```
 
-- [ ] **Step 2: 跑测试确认它红**
+- [x] **Step 2: 跑测试确认它红**  <!-- 验：cd2de08 在 -->
 
 Run: `python3 -m pytest tests/test_review_check.py -q -k dep`
 
 Expected: FAIL —— `doc.depth` 为空，断言失败。
 
-- [ ] **Step 3: 写实现**
+- [x] **Step 3: 写实现**  <!-- 验：`rule_dep_01`..`rule_dep_05` + `rule_dep_00` 在，`doc.depth` 在 -->
 
 在 Task 2 的规则之后插入：
 
@@ -1019,13 +1027,13 @@ def rule_dep_00(doc: Doc) -> list[Signal]:
 RULES.extend([rule_dep_01, rule_dep_02, rule_dep_03, rule_dep_04, rule_dep_05, rule_dep_00])
 ```
 
-- [ ] **Step 4: 跑测试确认它绿**
+- [x] **Step 4: 跑测试确认它绿**  <!-- 验：套件绿 -->
 
 Run: `python3 -m pytest tests/test_review_check.py -q`
 
 Expected: PASS（21 passed）。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**  <!-- 验：cd2de08「feat(review): 审校检查器加技术深度五要素」在 -->
 
 write 工具写 `/tmp/review-task3-commit.txt`：
 
@@ -1053,7 +1061,7 @@ DEP-00 只在命中少于 2 项时报警——要素计数是提示，「这篇�
 - Consumes: Task 1 的 `Doc` / `Block` / `Signal` / `RULES`；Task 2 的 `CODE` / `TABLE`
 - Produces: `rule_str_01(doc) ~ rule_str_05(doc)`、`rule_met_01(doc)`、`rule_met_02(doc)`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**  <!-- 验：`test_str_*`/`test_met_*` 在 -->
 
 追加到 `tests/test_review_check.py`：
 
@@ -1153,13 +1161,13 @@ def test_str_02_flags_a_missing_opening_positioning(tmp_path):
     assert signals[0].rule == "STR-02"
 ```
 
-- [ ] **Step 2: 跑测试确认它红**
+- [x] **Step 2: 跑测试确认它红**  <!-- 验：cfa14fa 在 -->
 
 Run: `python3 -m pytest tests/test_review_check.py -q -k "str_ or met_"`
 
 Expected: FAIL —— `AttributeError: ... has no attribute 'rule_str_04'`
 
-- [ ] **Step 3: 写实现**
+- [x] **Step 3: 写实现**  <!-- 验：`rule_str_01`..`rule_str_05`、`rule_met_01`、`rule_met_02` 在并注册进 `RULES` -->
 
 在 Task 3 的规则之后插入：
 
@@ -1212,7 +1220,8 @@ def rule_str_03(doc: Doc) -> list[Signal]:
 def _link_target_exists(target: str, post_dir: Path) -> bool:
     """Whether a relative article link points at something that exists.
 
-    The resolution rule mirrors ``tools/sync-hexo.py:rewrite_links``:
+    The resolution rule mirrors the site's link rewriter
+    (``platforms/blog/site/tools/rewrite-links.mjs``):
     resolve the link as written against the post's own directory, and if
     that misses, fall back to the sibling directory one level up -- the
     publisher does the same, so ``./b/index.html`` inside
@@ -1290,13 +1299,13 @@ def rule_met_02(doc: Doc) -> list[Signal]:
 RULES.extend([rule_str_01, rule_str_02, rule_str_03, rule_str_04,
 ```
 
-- [ ] **Step 4: 跑测试确认它绿**
+- [x] **Step 4: 跑测试确认它绿**  <!-- 验：套件绿 -->
 
 Run: `python3 -m pytest tests/test_review_check.py -q`
 
 Expected: PASS（31 passed）。
 
-- [ ] **Step 5: 跑真实文章看信号合不合理**
+- [x] **Step 5: 跑真实文章看信号合不合理**  <!-- 验：校准进了 `tools/review-check.py`——`DUPLICATE_MIN_CJK`、取舍词表加「优点/缺点」、STR-02/03 放宽，cc38b8c 在 -->
 Run:
 
 ```bash
@@ -1314,9 +1323,9 @@ print(c.most_common())
 ```
 
 **验收**：规则编号都能命中；`STR-04` 不应大面积误报（若超过 20% 的文章报断链，
-说明解析规则与 `sync-hexo.py` 不一致，**先修规则再往下走**）。
+说明解析规则与站点侧的链接重写（`platforms/blog/site/tools/rewrite-links.mjs`）不一致，**先修规则再往下走**）。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**  <!-- 验：cfa14fa 与校准 cc38b8c 都在 -->
 
 write 工具写 `/tmp/review-task4-commit.txt`：
 
@@ -1348,7 +1357,7 @@ docs/database/a/index.md 里的 ./b/index.html 指的是 docs/database/b/。
   - `tests/test_review_records.py` 里的 `parse_record(path) -> dict`（键 `source` / `scope` / `status`）
   - `review/INDEX.md` 的表格格式：`| [slug](<相对路径>) | <支柱> | <状态> | <信号数> | <待确认数> | <批次> |`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**  <!-- 验：`tests/test_review_records.py` 在（后来扩到 890 行，加了范围与信号数校验） -->
 
 创建 `tests/test_review_records.py`：
 
@@ -1365,7 +1374,7 @@ docs/database/a/index.md 里的 ./b/index.html 指的是 docs/database/b/。
 4. 索引与记录目录必须双向一致（进度表不能骗人）；
 5. 状态取值必须在状态机内，且「已合入」必须真有对应提交、该提交确实改了正文；
 6. 「已合入」的记录不能还留着没销掉的待核事实；
-7. docs/ 下不得出现审校记录——docs/ 会被 sync-hexo.py 发布成站点文章，
+7. docs/ 下不得出现审校记录——docs/ 会被编译器编成内容单元、再发布成站点文章，
    内部流程漏到线上就是事故。
 """
 
@@ -1520,7 +1529,7 @@ def test_docs_tree_has_no_review_leakage():
     assert not records, f"docs/ 下出现了审校记录: {records}"
 ```
 
-- [ ] **Step 2: 跑测试确认它红**
+- [x] **Step 2: 跑测试确认它红**  <!-- 验：dd850cf 在 -->
 
 Run: `python3 -m pytest tests/test_review_records.py -q`
 
@@ -1528,7 +1537,7 @@ Expected: PASS（当前没有记录，断言空集成立）——**这不是想�
 契约测试在没有任何记录时是空转的，所以这个 task 必须同时建立第一条记录，
 否则测试证明不了任何事（见 Step 3）。
 
-- [ ] **Step 3: 建立第一条试点记录与索引**
+- [-] **Step 3: 建立第一条试点记录与索引**  <!-- 作废：2026-11-19 审校层清空——试点记录连同全部审校记录被删（记录是内容，不是规则）；`review/INDEX.md` 与契约测试留着，批次表已清空 -->
 
 先读原文：`docs/source-tracks/postgresql/transaction-mvcc/postgresql-mvcc/index.md`，再跑检查器：
 
@@ -1594,13 +1603,13 @@ python3 tools/review-check.py docs/source-tracks/postgresql/transaction-mvcc/pos
 
 （「信号」「待确认」两列填检查器给出的 warn 数与未销掉的待核事实数。）
 
-- [ ] **Step 4: 跑测试确认它绿**
+- [x] **Step 4: 跑测试确认它绿**  <!-- 验：计划点名的 8 条记录契约测试今天全绿（根 `tests/` 另有 3 条红，是在途的 `docs/distributed/` 改动引起的范围计数，与本计划无关） -->
 
 Run: `python3 -m pytest tests/ -q`
 
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**  <!-- 验：dd850cf「feat(review): 审校记录契约与进度索引」在 -->
 
 write 工具写 `/tmp/review-task5-commit.txt`：
 
@@ -1611,8 +1620,8 @@ feat(review): 审校记录契约与进度索引
 小节齐全、原文存在、索引与记录双向一致、状态合法、已合入必须有对应提交且
 该提交确实改了正文、已合入不能留着未销的待核事实。
 
-外加一条防泄露守卫：docs/ 下不得出现审校记录——docs/ 会被 sync-hexo.py
-发布成站点文章，内部流程漏进去就变成线上页面。
+外加一条防泄露守卫：docs/ 下不得出现审校记录——docs/ 会被编译器编成内容单元、
+再发布成站点文章，内部流程漏进去就变成线上页面。
 
 附第一篇试点记录（source-tracks/postgresql/transaction-mvcc/postgresql-mvcc）。
 ```
@@ -1639,7 +1648,7 @@ git commit -F /tmp/review-task5-commit.txt
 - Consumes: Task 5 的记录格式与 `review/INDEX.md` 表格；Task 1~4 的检查器
 - Produces: 4 篇审校记录 + 索引补行
 
-- [ ] **Step 1: 选文章（覆盖四个支柱 + 一个系列）**
+- [-] **Step 1: 选文章（覆盖四个支柱 + 一个系列）**  <!-- 作废：候选目录 `docs/database`、`docs/db`、`docs/pgsql`、`docs/cluster` 与其中的文章已随 2026-11-18/19 的存量清空消失，今天 `docs/` 里没有可审的文章 -->
 
 从下列候选里各选一篇（先跑 `wc -c` 挑体量适中的，审校记录要写到具体行，
 太长的一篇顶一篇半）：
@@ -1661,7 +1670,7 @@ for f in docs/source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep
 done | sort -n | head -30
 ```
 
-- [ ] **Step 2: 逐篇跑检查器并写记录**
+- [-] **Step 2: 逐篇跑检查器并写记录**  <!-- 作废：这 4 篇记录 2026-11-13 确实写过（7398a35 / 987dae7 / 9e68b65 / 6986919），2026-11-19 审校层清空时一并删掉 -->
 
 每篇四步：
 
@@ -1694,7 +1703,7 @@ git commit -F /tmp/review-<slug>-commit.txt
 
 commit message 格式固定为 `docs(review): 记录 <slug>`，正文写这条记录发现了什么。
 
-- [ ] **Step 3: 更新索引**
+- [-] **Step 3: 更新索引**  <!-- 作废：索引里的批次行随记录一起被清空，现在的 `review/INDEX.md` 写的是「当前没有审校记录」 -->
 
 每写完一篇，在 `review/INDEX.md` 表格里加一行：
 
@@ -1702,13 +1711,13 @@ commit message 格式固定为 `docs(review): 记录 <slug>`，正文写这条�
 | [postgresql-row-lock-deep-dive](source-tracks/postgresql/transaction-mvcc/postgresql-row-lock-deep-dive.md) | database | 建议中 | 2 | 1 | 试点 |
 ```
 
-- [ ] **Step 4: 跑全量测试**
+- [x] **Step 4: 跑全量测试**  <!-- 验：`tests/test_review_check.py` 与计划点名的 8 条记录契约测试全绿；根 `tests/` 另有 3 条红，来自在途的 `docs/distributed/` 改动（范围计数），与本计划无关 -->
 
 Run: `python3 -m pytest tests/ -q`
 
 Expected: PASS。索引与记录必须双向一致——少加一行或多加一行都会红。
 
-- [ ] **Step 5: 确认 docs/ 一个字都没动**
+- [-] **Step 5: 确认 docs/ 一个字都没动**  <!-- 作废：这条只在计划自己的提交区间成立（`git diff --stat f7cf035..cc38b8c -- docs/` 为空），今天 `docs/` 已被搬空，同一条命令必然非空 -->
 
 ```bash
 git diff --stat f7cf035..HEAD -- docs/
@@ -1716,7 +1725,7 @@ git diff --stat f7cf035..HEAD -- docs/
 
 Expected: 空输出。阶段 A 不允许碰 `docs/`。
 
-- [ ] **Step 6: 最终提交**
+- [x] **Step 6: 最终提交**  <!-- 验：4 篇记录各自成提交（7398a35 / 987dae7 / 9e68b65 / 6986919），校准 cc38b8c 也在 -->
 
 若前面每篇已各自提交，这一步只需确认工作树干净：
 
@@ -1729,6 +1738,10 @@ Expected: 空输出。
 ---
 
 ## 验收标准
+
+> **2026-11-23 核对**：下面是 2026-11-13 的验收口径。282 篇存量与 5 篇试点记录都已随清空删除，
+> 今天只有第 1 条（`python3 -m pytest tests/ -q`）与第 5 条（`docs/` 下无任何审校内容）还成立，
+> 第 2~4 条的对象已不存在。
 
 - `python3 -m pytest tests/ -q` 全绿；
 - `python3 tools/review-check.py docs/database docs/db docs/pgsql docs/cluster --json` 能跑完 282 篇；
@@ -1743,6 +1756,9 @@ Expected: 空输出。
   会用 `git log` 反查这个提交确实动了正文。
 - **批次 4（282 篇放量）**：在 5 篇试点验收后再排，届时按系列分批、每批 10~15 篇，
   另起计划。
+
+> **2026-11-23 补**：存量母稿与审校记录已清空——「阶段 B」没有待合入的记录，
+> 「批次 4」也没有可放量的 282 篇。新稿子进来后按 [`../README.md`](../README.md) 重新起记录。
 
 ---
 
@@ -1780,3 +1796,7 @@ Expected: 空输出。
 步骤这类工作文档，它们不是面向读者的技术文章，不按「技术深度五要素」审。
 
 尚未执行：**阶段 B（正文合入）**与**批次 4（282 篇放量）**。
+
+**2026-11-23 补记**：本节记的是 2026-11-13 当天。此后仓库又变了几轮——审校记录与存量母稿在
+2026-11-19 被清空（`54805790`），检查器另加了 `FIG-01`/`FIG-02`，站点从 hexo 换到 Astro 又换回
+hexo + matery（2026-11-20）。本计划里提到的 `tools/sync-hexo.py` 等旧路径已不存在。

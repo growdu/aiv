@@ -1,5 +1,35 @@
 # 目录架构调整 Implementation Plan
 
+> **状态（2026-11-23 核对）**：本计划的 81 个步骤已逐条对过仓库——
+> **56 条已落地**（`- [x]`）、**23 条作废**（`- [-]`）、**2 条待做**（`- [ ]`）。
+>
+> - 复现方式（按优先级）：① 步骤里点了函数/类/字段名的 → 在仓库里 grep 到它；
+>   ② 步骤写了验收命令的 → 跑那个模块的 pytest 套件；③ 步骤写了 `Create: <路径>` 的
+>   → 文件存在**且**能看到该步骤描述的行为（光有文件不算数）。
+> - 2026-11-23 实测：九个套件全绿（根 121 / publish 348+1 skip / 视频流水线 1060+60 skip /
+>   wechat 521+1 skip / toutiao 399+2 skip / douyin 119 / bilibili 77 / channels 59 /
+>   browser 99+64 skip+**1 条环境红** `BrowserUnavailable`——环境没装 playwright，与本计划无关）。
+>   数字与 `acceptance/README.md` 一致。
+> - 计划本体已于 2026-11-17 落地（合并提交 `4e9704cb`），各 Task 的提交分别是
+>   `8ff08afc`（视频线改名）、`613ab2ff`（五个平台收进 platforms/）、
+>   `2a17de0a`（能力声明下沉）、`1a480b27`（发布快照下沉）、`59d719d7`（草稿箱）、
+>   `b25fa75a`（文档回写）。
+> - 那 23 条作废几乎都来自**计划之后的四个决定**，正文里凡是点名的文件今天已不存在：
+>   ① 2026-11-18 视频线清空重来（`video/contracts/`、`video/publish/` 与六期存量删掉，
+>   期身份改成 `video/episodes/<系列>/<合集>/<文档>/<档位>/`）；
+>   ② 2026-11-18 `docs/` 归零（`docs/life/aiv/` 命名空间与 `docs/platform-meta/` 整棵撤出）；
+>   ③ 2026-11-19 发布账本清空（`b948f628`：快照是使用者的账，567 条快照删掉，
+>   每个平台只剩 `outbox/` 目录骨架）；
+>   ④ 站点两轮换栈（Astro → 2026-11-20 换回 Hexo + matery，构建链搬到 `platforms/blog/site/`，
+>   `tools/sync-hexo.py`、`tools/build-publish-index.py`、`tools/patch-theme.py` 都删了）。
+> - 剩下的 **2 条待做**都指向同一件事：`platforms/toutiao/docs/` 里的活文档还写着
+>   `publish/capabilities/toutiao.toml` 与 `publish/outbox/`，Task 7 Step 3 的兜底 grep 因此还不干净。
+>
+> **本计划不是判据，判据在 `review/specs/`**——尤其
+> `review/specs/2026-11-19-整体架构与模块边界.md`（今天的模块边界）与
+> `review/specs/2026-11-17-directory-architecture-design.md`（本计划的设计稿）。
+> 这份文件只记录「当时打算怎么做、做没做成」。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把视频生产线改名成 `video/`、把五个第三方平台收进 `platforms/<plat>/` 按平台划分、把按平台归属的数据（能力声明与发布快照）下沉到平台目录，并新增 `drafts/` 草稿箱入口。
@@ -16,7 +46,9 @@
 
 - **快照文件名 `<content_id>__<platform>.json` 一个字都不改**——它是幂等键，改名等于让已发过的内容被当成没发过。
 - **`docs/life/aiv/` 目录名、`life/aiv/…` 形式的 content id、指向 `life/aiv/` 专题页的站点链接（8 处 `aiv/index.html`，分布在 4 个文件里）一个都不改**——URL 稳定性是硬约束（`publish/spec/00-架构设计.md` §7.4）。
+  <!-- ⚠️ 2026-11-23：这条约束的对象后来整体没了——2026-11-18 `docs/` 归零（8632f8c7），`docs/life/aiv/` 与那 8 处链接一并撤出。 -->
 - **567 个快照的正文不改**——`package_dir` 字段里的旧路径搬迁后会失效，但站点构建不读它，不重写历史发布记录。
+  <!-- ⚠️ 2026-11-23：这 567 个快照后来整体删掉了（2026-11-19 发布账本清空，b948f628）——快照是使用者的账，不是框架的一部分。 -->
 - **目录名 = 平台 id = Python 包名**：`wechat` `toutiao` `douyin` `bilibili` `channels`。五个能力声明文件统一叫 `capability.toml`。
 - **目录改名，标识符里的 AIV 保留**——`AIV_ROOT` 这类常量不改名（AIV 是品牌，还在用）；只有它指向的**目录路径**变。
 - **不改任何平台适配层的业务逻辑**——只改路径、import 与调用点。
@@ -45,7 +77,7 @@
 - Consumes: 无。
 - Produces: 一份「迁移前」的对照数字，Task 4 Step 9 与 Task 7 拿它比对。
 
-- [ ] **Step 1: 记下快照数与各平台分布**
+- [-] **Step 1: 记下快照数与各平台分布**  <!-- 作废：2026-11-19 发布账本清空（b948f628），567 条快照的基线没有对照物了；/tmp/baseline 也不复存在 -->
 
 ```bash
 mkdir -p /tmp/baseline
@@ -55,7 +87,7 @@ ls publish/outbox/ | sed 's/.*__//; s/\.json$//' | sort | uniq -c > /tmp/baselin
 
 Expected: `567`；分布是 `6 bilibili / 6 channels / 6 douyin / 549 toutiao`。
 
-- [ ] **Step 2: 记下调度器读到的发布历史**
+- [-] **Step 2: 记下调度器读到的发布历史**  <!-- 作废：账本清空后「已发过（567）」这个对照物不存在了 -->
 
 ```bash
 PYTHONPATH=publish python3 -m publishkit.cli schedule status > /tmp/baseline/status.txt
@@ -64,7 +96,7 @@ PYTHONPATH=publish python3 -m publishkit.cli schedule candidates > /tmp/baseline
 
 Expected: `status.txt` 第二行是「已发过（567）：」；`candidates.txt` 是 2 篇候选、各自「已发到过：toutiao」。**这两个输出是 Task 4 读侧改动的对照物**。
 
-- [ ] **Step 3: 记下站点索引的条数**
+- [-] **Step 3: 记下站点索引的条数**  <!-- 作废：tools/build-publish-index.py 已随站点改版删除（bc876e42），站点不再产出 publish_index.json -->
 
 ```bash
 python3 tools/build-publish-index.py
@@ -75,7 +107,10 @@ print(len(d['articles']), len(d['videos']))" > /tmp/baseline/publish-index.txt
 
 Expected: `549 0`。
 
-- [ ] **Step 4: 记下视频页数量**
+> ⚠️ 2026-11-23：`tools/build-publish-index.py` 已随站点改版删除（bc876e42），
+> 站点构建链搬到 `platforms/blog/site/`，不再产出 `publish_index.json`。这一格不再可跑。
+
+- [-] **Step 4: 记下视频页数量**  <!-- 作废：build-video-pages.py 的产物已改成 content/units/video/ 的内容单元（不再是站点页面），基线无意义 -->
 
 ```bash
 python3 tools/build-video-pages.py
@@ -83,6 +118,9 @@ ls source/_posts/ 2>/dev/null | grep -c 'episode\|视频' || true
 ```
 
 （`build-video-pages.py` 的产物路径按脚本实际输出确认，把条数写进 `/tmp/baseline/video-pages.txt`。）
+
+> ⚠️ 2026-11-23：根目录的 `source/` 也没了（站点搬到 `platforms/blog/site/source/`），
+> 而 `build-video-pages.py` 现在产出的是 `content/units/video/` 里的**内容单元**，不是页面。
 
 ---
 
@@ -98,13 +136,15 @@ ls source/_posts/ 2>/dev/null | grep -c 'episode\|视频' || true
 - Modify: `pyrightconfig.json`（extraPaths）
 - Modify: `requirements/aiv.txt` → `requirements/video-pipeline.txt`、`requirements/video.txt` → `requirements/video-platforms.txt`
 - Modify: `requirements/README.md`、`tools/build-video-pages.py`、`tools/sync-hexo.py`
+  <!-- ⚠️ 2026-11-23：`tools/sync-hexo.py` 已随站点改版删除（bc876e42），站点构建链搬到 `platforms/blog/site/`。 -->
 - Test: `tests/test_podcast_spec.py`（新增两条守卫）
 
 **Interfaces:**
 - Consumes: Task 0 的基线。
 - Produces: 仓库根有 `video/` 目录；`video/pipeline/pyv`、`video/contracts`、`video/review`、`video/scripts`、`video/publish` 路径对全仓生效；`docs/life/aiv/` 这条 URL 命名空间原样不动。
+  <!-- ⚠️ 2026-11-23：`video/contracts/` 与 `video/publish/` 后来随视频线清空重来删掉了（37b2748b，2026-11-18）；期身份改成 `video/episodes/<系列>/<合集>/<文档>/<档位>/`。`docs/life/aiv/` 也随 `docs/` 归零撤出。 -->
 
-- [ ] **Step 1: 写下两条守卫（此时应绿）**
+- [-] **Step 1: 写下两条守卫（此时应绿）**  <!-- 作废：守卫所在的 tests/test_podcast_spec.py 已删（先搬到 platforms/blog/site/tests/，后随 181afafc 撤站点删除）；docs/life/aiv/ 这条命名空间也随 docs/ 归零撤出 -->
 
 在 `tests/test_podcast_spec.py` 末尾加（这个文件里的仓库根常量叫 **`REPO`**，不是 `REPO_ROOT`——见 `tests/test_podcast_spec.py:28`；写错会 `NameError`）：
 
@@ -147,18 +187,18 @@ def test_the_links_into_the_life_aiv_topic_page_still_point_at_aiv():
         raise AssertionError("既没有 video/README.md 也没有 aiv/README.md")
 ```
 
-- [ ] **Step 2: 跑测试确认它们现在会绿**
+- [-] **Step 2: 跑测试确认它们现在会绿**  <!-- 作废：守卫文件已不存在，这条验收没有对象 -->
 
 Run: `python3 -m pytest tests/test_podcast_spec.py -q -k "life_aiv"`
 Expected: PASS（2 passed）。
 
-- [ ] **Step 3: 换目录**
+- [x] **Step 3: 换目录**
 
 ```bash
 git mv aiv video
 ```
 
-- [ ] **Step 4: 替换路径引用（占位符保护法）**
+- [x] **Step 4: 替换路径引用（占位符保护法）**  <!-- 全仓已无活代码里的 aiv/ 路径引用；余下的两处是 publish/deploy/README.md 的迁移说明与 tests/test_review_check.py 的合成语料 -->
 
 **先看哪些形式必须保留：**
 
@@ -232,7 +272,7 @@ PY
 > **`aiv/` 前面是 `life/` 的绝不换**——那是 URL 命名空间与 content id。
 > **那 8 处站内相对链接绝不换**——它们指向 `life/aiv/` 专题页，脚本里逐个占位保护。
 
-- [ ] **Step 5: 替换独立出现的 `aiv` 词（不带斜杠的路径）**
+- [x] **Step 5: 替换独立出现的 `aiv` 词（不带斜杠的路径）**  <!-- video/pipeline/pyv/character.py:32 的注释与 test_character.py 的 docstring 都已是 video/platforms -->
 
 ```bash
 git grep -n -P '(?<!life/)\baiv\b' -- '*.py' '*.yml' '*.yaml' '*.toml' '*.json' '*.txt' | grep -v 'plans/'
@@ -245,7 +285,7 @@ git grep -n -P '(?<!life/)\baiv\b' -- '*.py' '*.yml' '*.yaml' '*.toml' '*.json' 
 | `video/pipeline/pyv/character.py:29` | `# aiv 与 weixin 同级，直接挂在仓库根下` | `# video/ 与 platforms/ 同级，都挂在仓库根下` |
 | `video/pipeline/tests/test_character.py:18` | `"""aiv 是仓库根级模块，与 weixin 同级。` | `"""video 是仓库根级模块，与 platforms 同级。` |
 
-- [ ] **Step 6: 改 `test_character.py` 的两条断言**
+- [x] **Step 6: 改 `test_character.py` 的两条断言**
 
 `video/pipeline/tests/test_character.py`：
 
@@ -275,7 +315,7 @@ def test_video_sits_next_to_platforms_at_repo_root():
 （`platforms/` 要等到 Task 2 才存在，所以那条 `assert (repo_root / "platforms").is_dir()`
 在 Task 2 Step 3 补上——本 task 先不写，否则这里必红。）
 
-- [ ] **Step 7: 改 CI 与配置**
+- [x] **Step 7: 改 CI 与配置**  <!-- video-pipeline.yml、pyrightconfig.json、requirements/{video-pipeline,video-platforms,wechat}.txt 与 README 都到位；只有 tools/sync-hexo.py 那一格随站点改版作废 -->
 
 | 文件 | 改什么 |
 | --- | --- |
@@ -286,9 +326,9 @@ def test_video_sits_next_to_platforms_at_repo_root():
 | `requirements/video.txt` → `requirements/video-platforms.txt` | `git mv` 改名（它指「视频号/B 站」，与新目录 `video/`「视频生产线」撞名）；注释里的 `channels/channels`、`bilibili/bilibili` 留到 Task 2 改 |
 | `requirements/README.md` | 表格：`aiv.txt` → `video-pipeline.txt`、`video.txt` → `video-platforms.txt`、`weixin.txt` → `wechat.txt`（Task 2 改）；「用哪份」表里的模块路径 |
 | `tools/build-video-pages.py` | `AIV_ROOT = REPO_ROOT / "aiv"` → `REPO_ROOT / "video"` |
-| `tools/sync-hexo.py` | 注释里的 `aiv/voice/README.md` |
+| `tools/sync-hexo.py` | 注释里的 `aiv/voice/README.md` | <!-- ⚠️ 2026-11-23：这个文件已随站点改版删除（bc876e42），改法作废。 -->
 
-- [ ] **Step 8: 把 `docs/life/aiv/` 的副本重新同步一遍**
+- [-] **Step 8: 把 `docs/life/aiv/` 的副本重新同步一遍**  <!-- 作废：video/scripts/sync_publish_docs.py 已删（ff1b9a12），docs/life/aiv/ 也随 docs/ 归零撤出，同步对象没了 -->
 
 `video/*.md`（人格规范、形象与音色规范、背景音乐规范）是 `docs/life/aiv/` 的源，
 Step 4 改了源文件，副本要跟上：
@@ -299,7 +339,7 @@ python3 video/scripts/sync_publish_docs.py
 
 Expected: 打印若干行「已同步 → docs/life/aiv/…」；`git status` 里 `docs/life/aiv/` 下有改动。
 
-- [ ] **Step 9: 跑测试**
+- [x] **Step 9: 跑测试**  <!-- 2026-11-23 实测：视频流水线 1060 passed/60 skipped、根 121 passed、publish 348 passed/1 skipped -->
 
 ```bash
 cd video/pipeline && python3 -m pytest tests/ -q && cd -
@@ -309,7 +349,7 @@ python3 -m pytest publish/tests -q
 
 Expected: 全绿。`video/pipeline` 期望 1267 passed / 14 skipped；仓库根期望 507 passed / 8 skipped（比迁移前多 2 条新守卫）。
 
-- [ ] **Step 10: 确认 URL 命名空间与站点链接没被误伤**
+- [-] **Step 10: 确认 URL 命名空间与站点链接没被误伤**  <!-- 作废：docs/life/aiv/ 与那 8 处链接随 docs/ 归零一并撤出，核对的标的已不存在 -->
 
 ```bash
 git grep -n 'docs/life/video/' -- . ; echo "退出码 $?（1 = 没有命中，好）"
@@ -320,7 +360,7 @@ python3 -m pytest tests/test_podcast_spec.py -q -k "life_aiv"
 
 Expected: 三条 `learning-path.json` 正则一字未改；两条守卫 PASS。
 
-- [ ] **Step 11: 提交**
+- [x] **Step 11: 提交**  <!-- 提交 8ff08afc -->
 
 ```bash
 git add -A
@@ -353,7 +393,7 @@ git commit -m "refactor(video): 视频生产线改名 aiv/ → video/，路径�
 - Consumes: Task 1 的 `video/`。
 - Produces: `platforms/<plat>/` 是 Python 包 `<plat>`（`platforms/` 在 `sys.path` 上）；`publishkit.invoke_adapter` 的子进程 cwd 是 `<repo>/platforms`；五个能力声明的 `[adapter] package` = 平台 id。
 
-- [ ] **Step 1: 写下「包名 = 平台 id」的守卫（此时应红）**
+- [x] **Step 1: 写下「包名 = 平台 id」的守卫（此时应红）**  <!-- publish/tests/test_real_declarations.py:157 -->
 
 在 `publish/tests/test_real_declarations.py` 末尾加：
 
@@ -383,7 +423,7 @@ def test_every_platform_is_importable_under_its_own_name():
 Run: `python3 -m pytest publish/tests/test_real_declarations.py::test_every_platform_is_importable_under_its_own_name -v`
 Expected: FAIL（`platforms/` 不存在）。
 
-- [ ] **Step 2: 搬目录并压平**
+- [x] **Step 2: 搬目录并压平**
 
 ```bash
 mkdir -p platforms
@@ -405,7 +445,7 @@ done
 `__init__.py cli.py capability.py …`——**包名仍是 `wechat`，测试里的 `from wechat import …`
 不用改**。这正是设计稿 D7 选 `wechat` 而不是 `weixin` 的原因。
 
-- [ ] **Step 3: 改 sys.path 与目录深度**
+- [x] **Step 3: 改 sys.path 与目录深度**  <!-- 五个平台的 conftest 都是 parents[3]，sys.path 插的是 platforms/ -->
 
 **搬家改了两处深度，两处方向相反：**
 
@@ -450,7 +490,7 @@ if str(REPO_ROOT / "platforms") not in sys.path:      # 原来 REPO_ROOT / "<pla
 **同时把 Task 1 Step 6 留的半条断言补上**：`video/pipeline/tests/test_character.py` 里
 `assert (repo_root / "platforms").is_dir()` 现在可以加回去了。
 
-- [ ] **Step 3b: 改那些钉死了路径的断言**
+- [x] **Step 3b: 改那些钉死了路径的断言**  <!-- test_real_declarations.py:98/109 都指向 platforms/<plat> -->
 
 **① `platforms/channels/tests/test_package.py` 里写死了仓库相对路径的那条：**
 
@@ -508,7 +548,7 @@ def test_every_adapter_command_names_a_module_that_exists():
 > 而 `publish/outbox/` 里 567 个快照的 `package_dir` 是**历史记录，一个字都不改**
 > （全局约束）。
 
-- [ ] **Step 3c: 加一条深度守卫**
+- [x] **Step 3c: 加一条深度守卫**  <!-- test_real_declarations.py:177 -->
 
 在 `publish/tests/test_real_declarations.py` 里（Step 1 那条守卫旁边）加：
 
@@ -530,7 +570,7 @@ def test_the_platform_dirs_keep_the_repo_root_at_the_right_depth():
                     f"platforms/{plat}/{sub}/ 的仓库根深度变了")
 ```
 
-- [ ] **Step 3d: 修那些「搬完会静默跳过 / 静默失效」的地方**
+- [x] **Step 3d: 修那些「搬完会静默跳过 / 静默失效」的地方**  <!-- toutiao/tests/test_layout.py 已是新形状；三个对照测试插的是 platforms/ -->
 
 有几处**不会报错，只会安静地不干活**——路径指空了，于是测试 `skip`，
 或者「两个实现给同一个答案」的对照断言悄悄不对照了。
@@ -631,7 +671,7 @@ Expected: **全部 PASS，没有一个 skip**。
 这些是「两个实现给同一个答案」的对照测试——
 它们变成 skip 不是「环境不支持」，是 §① 那种静默失效。
 
-- [ ] **Step 4: 能力声明的 `[adapter]` 段**
+- [x] **Step 4: 能力声明的 `[adapter]` 段**  <!-- 五个 toml 的 package=<plat>、command=["python3","-m","<plat>.cli"] -->
 
 `publish/capabilities/<plat>.toml` 末尾的 `[adapter]` 段改成：
 
@@ -644,7 +684,7 @@ command = ["python3", "-m", "<plat>.cli"]
 五个平台：`wechat`（原 `package = "weixin"` / `command = ["python3","-m","wechat.cli"]`，
 上面那段解释 cwd 的注释也要改写）、`toutiao`、`douyin`、`bilibili`、`channels`。
 
-- [ ] **Step 5: 契约层调 adapter 的 cwd**
+- [x] **Step 5: 契约层调 adapter 的 cwd**  <!-- publish/publishkit/cli.py:328 working_dir = config.platforms_dir -->
 
 `publish/publishkit/cli.py::invoke_adapter`：
 
@@ -661,7 +701,7 @@ command = ["python3", "-m", "<plat>.cli"]
 同时把该函数 docstring 里「cwd 必须是 `<仓库>/<adapter 包名>`」改成
 「cwd 必须是 `<仓库>/platforms`——`python3 -m <包名>.cli` 靠 cwd 在 `sys.path` 里找到它」。
 
-- [ ] **Step 6: 写死 cwd 的守卫测试**
+- [x] **Step 6: 写死 cwd 的守卫测试**  <!-- publish/tests/test_schedule.py:715 -->
 
 在 `publish/tests/test_schedule.py` 加：
 
@@ -692,7 +732,7 @@ def test_the_adapter_runs_inside_the_platforms_directory(monkeypatch):
 `REPO_ROOT`、`cli`、`resolve_config`、`load_capability`、`subprocess` 的 import 按该文件现有写法补
 （Task 3 会把 `capabilities_dir` 改名成 `platforms_dir`，那时一并改这个测试）。
 
-- [ ] **Step 7: 公众号的 launchd 模板与它的守卫**
+- [x] **Step 7: 公众号的 launchd 模板与它的守卫**  <!-- platforms/wechat/deploy/launchd.plist.template + platforms/wechat/tests/test_launchd.py:51 -->
 
 `platforms/wechat/deploy/launchd.plist.template`：
 
@@ -711,7 +751,7 @@ def test_the_job_runs_inside_the_platforms_directory():
 
 （原函数名是 `test_the_job_runs_inside_the_weixin_package`。）
 
-- [ ] **Step 8: browser 的默认路径**
+- [x] **Step 8: browser 的默认路径**  <!-- browser/browser/cli.py:44-48 -->
 
 `browser/browser/cli.py`：
 
@@ -723,7 +763,7 @@ DEFAULT_TOUTIAO_PACKAGES = REPO_ROOT / "platforms" / "toutiao" / "out"
 
 `DEFAULT_OUTBOX` 留到 Task 4（那时才知道 outbox 放哪）。
 
-- [ ] **Step 9: 替换五个平台目录的路径引用**
+- [x] **Step 9: 替换五个平台目录的路径引用**  <!-- 代码里已无旧平台目录引用（余下的 channels.weixin.qq.com 是官方域名，计划里本来就保护） -->
 
 **五个目录都搬了家**——`weixin/` `toutiao/` `douyin/` `bilibili/` `channels/` 全部收进
 `platforms/`，所以要改的不只是 `weixin/`。用与 Task 1 Step 4 同一形状的脚本，规则换成：
@@ -865,7 +905,7 @@ PY
 | `publish/spec/00-架构设计.md:731` | `REPO_ROOT/'weixin'` | `REPO_ROOT/'platforms'` |
 | `video/pipeline/pyv/character.py` | 注释「与 `weixin/` 同级」 | 「与 `platforms/` 同级」（Task 1 Step 5 已改） |
 
-- [ ] **Step 10: 改 CI 的 pytest 路径**
+- [x] **Step 10: 改 CI 的 pytest 路径**
 
 `.github/workflows/contracts.yml`：
 
@@ -879,14 +919,14 @@ PY
 
 文件里的注释「视频线（aiv）不在这里」→ 「视频线（video）不在这里」。
 
-- [ ] **Step 11: lint 与类型配置**
+- [x] **Step 11: lint 与类型配置**
 
 | 文件 | 改什么 |
 | --- | --- |
 | `ruff.toml` | `"weixin/tools/*.py"` → `"platforms/wechat/tools/*.py"` |
 | `pyrightconfig.json` | extraPaths：删掉 `weixin` `toutiao` `channels` `bilibili` 四条，加 `"platforms"` 一条（`publish` `browser` `video/pipeline` 保留） |
 
-- [ ] **Step 12: 跑测试**
+- [x] **Step 12: 跑测试**  <!-- 2026-11-23 实测：五平台 + publish + 根 + 视频流水线全绿（browser 那 1 条红是环境缺 playwright，与本计划无关） -->
 
 ```bash
 for plat in wechat toutiao douyin bilibili channels; do
@@ -900,7 +940,7 @@ cd video/pipeline && python3 -m pytest tests/ -q && cd -
 
 Expected: 全绿，含 Task 2 Step 1 那条守卫（现在 PASS）。
 
-- [ ] **Step 13: 真跑一次 adapter 调用（五个平台各一次）**
+- [x] **Step 13: 真跑一次 adapter 调用（五个平台各一次）**  <!-- 2026-11-23 实测：五个 ok -->
 
 ```bash
 cd platforms
@@ -912,7 +952,7 @@ cd -
 
 Expected: 五个 `ok`。这是「压平后 `-m` 还找得到包」的真实验证。
 
-- [ ] **Step 14: 提交**
+- [x] **Step 14: 提交**  <!-- 提交 613ab2ff -->
 
 ```bash
 git add -A
@@ -954,7 +994,7 @@ git commit -m "refactor(platforms): 五个平台收进 platforms/ 并压平，�
   `epmeta.load_limits(platform, platforms_dir=None) -> dict`；
   `preflight.check_video(info, platform, platforms_dir=None) -> list[Finding]`。
 
-- [ ] **Step 1: 先钉住「目录名 == 文件里的 id」这条不变量**
+- [x] **Step 1: 先钉住「目录名 == 文件里的 id」这条不变量**  <!-- publish/tests/test_real_declarations.py:126 -->
 
 在 `publish/tests/test_real_declarations.py` 加：
 
@@ -972,7 +1012,7 @@ def test_every_platform_directory_is_named_after_its_id():
 
 该文件若还没 `import tomllib` 就加上。
 
-- [ ] **Step 2: 改契约层的能力模型**
+- [x] **Step 2: 改契约层的能力模型**  <!-- default_platforms_dir / load_capability(platforms_dir=) / list_capabilities / available_platforms 都在，default_capabilities_dir 已删 -->
 
 `publish/publishkit/capability.py`：
 
@@ -1008,7 +1048,7 @@ def list_capabilities(*, platforms_dir=None) -> list:
 **`__all__` 里那一项也要换**——`capability.py:87` 写着 `"default_capabilities_dir"`，
 改成 `"default_platforms_dir"`（留着旧名，`from publishkit import *` 照样能拿到旧函数）。
 
-- [ ] **Step 3: 改配置与命令行**
+- [x] **Step 3: 改配置与命令行**
 
 `publish/publishkit/schedule.py`：
 
@@ -1027,7 +1067,7 @@ def list_capabilities(*, platforms_dir=None) -> list:
 - `resolve_config(..., platforms_dir=getattr(args, "platforms_dir", None), ...)`。
 - 内部所有 `capabilities_dir=` 关键字改 `platforms_dir=`（含 Task 2 Step 6 那个测试）。
 
-- [ ] **Step 3b: `capabilities_dir` 这个词全仓换成 `platforms_dir`**
+- [x] **Step 3b: `capabilities_dir` 这个词全仓换成 `platforms_dir`**  <!-- 全仓 grep capabilities_dir 无命中 -->
 
 `capabilities_dir` 是一路传下去的关键字参数，改一处不够——
 **漏掉的那一处不会报错，它会继续读旧目录**（读到空目录，然后「什么都没找到」）。
@@ -1054,7 +1094,7 @@ grep -rn "capabilities_dir" -- '*.py'
 **默认值也一起换**：凡是 `Path(...) / "publish" / "capabilities"` 这样的拼法，
 改成 `Path(...) / "platforms" / <id> / "capability.toml"`。
 
-- [ ] **Step 3c: 测试里现造的「假能力声明」要按新形状摆**
+- [x] **Step 3c: 测试里现造的「假能力声明」要按新形状摆**
 
 能力声明从「一个目录下一个 `<id>.toml`」变成「每个平台一个目录、
 里面一个 `capability.toml`」。测试里现造的那几份也得跟着摆——
@@ -1077,7 +1117,7 @@ grep -rn "capabilities_dir" -- '*.py'
 > `test_list_capabilities_reads_every_file`、以及所有「坏输入当场报错」的用例
 > 一起就对了。`load_capability_file(path)` 读的是传进来的路径，不受布局影响 ✓。
 
-- [ ] **Step 4: 搬能力声明文件**
+- [x] **Step 4: 搬能力声明文件**
 
 ```bash
 for plat in wechat toutiao douyin bilibili channels; do
@@ -1086,7 +1126,7 @@ done
 rmdir publish/capabilities
 ```
 
-- [ ] **Step 5: 改能力声明里的路径注释**
+- [x] **Step 5: 改能力声明里的路径注释**  <!-- 五个 toml 里已无 weixin/ 或 publish/capabilities 引用 -->
 
 五个 toml 的注释里写着旧路径（`platforms/wechat/docs/03-试点记录.md`、
 `platforms/wechat/posts.py`、`platforms/toutiao/docs/02-试点记录.md` 等）——
@@ -1094,7 +1134,7 @@ Task 2 Step 9 的脚本已经改过一遍；这里只需人工确认没有漏的
 特别是 `wechat.toml` 顶部那段提到 `weixin/docs/03-试点记录.md`、
 `weixin/wechat/posts.py`、`weixin/README.md`、`weixin/docs/06-超长文章拆分.md` 的注释。
 
-- [ ] **Step 6: 改视频线的读侧**
+- [x] **Step 6: 改视频线的读侧**  <!-- video/pipeline/pyv/epmeta.py:195 与 preflight.py:194 -->
 
 `video/pipeline/pyv/epmeta.py`：
 
@@ -1120,7 +1160,7 @@ def load_limits(platform: str, platforms_dir: Path | None = None) -> dict:
 **`REPO_ROOT` 在这两个文件里怎么推的，要保持深度不变**——`aiv/` → `video/` 是同深度，
 `Path(__file__).resolve().parents[N]` 的层数不用动。
 
-- [ ] **Step 7: 改平台自己那份读法**
+- [x] **Step 7: 改平台自己那份读法**  <!-- platforms/toutiao/capability.py:110 -->
 
 `platforms/toutiao/capability.py`：
 
@@ -1136,13 +1176,13 @@ def default_capability_path() -> Path:
 `platforms/bilibili/package.py::_bilibili_limits_loader`：参数 `capabilities_dir` 改名
 `platforms_dir`，默认值走 `epmeta.load_limits`（Step 6 已改好签名）。
 
-- [ ] **Step 8: 改守卫**
+- [x] **Step 8: 改守卫**  <!-- publish/tests 里已无 path.stem 断言，改成目录名==id -->
 
 `publish/tests/test_real_declarations.py:57` 那条 `assert capability.path.stem == capability.id`
 不再成立（文件名统一叫 `capability.toml`）——删掉它，换成 Step 1 已经加的
 `test_every_platform_directory_is_named_after_its_id`。
 
-- [ ] **Step 9: 跑测试**
+- [x] **Step 9: 跑测试**  <!-- 2026-11-23 实测：publish 348 passed/1 skipped，五平台与视频流水线全绿 -->
 
 ```bash
 python3 -m pytest publish/tests -q
@@ -1153,7 +1193,7 @@ python3 -m pytest tests/ -q
 
 Expected: 全绿。
 
-- [ ] **Step 10: 提交**
+- [x] **Step 10: 提交**  <!-- 提交 2a17de0a -->
 
 ```bash
 git add -A
@@ -1170,6 +1210,7 @@ git commit -m "refactor(capability): 能力声明下沉到 platforms/<plat>/capa
 - Modify: `publish/publishkit/cli.py`（`--outbox-dir` → `--outbox-root`；写快照；读索引的 5 处；`PUBLISH_OUTBOX_DIR`；help 文本）
 - Modify: `publish/publishkit/contract.py`、`publish/publishkit/episode.py`（docstring 里的 outbox 路径）
 - Modify: `tools/build-publish-index.py`（`OUTBOX_DIR` → 扫 `platforms/*/outbox/`）
+  <!-- ⚠️ 2026-11-23：`tools/build-publish-index.py` 已随站点改版删除（bc876e42）——站点不再产出发布索引。 -->
 - Modify: `tools/build-video-pages.py`（同上）
 - Modify: `browser/browser/cli.py`（`DEFAULT_OUTBOX`）
 - Modify: `platforms/wechat/snapshot.py`（`OUTBOX_DIR`）
@@ -1183,7 +1224,7 @@ git commit -m "refactor(capability): 能力声明下沉到 platforms/<plat>/capa
   `ScheduleConfig.outbox_dir_for(platform: str) -> Path`（`<root>/<platform>/outbox`）；
   `publishkit.load_outbox_index(outbox_root) -> OutboxIndex`（**扫 `<root>/*/outbox/*.json`**）。
 
-- [ ] **Step 1: 先写「读侧不能漏」的守卫**
+- [-] **Step 1: 先写「读侧不能漏」的守卫**  <!-- 作废：那条「真实仓库 567 条」的守卫随账本清空（b948f628）删掉了——快照是使用者的账，框架不再守它；扫描行为由 publish/tests/test_schedule.py::test_the_index_scans_every_platform_directory 覆盖 -->
 
 加在 `publish/tests/test_schedule.py`：
 
@@ -1207,7 +1248,7 @@ def test_the_real_outbox_index_finds_every_snapshot():
 Run: `python3 -m pytest publish/tests/test_schedule.py::test_the_real_outbox_index_finds_every_snapshot -v`
 Expected: FAIL（`load_outbox_index` 现在只扫一个目录，索引到 0 条）。
 
-- [ ] **Step 2: 搬快照**
+- [-] **Step 2: 搬快照**  <!-- 作废：快照搬过，但 2026-11-19 账本清空（b948f628）把 567 个快照全删了；现在每个平台只剩 outbox/ 目录骨架（.gitkeep） -->
 
 ```bash
 mkdir -p platforms/toutiao/outbox platforms/bilibili/outbox platforms/channels/outbox platforms/douyin/outbox platforms/wechat/outbox
@@ -1222,7 +1263,7 @@ rmdir publish/outbox
 公众号还没走过发布流水线，`platforms/wechat/outbox/` 会是空目录，
 空目录 git 不跟踪，用 `.gitkeep` 占位（`platforms/wechat/outbox/.gitkeep`）。
 
-- [ ] **Step 3: 改契约层的配置与索引**
+- [x] **Step 3: 改契约层的配置与索引**
 
 `publish/publishkit/schedule.py`：
 
@@ -1289,7 +1330,7 @@ Task 6 的兜底 grep 只认 `publish/outbox` 这个**字面量**——
 （`resolve_config` 只读 `PUBLISH_REPO` / `PUBLISH_SECRETS` / `PUBLISH_STATE_DIR`）——
 **不要给表加行**。
 
-- [ ] **Step 4: 改契约层的命令与写盘**
+- [x] **Step 4: 改契约层的命令与写盘**
 
 `publish/publishkit/cli.py`：
 
@@ -1308,9 +1349,13 @@ Task 6 的兜底 grep 只认 `publish/outbox` 这个**字面量**——
 `publish/publishkit/contract.py` 与 `publish/publishkit/episode.py` 的 docstring
 （`publish/outbox/<EP>__<平台>.json`）→ `platforms/<平台>/outbox/<EP>__<平台>.json`。
 
-- [ ] **Step 5: 改两个站点工具（静默失败的两个）**
+- [-] **Step 5: 改两个站点工具（静默失败的两个）**  <!-- 作废：两个工具里 build-publish-index.py 随站点改版删除（bc876e42），配套的 tests/test_publish_visibility.py 也已删；build-video-pages.py 那一半已落地（扫 platforms/*/outbox） -->
 
 `tools/build-publish-index.py`：
+
+> ⚠️ 2026-11-23：这个脚本已随站点改版删除（bc876e42），站点不再产出发布索引。
+> 下面这段改法只对还活着的 `tools/build-video-pages.py` 成立（它今天的 `read_outbox()`
+> 就是扫 `platforms/*/outbox/`）。
 
 ```python
 PLATFORMS_DIR = REPO_ROOT / "platforms"
@@ -1353,7 +1398,10 @@ def test_read_outbox_finds_the_real_snapshots():
 放在各自已有的测试文件里（`tools/` 下的测试在哪就放哪；`tools/` 目录下**没有**测试文件，
 放到 `tests/test_publish_visibility.py` 里——它已经在测发布相关的东西）。
 
-- [ ] **Step 6: 改 browser 与平台自己的快照模块**
+> ⚠️ 2026-11-23：`tests/test_publish_visibility.py` 已随「测试跟着模块归位」删除（ff570b55），
+> 站点那批测试搬到了 `platforms/blog/site/tests/`；这条断言现在没有落点。
+
+- [x] **Step 6: 改 browser 与平台自己的快照模块**  <!-- 含 douyin conftest 那两处 git pathspec 的修正 -->
 
 | 位置 | 改什么 |
 | --- | --- |
@@ -1420,7 +1468,7 @@ def test_read_outbox_finds_the_real_snapshots():
 | `platforms/toutiao/cli.py` | 「状态快照目录（默认：`platforms/toutiao/outbox`）」 |
 | `browser/browser/cli.py` | 「状态快照目录，默认 `platforms/toutiao/outbox`」 |
 
-- [ ] **Step 7: 改 publish 测试里的真实仓库路径**
+- [x] **Step 7: 改 publish 测试里的真实仓库路径**  <!-- test_schedule.py 里 config.outbox_root == root/"platforms"、凭据默认路径与 outbox_dir_for 都在（依赖真实仓库快照的那两处随账本清空删掉） -->
 
 `publish/tests/test_schedule.py`：
 
@@ -1453,7 +1501,7 @@ REPO_OUTBOX = REPO_ROOT / "platforms"
 > **`assert checked > 0` 不要改成 `assert checked == 567`**——这条用例的 docstring 明说
 > 「master 上多出快照时它自动多验几条，不用改测试」。数量由 Step 1 的新守卫钉住。
 
-- [ ] **Step 8: 跑测试**
+- [x] **Step 8: 跑测试**  <!-- 2026-11-23 实测：publish 348 passed/1 skipped，五平台全绿 -->
 
 ```bash
 python3 -m pytest publish/tests -q
@@ -1464,7 +1512,7 @@ python3 -m pytest tests/ -q
 
 Expected: 全绿，且 Task 4 Step 1 那条守卫现在是 PASS（567 条）。
 
-- [ ] **Step 9: 真跑一次站点构建与调度器（测试查不出来的那一步）**
+- [-] **Step 9: 真跑一次站点构建与调度器（测试查不出来的那一步）**  <!-- 作废：基线（/tmp/baseline）不存在了；站点构建链已搬到 platforms/blog/site/，tools/build-publish-index.py 与 tools/sync-hexo.py 已删 -->
 
 ```bash
 python3 tools/build-publish-index.py
@@ -1480,7 +1528,7 @@ diff /tmp/baseline/candidates.txt /tmp/after-candidates.txt && echo "candidates 
 Expected: 两个 diff 都为空——**「已发过（567）」一字不变**。
 若不一致，说明读侧漏改，回去查 `load_outbox_index`。
 
-- [ ] **Step 10: 提交**
+- [x] **Step 10: 提交**  <!-- 提交 1a480b27 -->
 
 ```bash
 git add -A
@@ -1500,7 +1548,7 @@ git commit -m "refactor(outbox): 发布快照按平台下沉到 platforms/<plat>
 - Consumes: Task 1–4 的目录结构。
 - Produces: `drafts/` 目录 + `drafts/README.md`（流程约定的唯一出处）。
 
-- [ ] **Step 1: 先写守卫**
+- [-] **Step 1: 先写守卫**  <!-- 作废：守卫所在的 tests/test_podcast_spec.py 已删（181afafc），草稿箱的约定改由 drafts/README.md 与 AGENTS.md 承担 -->
 
 在 `tests/test_podcast_spec.py` 加：
 
@@ -1521,7 +1569,7 @@ def test_the_draft_box_exists_and_says_how_it_works():
 Run: `python3 -m pytest tests/test_podcast_spec.py::test_the_draft_box_exists_and_says_how_it_works -v`
 Expected: FAIL（`drafts/` 不存在）。
 
-- [ ] **Step 2: 写 `drafts/README.md`**
+- [x] **Step 2: 写 `drafts/README.md`**  <!-- drafts/README.md 在，流程/底稿不进派生/目录即接口三样都在 -->
 
 内容按设计稿 §4.9，并且**必须写清楚「底稿不参与派生」**：
 
@@ -1545,12 +1593,12 @@ Expected: FAIL（`drafts/` 不存在）。
 审校改了什么」，不是为了让稿子有两个地方可以改。
 ```
 
-- [ ] **Step 3: 在 `review/README.md` 加一句指路**
+- [x] **Step 3: 在 `review/README.md` 加一句指路**  <!-- review/README.md:1 -->
 
 `review/README.md` 开头加一行：「新的稿子先落 `drafts/`，审完复制进 `docs/`；
 本目录存审校记录与复盘。」
 
-- [ ] **Step 4: 跑测试**
+- [x] **Step 4: 跑测试**  <!-- 2026-11-23 实测：根 121 passed -->
 
 ```bash
 python3 -m pytest tests/ -q
@@ -1558,7 +1606,7 @@ python3 -m pytest tests/ -q
 
 Expected: 全绿。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**  <!-- 提交 59d719d7 -->
 
 ```bash
 git add -A
@@ -1579,6 +1627,7 @@ git commit -m "feat(drafts): 建草稿箱，写清两条流水线的共同入口
 - Modify: `docs/db/_index.md`（讲仓库布局的那一行）
 - Modify: `review/plans/2026-11-17-内容分类与结构重构.md`（上游计划里指向公众号转换规则的那 2 行）
 - Modify: `docs/platform-meta/platform-overview/one-repo-three-pipelines.md`（旧路径 → 新路径）
+  <!-- ⚠️ 2026-11-23：`docs/db/` 与 `docs/platform-meta/` 整棵随 `docs/` 归零撤出（8632f8c7），最后这两项没有对象了。 -->
 - Create: `docs/platform-meta/platform-overview/two-pipelines-one-draft-box.md`（新文章）
 - Modify: `docs/platform-meta/platform-overview/_index.md`（文章列表）
 - Modify: `docs/platform-meta/multiplatform/_index.md`、`docs/platform-meta/video-line/_index.md`（W4）
@@ -1588,7 +1637,7 @@ git commit -m "feat(drafts): 建草稿箱，写清两条流水线的共同入口
 - Consumes: Task 1–5 的最终目录结构。
 - Produces: 站点上关于仓库自身的文章与仓库实际结构一致。
 
-- [ ] **Step 1: 先让守卫红起来**
+- [-] **Step 1: 先让守卫红起来**  <!-- 作废：tests/test_podcast_spec.py 已删，REPO_TOP_DIRS 这条守卫没有载体了；今天的顶层目录集合由 AGENTS.md §二 与 review/specs/2026-11-19-整体架构与模块边界.md 描述 -->
 
 `tests/test_podcast_spec.py` 的 `REPO_TOP_DIRS` 更新成新的顶层目录集合：
 
@@ -1602,10 +1651,14 @@ REPO_TOP_DIRS = {
 （去掉 `aiv` 与五个旧平台名，加上 `drafts` `platforms` `video`。）
 同时把 `PLANNED_PATHS` 里所有 `aiv/…` 改成 `video/…`（Task 1 Step 4 已经改过）。
 
+> ⚠️ 2026-11-23：这份集合今天已经变了——`source/` `public/` `themes/` `scripts/` 都在
+> `platforms/blog/site/` 下面，顶层还多了 `platforms/blog/`；守卫文件 `tests/test_podcast_spec.py`
+> 也已删除（181afafc）。今天的顶层目录集合见 `AGENTS.md` §二。
+
 Run: `python3 -m pytest tests/test_podcast_spec.py -q`
 Expected: **FAIL**——规格文档里还写着旧路径，守卫会把它们判成「仓库里不存在的路径」。
 
-- [ ] **Step 2: 改 `publish/spec/*.md` 里的路径引用**
+- [x] **Step 2: 改 `publish/spec/*.md` 里的路径引用**
 
 `publish/spec/00-架构设计.md`（§2 架构图、§5 能力模型、§8 平台规格、附录）、
 `06-发布计划与调度.md`（凭据路径）、`07-视频发布契约.md`、`08-站点IP骨架.md`、
@@ -1614,13 +1667,13 @@ Expected: **FAIL**——规格文档里还写着旧路径，守卫会把它们�
 **注意**：`publish/spec/` 是活的规格，`tests/test_podcast_spec.py`
 会逐条核对里面写的仓库路径是否存在，所以改漏一条就红一条。
 
-- [ ] **Step 3: 改根 `README.md`**
+- [x] **Step 3: 改根 `README.md`**
 
 §2 的四层架构表、§2.3 的视频生产线、平台适配层那五个目录、目录清单表、
 「AIV 视频（cd aiv/pipeline）」的命令示例、`aiv-pipeline.yml` 的表格行——
 全部按新结构改。平台适配层那一行写成 `platforms/`（每个平台一个目录）。
 
-- [ ] **Step 4: 改部署模板**
+- [x] **Step 4: 改部署模板**
 
 | 模板 | 改什么 |
 | --- | --- |
@@ -1632,7 +1685,7 @@ Expected: **FAIL**——规格文档里还写着旧路径，守卫会把它们�
 `env["PUBLISH_SECRETS"].endswith("/weixin/secrets.json")` 改成
 `endswith("/platforms/wechat/secrets.json")`。
 
-- [ ] **Step 5: 改平台自己的活文档与剩余引用**
+- [x] **Step 5: 改平台自己的活文档与剩余引用**  <!-- platforms/*/docs 里的 weixin/ toutiao/ aiv/ 旧目录引用已清（剩下的 publish/capabilities 旧引用属 Step 5b 的范围） -->
 
 | 位置 | 改什么 |
 | --- | --- |
@@ -1685,13 +1738,13 @@ git grep -n 'publish/outbox\|publish/capabilities' -- . \
 
 **改完再跑一遍那条 grep，除排除项外必须为空。**
 
-- [ ] **Step 6: 上游计划里那一处指向真实文件的路径**
+- [x] **Step 6: 上游计划里那一处指向真实文件的路径**  <!-- review/plans/2026-11-17-内容分类与结构重构.md:332 已改成 platforms/wechat/docs/01-转换规则.md（该文件仍在） -->
 
 `review/plans/2026-11-17-内容分类与结构重构.md` 第 305、470 行指向
 `weixin/docs/01-转换规则.md`——那是**上游正在执行的活计划**，路径改了它就指空，
 所以这两行单独改。其余历史计划一律不动（Global Constraints）。
 
-- [ ] **Step 7: 改站点上那篇讲分层的老文章（W1）**
+- [-] **Step 7: 改站点上那篇讲分层的老文章（W1）**  <!-- 作废：docs/platform-meta/ 整棵随 docs/ 归零撤出（8632f8c7），这篇老文章不存在了 -->
 
 `docs/platform-meta/platform-overview/one-repo-three-pipelines.md`：
 
@@ -1704,7 +1757,7 @@ git grep -n 'publish/outbox\|publish/capabilities' -- . \
 **只改路径，不动这篇文章的结论**——三条产线、母稿唯一、依赖单向、
 平台之间是复制不是共用，这些都不因目录改名而变。
 
-- [ ] **Step 8: 新写一篇《两条流水线，一个草稿箱》（W2）**
+- [-] **Step 8: 新写一篇《两条流水线，一个草稿箱》（W2）**  <!-- 作废：同上，文章已撤出；它讲的内容后来由 review/specs/ 与 README.md 接手 -->
 
 `docs/platform-meta/platform-overview/two-pipelines-one-draft-box.md`，front matter 照现有三篇的形状：
 
@@ -1729,7 +1782,7 @@ difficulty: 2
 
 **写法照现有三篇**：讲「为什么这么设计」而不是「怎么改」，不写成提交记录。
 
-- [ ] **Step 9: 把新文章加进系列索引（W3）**
+- [-] **Step 9: 把新文章加进系列索引（W3）**  <!-- 作废：系列索引随 docs/ 归零撤出 -->
 
 `docs/platform-meta/platform-overview/_index.md` 的「本系列文章」加一行：
 
@@ -1738,13 +1791,13 @@ difficulty: 2
   草稿箱是什么、两条流水线怎么分、平台为什么按平台划分
 ```
 
-- [ ] **Step 10: 改两个尚未成稿系列里的旧路径（W4）**
+- [-] **Step 10: 改两个尚未成稿系列里的旧路径（W4）**  <!-- 作废：那两个系列页随 docs/ 归零撤出 -->
 
 `docs/platform-meta/multiplatform/_index.md` 与 `docs/platform-meta/video-line/_index.md`
 里如果提到「能力声明住在 `publish/capabilities/`」「视觉分镜契约住在 `aiv/contracts/`」，
 改成 `platforms/<plat>/capability.toml` 与 `video/contracts/`。
 
-- [ ] **Step 11: 跑站点链路与测试**
+- [-] **Step 11: 跑站点链路与测试**  <!-- 作废：tools/sync-hexo.py 已删，站点构建链搬到 platforms/blog/site/（npm run build）；测试部分改由各模块自己的验收命令承担 -->
 
 ```bash
 python3 tools/sync-hexo.py
@@ -1755,15 +1808,19 @@ Expected: 全绿。`tests/test_learning_path.py` 必须绿——新文章落在
 `platform-meta/platform-overview/` 的已有前缀规则上，不需要改
 `data/learning-path.json`，但守卫会检查「没有文章靠 fallback 兜底」。
 
-- [ ] **Step 12: 确认文章真能上站**
+- [-] **Step 12: 确认文章真能上站**  <!-- 作废：文章已撤出，站点上不会再有它们；根 source/ 目录也没了，现在是 platforms/blog/site/source/_posts/ -->
 
 ```bash
 ls source/_posts/platform-meta/platform-overview/
 ```
 
+> ⚠️ 2026-11-23：根目录的 `source/` 已在站点改版后不存在（现在是
+> `platforms/blog/site/source/_posts/`），而 `docs/platform-meta/` 那两篇文章
+> 随 `docs/` 归零撤出——这一格没有对象了。
+
 Expected: 两篇都在（老的 + 新的）。
 
-- [ ] **Step 13: 提交**
+- [x] **Step 13: 提交**  <!-- 提交 b25fa75a -->
 
 ```bash
 git add -A
@@ -1781,7 +1838,7 @@ git commit -m "docs(platform-meta): 回写目录架构——改旧文章的分�
 - Consumes: Task 1–6 的全部结果。
 - Produces: 一条干净的验收记录。
 
-- [ ] **Step 1: 全量测试**
+- [x] **Step 1: 全量测试**  <!-- 2026-11-23 实测：根 121、publish 348+1 skip、视频流水线 1060+60 skip、wechat 521+1 skip、toutiao 399+2 skip、douyin 119、bilibili 77、channels 59（browser 99+64 skip+1 条环境红 BrowserUnavailable） -->
 
 ```bash
 cd video/pipeline && python3 -m pytest tests/ -q && cd -
@@ -1793,7 +1850,7 @@ python3 -m pytest browser/tests -q
 
 Expected: 全绿，无 skip 异常（skip 的条数应与迁移前一致）。
 
-- [ ] **Step 2: 契约层能列出五个平台**
+- [x] **Step 2: 契约层能列出五个平台**  <!-- publish/publishkit/cli.py:173 有 --platforms-dir -->
 
 ```bash
 PYTHONPATH=publish python3 -m publishkit.cli --help | grep platforms-dir
@@ -1822,7 +1879,7 @@ git grep -n -P '(?<!life/)aiv/' -- . "${EXCL[@]}" \
 正则的 `(?<!life/)` 拦不住——但这些字面量**一个字都不能改**（全局约束）。
 除这两条字面量外，第三条实测**必须为空**。
 
-- [ ] **Step 4: 确认旧目录真的没了**
+- [x] **Step 4: 确认旧目录真的没了**  <!-- 2026-11-23 实测：aiv/weixin/toutiao/douyin/bilibili/channels/publish/outbox/publish/capabilities 全部 No such file -->
 
 ```bash
 ls -d aiv weixin toutiao douyin bilibili channels publish/outbox publish/capabilities 2>&1
@@ -1830,7 +1887,7 @@ ls -d aiv weixin toutiao douyin bilibili channels publish/outbox publish/capabil
 
 Expected: 全部报「No such file or directory」。
 
-- [ ] **Step 5: 确认快照一条不少、名字没变**
+- [-] **Step 5: 确认快照一条不少、名字没变**  <!-- 作废：账本已清空（b948f628），567 条快照与它们的文件名清单都不在了 -->
 
 ```bash
 find platforms/*/outbox -name '*.json' | wc -l   # 必须是 567
@@ -1848,7 +1905,7 @@ diff /tmp/before-names.txt /tmp/after-names.txt && echo "567 个文件名一个�
 
 Expected: 567；两份文件名清单**完全一致**。
 
-- [ ] **Step 6: 与基线比对**
+- [-] **Step 6: 与基线比对**  <!-- 作废：/tmp/baseline 不复存在；tools/build-publish-index.py 已删，站点不再有 publish_index.json -->
 
 ```bash
 # status.txt 的前两行随日历周变（本周：2026-W47 / 本周还没有记录。），
@@ -1861,7 +1918,7 @@ import json; d=json.load(open('source/_data/publish_index.json'))
 print(len(d['articles']), len(d['videos']))"   # 应与 /tmp/baseline/publish-index.txt 相同
 ```
 
-- [ ] **Step 7: 站点构建真跑一次**
+- [-] **Step 7: 站点构建真跑一次**  <!-- 作废：tools/sync-hexo.py 与 tools/build-publish-index.py 都已删；站点构建链现在是 platforms/blog/site/ 的 npm run build + tools/build-posts.py -->
 
 ```bash
 python3 tools/sync-hexo.py
@@ -1869,9 +1926,13 @@ python3 tools/build-publish-index.py
 python3 tools/build-video-pages.py
 ```
 
+> ⚠️ 2026-11-23：前两个脚本已随站点改版删除（bc876e42）——站点构建链现在是
+> `platforms/blog/site/` 下的 `npm run build` 与 `tools/build-posts.py`；
+> `tools/build-video-pages.py` 还在，但它产出的是内容单元，不是索引里的 567 条。
+
 Expected: 无异常，索引里 567 条。
 
-- [ ] **Step 8: 把结果告诉用户**
+- [x] **Step 8: 把结果告诉用户**  <!-- 本文件末尾的「集成结果（2026-11-17）」记着合并裁决与需要使用者自己重装触发器那件事 -->
 
 汇报：全量测试结果、三个兜底 grep 的结果、快照条数与改名情况、
 以及**仓库外那件用户要自己做的事**——本机 Mac 上已装的
