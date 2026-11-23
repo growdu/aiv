@@ -81,7 +81,7 @@
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
-| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 114 passed | 114 passed |
+| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 121 passed | 121 passed |
 | 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏 | 86 passed | 86 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 348 passed / 1 skipped | 348 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
@@ -101,10 +101,17 @@
 | 2026-11-19（视频线不发布那轮） | 81 | 51 / 1 skip | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip | 68 | 55 |
 | 2026-11-20（站点换 hexo 那轮） | 81 | 79 | 338 / 1 skip | 394 / 2 skip | 504 / 1 skip | 115 | 1050 / 60 skip | 68 | 55 |
 | 2026-11-19（还 §五 欠账那轮） | 114 | 59 / 1 skip | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
+| 2026-11-23（README 保留名那轮） | 117 | 86 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
+| 2026-11-23（发布意图透传那轮） | 121 | 86 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
 
 > 口径说明：站点换 hexo 那轮与还 §五 欠账那轮在两条分支上**并行**发生。
 > 合并后站点以 hexo+matery 为准：hexo 的 79 条 + 还欠账那轮里仍适用的
 > URL 形状、图片基准、身份守卫共 7 条，合起来 **86**（§三 第 2 行）。
+
+> 2026-11-23 那两轮：根套件 +7 条——① 编译器把 `README.md` 当**保留名**
+> （模块说明，不是稿子），配套 3 条用例钉住它；② 编译器补上**发布意图字段**
+> （`platforms` / `publish_on`）的透传，配套 4 条用例钉住「母稿写了发布意图 →
+> 内容单元**就是**发布候选」。**其余 9 条一条没动。**
 
 ### 还 §五 欠账那轮（2026-11-19 晚）
 

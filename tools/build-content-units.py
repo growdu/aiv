@@ -16,8 +16,13 @@
   站点与两个 adapter 共用这一条规则。
   ⚠️ `images/` 是**保留名**：`docs/images/` 这一层不编译成内容单元
   （那一层是图片仓库的位置），发现里面有稿子会**往 stderr 说一声**。
+- ⚠️ `README.md` 也是**保留名**：它是**模块说明文档**，不是稿子——
+  任何一层都不编译成内容单元。顶层那份（`docs/README.md`）跳过不吵；
+  嵌套的要**往 stderr 说一声**。
 - 内容单元 = 一篇 markdown + 一份 front matter。front matter 由母稿的
   front matter、目录链上的 `_index.md`、以及 git 历史推导出来。
+- 母稿 front matter 里**白名单**的字段（期号字段 + `platforms` / `publish_on`）
+  照抄进内容单元，其余一律丢弃——白名单透传，不做全文转储。
 
 **规矩（重要）**
 
@@ -82,6 +87,21 @@ EPISODE_FIELDS = ("episode", "episode_no", "series", "episode_hook",
                   "episode_subtitle", "episode_duration_s", "episode_license",
                   "episode_sources", "episode_repro")
 
+#: **发布意图**字段——母稿说「这篇发到哪些平台、什么时候发」。
+#:
+#: 这两个字段以前**不在**白名单里，于是被静默丢掉：内容单元里没有
+#: ``platforms``，契约层的 ``is_publish_candidate`` 恒为 False，
+#: **调度器的候选集永远是空的**（``schedule candidates`` 报「候选集：0 篇」）。
+#: 闸门本身没错——断的是它上游的这条通道。
+#:
+#: **必须与契约层 publish/publishkit/contract.py 的 ``PASSTHROUGH_FIELDS`` 一致**
+#: ——tests/test_content_units.py 钉住这条。
+#:
+#: 形状由**契约层**管（``platforms`` 必须是列表、``publish_on`` 必须是
+#: ``YYYY-MM-DD``）：编译器**不重复实现**那套校验——``tools/check-content-contract.py``
+#: 就在 CI 里拿契约层自己的规则校验内容单元，违规即构建失败。
+PUBLISH_FIELDS = ("platforms", "publish_on")
+
 #: 编译器**自己推导**、不照抄母稿的字段。母稿写了这些字段也不直接算数：
 #: title 可从 H1 来、description 可从正文第一段来、date 可从 git 历史来、
 #: tags 要并上目录链上的。
@@ -113,6 +133,19 @@ IMAGES_DIR = "images"
 #:
 #: 用户在 ``docs/`` 下建同名分类，内容单元会跟产物撞在同一层。
 RESERVED_UNIT_DIRS = {"video", IMAGES_DIR}
+
+#: **模块说明文档**的文件名——``README.md`` 不编译成内容单元。
+#:
+#: 母稿的路径协议是 ``docs/<分类>/<二级>/<文档>/<slug>.md``：
+#: 顶层 ``docs/README.md`` **不可能**是文章，它是这一层的说明文档
+#: （每个模块目录都有一份，见 ``docs/README.md``）。它没有 front matter，
+#: 正文里也没有「第一段」可当描述——编译它必然报「没有描述」，
+#: **一条模块说明就把整轮编译打断**。
+#:
+#: 规则：**任何一层**的 ``README.md`` 都不编译——说明文档不是稿子。
+#: 嵌套的（分类目录里的）要**说一声**：用户多半是把它当稿子写的，
+#: 静悄悄地吃最难查（跟 ``images/`` 同一个道理）。
+README_FILENAME = "README.md"
 
 H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 
@@ -277,15 +310,17 @@ def build_unit(path: Path) -> Unit:
     if not date:
         raise CompileError(f"{rel} 找不到日期（front matter 里没有 date，git 里也查不到历史）")
 
-    # 母稿里多出来的字段按白名单搬进 `extra`。白名单**只有期号字段**——
-    # 母稿随手写的别的字段不往下传。
+    # 母稿里多出来的字段按白名单搬进 `extra`。白名单是**期号字段** +
+    # **发布意图字段**——母稿随手写的别的字段不往下传。
     #
     # 空的值**不搬**：`episode_sources: []` 落盘后，契约层的扁平解析器把
     # `[]` 读成**字符串** `'[]'`（空值读成 `'null'`），然后报
     # 「episode_sources 必须是列表」。空的就当「没有这个字段」，
     # 让契约层看到**缺省**，而不是看到坏形状。
+    # （`platforms: []` 同理：空列表 = 「这篇不属于任何平台」=
+    # 不进发布候选集——那是缺省，不是坏形状。）
     extra: dict = {}
-    for key in EPISODE_FIELDS:
+    for key in EPISODE_FIELDS + PUBLISH_FIELDS:
         if key not in fm:
             continue
         if key in BASE_FIELDS:
@@ -384,8 +419,11 @@ def compile_units() -> list[Unit]:
     for path in sorted(DOCS.rglob("*.md")):
         if path.relative_to(DOCS).parts[0] == IMAGES_DIR:
             continue  # images/ 是图片仓库的位置——保留名，不编译
+        if path.name == README_FILENAME:
+            continue  # README.md 是模块说明——保留名，不编译
         units.append(build_unit(path))
     _warn_images_dir()
+    _warn_nested_readme()
     return units
 
 
@@ -404,6 +442,25 @@ def _warn_images_dir() -> None:
     print(
         "警告：docs/images/ 这一层不编译成内容单元——`images/` 是图片仓库的位置"
         "（content/units/images/）。那一层的稿子请挪到别的目录。",
+        file=sys.stderr,
+    )
+
+
+def _warn_nested_readme() -> None:
+    """``docs/`` 里**嵌套**的 ``README.md`` 不编译——说一声。
+
+    顶层 ``docs/README.md`` 是这一层的说明文档（每个模块目录都有一份），
+    跳过它在意料之中，不该吵。但分类目录里的 ``README.md`` 不一样：
+    用户多半是把它当稿子写的——页面不会出现，而稿子明明在。
+    静悄悄地吃是最难查的那种问题（跟 ``images/`` 同一个道理）。
+    """
+    nested = [p for p in sorted(DOCS.rglob(README_FILENAME)) if p.parent != DOCS]
+    if not nested:
+        return
+    where = "、".join(p.relative_to(DOCS).as_posix() for p in nested)
+    print(
+        f"警告：{where} 不编译成内容单元——README.md 是模块说明（保留名），不是稿子。"
+        "稿子请按 docs/<分类>/<二级>/<文档>/<slug>.md 放。",
         file=sys.stderr,
     )
 
@@ -510,6 +567,10 @@ def compile_only(rel_id: str) -> dict:
     平台层（`platforms/blog/cli.py`）问的是这个编译器，不是自己抄一遍规则。
     """
     path = locate_source(rel_id)
+    if path.name == README_FILENAME:
+        # ⚠️ 顺序：先 locate_source（找不到就是「找不到这一篇」），再判保留名。
+        raise CompileError(
+            "README.md 是保留名（模块说明文档），不编译成内容单元：{}".format(rel_id))
     if path.relative_to(DOCS).parts[0] == IMAGES_DIR:
         # ⚠️ 顺序：先 locate_source（找不到就是「找不到这一篇」），再判保留名。
         # 全量编译跳过这一层，--only 也得跳——不然「这一篇能不能进站」会答错。

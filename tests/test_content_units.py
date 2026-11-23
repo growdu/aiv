@@ -99,6 +99,65 @@ def test_the_compiler_and_the_contract_layer_agree_on_the_episode_fields(compile
     assert set(compiler.EPISODE_FIELDS) == set(contract.EPISODE_SCALAR_FIELDS) | set(contract.EPISODE_LIST_FIELDS)
 
 
+def test_the_compiler_and_the_contract_layer_agree_on_the_publish_fields(compiler):
+    """发布意图字段（`platforms` / `publish_on`）也必须两边一致。
+
+    编译器传了、契约层不认 = 白传；编译器不传、契约层认 = **候选集永远是空的**。
+    """
+    from publishkit import contract
+    assert set(compiler.PUBLISH_FIELDS) <= set(contract.PASSTHROUGH_FIELDS)
+
+
+def test_a_publish_intent_reaches_the_content_unit(compiler):
+    """``platforms`` / ``publish_on`` 以前被静默丢掉——**候选集于是永远是空的**。
+
+    母稿写了「这篇发到公众号、这天发」，内容单元里却没有 ``platforms``，
+    契约层的 ``is_publish_candidate`` 恒为 False，调度器报「候选集：0 篇」。
+    闸门本身没错——断的是它上游的这条通道。
+    """
+    (compiler.DOCS / "ep.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n"
+        "platforms:\n  - wechat\n  - toutiao\npublish_on: '2026-12-01'\n---\n\n正文。\n",
+        encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "ep.md")
+    fields, _ = parse_front_matter(compiler.render(unit))
+    assert fields["platforms"] == ["wechat", "toutiao"]
+    assert fields["publish_on"] == "2026-12-01"
+
+
+def test_a_mother_draft_with_a_publish_intent_becomes_a_candidate(compiler):
+    """端到端：母稿写了发布意图 → 内容单元**就是**发布候选。
+
+    编译 → 契约 → 判定，三步连起来，闸门这才有东西可放。
+    这一条是「候选集永远空」那笔欠账的正面回答。
+    """
+    from publishkit import contract
+    (compiler.DOCS / "ep.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n"
+        "platforms:\n  - wechat\n---\n\n正文。\n", encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "ep.md")
+    fields, _ = parse_front_matter(compiler.render(unit))
+    read = contract.contract_from_fields(fields)
+    assert read.platforms == ("wechat",)
+    assert read.is_publish_candidate
+
+
+def test_a_mother_draft_without_a_publish_intent_is_not_a_candidate(compiler):
+    """没写 `platforms` 的稿子**不是**候选——闸门照旧关着。
+
+    通道通了不等于闸门松了：这一条钉住「透传」没有把闸门一起拆掉。
+    """
+    from publishkit import contract
+    (compiler.DOCS / "ep.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n",
+        encoding="utf-8")
+    unit = compiler.build_unit(compiler.DOCS / "ep.md")
+    fields, _ = parse_front_matter(compiler.render(unit))
+    read = contract.contract_from_fields(fields)
+    assert read.platforms == ()
+    assert not read.is_publish_candidate
+
+
 def test_an_empty_episode_list_is_not_passed_through(compiler):
     """空列表/空值的期号字段**不要**搬进内容单元——契约层读不了那个形状。
 
@@ -296,6 +355,54 @@ def test_a_category_named_images_is_not_compiled(compiler, monkeypatch, capsys):
     # 那一层没变成内容单元，而**别的图还在它该在的地方**
     assert not (compiler.CONTENT_UNITS / "images" / "foo.md").exists()
     assert (compiler.CONTENT_UNITS / "images" / "fig.png").is_file()
+
+
+def test_a_readme_is_not_compiled(compiler):
+    """``README.md`` 是模块说明——不是稿子，不编译成内容单元。
+
+    母稿的路径协议是 ``docs/<分类>/<二级>/<期号>/index.md``：顶层
+    ``README.md`` **不可能**是文章，它是这一层的说明书（每个模块目录
+    都有一份）。它没有 front matter，正文里也没有「第一段」可当描述——
+    编译它必然报「没有描述」，**一条模块说明就把整轮编译打断**。
+    """
+    (compiler.DOCS / "README.md").write_text(
+        "# docs/ —— 母稿层\n\n这一层的说明。\n", encoding="utf-8")
+    (compiler.DOCS / "ep.md").write_text(
+        "---\ntitle: 一篇\ndate: '2026-01-01'\ndescription: 一篇的描述。\n---\n\n正文。\n",
+        encoding="utf-8")
+
+    assert [u.path.as_posix() for u in compiler.compile_units()] == ["ep.md"]
+
+
+def test_a_nested_readme_is_not_compiled_and_it_says_so(compiler, capsys):
+    """分类目录里的 ``README.md`` 也不编译——而且要**说一声**。
+
+    顶层那份跳过不吵（意料之中：它就是模块说明）；嵌套的不一样——
+    用户多半是把它当稿子写的，结果页面不会出现。静悄悄地吃是最难查的
+    那种问题（跟 ``images/`` 同一个道理）。
+    """
+    (compiler.DOCS / "cat").mkdir(parents=True)
+    (compiler.DOCS / "cat" / "README.md").write_text("# 一个分类\n", encoding="utf-8")
+
+    assert compiler.compile_units() == []
+
+    err = capsys.readouterr().err
+    assert "README.md" in err, "这一份不编译，就得说一声"
+
+
+def test_the_only_path_refuses_the_readme(compiler):
+    """``--only`` 也得认这个保留名——不然「这一篇能不能进站」会答错。
+
+    平台层问的是编译器（``platforms/blog/cli.py`` 跑
+    ``build-content-units.py --only <id>``，读 stdout 的 JSON）。
+    全量编译跳过 ``README.md``，而 ``--only`` 不跳 →
+    用户拿到「能进站」，实际那一篇永远不会有页面。
+    """
+    (compiler.DOCS / "README.md").write_text(
+        "# docs/ —— 母稿层\n\n这一层的说明。\n", encoding="utf-8")
+
+    with pytest.raises(compiler.CompileError):
+        compiler.compile_only("README.md")
 
 
 def test_the_compile_only_result_carries_the_category_ids(compiler):
