@@ -35,6 +35,8 @@
 
 # Dependencies
 node_modules/
+# 创作平台前端的构建产物（vite）。
+/front/dist/
 # Python 项目环境（类型检查与本地测试用；依赖清单在 requirements/）
 .venv/
 
