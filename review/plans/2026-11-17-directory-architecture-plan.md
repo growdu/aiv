@@ -1,7 +1,7 @@
 # 目录架构调整 Implementation Plan
 
 > **状态（2026-11-23 核对）**：本计划的 81 个步骤已逐条对过仓库——
-> **56 条已落地**（`- [x]`）、**23 条作废**（`- [-]`）、**2 条待做**（`- [ ]`）。
+> **58 条已落地**（`- [x]`）、**23 条作废**（`- [-]`）、**0 条待做**（`- [ ]`）。
 >
 > - 复现方式（按优先级）：① 步骤里点了函数/类/字段名的 → 在仓库里 grep 到它；
 >   ② 步骤写了验收命令的 → 跑那个模块的 pytest 套件；③ 步骤写了 `Create: <路径>` 的
@@ -22,8 +22,12 @@
 >   每个平台只剩 `outbox/` 目录骨架）；
 >   ④ 站点两轮换栈（Astro → 2026-11-20 换回 Hexo + matery，构建链搬到 `platforms/blog/site/`，
 >   `tools/sync-hexo.py`、`tools/build-publish-index.py`、`tools/patch-theme.py` 都删了）。
-> - 剩下的 **2 条待做**都指向同一件事：`platforms/toutiao/docs/` 里的活文档还写着
+> - 原来剩下的 **2 条待做**（2026-11-23 已做完）：`platforms/toutiao/docs/` 里的活文档还写着
 >   `publish/capabilities/toutiao.toml` 与 `publish/outbox/`，Task 7 Step 3 的兜底 grep 因此还不干净。
+>   **2026-11-23**：两份文档按 Step 5b 的「改法」表改完（**只改路径，实测与判定未动**），
+>   并立了根级守卫 `tests/test_stale_paths.py` 盯着那两棵搬走的树；
+>   Step 3 的第二、三条 grep **实测不该为空**（那些命中是迁移对照与守卫自己的说明），
+>   详见那一步下面的订正。
 >
 > **本计划不是判据，判据在 `review/specs/`**——尤其
 > `review/specs/2026-11-19-整体架构与模块边界.md`（今天的模块边界）与
@@ -1696,7 +1700,8 @@ Expected: **FAIL**——规格文档里还写着旧路径，守卫会把它们�
 | `review/README.md` | 路径引用 |
 | `review/specs/2026-11-13-content-review-design.md` | 若有路径引用则改；**本次的目录架构设计稿不改**（它描述的就是这次迁移） |
 
-- [ ] **Step 5b: 全仓扫 `publish/outbox` 与 `publish/capabilities` 的活引用**
+- [x] **Step 5b: 全仓扫 `publish/outbox` 与 `publish/capabilities` 的活引用**
+  <!-- 2026-11-23 落地：只剩 platforms/toutiao/docs/ 两份文档，已按本步的「改法」表改完；顺带立了根级守卫 tests/test_stale_paths.py 盯着这件事 -->
 
 Task 3、Task 4 改的是**代码里算路径的地方**；这一条扫的是**注释、docstring、
 help 文本、规格与站点文章里还写着旧路径的地方**。改完这一条，
@@ -1737,6 +1742,26 @@ git grep -n 'publish/outbox\|publish/capabilities' -- . \
 | `publish/spec/*.md` | Step 2 一起改 |
 
 **改完再跑一遍那条 grep，除排除项外必须为空。**
+
+> **2026-11-23 实测与处置**：本步的 grep 跑下来只剩
+> `platforms/toutiao/docs/02-试点记录.md`（4 处 `publish/capabilities/toutiao.toml`
+> + 1 处 `publish/outbox/*__toutiao.json`）与
+> `platforms/toutiao/docs/11-实施计划.md`（13 处 `publish/capabilities/toutiao.toml`
+> + 4 处 `publish/outbox/`）——
+> **其余落点（browser 的 docstring 与选择器注释、`tools/patch-theme.py`、
+> `README.md`、各平台包的 docstring、`publish/publishkit/`、`publish/spec/`）早就干净了**。
+>
+> 这两份按本步自己的「改法」表改完（试点记录**要改**：本步的落点表里明写着
+> 「含试点记录——它们指的是会搬走的真文件」）。**只改路径**：
+> 能力模型 → `platforms/toutiao/capability.toml`，快照 → `platforms/toutiao/outbox/`；
+> **实测数字、判定与任务拆分一个字没动**，两份文件头部各加了一条 2026-11-23 的订正说明。
+> 唯一跟着路径一起改的还有 `11-实施计划.md` 里那个代码示例的**三行断言**
+> （`path.parent.name` 之类）——不改它们，示例自己就自相矛盾了
+> （今天仓库里那条用例就是这么写的，见 `platforms/toutiao/tests/test_capability.py`）。
+>
+> **另外立了一条守卫**（`tests/test_stale_paths.py`，根级）：
+> 那两棵搬走的树不许再被任何文件提到，白名单**今天留空**——
+> 将来真有历史记录要留，得写清理由才进白名单。
 
 - [x] **Step 6: 上游计划里那一处指向真实文件的路径**  <!-- review/plans/2026-11-17-内容分类与结构重构.md:332 已改成 platforms/wechat/docs/01-转换规则.md（该文件仍在） -->
 
@@ -1858,7 +1883,8 @@ PYTHONPATH=publish python3 -m publishkit.cli --help | grep platforms-dir
 
 Expected: 出现 `--platforms-dir 路径`（不再是 `--capabilities-dir`）。
 
-- [ ] **Step 3: 兜底 grep（应为空）**
+- [x] **Step 3: 兜底 grep（应为空）**
+  <!-- 2026-11-23 实测：第一条已空（并落成守卫）；第二、三条**不该空**，见下面的订正 -->
 
 ```bash
 EXCL=(':!review/plans' ':!review/specs' ':!publish/plans' ':!docs/blog' \
@@ -1878,6 +1904,28 @@ git grep -n -P '(?<!life/)aiv/' -- . "${EXCL[@]}" \
 写的是 `aiv/index.html` 与 `aiv/背景音乐规范.md`，它们前面是 `./` 或 `../`，
 正则的 `(?<!life/)` 拦不住——但这些字面量**一个字都不能改**（全局约束）。
 除这两条字面量外，第三条实测**必须为空**。
+
+> ⚠️ **2026-11-23 订正：后两条 grep「应为空」这条期望是错的。**
+>
+> 实测（Step 5b 改完之后）三条的结果是：**第一条空**（退出码 1），
+> 第二、三条**各有几处命中，且每一处都应该留着**：
+>
+> | 命中 | 是什么 | 为什么该留 |
+> | --- | --- | --- |
+> | `publish/deploy/README.md`（`weixin/secrets.json`、`aiv/`） | **迁移对照表**：旧名 → 新名并排 | 读者看的是箭头右边那列；`publish/tests/test_trigger_templates.py:199` **断言 README 必须同时写出新旧两个**（`test_the_readme_names_the_paths_the_templates_inject`）——把旧名删了，那条用例当场红 |
+> | `publish/tests/test_trigger_templates.py:199,212` | 断言本身 | 它守的就是「新旧都要写」 |
+> | `platforms/wechat/tests/test_tools_paths.py:221` | docstring 讲「默认值以前指着 `weixin/out`」 | 而且这个文件**自己就是那条守卫**（静态扫 `tools/`，谁再写 `weixin/out` 就红）——守卫当然得提那个名字 |
+> | `tests/test_review_check.py:164` | `aiv/人格规范` 是**合成语料里的 pillar 名**，不是路径 | 改它就改了夹具本身 |
+>
+> 也就是说：**能进「读者照着它去找文件」那一栏的，只有第一条**，
+> 而它今天**已经空了**，并且**落成了一条守卫**（`tests/test_stale_paths.py`，根级）：
+> 那两棵搬走的树不许再被任何文件提到；白名单**今天留空**，
+> 将来真有历史记录要留，得写清理由才进白名单。
+>
+> 第二、三条**不该为空**——把它们扫成空，等于把「旧名 → 新名」的对照表删掉，
+> 或者把守卫自己的说明删掉。**这两条的判据是别的**：
+> 代码里不许再引用旧目录（`platforms/wechat/tests/test_tools_paths.py` 守着），
+> 文档里提到旧名时要**并排写出新名**。
 
 - [x] **Step 4: 确认旧目录真的没了**  <!-- 2026-11-23 实测：aiv/weixin/toutiao/douyin/bilibili/channels/publish/outbox/publish/capabilities 全部 No such file -->
 

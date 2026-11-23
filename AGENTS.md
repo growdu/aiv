@@ -37,7 +37,7 @@
 | **发布执行器** | `browser/` | `browser/`、`scripts/`、`selectors/`、`docs/` | 浏览器自动化（只服务没有公开 API 的平台） | `cd browser && python3 -m pytest tests/ -q` |
 | **共享规则** | `rules/` | —— | 跨模块共享的规则（`urls.json`） | ——（读取器各自有测试） |
 | **验收矩阵** | `acceptance/` | —— | 各模块的验收命令与实测数字 | ——（文档，不是代码） |
-| **仓库根测试** | `tests/` | —— | 身份守卫、编译器、退出码、内容契约 | `cd . && python3 -m pytest tests/ -q` |
+| **仓库根测试** | `tests/` | —— | 身份守卫、编译器、退出码、内容契约、死路径守卫 | `cd . && python3 -m pytest tests/ -q` |
 
 **跳过**（AI 不读不改）：`content/units/`（构建产物）、`node_modules/`、`.venv/`、`__pycache__/`、
 `platforms/blog/site/themes/`（第三方主题）、`.remember/`（会话记忆）、`.worktrees/`（并行工作区）。

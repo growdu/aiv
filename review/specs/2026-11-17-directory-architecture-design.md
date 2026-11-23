@@ -357,6 +357,21 @@ command = ["python3", "-m", "<平台 id>.cli"]
    - `grep -rn '"aiv/\|'"'"'aiv/\|`aiv/' --include="*.py" --include="*.yml" --include="*.toml" --include="*.json" .`
      （历史快照文档 `publish/plans/`、`review/plans/`、`video/review/plans/` 不算）
    - `grep -rn '"weixin/\|'"'"'weixin/' --include="*.py" --include="*.yml" --include="*.toml" --include="*.template" .`
+
+   > ⚠️ **2026-11-23 订正：三条 grep「应为空」这条期望太严了。**
+   >
+   > 实测（迁移早已落地之后）：三条各自还剩几处命中，**但全部落在测试文件里**——
+   > 命中的恰恰是**「迁移对照」本身的断言**：
+   > `publish/tests/test_trigger_templates.py` 断言 README **必须同时写出新旧两个路径**；
+   > `platforms/wechat/tests/test_tools_paths.py` 断言 `tools/` 里**不许再引用** `weixin/`；
+   > `tests/test_review_check.py` 的夹具 slug 是 `aiv/人格规范`。
+   > 外加 2026-11-23 新立的守卫 `tests/test_stale_paths.py`——
+   > 它**得写出那两个字才能找它们**。
+   >
+   > 也就是说：**生产代码**（`.py` / `.yml` / `.toml` / `.template` 的非测试文件）里**一处都没有**。
+   > 真正的判据是那句「生产代码里没有」，外加新守卫盯着那两棵搬走的树
+   > （`publish/capabilities/`、`publish/outbox/`——见 `tests/test_stale_paths.py`）。
+   > 把「测试里的迁移对照」也扫成空，等于把对照表和守卫自己的说明删掉。
 9. `platforms/<plat>/outbox/` 里的文件总数 = 567，且每个文件名仍满足
    `snapshot_name(content_id, platform) == path.name`。
 10. **回写到位**（§8.2）：

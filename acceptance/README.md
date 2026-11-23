@@ -80,7 +80,7 @@
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
-| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫、内容坐标与层间边界 | 125 passed / 3 skipped | 125 passed / 3 skipped |
+| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫、内容坐标与层间边界、**死路径** | 129 passed / 3 skipped | 129 passed / 3 skipped |
 | 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 125 passed / 1 skipped | 125 passed / 1 skipped |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
@@ -109,6 +109,15 @@
 | 2026-11-23（学习流视频条目那轮） | 121 | 116 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
 | 2026-11-23（筹备中标记那轮） | 121 | 119 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
 | 2026-11-23（总验收那轮） | 125 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
+| 2026-11-23（死路径守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
+
+> 2026-11-23（死路径守卫那轮）：**根 +4 条**——新文件 `test_stale_paths.py`：
+> 2026-11-17 目录重构搬走的那两棵平台私有目录（**能力模型**与**发布快照**）
+> **不许再被任何文件提到**；白名单**今天留空**（留白也要写清理由才进白名单）。
+> 守卫自己**要能抓到东西**（拿临时树试），并且先断言那两棵树**真的不在了**——
+> 哪天它们被搬回来，守卫就该跟着退役，而不是继续拦人。
+> 配套改的是 `platforms/toutiao/docs/` 两份文档里的**死路径**（**只改路径，
+> 实测数字与判定一个字没动**）。**其余九套件一条没动。**
 
 > 2026-11-23（总验收那轮）：**坐标系的 19 条验收逐条落成守卫**。
 >
