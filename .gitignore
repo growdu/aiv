@@ -13,9 +13,11 @@
 #   lib/      —— 第三方库（copy-vendor.py）
 #   learning/ —— 学习流的页面（build-learning-path.py）
 #   about/    —— 关于页（apply-site-config.py）
+#   docs/     —— 目录导航页（build-posts.py，kind: category 的单元）
 #   robots.txt / manifest.json —— 跟着身份走的两个小文件
 /platforms/blog/site/source/_posts/
 /platforms/blog/site/source/_data/
+/platforms/blog/site/source/docs/
 /platforms/blog/site/source/images/
 /platforms/blog/site/source/lib/
 /platforms/blog/site/source/learning/

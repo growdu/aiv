@@ -18,15 +18,40 @@
   参见 tests/test_content_nav_not_materialize_navbar.py。
 %>
 <%
-  var _base = page.permalink || '/';
+  // ⚠️ 这里有两个坑，少一个都表现为「目录页生成成 0 字节的空文件」——
+  // Hexo 吞掉渲染错误（只记一条 ERROR），页面就静悄悄地不见了。
+  //
+  // 坑一：`site.posts` / `site.pages` 在 Hexo 里是 **Query**（warehouse 的
+  // 查询对象），不是数组——它没有 `concat`。直接写
+  // `(site.posts || []).concat(...)` 会抛 TypeError。
+  //
+  // 坑二：地址的形状不统一。页面自己的 `permalink` 是绝对地址且以
+  // `index.html` 结尾（`https://站点/docs/x/index.html`），
+  // 文章的 `permalink` 是绝对地址且以 `/` 结尾。两者直接比前缀，
+  // 谁也不匹配谁——于是目录页一个子级都列不出来。
+  // 所以两边都先归一化成「站内路径 + 末尾斜杠」再比。
+  var _cfg = config || {};
+  var _root = String(_cfg.url || '').replace(/\/+$/, '') + String(_cfg.root || '/');
+  function _norm(link) {
+    var s = String(link || '');
+    if (_root && s.indexOf(_root) === 0) s = s.slice(_root.length);
+    s = s.replace(/index\.html$/, '');
+    if (s.charAt(0) !== '/') s = '/' + s;
+    if (s.charAt(s.length - 1) !== '/') s = s + '/';
+    return s;
+  }
+  var _base = _norm(page.permalink);
   // 底下可能有两种东西：文档（文章）与子目录的门面（目录页）。
-  var _all = (site.posts || []).concat((site.pages || []));
+  var _all = (site.posts ? site.posts.toArray() : [])
+    .concat(site.pages ? site.pages.toArray() : []);
   var _children = _all.filter(function (p) {
-    var link = p.permalink || '';
+    var link = _norm(p.permalink);
     if (link === _base || link.indexOf(_base) !== 0) return false;
     // 只取直接子级：剩下的地址里只许有一个斜杠。
     var rest = link.slice(_base.length);
     return rest.slice(0, -1).indexOf('/') === -1;
+  }).map(function (p) {
+    return { title: p.title, description: p.description, url: _norm(p.permalink) };
   });
 %>
 <main class="content learning-page">
@@ -49,7 +74,7 @@
         <ul>
           <% _children.forEach(function (p) { %>
           <li>
-            <a href="<%- url_for(p.permalink) %>"><%= p.title %></a>
+            <a href="<%- url_for(p.url) %>"><%= p.title %></a>
             <% if (p.description) { %>
             <div class="docs-index__desc"><%= p.description %></div>
             <% } %>
