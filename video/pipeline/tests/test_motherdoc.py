@@ -184,6 +184,54 @@ def test_a_missing_file_raises(tmp_path):
         motherdoc.load_motherdoc(tmp_path / "no-such-doc.md")
 
 
+# ---- 语言标注与引用解析 ---------------------------------------------------
+
+
+def test_a_block_carries_the_language_of_its_fence(tmp_path):
+    """代码块要靠语言标注选词法——没有它所有代码都按纯文本画。"""
+    doc = motherdoc.load_motherdoc(_write(tmp_path, "a.md", FULL_DOC))
+    code = motherdoc.find_block(doc, "code", 1)
+    mermaid = motherdoc.find_block(doc, "mermaid", 1)
+    table = motherdoc.find_block(doc, "table", 1)
+    assert code.lang == "python"
+    assert mermaid.lang == "mermaid"
+    assert table.lang == ""
+
+
+def test_resolve_ref_returns_the_block_the_reference_points_at(tmp_path):
+    """引用 → 块。绝对路径直接认（夹具就靠它指到临时目录）。"""
+    path = _write(tmp_path, "a.md", MULTI_DOC)
+    block = motherdoc.resolve_ref({"doc": str(path), "nth": 2}, "mermaid")
+    assert block.nth == 2
+    assert "sequenceDiagram" in block.content
+
+
+def test_resolve_ref_reads_relative_paths_from_the_given_root(tmp_path):
+    """相对路径按 `root` 解析（默认是仓库根）。"""
+    _write(tmp_path, "a.md", MULTI_DOC)
+    block = motherdoc.resolve_ref({"doc": "a.md", "nth": 1}, "mermaid",
+                                   root=tmp_path)
+    assert "graph TD" in block.content
+
+
+def test_resolve_ref_refuses_a_broken_reference(tmp_path):
+    """引用错了当场报错——不静默返回空块。"""
+    path = _write(tmp_path, "a.md", MULTI_DOC)
+    with pytest.raises(FileNotFoundError):
+        motherdoc.resolve_ref({"doc": str(tmp_path / "no.md"), "nth": 1},
+                              "mermaid")
+    with pytest.raises(ValueError):
+        motherdoc.resolve_ref({"doc": str(path), "nth": 99}, "mermaid")
+    with pytest.raises(ValueError):
+        motherdoc.resolve_ref({"doc": str(path)}, "mermaid")
+    with pytest.raises(ValueError):
+        motherdoc.resolve_ref({"doc": str(path), "nth": "x"}, "mermaid")
+    with pytest.raises(ValueError):
+        motherdoc.resolve_ref({"doc": str(path), "nth": 0}, "mermaid")
+    with pytest.raises(ValueError):
+        motherdoc.resolve_ref({"doc": "", "nth": 1}, "mermaid")
+
+
 # 规格 §2.4 的历史统计（那六期已清空，这里只校它自身的一致性）。
 SAMPLES = (
     # 主题, mermaid 数, 围栏块总数

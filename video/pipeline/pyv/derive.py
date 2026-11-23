@@ -23,14 +23,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from pyv import motherdoc
 from pyv import skeleton
-
-# video/ 是 pipeline/ 的上一级：pyv/derive.py → pyv → pipeline → video
-AIV_ROOT = Path(__file__).resolve().parents[2]
-REPO_ROOT = AIV_ROOT.parent
 
 #: 画面类型 → 通用渲染器模块。
 #:
@@ -59,33 +54,13 @@ class Derived:
 def _resolve_ref(kind: str, ref: dict) -> motherdoc.Block:
     """把母稿引用解析成真的块。**找不到就报错。**
 
+    解析逻辑在 `pyv/motherdoc.py` 里——**派生期与渲染期用的是同一处**：
+    渲染器也要把引用变成内容，两边各写一份就会漂。
+
     `ref.doc` 是相对仓库根的路径（规格 §5.3）；绝对路径也认——
     测试夹具就靠它指到临时目录里的母稿。
     """
-    doc = str(ref.get("doc") or "").strip()
-    if not doc:
-        raise ValueError("母稿引用没有 doc")
-    try:
-        nth = int(ref.get("nth"))
-    except (TypeError, ValueError):
-        raise ValueError(f"母稿引用的 nth 不是整数：{ref.get('nth')!r}") from None
-    if nth < 1:
-        raise ValueError(f"母稿引用的 nth 是 {nth}——从 1 起")
-
-    path = Path(doc)
-    if not path.is_absolute():
-        path = REPO_ROOT / path
-    if not path.is_file():
-        raise FileNotFoundError(f"母稿不存在：{doc}")
-
-    mother = motherdoc.load_motherdoc(path)
-    try:
-        return motherdoc.find_block(mother, kind, nth)
-    except LookupError as exc:
-        raise ValueError(
-            f"母稿 {doc} 里没有 {kind} 类的第 {nth} 块"
-            f"（该类共 {mother.count(kind)} 块）"
-        ) from exc
+    return motherdoc.resolve_ref(ref, kind)
 
 
 def _segment_visual(segment: dict) -> tuple[str, dict]:

@@ -48,6 +48,11 @@ KIND_MERMAID = "mermaid"
 KIND_CODE = "code"
 KIND_TABLE = "table"
 
+#: video/ 是 pipeline/ 的上一级：pyv/motherdoc.py → pyv → pipeline → video
+AIV_ROOT = Path(__file__).resolve().parents[2]
+#: 仓库根——母稿引用的相对路径按它解析。
+REPO_ROOT = AIV_ROOT.parent
+
 
 @dataclass(frozen=True)
 class Block:
@@ -55,11 +60,16 @@ class Block:
 
     `nth` 是**同类块里**的序号，从 1 起——mermaid 块自己数自己的，
     code 块自己数自己的（规格 §5.3：「`nth` 的计数口径按块类型分别计」）。
+
+    `lang` 是围栏上的语言标注（```python → `python`；表格块没有，为空串）。
+    **代码块要靠它选词法**（`pygments`）——没有它，所有代码都按纯文本画，
+    高亮就没了。
     """
 
     kind: str
     nth: int
     content: str
+    lang: str = ""
 
 
 @dataclass(frozen=True)
@@ -127,7 +137,8 @@ def _parse_blocks(lines: list[str]) -> tuple[list[Block], int]:
                 kind = KIND_MERMAID if fence_lang == MERMAID_LANG else KIND_CODE
                 counters[kind] += 1
                 blocks.append(Block(kind=kind, nth=counters[kind],
-                                    content="\n".join(fence_lines)))
+                                    content="\n".join(fence_lines),
+                                    lang=fence_lang))
                 fence_char = ""
                 fence_lines = []
             else:
@@ -196,3 +207,44 @@ def find_block(doc: MotherDoc, kind: str, nth: int) -> Block:
         f"{doc.path.name} 里没有 {kind} 类的第 {nth} 块"
         f"（该类共 {doc.count(kind)} 块）"
     )
+
+
+def resolve_ref(ref: dict, kind: str,
+                root: str | Path | None = None) -> Block:
+    """把一个母稿引用解析成真的块。
+
+    `ref` 是 `{"doc": 路径, "nth": 同类序号}`（规格 §5.3）：
+    `doc` 相对仓库根（绝对路径照用），`nth` 从 1 起。
+
+    **引用错了当场报错**：母稿没了（`FileNotFoundError`）、`nth` 不是整数或
+    越界（`ValueError`）、引用本身残缺（`ValueError`）。
+    一条引用错了却安静地产出一支缺画面的片子，比直接炸掉糟糕得多。
+
+    `root` 给测试夹具用——默认按仓库根解析相对路径。
+    """
+    doc = str((ref or {}).get("doc") or "").strip()
+    if not doc:
+        raise ValueError("母稿引用没有 doc")
+    try:
+        nth = int((ref or {}).get("nth"))
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"母稿引用的 nth 不是整数：{(ref or {}).get('nth')!r}") from None
+    if nth < 1:
+        raise ValueError(f"母稿引用的 nth 是 {nth}——从 1 起")
+
+    base = Path(root) if root is not None else REPO_ROOT
+    path = Path(doc)
+    if not path.is_absolute():
+        path = base / path
+    if not path.is_file():
+        raise FileNotFoundError(f"母稿不存在：{doc}")
+
+    mother = load_motherdoc(path)
+    try:
+        return find_block(mother, kind, nth)
+    except LookupError as exc:
+        raise ValueError(
+            f"母稿 {doc} 里没有 {kind} 类的第 {nth} 块"
+            f"（该类共 {mother.count(kind)} 块）"
+        ) from exc
