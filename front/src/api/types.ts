@@ -68,6 +68,22 @@ export interface PlatformCapability {
   spec: unknown;
 }
 
+/**
+ * 出包快照的**公共子集**。
+ *
+ * 各平台的快照键数不一样——这里只列公共的那几个，
+ * **缺了的键就缺着**（接口面不补默认值）。
+ */
+export interface OutboxSnapshot {
+  platform: string;
+  status: string;
+  reason?: string;
+  updated_at?: string;
+  content_id?: string;
+  title?: string;
+  published_url?: string;
+}
+
 /** 一篇母稿（`docs/` 里的）。 */
 export interface DocumentMeta {
   id: string;

@@ -6,10 +6,14 @@
 import { onMounted, ref } from "vue";
 
 import { getJSON, postJSON, putJSON } from "./api/client";
-import type { DraftUnit, ReviewReport } from "./api/types";
+import type { DraftUnit, OutboxSnapshot, ReviewReport } from "./api/types";
+import JobLog from "./components/JobLog.vue";
+import DocPreview from "./views/DocPreview.vue";
 import DraftPicker from "./views/DraftPicker.vue";
+import PublishStatus from "./views/PublishStatus.vue";
 import ReviewPanel from "./views/ReviewPanel.vue";
 import ScriptEditor from "./views/ScriptEditor.vue";
+import VideoPreview from "./views/VideoPreview.vue";
 
 const units = ref<DraftUnit[]>([]);
 const selected = ref<DraftUnit | null>(null);
@@ -18,6 +22,9 @@ const message = ref("");
 const manualSteps = ref<string[]>([]);
 const report = ref<ReviewReport | null>(null);
 const reviewing = ref(false);
+const jobId = ref<string | null>(null);
+const snapshots = ref<OutboxSnapshot[]>([]);
+
 
 /**
  * 草稿单元 → **母稿层**的坐标。
@@ -96,7 +103,39 @@ async function create(kind: string): Promise<void> {
   void kind;
 }
 
-onMounted(loadUnits);
+/** 出片：**先过审再出片**（规格 D10）——服务端那一步自己会先复制。 */
+async function build(): Promise<void> {
+  const subject = selected.value ? motherSubject(selected.value) : null;
+  if (!subject || subject.kind !== "episode") return;
+  const body = await postJSON<{ job_id: string }>(
+    "/episodes/" + subject.id + "/build",
+  );
+  jobId.value = body.job_id;
+}
+
+/** 重建：文档内容单元 → 视频内容单元 → 站点。 */
+async function rebuild(): Promise<void> {
+  const subject = selected.value ? motherSubject(selected.value) : null;
+  if (!subject || subject.kind !== "document") return;
+  const body = await postJSON<{ job_id: string }>(
+    "/documents/" + subject.id + "/rebuild",
+  );
+  jobId.value = body.job_id;
+}
+
+async function loadSnapshots(): Promise<void> {
+  try {
+    const body = await getJSON<{ snapshots: OutboxSnapshot[] }>("/publish/outbox");
+    snapshots.value = body.snapshots ?? [];
+  } catch {
+    snapshots.value = [];
+  }
+}
+
+onMounted(() => {
+  void loadUnits();
+  void loadSnapshots();
+});
 </script>
 
 <template>
@@ -126,5 +165,21 @@ onMounted(loadUnits);
       :report="report"
       :busy="reviewing"
     />
+
+    <VideoPreview
+      v-if="selected && selected.kind === 'episode'"
+      :episode="(motherSubject(selected) ?? { id: '' }).id"
+      @build="build"
+    />
+
+    <DocPreview
+      v-if="selected && selected.kind === 'document'"
+      :doc-id="(motherSubject(selected) ?? { id: '' }).id"
+      @rebuild="rebuild"
+    />
+
+    <JobLog :job-id="jobId" />
+
+    <PublishStatus :snapshots="snapshots" />
   </main>
 </template>
