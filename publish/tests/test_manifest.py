@@ -94,7 +94,16 @@ def test_missing_required_field_is_rejected(missing):
 
 @pytest.mark.parametrize(
     "field",
-    ["content_id", "platform", "kind", "title", "body_html", "digest", "cover", "source_url"],
+    [
+        "content_id",
+        "platform",
+        "kind",
+        "title",
+        "body_html",
+        "digest",
+        "cover",
+        "source_url",
+    ],
 )
 def test_wrong_scalar_type_is_rejected(field):
     data = dict(FULL_MANIFEST)

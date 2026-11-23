@@ -31,6 +31,7 @@ from pathlib import Path
 import pytest
 
 from paths import DOCS, REPO_ROOT, ROOT_TOOLS
+
 REVIEW_ROOT = REPO_ROOT / "review"
 
 STATES = ("待审", "审校中", "建议中", "已确认", "已合入")
@@ -74,18 +75,25 @@ def mechanically_non_article(path: Path) -> bool:
     """
     if path.name == "_index.md":
         return True
-    if path.relative_to(REPO_ROOT).as_posix().startswith(
-            "docs/engineering/engineering-practice/code/"):
+    if (
+        path.relative_to(REPO_ROOT)
+        .as_posix()
+        .startswith("docs/engineering/engineering-practice/code/")
+    ):
         return True
     text = path.read_text(encoding="utf-8", errors="replace")
     if REPRINT_MARKER_RE.search(text[:1200]):
         return True
-    body = [line.strip() for line in text.split("\n")
-            if line.strip() and line.strip() != "---"]
+    body = [
+        line.strip()
+        for line in text.split("\n")
+        if line.strip() and line.strip() != "---"
+    ]
     if any(line.startswith("```") or line.startswith("|") for line in body):
         return False
     rest = "".join(line for line in body if not line.startswith("#"))
     return len(rest.replace(" ", "")) <= 10
+
 
 # GitHub runner 的 git 环境：没有开发者的全局 git 配置，core.quotePath
 # 取默认值（true）。开发机常常把它关掉，于是同一个提交在两台机器上
@@ -121,10 +129,14 @@ NON_RECORD_FILES = ("README.md", "INDEX.md")
 
 
 def record_files() -> list[Path]:
-    return sorted(p for p in REVIEW_ROOT.rglob("*.md")
-                  if p.name not in NON_RECORD_FILES
-                  and "specs" not in p.parts and "plans" not in p.parts
-                  and "scope" not in p.parts)
+    return sorted(
+        p
+        for p in REVIEW_ROOT.rglob("*.md")
+        if p.name not in NON_RECORD_FILES
+        and "specs" not in p.parts
+        and "plans" not in p.parts
+        and "scope" not in p.parts
+    )
 
 
 def parse_record(path: Path) -> dict:
@@ -134,11 +146,11 @@ def parse_record(path: Path) -> dict:
     for line in text.split("\n"):
         stripped = line.strip()
         if stripped.startswith("- 原文："):
-            info["source"] = stripped[len("- 原文："):].strip().strip("`")
+            info["source"] = stripped[len("- 原文：") :].strip().strip("`")
         elif stripped.startswith("- 范围："):
-            info["scope"] = stripped[len("- 范围："):].strip()
+            info["scope"] = stripped[len("- 范围：") :].strip()
         elif stripped.startswith("- 审校状态："):
-            info["status"] = stripped[len("- 审校状态："):].strip()
+            info["status"] = stripped[len("- 审校状态：") :].strip()
     return info
 
 
@@ -165,21 +177,25 @@ def section_text(text: str, heading: str) -> str:
 
 def fact_items(text: str) -> list[str]:
     """「事实待核」段落里的条目行。"""
-    return [line.strip() for line in section_text(text, "## 事实待核").split("\n")
-            if line.strip().startswith("- ")]
+    return [
+        line.strip()
+        for line in section_text(text, "## 事实待核").split("\n")
+        if line.strip().startswith("- ")
+    ]
 
 
 def open_fact_items(text: str) -> list[str]:
     """还没销掉的待核事实条目（既没标 [x]，也没标 [不适用]）。"""
-    return [item for item in fact_items(text)
-            if not item.startswith(FACT_DONE)
-            and not item.startswith(FACT_NA)]
+    return [
+        item
+        for item in fact_items(text)
+        if not item.startswith(FACT_DONE) and not item.startswith(FACT_NA)
+    ]
 
 
 def naive_fact_items(text: str) -> list[str]:
     """标了「不适用」的待核事实条目。"""
-    return [item for item in fact_items(text)
-            if item.startswith(FACT_NA)]
+    return [item for item in fact_items(text) if item.startswith(FACT_NA)]
 
 
 def index_table() -> tuple[list[str], dict[Path, dict[str, str]]]:
@@ -202,16 +218,16 @@ def index_table() -> tuple[list[str], dict[Path, dict[str, str]]]:
         if not match:
             continue
         assert columns, "review/INDEX.md 里找不到表头"
-        assert len(cells) == len(columns), (
-            f"索引行的列数与表头对不上：{stripped}")
+        assert len(cells) == len(columns), f"索引行的列数与表头对不上：{stripped}"
         # cells[0] 是记录链接，与表头第一列「记录」一一对应。
         rows[(REVIEW_ROOT / match.group(2)).resolve()] = dict(zip(columns, cells))
     assert columns, "review/INDEX.md 里找不到表头"
     return columns, rows
 
 
-def git(*args: str, extra_env: dict[str, str] | None = None,
-        cwd: Path | None = None) -> str:
+def git(
+    *args: str, extra_env: dict[str, str] | None = None, cwd: Path | None = None
+) -> str:
     """Run git and return its stdout, decoded as UTF-8.
 
     The encoding is pinned on purpose: ``text=True`` follows the machine
@@ -223,9 +239,14 @@ def git(*args: str, extra_env: dict[str, str] | None = None,
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
-    result = subprocess.run(["git", *args], cwd=cwd or REPO_ROOT, env=env,
-                            capture_output=True, encoding="utf-8",
-                            errors="replace")
+    result = subprocess.run(
+        ["git", *args],
+        cwd=cwd or REPO_ROOT,
+        env=env,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     return result.stdout
 
 
@@ -241,8 +262,12 @@ def history_is_shallow() -> bool:
     shallow = REPO_ROOT / ".git" / "shallow"
     if shallow.exists():
         return True
-    result = subprocess.run(["git", "rev-parse", "--is-shallow-repository"],
-                            cwd=REPO_ROOT, capture_output=True, text=True)
+    result = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
     return result.stdout.strip() == "true"
 
 
@@ -274,7 +299,7 @@ def historical_source_paths(source: str) -> set[str]:
         return set()
     # 迁移表是「旧 → 新」，这里要反查：给的是搬家之后的路径。
     for old, new in moves.items():
-        if new == source[len("docs/"):]:
+        if new == source[len("docs/") :]:
             return {"docs/" + old}
     return set()
 
@@ -284,8 +309,9 @@ def accepted_source_paths(source: str) -> set[str]:
     return {source} | historical_source_paths(source)
 
 
-def changed_paths(sha: str, *, extra_env: dict[str, str] | None = None,
-                  cwd: Path | None = None) -> list[str]:
+def changed_paths(
+    sha: str, *, extra_env: dict[str, str] | None = None, cwd: Path | None = None
+) -> list[str]:
     """The raw paths a commit touched.
 
     ``git show --name-only`` C-quotes non-ASCII pathnames unless
@@ -298,8 +324,15 @@ def changed_paths(sha: str, *, extra_env: dict[str, str] | None = None,
     the other.  ``-z`` pins the output to raw bytes with NUL separators,
     independent of any git configuration.
     """
-    out = git("show", "--name-only", "--pretty=format:", "-z", sha,
-              extra_env=extra_env, cwd=cwd)
+    out = git(
+        "show",
+        "--name-only",
+        "--pretty=format:",
+        "-z",
+        sha,
+        extra_env=extra_env,
+        cwd=cwd,
+    )
     return [p for p in out.split("\0") if p]
 
 
@@ -316,7 +349,8 @@ def test_records_live_under_the_articles_own_pillar():
         assert (DOCS / pillar).is_dir(), f"{rel} 的支柱目录在 docs/ 下不存在"
         source = parse_record(path)["source"]
         assert source.startswith(f"docs/{pillar}/"), (
-            f"{rel} 的原文 {source} 不在自己的支柱目录下")
+            f"{rel} 的原文 {source} 不在自己的支柱目录下"
+        )
 
 
 def test_record_has_all_template_sections():
@@ -395,23 +429,29 @@ def test_merged_record_has_no_open_facts():
 
 def test_docs_tree_has_no_review_leakage():
     """docs/ 会被发布成站点文章，审校记录绝不能漏进去。"""
-    offenders = [p for p in DOCS.rglob("*")
-                 if p.is_dir() and p.name in ("review", "reviews")]
+    offenders = [
+        p for p in DOCS.rglob("*") if p.is_dir() and p.name in ("review", "reviews")
+    ]
     assert not offenders, f"docs/ 下出现了审校目录: {offenders}"
-    records = [p for p in DOCS.rglob("*.md")
-               if p.name.startswith("审校") or "审校记录" in p.name]
+    records = [
+        p
+        for p in DOCS.rglob("*.md")
+        if p.name.startswith("审校") or "审校记录" in p.name
+    ]
     assert not records, f"docs/ 下出现了审校记录: {records}"
 
 
-def _naive_changed_paths(sha: str, *, extra_env: dict[str, str] | None = None,
-                         cwd: Path | None = None) -> list[str]:
+def _naive_changed_paths(
+    sha: str, *, extra_env: dict[str, str] | None = None, cwd: Path | None = None
+) -> list[str]:
     """The pre-fix way of reading a commit's paths: no ``-z``.
 
     Kept here so the guard can prove the hazard is real instead of only
     asserting the happy path.
     """
-    out = git("show", "--name-only", "--pretty=format:", sha,
-              extra_env=extra_env, cwd=cwd)
+    out = git(
+        "show", "--name-only", "--pretty=format:", sha, extra_env=extra_env, cwd=cwd
+    )
     return [line for line in out.split("\n") if line]
 
 
@@ -430,14 +470,29 @@ def _synthetic_chinese_commit(tmp_path: Path) -> tuple[Path, str]:
     repo = tmp_path / "repo"
     (repo / "docs").mkdir(parents=True)
     (repo / "docs" / "分布式一致性协议.md").write_text("# 标题\n", encoding="utf-8")
-    env = dict(os.environ,
-               GIT_AUTHOR_NAME="test", GIT_AUTHOR_EMAIL="test@example.com",
-               GIT_COMMITTER_NAME="test", GIT_COMMITTER_EMAIL="test@example.com")
-    for args in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "docs(review): 中文记录"]):
-        subprocess.run(["git", *args], cwd=repo, env=env, check=True,
-                       capture_output=True)
-    sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, env=env,
-                         capture_output=True, encoding="utf-8", check=True).stdout.strip()
+    env = dict(
+        os.environ,
+        GIT_AUTHOR_NAME="test",
+        GIT_AUTHOR_EMAIL="test@example.com",
+        GIT_COMMITTER_NAME="test",
+        GIT_COMMITTER_EMAIL="test@example.com",
+    )
+    for args in (
+        ["init", "-q"],
+        ["add", "-A"],
+        ["commit", "-q", "-m", "docs(review): 中文记录"],
+    ):
+        subprocess.run(
+            ["git", *args], cwd=repo, env=env, check=True, capture_output=True
+        )
+    sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        encoding="utf-8",
+        check=True,
+    ).stdout.strip()
     return repo, sha
 
 
@@ -451,8 +506,7 @@ def test_changed_paths_are_raw_even_when_git_quotes_non_ascii_paths(tmp_path):
     """
     repo, sha = _synthetic_chinese_commit(tmp_path)
     paths = changed_paths(sha, extra_env=CI_LIKE_GIT_ENV, cwd=repo)
-    assert CHINESE_SOURCE in paths, (
-        f"带 -z 的改动列表里没有中文路径：{paths}")
+    assert CHINESE_SOURCE in paths, f"带 -z 的改动列表里没有中文路径：{paths}"
 
 
 def test_the_ci_like_git_environment_really_breaks_the_naive_path_reading(tmp_path):
@@ -465,10 +519,10 @@ def test_the_ci_like_git_environment_really_breaks_the_naive_path_reading(tmp_pa
     repo, sha = _synthetic_chinese_commit(tmp_path)
     naive = _naive_changed_paths(sha, extra_env=CI_LIKE_GIT_ENV, cwd=repo)
     assert CHINESE_SOURCE not in naive, (
-        "CI 样的 git 环境没有转义非 ASCII 路径，上一条守卫测不到东西")
+        "CI 样的 git 环境没有转义非 ASCII 路径，上一条守卫测不到东西"
+    )
     raw = changed_paths(sha, extra_env=CI_LIKE_GIT_ENV, cwd=repo)
-    assert CHINESE_SOURCE in raw, (
-        f"带 -z 的改动列表里没有中文路径：{raw}")
+    assert CHINESE_SOURCE in raw, f"带 -z 的改动列表里没有中文路径：{raw}"
 
 
 def test_readme_documents_the_fact_markers_the_contract_enforces():
@@ -521,13 +575,16 @@ def test_index_counts_match_the_records():
         row = rows[path.resolve()]
         assert row["待确认"] == str(len(open_items)), (
             f"{path.name} 的待确认数对不上：索引写 {row['待确认']}，"
-            f"记录里真没销掉的有 {len(open_items)} 条")
+            f"记录里真没销掉的有 {len(open_items)} 条"
+        )
         assert row["不阻塞"] == str(len(naive_items)), (
             f"{path.name} 的「不适用」数对不上：索引写 {row['不阻塞']}，"
-            f"记录里有 {len(naive_items)} 条")
+            f"记录里有 {len(naive_items)} 条"
+        )
         if info["status"] == "已合入":
             assert not open_items, (
-                f"{path.name} 标了已合入，却还有 {len(open_items)} 条没销掉")
+                f"{path.name} 标了已合入，却还有 {len(open_items)} 条没销掉"
+            )
 
 
 def count_warn_signals(report: dict) -> int:
@@ -544,7 +601,11 @@ def run_checker(source: str) -> dict:
     """对单个文件跑一遍检查器，返回它那一篇的报告。"""
     result = subprocess.run(
         [sys.executable, str(ROOT_TOOLS / "review-check.py"), source, "--json"],
-        cwd=REPO_ROOT, capture_output=True, encoding="utf-8", errors="replace")
+        cwd=REPO_ROOT,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     assert result.returncode == 0, result.stdout + result.stderr
     docs = json.loads(result.stdout)["docs"]
     assert len(docs) == 1, f"{source} 应当只产出一份报告，实得 {len(docs)}"
@@ -553,13 +614,15 @@ def run_checker(source: str) -> dict:
 
 def test_count_warn_signals_ignores_info_level_signals():
     """单元：「信号」列只数 warn，info 级结构提示不算。"""
-    report = {"signals": [
-        {"rule": "AIF-03", "severity": "warn"},
-        {"rule": "AIF-05", "severity": "warn"},
-        {"rule": "STR-01", "severity": "info"},
-        {"rule": "STR-02", "severity": "info"},
-        {"rule": "MET-01", "severity": "info"},
-    ]}
+    report = {
+        "signals": [
+            {"rule": "AIF-03", "severity": "warn"},
+            {"rule": "AIF-05", "severity": "warn"},
+            {"rule": "STR-01", "severity": "info"},
+            {"rule": "STR-02", "severity": "info"},
+            {"rule": "MET-01", "severity": "info"},
+        ]
+    }
     assert count_warn_signals(report) == 2
     assert count_warn_signals({"signals": []}) == 0
     assert count_warn_signals({}) == 0
@@ -585,7 +648,8 @@ def test_index_signal_counts_match_the_checker():
         row = rows[path.resolve()]
         assert row["信号"] == str(actual), (
             f"{path.name} 的信号数对不上：索引写 {row['信号']}，"
-            f"检查器实跑 {actual} 条（{source}）")
+            f"检查器实跑 {actual} 条（{source}）"
+        )
 
 
 def scope_bucket_table() -> dict[str, int]:
@@ -608,9 +672,11 @@ def scope_bucket_sections() -> dict[str, tuple[int, list[str]]]:
     text = SCOPE_DOC.read_text(encoding="utf-8")
     sections: dict[str, tuple[int, list[str]]] = {}
     for match in re.finditer(
-            r"^### (桶 \d+ [^（(\n]+)[（(](\d+) 篇[）)]\n(.*?)(?=^### |\Z)",
-            text, re.M | re.S):
-        label = match.group(1)[len("桶 "):]
+        r"^### (桶 \d+ [^（(\n]+)[（(](\d+) 篇[）)]\n(.*?)(?=^### |\Z)",
+        text,
+        re.M | re.S,
+    ):
+        label = match.group(1)[len("桶 ") :]
         paths = re.findall(r"^- `(docs/[^`]+)`$", match.group(3), re.M)
         sections[label] = (int(match.group(2)), paths)
     return sections
@@ -629,7 +695,8 @@ def test_index_excluded_count_matches_the_scope_list():
     stated = int(match.group(1))
     actual = len(excluded_paths())
     assert stated == actual, (
-        f"索引说共 {stated} 篇已排除，范围文档的排除清单里实际有 {actual} 条")
+        f"索引说共 {stated} 篇已排除，范围文档的排除清单里实际有 {actual} 条"
+    )
 
 
 def test_scope_bucket_counts_are_self_consistent():
@@ -652,13 +719,16 @@ def test_scope_bucket_counts_are_self_consistent():
         assert label in sections, f"桶表里的「{label}」在正文里没有对应小节"
         heading_count, paths = sections[label]
         assert heading_count == count, (
-            f"桶「{label}」标题写 {heading_count} 篇，桶表写 {count} 篇")
+            f"桶「{label}」标题写 {heading_count} 篇，桶表写 {count} 篇"
+        )
         assert len(paths) == count, (
-            f"桶「{label}」标题写 {count} 篇，小节里实际列了 {len(paths)} 条")
+            f"桶「{label}」标题写 {count} 篇，小节里实际列了 {len(paths)} 条"
+        )
         excluded_total += count
 
     assert excluded_total == len(excluded_paths()), (
-        f"五个桶相加 {excluded_total}，排除清单里实际有 {len(excluded_paths())} 条")
+        f"五个桶相加 {excluded_total}，排除清单里实际有 {len(excluded_paths())} 条"
+    )
 
     technical = table.get("5 技术文章")
     assert technical is not None, "桶表里找不到「5 技术文章」"
@@ -668,19 +738,22 @@ def test_scope_bucket_counts_are_self_consistent():
     actual_total = sum(1 for _ in DOCS.rglob("*.md"))
     assert excluded_total + technical == actual_total, (
         f"五桶 {excluded_total} + 技术文章 {technical} = "
-        f"{excluded_total + technical}，不是全树 {actual_total} 篇")
+        f"{excluded_total + technical}，不是全树 {actual_total} 篇"
+    )
 
     prose = SCOPE_DOC.read_text(encoding="utf-8")
     work = re.search(r"审校工作面\s*=\s*(\d+)\s*篇", prose)
     assert work, "范围文档里找不到「审校工作面 = N 篇」这句话"
     assert int(work.group(1)) == technical, (
-        f"范围文档说审校工作面 {work.group(1)} 篇，桶表里的技术文章是 {technical} 篇")
+        f"范围文档说审校工作面 {work.group(1)} 篇，桶表里的技术文章是 {technical} 篇"
+    )
 
     index = (REVIEW_ROOT / "INDEX.md").read_text(encoding="utf-8")
     stated = re.search(r"面向读者的技术文章\*\*（(\d+) 篇）", index)
     assert stated, "review/INDEX.md 里找不到「面向读者的技术文章（N 篇）」"
     assert int(stated.group(1)) == technical, (
-        f"索引说技术文章 {stated.group(1)} 篇，桶表里是 {technical} 篇")
+        f"索引说技术文章 {stated.group(1)} 篇，桶表里是 {technical} 篇"
+    )
 
 
 def test_scope_exclusion_list_points_at_existing_files():
@@ -697,10 +770,12 @@ def test_mechanical_non_articles_are_all_excluded():
     免得把站点导航页也按技术深度五要素去审。
     """
     excluded = excluded_paths()
-    missing = [p.relative_to(REPO_ROOT).as_posix()
-               for p in sorted(DOCS.rglob("*.md"))
-               if mechanically_non_article(p)
-               and p.relative_to(REPO_ROOT).as_posix() not in excluded]
+    missing = [
+        p.relative_to(REPO_ROOT).as_posix()
+        for p in sorted(DOCS.rglob("*.md"))
+        if mechanically_non_article(p)
+        and p.relative_to(REPO_ROOT).as_posix() not in excluded
+    ]
     assert not missing, f"机械判据认出的非内容没进排除清单: {missing}"
 
 
@@ -710,7 +785,8 @@ def test_reviewed_articles_are_inside_the_review_scope():
     for path in record_files():
         source = parse_record(path)["source"]
         assert source not in excluded, (
-            f"{path.name} 的原文 {source} 在排除清单里，不是面向读者的技术文章")
+            f"{path.name} 的原文 {source} 在排除清单里，不是面向读者的技术文章"
+        )
 
 
 def test_contract_file_passes_in_a_ci_like_git_environment():
@@ -727,7 +803,10 @@ def test_contract_file_passes_in_a_ci_like_git_environment():
     env.update(CI_LIKE_GIT_ENV)
     result = subprocess.run(
         [sys.executable, "-m", "pytest", "tests/test_review_records.py", "-q"],
-        cwd=REPO_ROOT, capture_output=True, encoding="utf-8", errors="replace",
+        cwd=REPO_ROOT,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
         env=env,
     )
     assert result.returncode == 0, result.stdout + result.stderr
@@ -739,7 +818,8 @@ def test_contract_file_passes_in_a_ci_like_git_environment():
 def load_checker():
     """Import tools/review-check.py as a module (it is a script, not a package)."""
     spec = importlib.util.spec_from_file_location(
-        "review_check", ROOT_TOOLS / "review-check.py")
+        "review_check", ROOT_TOOLS / "review-check.py"
+    )
     module = importlib.util.module_from_spec(spec)
     sys.modules["review_check"] = module
     spec.loader.exec_module(module)
@@ -790,10 +870,12 @@ def test_readme_figure_thresholds_match_the_checker():
         assert const in stated, f"README 阈值表里找不到 {const} 那一行"
         actual = getattr(module, const)
         assert stated[const] == actual, (
-            f"{const} 漂移了：README 写 {stated[const]}，检查器是 {actual}")
+            f"{const} 漂移了：README 写 {stated[const]}，检查器是 {actual}"
+        )
     # 反过来：检查器里改出一个新阈值，README 没跟上也要报出来
     assert len(stated) == len(README_FIG_ROWS), (
-        f"README 阈值表只认出 {len(stated)} 行，应有 {len(README_FIG_ROWS)} 行")
+        f"README 阈值表只认出 {len(stated)} 行，应有 {len(README_FIG_ROWS)} 行"
+    )
 
 
 def test_readme_documents_the_readability_dimensions():

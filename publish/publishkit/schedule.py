@@ -180,9 +180,7 @@ def resolve_config(
             else state / "schedule.json"
         ),
         platforms_dir=(
-            Path(platforms_dir)
-            if platforms_dir is not None
-            else root / "platforms"
+            Path(platforms_dir) if platforms_dir is not None else root / "platforms"
         ),
         secrets_file=secret_path,
     )
@@ -518,8 +516,11 @@ def select_for_platform(units, platform, *, window, outbox=None, exclude=()):
         if matched:
             # 有内容单元、只是它们**都是分类页**——分类页是站点的东西，
             # 不是要发给平台的稿子。这跟「一个都没有」不是一回事。
-            return None, "候选集是空的：{!r} 这个平台下只有分类页，没有要发的稿子".format(
-                platform
+            return (
+                None,
+                "候选集是空的：{!r} 这个平台下只有分类页，没有要发的稿子".format(
+                    platform
+                ),
             )
         return None, "候选集是空的：没有内容单元的 platforms 里包含 {!r}".format(
             platform

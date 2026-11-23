@@ -165,6 +165,7 @@ def rewrite_links(body, script_to_permalink):
     READMEs) keep their text but lose the link — a dead link on the site is
     worse than plain text.
     """
+
     def replace(match):
         target = match.group(1)
         url = script_to_permalink.get(target)
@@ -210,11 +211,7 @@ def build_page(episode, ep_dir, outbox, content_id):
     date = fields.get("date") or "1970-01-01"
     description = meta.get("description") or ""
 
-    platforms = sorted(
-        platform
-        for (cid, platform) in outbox
-        if cid == content_id
-    )
+    platforms = sorted(platform for (cid, platform) in outbox if cid == content_id)
 
     front_matter = [
         "---",
@@ -282,14 +279,14 @@ def main(argv=None) -> int:
         path = posts_dir / f"{content_id}.md"
         path.write_text(front + body, encoding="utf-8")
 
-        platforms = sorted(
-            platform for (cid, platform) in outbox if cid == content_id
-        )
+        platforms = sorted(platform for (cid, platform) in outbox if cid == content_id)
         pages.append((episode, title, date, url, platforms))
 
-    print("生成视频内容单元 {} 个：{}".format(
-        len(pages), "、".join(episode for episode, *_ in pages)
-    ))
+    print(
+        "生成视频内容单元 {} 个：{}".format(
+            len(pages), "、".join(episode for episode, *_ in pages)
+        )
+    )
     print("合集页由站点自己渲染（platforms/blog/site/src/pages/videos/）")
     return 0
 

@@ -472,9 +472,7 @@ def load_capability_file(path) -> Capability:
     requires_certification = _optional(
         data, "requires_certification", "", _as_bool, False
     )
-    requires_min_followers = _optional(
-        data, "requires_min_followers", "", _as_int, 0
-    )
+    requires_min_followers = _optional(data, "requires_min_followers", "", _as_int, 0)
     if requires_min_followers < 0:
         raise CapabilityFieldError(
             "能力模型字段 requires_min_followers 不能为负，实际是 {}".format(
@@ -515,9 +513,7 @@ def load_capability(platform_id: str, *, platforms_dir=None) -> Capability:
             "平台 id 不合法：{!r}（应为小写字母开头的标识符）".format(platform_id)
         )
     directory = (
-        Path(platforms_dir)
-        if platforms_dir is not None
-        else default_platforms_dir()
+        Path(platforms_dir) if platforms_dir is not None else default_platforms_dir()
     )
     path = directory / platform_id / "capability.toml"
     if not path.is_file():
@@ -530,9 +526,7 @@ def load_capability(platform_id: str, *, platforms_dir=None) -> Capability:
 def list_capabilities(*, platforms_dir=None) -> list:
     """Load every platform's ``capability.toml``, sorted by id."""
     directory = (
-        Path(platforms_dir)
-        if platforms_dir is not None
-        else default_platforms_dir()
+        Path(platforms_dir) if platforms_dir is not None else default_platforms_dir()
     )
     if not directory.is_dir():
         return []

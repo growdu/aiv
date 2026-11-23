@@ -159,17 +159,21 @@ EPISODE_LIST_FIELDS = (
 #: 透传白名单（§4.1 + 契约七 §4.3）。未声明的顶层字段一律丢弃——
 #: 白名单透传，不做全文转储。
 PASSTHROUGH_FIELDS = (
-    "title",
-    "short_title",
-    "tldr",
-    "description",
-    "difficulty",
-    "cover",
-    "reprintPolicy",
-    "kind",
-    "platforms",
-    "publish_on",
-) + EPISODE_SCALAR_FIELDS + EPISODE_LIST_FIELDS
+    (
+        "title",
+        "short_title",
+        "tldr",
+        "description",
+        "difficulty",
+        "cover",
+        "reprintPolicy",
+        "kind",
+        "platforms",
+        "publish_on",
+    )
+    + EPISODE_SCALAR_FIELDS
+    + EPISODE_LIST_FIELDS
+)
 
 #: 长度约束（§4.1）。
 _FIELD_MAX_CHARS = {
@@ -291,7 +295,7 @@ def parse_front_matter(text: str) -> tuple:
                 list_key = key
     close_list()
 
-    return fields, text[match.end():]
+    return fields, text[match.end() :]
 
 
 def validate_fields(fields: dict) -> list:
@@ -416,9 +420,7 @@ def parse_content_date(value: str) -> date:
     try:
         return datetime.fromisoformat(text).date()
     except ValueError as exc:
-        raise ContractFieldError(
-            "date {!r} 不是真实存在的日期".format(value)
-        ) from exc
+        raise ContractFieldError("date {!r} 不是真实存在的日期".format(value)) from exc
 
 
 def _validate_date(fields: dict) -> list:

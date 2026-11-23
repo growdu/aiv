@@ -180,9 +180,7 @@ def test_a_regular_list_is_still_a_list():
 
 def test_an_indented_scalar_under_a_scalar_field_is_a_string():
     """标量字段的缩进形态也是标量——``cover`` 本来就该是字符串。"""
-    fields, _ = parse_front_matter(
-        "---\ncover:\n  images/cover.jpg\n---\n\n正文\n"
-    )
+    fields, _ = parse_front_matter("---\ncover:\n  images/cover.jpg\n---\n\n正文\n")
 
     assert fields["cover"] == "images/cover.jpg"
     assert validate_fields(fields) == []
@@ -357,7 +355,9 @@ def test_platforms_must_be_a_list(tmp_path):
 
 def test_platforms_items_must_be_non_empty_strings(tmp_path):
     path = tmp_path / "post.md"
-    path.write_text("---\ntitle: x\nplatforms:\n  - wechat\n  - \"\"\n---\n\n正文\n", encoding="utf-8")
+    path.write_text(
+        '---\ntitle: x\nplatforms:\n  - wechat\n  - ""\n---\n\n正文\n', encoding="utf-8"
+    )
 
     with pytest.raises(ContractFieldError) as excinfo:
         read_contract(path)
@@ -366,7 +366,9 @@ def test_platforms_items_must_be_non_empty_strings(tmp_path):
 
 def test_platform_id_must_look_like_an_id(tmp_path):
     path = tmp_path / "post.md"
-    path.write_text("---\ntitle: x\nplatforms:\n  - WeChat\n---\n\n正文\n", encoding="utf-8")
+    path.write_text(
+        "---\ntitle: x\nplatforms:\n  - WeChat\n---\n\n正文\n", encoding="utf-8"
+    )
 
     with pytest.raises(ContractFieldError) as excinfo:
         read_contract(path)
@@ -391,7 +393,9 @@ def test_publish_on_must_be_yyyy_mm_dd(tmp_path, bad_date):
 
 def test_publish_on_must_be_a_real_date(tmp_path):
     path = tmp_path / "post.md"
-    path.write_text("---\ntitle: x\npublish_on: 2026-02-30\n---\n\n正文\n", encoding="utf-8")
+    path.write_text(
+        "---\ntitle: x\npublish_on: 2026-02-30\n---\n\n正文\n", encoding="utf-8"
+    )
 
     with pytest.raises(ContractFieldError) as excinfo:
         read_contract(path)
@@ -400,7 +404,9 @@ def test_publish_on_must_be_a_real_date(tmp_path):
 
 def test_publish_on_accepts_a_real_date(tmp_path):
     path = tmp_path / "post.md"
-    path.write_text("---\ntitle: x\npublish_on: 2026-11-13\n---\n\n正文\n", encoding="utf-8")
+    path.write_text(
+        "---\ntitle: x\npublish_on: 2026-11-13\n---\n\n正文\n", encoding="utf-8"
+    )
 
     assert read_contract(path).publish_on == "2026-11-13"
 
@@ -444,7 +450,9 @@ def test_title_over_eighty_chars_is_rejected(tmp_path):
 
 def test_tldr_over_one_hundred_twenty_chars_is_rejected(tmp_path):
     path = tmp_path / "post.md"
-    path.write_text("---\ntitle: x\ntldr: {}\n---\n\n正文\n".format("句" * 121), encoding="utf-8")
+    path.write_text(
+        "---\ntitle: x\ntldr: {}\n---\n\n正文\n".format("句" * 121), encoding="utf-8"
+    )
 
     with pytest.raises(ContractFieldError) as excinfo:
         read_contract(path)
@@ -465,7 +473,9 @@ def test_description_over_one_hundred_fifty_chars_is_rejected(tmp_path):
 
 def test_unknown_reprint_policy_is_rejected(tmp_path):
     path = tmp_path / "post.md"
-    path.write_text("---\ntitle: x\nreprintPolicy: free\n---\n\n正文\n", encoding="utf-8")
+    path.write_text(
+        "---\ntitle: x\nreprintPolicy: free\n---\n\n正文\n", encoding="utf-8"
+    )
 
     with pytest.raises(ContractFieldError) as excinfo:
         read_contract(path)
@@ -499,15 +509,18 @@ def test_validate_fields_collects_every_violation_at_once():
 
 
 def test_validate_fields_accepts_a_clean_draft():
-    assert validate_fields(
-        {
-            "title": "x",
-            "platforms": ["wechat"],
-            "publish_on": "2026-11-13",
-            "difficulty": "1",
-            "kind": "document",
-        }
-    ) == []
+    assert (
+        validate_fields(
+            {
+                "title": "x",
+                "platforms": ["wechat"],
+                "publish_on": "2026-11-13",
+                "difficulty": "1",
+                "kind": "document",
+            }
+        )
+        == []
+    )
 
 
 def test_contract_from_fields_accepts_parsed_fields():
@@ -641,7 +654,8 @@ def test_parser_matches_the_weixin_parser_on_the_real_corpus():
         their_fields, their_body = weixin_parser(text)
         assert mine_fields == their_fields, (
             "{}：解析结果与 wechat.posts 不一致\n  契约层：{}\n  weixin：{}".format(
-                name, mine_fields, their_fields)
+                name, mine_fields, their_fields
+            )
         )
         assert mine_body == their_body, "{}：正文切分不一致".format(name)
 

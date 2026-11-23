@@ -108,12 +108,25 @@ def test_both_readers_read_the_real_declaration_the_same_way():
     assert contract_cap.review == adapter_cap.review == "platform"
     assert contract_cap.requires_certification is True
     assert adapter_cap.requires_certification is True
-    assert contract_cap.requires_min_followers == adapter_cap.requires_min_followers == 1000
+    assert (
+        contract_cap.requires_min_followers
+        == adapter_cap.requires_min_followers
+        == 1000
+    )
 
-    for key in ("title_chars", "body_chars", "digest_chars", "image_bytes",
-                "cover_ratio", "max_body_images", "paragraph_words"):
+    for key in (
+        "title_chars",
+        "body_chars",
+        "digest_chars",
+        "image_bytes",
+        "cover_ratio",
+        "max_body_images",
+        "paragraph_words",
+    ):
         assert contract_cap.limits[key] == getattr(adapter_cap.limits, key), key
-    assert list(contract_cap.limits["image_formats"]) == list(adapter_cap.limits.image_formats)
+    assert list(contract_cap.limits["image_formats"]) == list(
+        adapter_cap.limits.image_formats
+    )
     assert list(contract_cap.limits["cover_min_pixels"]) == list(
         adapter_cap.limits.cover_min_pixels
     )
@@ -139,7 +152,10 @@ def test_both_readers_read_the_real_declaration_the_same_way():
         ("顶层缺 name", BASE_TOML.replace('name = "头条号"\n', "")),
         ("顶层缺 kind", BASE_TOML.replace('kind = "document"\n', "")),
         ("顶层缺 review", BASE_TOML.replace('review = "platform"\n', "")),
-        ("automation 值域外", BASE_TOML.replace('automation = "manual"', 'automation = "api"')),
+        (
+            "automation 值域外",
+            BASE_TOML.replace('automation = "manual"', 'automation = "api"'),
+        ),
     ],
     ids=[
         "typo_in_requires_certification",

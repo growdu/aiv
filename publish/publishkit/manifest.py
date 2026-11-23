@@ -179,17 +179,13 @@ class Manifest:
         digest_limit = _limit(limits, "digest_chars")
         if isinstance(digest_limit, int) and len(self.digest) > digest_limit:
             violations.append(
-                "摘要 {} 字，超过平台上限 {} 字".format(
-                    len(self.digest), digest_limit
-                )
+                "摘要 {} 字，超过平台上限 {} 字".format(len(self.digest), digest_limit)
             )
 
         body_limit = _limit(limits, "body_chars")
         if isinstance(body_limit, int) and len(self.body_html) > body_limit:
             violations.append(
-                "正文 {} 字，超过平台上限 {} 字".format(
-                    len(self.body_html), body_limit
-                )
+                "正文 {} 字，超过平台上限 {} 字".format(len(self.body_html), body_limit)
             )
 
         max_images = _limit(limits, "max_body_images")
@@ -229,9 +225,7 @@ def _limit(limits, name):
 def _as_str(value: object, key: str) -> str:
     if not isinstance(value, str):
         raise ManifestFieldError(
-            "发布清单字段 {} 必须是字符串，实际是 {}".format(
-                key, type(value).__name__
-            )
+            "发布清单字段 {} 必须是字符串，实际是 {}".format(key, type(value).__name__)
         )
     return value
 
@@ -239,9 +233,7 @@ def _as_str(value: object, key: str) -> str:
 def _as_str_list(value: object, key: str) -> tuple:
     if not isinstance(value, list):
         raise ManifestFieldError(
-            "发布清单字段 {} 必须是数组，实际是 {}".format(
-                key, type(value).__name__
-            )
+            "发布清单字段 {} 必须是数组，实际是 {}".format(key, type(value).__name__)
         )
     for item in value:
         if not isinstance(item, str):

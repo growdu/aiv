@@ -107,7 +107,9 @@ def test_the_state_file_round_trips(tmp_path):
     state = ScheduleState(path)
     state.put(
         WEEK,
-        WeekRecord("a/b", ("wechat", "toutiao"), "2026-11-13 09:00:03", "weekly", False),
+        WeekRecord(
+            "a/b", ("wechat", "toutiao"), "2026-11-13 09:00:03", "weekly", False
+        ),
     )
     state.save()
 
@@ -128,7 +130,9 @@ def test_a_crash_while_writing_leaves_no_half_json(tmp_path):
     """
     path = tmp_path / "schedule.json"
     state = ScheduleState(path)
-    state.put(WEEK, WeekRecord("a/b", ("wechat",), "2026-11-13 09:00:03", "weekly", True))
+    state.put(
+        WEEK, WeekRecord("a/b", ("wechat",), "2026-11-13 09:00:03", "weekly", True)
+    )
     state.save()
     original = path.read_text(encoding="utf-8")
 
@@ -136,7 +140,9 @@ def test_a_crash_while_writing_leaves_no_half_json(tmp_path):
         raise OSError("磁盘满了")
 
     broken = ScheduleState(path)
-    broken.put(WEEK, WeekRecord("c/d", ("wechat",), "2026-11-13 09:00:03", "weekly", True))
+    broken.put(
+        WEEK, WeekRecord("c/d", ("wechat",), "2026-11-13 09:00:03", "weekly", True)
+    )
 
     real_replace = os.replace
     os.replace = boom
@@ -163,7 +169,9 @@ def test_a_corrupt_state_file_is_refused_loudly(tmp_path):
 def test_a_state_record_with_a_wrong_field_is_refused_loudly(tmp_path):
     path = tmp_path / "schedule.json"
     path.write_text(
-        json.dumps({"2026-W46": {"content_id": "a", "done": "yes"}}, ensure_ascii=False),
+        json.dumps(
+            {"2026-W46": {"content_id": "a", "done": "yes"}}, ensure_ascii=False
+        ),
         encoding="utf-8",
     )
 
@@ -308,8 +316,9 @@ def test_an_already_published_platform_is_skipped(tmp_path):
     """发布层的幂等键：重跑不会重发已成功的部分。"""
     config = make_config(tmp_path)
     _corpus(tmp_path)
-    write_snapshot(config.outbox_dir_for("toutiao"), "db/demo", "toutiao",
-                  status="packaged")
+    write_snapshot(
+        config.outbox_dir_for("toutiao"), "db/demo", "toutiao", status="packaged"
+    )
     publisher = RecordingPublisher()
 
     result = run_weekly(config, publisher=publisher, now=FRIDAY)
@@ -322,8 +331,9 @@ def test_nothing_to_publish_is_stated_out_loud(tmp_path):
     """§3.3 规则 5：本周没有可发的 → 明确说，不静默成功。"""
     config = make_config(tmp_path)
     _corpus(tmp_path)
-    write_snapshot(config.outbox_dir_for("toutiao"), "db/demo", "toutiao",
-                  status="packaged")
+    write_snapshot(
+        config.outbox_dir_for("toutiao"), "db/demo", "toutiao", status="packaged"
+    )
     publisher = RecordingPublisher()
 
     result = run_weekly(config, publisher=publisher, now=FRIDAY)
@@ -359,9 +369,9 @@ def test_a_dry_run_writes_nothing(tmp_path):
     result = run_weekly(config, publisher=publisher, now=FRIDAY, dry_run=True)
 
     assert result.action == "published"
-    assert publisher.calls == []          # 没调 adapter
-    assert not config.schedule_file.exists()   # 没写周键
-    assert not config.outbox_dir_for("toutiao").exists()   # 没写 outbox
+    assert publisher.calls == []  # 没调 adapter
+    assert not config.schedule_file.exists()  # 没写周键
+    assert not config.outbox_dir_for("toutiao").exists()  # 没写 outbox
     assert any("演练" in message for message in result.messages)
 
 
