@@ -237,3 +237,94 @@ def test_ep_doc_and_ep_tier_read_the_two_other_names(tmp_path, monkeypatch):
     monkeypatch.setattr(episodes_mod, "EPISODES_DIR", tmp_path)
     assert episodes_mod.ep_doc(EP) == "演示系列/演示合集/夹具文档"
     assert episodes_mod.ep_tier(EP) == "short"
+
+
+# ── 坐标与口播稿要对得上 ─────────────────────────────────
+#
+# **坐标是目录说了算**（期路径四层），口播稿 front matter 里的
+# `episode` / `tier` / `episode_number` 是同一件事的**第二遍抄写**。
+# 两遍抄写对不上时，没有哪一遍是对的——所以这里把它们对一遍。
+
+
+def test_a_tier_that_disagrees_with_the_directory_is_caught(tmp_path):
+    """口播稿写的档位必须等于目录的第四层。
+
+    对不上的后果不是「显示难看」：三档裁剪器按 role 裁出 short / mid / full，
+    而**目录名**才是这一期到底是什么档的凭据。两处对不上时，
+    出片管线裁的是一档，发出去的是另一档。
+    """
+    _make_episode(tmp_path, "系列甲/合集甲/文档甲/short",
+                  front_matter="---\nepisode: 系列甲/合集甲/文档甲\n"
+                               "tier: mid\n---\n")
+    problems = episodes_mod.coordinate_problems(tmp_path)
+    assert any("tier=mid" in p and "目录是 short" in p for p in problems), problems
+
+
+def test_a_document_path_that_disagrees_with_the_directory_is_caught(tmp_path):
+    """口播稿的 `episode` 记的必须是**文档路径**（前三层）。
+
+    记成别的，契约比对就把同一篇文档的三档当成三篇不同的文档——
+    short 与 full 互相「不一致」，而人看不出哪一处错了。
+    """
+    _make_episode(tmp_path, "系列甲/合集甲/文档甲/short",
+                  front_matter="---\nepisode: 系列甲/合集甲/文档乙\n"
+                               "tier: short\n---\n")
+    problems = episodes_mod.coordinate_problems(tmp_path)
+    assert any("episode=系列甲/合集甲/文档乙" in p for p in problems), problems
+
+
+def test_two_episodes_with_the_same_number_are_caught(tmp_path):
+    """**两个期不许共用一个期号**。
+
+    期号是内容单元的文件名（``content/units/video/<期号>.md``）——
+    两期共用一个期号，内容单元就撞车了，后写的把先写的**盖掉**，
+    而且**一声不响**：构建成功，产物少一期。
+    """
+    for ep in ("系列甲/合集甲/文档甲/short", "系列乙/合集乙/文档乙/full"):
+        _make_episode(tmp_path, ep,
+                      front_matter="---\n"
+                                   f"episode: {ep.rsplit('/', 1)[0]}\n"
+                                   "tier: short\n"
+                                   "episode_number: ep01\n---\n")
+    problems = episodes_mod.coordinate_problems(tmp_path)
+    assert any("期号 ep01" in p and "重复" in p for p in problems), problems
+
+
+def test_a_consistent_episode_tree_has_no_problems(tmp_path):
+    """对得上的时候不许报问题——这条守卫不许变成噪音。"""
+    _make_episode(tmp_path, "系列甲/合集甲/文档甲/short",
+                  front_matter="---\nepisode: 系列甲/合集甲/文档甲\n"
+                               "tier: short\nepisode_number: ep01\n---\n")
+    assert episodes_mod.coordinate_problems(tmp_path) == []
+
+
+def test_a_directory_without_a_script_is_not_an_episode(tmp_path):
+    """没有口播稿的目录不是期——不算坐标问题，也别拿它当一期。"""
+    _make_episode(tmp_path, "系列甲/合集甲/文档甲/short")
+    assert episodes_mod.coordinate_problems(tmp_path) == []
+
+
+def test_the_real_episode_tree_has_no_coordinate_problems():
+    """仓库里真的那些期，坐标与口播稿必须对得上。
+
+    今天期树是空的（视频线清空重来），所以这条**此刻是空的断言**——
+    等第一批期入库，它立刻开始盯人。
+    """
+    assert episodes_mod.coordinate_problems() == []
+
+
+def test_every_document_has_a_short_tier():
+    """每一篇文档都得有 **short** 档。
+
+    short 是默认档：学习流、视频平台（抖音 / 视频号只收 short）
+    与站上那一面都指向它。缺了 short，一期视频在默认的口径下**哪儿都不出现**。
+    """
+    root = episodes_mod.EPISODES_DIR
+    if not root.is_dir():
+        return
+    for doc in episodes_mod.known_docs_at(root):
+        tiers = {
+            path.name for path in (root / doc).iterdir()
+            if path.is_dir() and path.name in episodes_mod.TIERS
+        }
+        assert "short" in tiers, f"{doc} 没有 short 档"

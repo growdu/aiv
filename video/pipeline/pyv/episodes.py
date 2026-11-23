@@ -284,3 +284,52 @@ def ep_doc(ep: str) -> str:
 def ep_tier(ep: str) -> str:
     """这一期 front matter 里记的档位（没有就空串）。"""
     return _front_matter(script_path(ep)).get("tier", "")
+
+
+def coordinate_problems(root: str | Path | None = None) -> list[str]:
+    """期树上「坐标」与「口播稿写的名字」对不上的地方。
+
+    **坐标是目录说了算**（期路径四层），口播稿 front matter 里的
+    ``episode``（文档路径）/ ``tier``（档位）/ ``episode_number``（期号）
+    是同一件事的**第二遍抄写**。
+
+    两遍抄写对不上时，没有哪一遍是对的——所以这里把它们对一遍：
+
+    | 对不上 | 后果 |
+    | --- | --- |
+    | ``tier`` 与目录第四层不符 | 三档裁剪器裁出来的东西与目录说的不是同一档 |
+    | ``episode`` 与目录前三层不符 | 契约比对把同一篇文档的三档当成三篇不同的文档 |
+    | 两个期共用一个期号 | 内容单元的文件名撞车，**后写的把先写的盖掉** |
+
+    返回问题清单（空列表 = 没问题）。**不抛异常**——调用方决定
+    把它当错误还是当 note。
+
+    只有**有口播稿**的目录才算一期（跟 ``read_episodes`` 同一条纪律：
+    说明文件不是一期）。
+    """
+    base = Path(root) if root is not None else EPISODES_DIR
+    problems: list[str] = []
+    numbers: dict[str, str] = {}
+    for ep in known_eps_at(base):
+        script = base / ep / SCRIPT_NAME
+        if not script.is_file():
+            continue  # 没有口播稿就不是一期
+        fields = _front_matter(script)
+        tier = ep.rsplit("/", 1)[-1]
+        doc = "/".join(ep.split("/")[:-1])
+        said_tier = fields.get("tier", "")
+        if said_tier and said_tier != tier:
+            problems.append(
+                f"{ep}：口播稿写着 tier={said_tier}，目录是 {tier}")
+        said_doc = fields.get("episode", "")
+        if said_doc and said_doc != doc:
+            problems.append(
+                f"{ep}：口播稿写着 episode={said_doc}，目录是 {doc}")
+        number = fields.get("episode_number", "")
+        if number:
+            if number in numbers:
+                problems.append(
+                    f"{ep}：期号 {number} 与 {numbers[number]} 重复")
+            else:
+                numbers[number] = ep
+    return problems

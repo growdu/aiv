@@ -227,3 +227,77 @@ def test_the_redirect_pages_are_not_tracked_by_git():
          "platforms/blog/site/source/redirects/learning/old-track/index.md"],
         cwd=REPO_ROOT, capture_output=True, text=True)
     assert out.returncode == 0, "跳转页的落点必须在 .gitignore 里"
+
+
+# --- 第 11 条：旧 URL 全部有跳转 ---------------------------------------------
+#
+# **站点对未知路径返回 200 + 首页**——所以「旧地址没人接」这件事
+# **不会靠 404 暴露**。写错一条，从外面看站点照常跑，
+# 只有点那个旧链接的人会发现地址没变。
+#
+# 所以这条验收不是「看一眼」，而是**钉住「改过名」这件事**：
+# 赛道 id 进了 URL，读者手上的旧链接就指着这里。
+
+
+#: 规格 §七 M1 的赛道改名表：旧 id → 新 id。
+#:
+#: 这张表是**已发生的事实**。改赛道 id 的人得同时更新它——
+#: 更新它就等于承认「这个旧地址从此有人要跳转」。
+KNOWN_RENAMES = {
+    "db-internals": "postgresql",
+    "linux-network": "linux",
+    "dataplane": "dpdk",
+}
+
+
+def _table() -> dict:
+    return json.loads(TABLE.read_text(encoding="utf-8"))
+
+
+def _track_ids() -> set:
+    rules = json.loads(LEARNING_RULES.read_text(encoding="utf-8"))
+    return {track["id"] for track in rules.get("tracks", [])}
+
+
+def test_every_known_rename_has_a_redirect():
+    """**改过名的赛道，旧地址必须有跳转。**
+
+    忘了加的后果不响：旧地址返回 200 + 首页，读者以为文章没了。
+    """
+    table = _table()
+    live = _track_ids()
+    for old_id, new_id in KNOWN_RENAMES.items():
+        old_url = f"/learning/{old_id}/"
+        new_url = f"/learning/{new_id}/"
+        assert table.get(old_url) == new_url, (
+            f"{old_url} 没有跳到 {new_url}——"
+            f"重定向表里是 {table.get(old_url)!r}"
+        )
+        assert new_id in live, f"{new_id} 不是现行的赛道 id"
+
+
+def test_a_redirect_target_is_a_url_the_site_actually_has():
+    """跳转的**目标**得是站上真有页面——跳到一个不存在的地址等于没跳。"""
+    live = _live_urls()
+    for old_url, new_url in _table().items():
+        assert new_url in live, (
+            f"{old_url} 跳到 {new_url}，可那儿没有页面"
+        )
+
+
+def test_the_redirect_page_reaches_the_browser():
+    """跳转页要真的**发出去**——产物里有它，而且它指着新地址。
+
+    页面写在 `source/redirects/` 里，hexo 按它的 `permalink:` 落到旧地址上。
+    这一条盯的是**产物**：表里写了不等于站上真的有。
+    """
+    dist = SITE / "dist"
+    if not dist.exists():
+        pytest.skip("还没构建（先跑 npm run build）")
+    for old_url, new_url in _table().items():
+        path = dist / old_url.strip("/") / "index.html"
+        assert path.is_file(), f"{old_url} 的跳转页不在产物里：{path}"
+        text = path.read_text(encoding="utf-8")
+        assert f"url={new_url}" in text, (
+            f"{old_url} 的跳转页指着 {new_url} 以外的地方"
+        )

@@ -49,7 +49,7 @@ from pathlib import Path
 import pytest
 
 from conftest import load_tool
-from paths import CONTENT_UNITS, SITE, SITE_DATA
+from paths import CONTENT_UNITS, DOCS, SITE, SITE_DATA
 
 SITE_ROOT = SITE
 RULES_FILE = SITE_DATA / "learning-path.json"
@@ -466,3 +466,136 @@ def test_compiled_output_is_up_to_date():
         "学习流编译结果不是最新的，先跑 build-learning-path.py：\n"
         f"{result.stdout}\n{result.stderr}"
     )
+
+
+# ── 源码方向：阶段 = 系列目录 ─────────────────────────────
+#
+# **这条不变量只对源码方向成立**（规格 §2.4）。
+#
+# 源码方向的赛道（`postgresql` / `linux` / `dpdk` / `ceph`）的每个阶段
+# 正好对应一个系列目录（`docs/source-tracks/<方向>/<系列>/`）——
+# 于是「循序渐进」不需要另维护一份，它就是目录的顺序。
+#
+# 写成全站通则当场就红：`engineering` 有 6 个系列目录、只有 4 个阶段，
+# `distributed` 同样 6 : 4。**范围必须写死。**
+
+#: 源码方向的目录前缀。只有 `source-tracks/` 下的赛道参与这条不变量。
+SOURCE_TRACKS = "source-tracks/"
+
+
+def _source_tracks(rules):
+    """源码方向的赛道——``track_match`` 指向 ``source-tracks/`` 的那些。"""
+    tracks = []
+    for track in rules["tracks"]:
+        for rule in track.get("track_match", []):
+            prefix = rule.get("path_prefix", "")
+            if prefix.startswith(SOURCE_TRACKS):
+                tracks.append(track)
+                break
+    return tracks
+
+
+def _series_dir(prefix: str) -> str | None:
+    """一条规则指向的系列目录（``source-tracks/<方向>/<系列>``）。
+
+    不是 ``source-tracks/`` 下的路径就返回 ``None``——那不是系列目录
+    （``path_regex`` 规则、``catch_all``、``video/`` 都不是）。
+    """
+    if not prefix.startswith(SOURCE_TRACKS):
+        return None
+    parts = prefix.rstrip("/").split("/")
+    if len(parts) < 3:
+        return None
+    return "/".join(parts[:3])
+
+
+def _stage_series_dirs(stage: dict) -> set[str]:
+    """一个阶段指向的系列目录集合。"""
+    dirs = set()
+    for rule in stage.get("match", []):
+        directory = _series_dir(rule.get("path_prefix", ""))
+        if directory:
+            dirs.add(directory)
+    return dirs
+
+
+def test_a_source_stage_points_at_exactly_one_series_dir(rules):
+    """源码方向的每个阶段，正好对应**一个**系列目录。
+
+    一个阶段指两个目录，等于两个阶段合成一阶——阶梯的级数与目录数对不上，
+    读者看到的「L3」其实是两个专题合起来的。
+    """
+    for track in _source_tracks(rules):
+        for stage in track["stages"]:
+            dirs = _stage_series_dirs(stage)
+            assert len(dirs) == 1, (
+                f"{track['id']}/{stage['id']} 指向 {len(dirs)} 个系列目录"
+                f"（{sorted(dirs)}）——源码方向的阶段与系列目录是一一对应的"
+            )
+
+
+def test_two_stages_never_share_a_series_dir(rules):
+    """两个阶段不许指同一个系列目录。
+
+    指同一个目录的时候，那批文章会同时落进两级——
+    读者要读两遍，而「这一级有多少篇」这个数字开始骗人。
+    """
+    for track in _source_tracks(rules):
+        seen: dict[str, str] = {}
+        for stage in track["stages"]:
+            for directory in _stage_series_dirs(stage):
+                assert directory not in seen, (
+                    f"{track['id']} 的 {stage['id']} 与 {seen[directory]} "
+                    f"指着同一个系列目录 {directory}"
+                )
+                seen[directory] = stage["id"]
+
+
+def test_every_series_dir_on_disk_has_a_stage(rules):
+    """**反向**也成立：磁盘上每个系列目录都在某个阶段里。
+
+    目录建好了却没人收，那个专题**永远不出现在学习流里**——
+    规则漏写一条，文章照样编译、照样上站，只是学习流上少了一块。
+    """
+    source_root = DOCS / SOURCE_TRACKS
+    if not source_root.is_dir():
+        pytest.skip("docs/source-tracks/ 不在（源码方向的内容还没搬进来）")
+    for direction_dir in sorted(p for p in source_root.iterdir() if p.is_dir()):
+        track = next(
+            (t for t in _source_tracks(rules)
+             if any(rule.get("path_prefix", "").startswith(
+                 f"{SOURCE_TRACKS}{direction_dir.name}/")
+                 for rule in t.get("track_match", []))),
+            None,
+        )
+        assert track is not None, (
+            f"docs/source-tracks/{direction_dir.name}/ 没有对应的赛道"
+        )
+        covered = set()
+        for stage in track["stages"]:
+            covered |= _stage_series_dirs(stage)
+        for series_dir in sorted(p for p in direction_dir.iterdir() if p.is_dir()):
+            relative = f"{SOURCE_TRACKS}{direction_dir.name}/{series_dir.name}"
+            assert relative in covered, (
+                f"{relative} 在磁盘上，却没有落进 {track['id']} 的任何一个阶段"
+            )
+
+
+def test_a_video_unit_appears_exactly_once_in_the_learning_path(compiled):
+    """一个视频单元在学习流里**只出现一次**。
+
+    档位不再进 content_id（视频线清空重来），所以「一期 = 一个档位目录」
+    意味着**一期一个内容单元**。要是同一期在两级里各出现一次，
+    读者会在同一级阶梯上看见两条几乎一样的视频。
+    """
+    _skip_if_disabled(compiled)
+    seen: dict[str, str] = {}
+    for track in compiled["tracks"]:
+        for stage in track["stages"]:
+            for unit in stage["units"]:
+                if not unit.startswith("video/"):
+                    continue
+                assert unit not in seen, (
+                    f"{unit} 同时出现在 {seen.get(unit)} 与 {track['id']}/{stage['id']}"
+                )
+                seen[unit] = f"{track['id']}/{stage['id']}"

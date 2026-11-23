@@ -270,6 +270,21 @@ def main(argv=None) -> int:
         script_to_permalink[rel] = url
         episode_meta[episode] = (ep_dir, date, url, content_id)
 
+    # 期号是内容单元的**文件名**。两期共用一个期号，两个内容单元撞车——
+    # 后写的把先写的**盖掉**，构建还成功，产物少一期。
+    # **先查一遍再写**：宁可一个都不写，也不要半截产物。
+    written: dict[str, str] = {}
+    for episode, (_ep_dir, _date, _url, content_id) in sorted(episode_meta.items()):
+        if content_id in written:
+            print(
+                "期号撞车：{} 与 {} 都要写成内容单元 {}".format(
+                    written[content_id], episode, content_id),
+                file=sys.stderr,
+            )
+            print("期号（口播稿的 episode_number）必须一期一个", file=sys.stderr)
+            return 1
+        written[content_id] = episode
+
     pages = []
     for episode, (ep_dir, date, url, content_id) in sorted(episode_meta.items()):
         title, _date, markdown = build_page(episode, ep_dir, outbox, content_id)
