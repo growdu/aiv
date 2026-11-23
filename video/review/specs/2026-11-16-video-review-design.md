@@ -190,7 +190,7 @@ python -m pyv.cli review frames --episode <期路径> --out /tmp/frames
 | `VV-07` | 平台技术门槛不合格 | error | `preflight.check_video` |
 
 `VV-05`~`VV-07` **不重写**：直接调已有的函数，判定只有一份。
-平台清单只有一个来源（`epmeta.PLATFORM_SPECS`），不在这里再抄一份。
+平台清单只有一个来源（`epmeta.load_specs()` 扫 `platforms/*/publish-spec.json`），不在这里再抄一份。
 
 两条口径钉在这里：
 

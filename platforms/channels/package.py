@@ -203,27 +203,18 @@ def _checklist(episode: str, copy: contract.ChannelsCopy,
     return "\n".join(lines)
 
 
-def _channels_limits_loader(platforms_dir: str | Path | None):
-    """能力声明的读法。默认读仓库里那份 `platforms/`。"""
-    if platforms_dir is None:
-        return epmeta.load_limits
-    base = Path(platforms_dir)
-
-    def load(platform: str) -> dict:
-        return epmeta.load_limits(platform, base)
-
-    return load
-
-
 def _channels_only(meta: epmeta.EpisodeMeta) -> epmeta.EpisodeMeta:
     """只留视频号那一段。
 
-    `check_meta` 会把两个平台都看一遍，但视频号的 adapter 只对视频号负责——
+    `check_meta` 会把所有平台都看一遍，但视频号的 adapter 只对视频号负责——
     「这一期没配 B 站文案」不是视频号的发布问题，不该进视频号的清单。
     """
+    section = meta.platforms.get("channels")
     return epmeta.EpisodeMeta(
         episode=meta.episode, title=meta.title, cover_at=meta.cover_at,
-        url=meta.url, channels=meta.channels, bilibili=None, path=meta.path)
+        url=meta.url,
+        platforms={"channels": section} if section is not None else {},
+        tier=meta.tier, path=meta.path)
 
 
 def _for_channels(findings: list) -> list:
@@ -248,7 +239,8 @@ def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
         _channels_only(meta),
         contract_episode=episode,
         duration=info.duration,
-        limits_loader=_channels_limits_loader(platforms_dir),
+        limits_loader=epmeta.scoped_loader(epmeta.load_limits, platforms_dir),
+        tiers_loader=epmeta.scoped_loader(epmeta.load_tiers, platforms_dir),
     )
     findings = _for_channels(findings)
     findings.extend(preflight.check_video(info, "channels", platforms_dir))

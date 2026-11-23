@@ -974,7 +974,7 @@ def vv_07_platform(media: Media, notes: list[str] | None = None) -> list[Signal]
         _note(notes, f"成片参数读不出来（{exc}）：VV-07 跳过")
         return []
     hits = []
-    for platform in epmeta.PLATFORM_SPECS:
+    for platform in sorted(epmeta.load_specs()):
         try:
             findings = preflight.check_video(info, platform)
         except (OSError, ValueError) as exc:

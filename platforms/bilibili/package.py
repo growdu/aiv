@@ -227,31 +227,20 @@ def _checklist(
     return "\n".join(lines)
 
 
-def _bilibili_limits_loader(platforms_dir: str | Path | None):
-    """能力声明的读法。默认读仓库里那份 `platforms/`。"""
-    if platforms_dir is None:
-        return epmeta.load_limits
-    base = Path(platforms_dir)
-
-    def load(platform: str) -> dict:
-        return epmeta.load_limits(platform, base)
-
-    return load
-
-
 def _bilibili_only(meta: epmeta.EpisodeMeta) -> epmeta.EpisodeMeta:
     """只留B站那一段。
 
-    `check_meta` 会把两个平台都看一遍，但B站的 adapter 只对B站负责——
+    `check_meta` 会把所有平台都看一遍，但B站的 adapter 只对B站负责——
     「这一期没配视频号文案」不是B站的发布问题，不该进B站的清单。
     """
+    section = meta.platforms.get("bilibili")
     return epmeta.EpisodeMeta(
         episode=meta.episode,
         title=meta.title,
         cover_at=meta.cover_at,
         url=meta.url,
-        channels=None,
-        bilibili=meta.bilibili,
+        platforms={"bilibili": section} if section is not None else {},
+        tier=meta.tier,
         path=meta.path,
     )
 
@@ -283,7 +272,8 @@ def preflight_findings(
         _bilibili_only(meta),
         contract_episode=episode,
         duration=info.duration,
-        limits_loader=_bilibili_limits_loader(platforms_dir),
+        limits_loader=epmeta.scoped_loader(epmeta.load_limits, platforms_dir),
+        tiers_loader=epmeta.scoped_loader(epmeta.load_tiers, platforms_dir),
     )
     findings = _for_bilibili(findings)
     findings.extend(

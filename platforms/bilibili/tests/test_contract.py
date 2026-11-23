@@ -33,11 +33,11 @@ def test_reprint_keeps_the_source_as_it_is():
 
     meta_with_reprint = epmeta.EpisodeMeta(
         episode="ep02", title="x", cover_at=1.0,
-        bilibili={
+        platforms={"bilibili": {
             "title": "t", "description": "d", "tags": ["x"],
             "tid": 231, "copyright": 2, "no_reprint": 0,
             "source": "https://example.invalid/2026/11/12/row-lock/origin/",
-        },
+        }},
     )
     copy = contract.slice_copy(meta_with_reprint)
     assert copy.copyright == 2
@@ -50,10 +50,10 @@ def test_the_contract_layer_rejects_a_reprint_without_a_source():
 
     meta_with_reprint = epmeta.EpisodeMeta(
         episode="ep02", title="x", cover_at=1.0,
-        bilibili={
+        platforms={"bilibili": {
             "title": "t", "description": "d", "tags": ["x"],
             "tid": 231, "copyright": 2, "no_reprint": 0,
-        },
+        }},
     )
     findings = epmeta.check_meta(meta_with_reprint)
     assert any(f.rule_id == "epmeta.conditional-required" for f in findings), (

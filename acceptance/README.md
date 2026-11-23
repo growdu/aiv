@@ -81,12 +81,12 @@
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
 | 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 121 passed | 121 passed |
-| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染 | 89 passed | 89 passed |
-| 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 348 passed / 1 skipped | 348 passed / 1 skipped |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 107 passed | 107 passed |
+| 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
-| 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版 | 119 passed | 119 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1060 passed / 60 skipped | 1060 passed / 60 skipped |
+| 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1071 passed / 60 skipped | 1071 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -103,11 +103,20 @@
 | 2026-11-23（README 保留名那轮） | 117 | 86 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
 | 2026-11-23（发布意图透传那轮） | 121 | 86 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
 | 2026-11-23（第一篇稿子进 `docs/` 那轮） | 121 | 89 | 348 / 1 skip | 399 / 2 skip | 521 / 1 skip | 119 | 1060 / 60 skip | 77 | 59 |
+| 2026-11-23（`epmeta` 变通用加载器那轮） | 121 | 107 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1071 / 60 skip | 77 | 59 |
 
 > 2026-11-23 最后一轮：**站点 +3 条**——目录页的 layout 渲染出错被 Hexo 吞成
 > **0 字节的空页面**（`site.posts` 是 Query 不是数组、`permalink` 两种形状
 > 对不上），新守卫钉住「产物里不许有空页面 / 不许有不是完整 HTML 的页面 /
 > 目录页必须列得出自己的直接子级」。其余九套件一条没动。
+
+> 2026-11-23（`epmeta` 变通用加载器那轮）：**视频线 +11 条**——平台清单从
+> 写死的三段搬进 `platforms/<plat>/publish-spec.json`，`epmeta` 不再认识任何平台名；
+> 配套的守卫钉住「规格是扫出来的」「JSON 里 `required_when` 的整数键要还原」
+> （不还原的话条件必填永远不触发）、「档位不在平台的 `tiers` 里就报红」。
+> **publish +8 条**（能力声明加 `tiers` 字段的守卫）；**站点 +18 条**（URL 级重定向）；
+> **抖音 −2 条**——三档全量出包那条改成「short 能出包、mid/full 被档位闸拒掉」
+> （规格 §四：抖音只收 short 档），两条参数化用例合成一条加两条新的。
 
 > 口径说明：站点换 hexo 那轮与还 §五 欠账那轮在两条分支上**并行**发生。
 > 合并后站点以 hexo+matery 为准：hexo 的 79 条 + 还欠账那轮里仍适用的

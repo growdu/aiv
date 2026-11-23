@@ -23,8 +23,12 @@ from conftest import EP_PATH, publish_payload, write_episode
 from douyin import contract, package
 from pyv import epmeta, episodes, preflight
 
-#: 三个档位：同一篇文档的三档是三期，各有各的文案。
-TIERS = ("short", "mid", "full")
+#: 抖音只收 short 档（规格 §四：竖版短视频场景，5–10 分钟的横版长视频
+#: 投进去不成立）。三档里只有 short 能出包——档位闸在出包前拦着。
+TIER = "short"
+
+#: 抖音不收的两档：它们各自是一期，但不是抖音的发布物。
+OTHER_TIERS = ("mid", "full")
 
 
 def _episode(root: Path, episode: str) -> epmeta.EpisodeMeta:
@@ -115,11 +119,11 @@ def test_a_synthetic_cover_is_actually_a_frame(episode_dir, on_disk_meta,
 # --- 三档全量 ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize("tier", TIERS)
-def test_every_episode_packages_with_a_synthetic_video(tier, episodes_root,
-                                                        vertical_video,
-                                                        tmp_path):
-    """三个档位都得能出包。
+@pytest.mark.parametrize("tier", (TIER,))
+def test_the_short_episode_packages_with_a_synthetic_video(tier, episodes_root,
+                                                            vertical_video,
+                                                            tmp_path):
+    """short 档能出包。
 
     这一条不依赖任何本机成片，所以**在 CI 上也真的跑**——
     证明的是「元数据 + 能力声明 + 预检」这一段链路是通的。
@@ -132,7 +136,24 @@ def test_every_episode_packages_with_a_synthetic_video(tier, episodes_root,
     assert result.warnings == []
 
 
-@pytest.mark.parametrize("tier", TIERS)
+@pytest.mark.parametrize("tier", OTHER_TIERS)
+def test_a_tier_outside_the_platform_tiers_is_refused(tier, episodes_root,
+                                                       vertical_video, tmp_path):
+    """mid / full 档抖音不收——出包前就该拦住。
+
+    不拦的后果是白跑一趟：包出了、文案写了，平台当场拒收。
+    档位清单写在平台自己的能力声明里（`platforms/douyin/capability.toml`）。
+    """
+    episode = "/".join((*EP_PATH.split("/")[:-1], tier))
+    meta = _episode(episodes_root, episode)
+    with pytest.raises(package.PackageError) as excinfo:
+        package.build_package(episode, meta, vertical_video, tmp_path / "out")
+    assert any(f.rule_id == "epmeta.tier-not-allowed"
+               for f in excinfo.value.findings), (
+        f"{tier} 档被拒了，但报的不是档位问题：{excinfo.value}")
+
+
+@pytest.mark.parametrize("tier", (TIER,))
 def test_the_packaged_text_never_carries_an_outbound_link(tier, episodes_root,
                                                             vertical_video,
                                                             tmp_path):

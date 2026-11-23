@@ -39,7 +39,7 @@ def publish_payload(episode: str = EP_PATH, **overrides) -> dict:
     `episode` 字段填**期路径**——出包时它要跟 adapter 拿到的那个期号对上
     （`pyv.epmeta.check_meta` 的 `epmeta.episode` 那道闸）。
 
-    B站这一档的必填字段按 `pyv/epmeta.py` 的 `PLATFORM_SPECS["bilibili"]`：
+    B站这一档的必填字段按 `platforms/bilibili/publish-spec.json`：
     `title` / `description` / `tags`（列表）/ `tid`（整数）/
     `copyright`（1 = 原创，2 = 转载）/ `no_reprint`（0 或 1）。
     `copyright = 2`（转载）必须额外给 `source`——见 `reprint_payload`。
@@ -51,13 +51,17 @@ def publish_payload(episode: str = EP_PATH, **overrides) -> dict:
         "title": "一个 64 位计数器，决定所有事务的提交顺序",
         "cover_at": 1.0,
         "url": "https://example.invalid/2026/11/12/row-lock/",
-        "bilibili": {
-            "title": "一个 64 位计数器，决定所有事务的提交顺序",
-            "description": "并发时 commit 的先后是乱的。",
-            "tags": ["数据库", "源码", "并发"],
-            "tid": 231,
-            "copyright": 1,
-            "no_reprint": 1,
+        # 平台段落在 `platforms` 下面——平台清单是扫出来的，
+        # 顶层摊开的话「哪些键是平台」就又变成写死的清单了。
+        "platforms": {
+            "bilibili": {
+                "title": "一个 64 位计数器，决定所有事务的提交顺序",
+                "description": "并发时 commit 的先后是乱的。",
+                "tags": ["数据库", "源码", "并发"],
+                "tid": 231,
+                "copyright": 1,
+                "no_reprint": 1,
+            },
         },
     }
     payload.update(overrides)
@@ -71,12 +75,12 @@ def reprint_payload(episode: str = EP_PATH, **overrides) -> dict:
     所以这一档的语料里它必须在场。
     """
     payload = publish_payload(episode)
-    payload["bilibili"].update({
+    payload["platforms"]["bilibili"].update({
         "copyright": 2,
         "no_reprint": 0,
         "source": "https://example.invalid/2026/11/12/row-lock/origin/",
     })
-    payload["bilibili"].update(overrides)
+    payload["platforms"]["bilibili"].update(overrides)
     return payload
 
 
@@ -212,13 +216,15 @@ def meta():
         title="一个 64 位计数器，决定所有事务的提交顺序",
         cover_at=1.0,
         url="https://example.invalid/2026/11/12/row-lock/",
-        bilibili={
-            "title": "一个 64 位计数器，决定所有事务的提交顺序",
-            "description": "并发时 commit 的先后是乱的。",
-            "tags": ["openGauss", "数据库", "源码"],
-            "tid": 231,
-            "copyright": 1,
-            "no_reprint": 1,
+        platforms={
+            "bilibili": {
+                "title": "一个 64 位计数器，决定所有事务的提交顺序",
+                "description": "并发时 commit 的先后是乱的。",
+                "tags": ["openGauss", "数据库", "源码"],
+                "tid": 231,
+                "copyright": 1,
+                "no_reprint": 1,
+            },
         },
     )
 

@@ -193,14 +193,19 @@ image_bytes = 20971520
 2. **写能力声明** `platforms/<新平台>/capability.toml`——
    `id` 必须等于目录名；限额要**对着平台实测**再写，
    每个数字写清「实测到什么、还没测到什么」；
-3. **写 adapter**：至少有一个 `cli.py`（声明里的 `[adapter].command`
+3. **（吃视频的平台）写发布规格** `platforms/<新平台>/publish-spec.json`——
+   这个平台发一期视频要哪些字段、每个字段对应能力声明里的哪个限额键、
+   哪些字段是整数、整数能取哪些值、什么条件下另一个字段必填。
+   **视频线只读它，不认识任何平台名**——所以这份规格是视频线唯一的
+   平台清单入口。文档类平台（公众号、头条、站点）没有这一份。
+4. **写 adapter**：至少有一个 `cli.py`（声明里的 `[adapter].command`
    指着它，守卫会查）；
-4. **定 `automation` 档位**：`manual` / `api_draft` / `api_publish`——
+5. **定 `automation` 档位**：`manual` / `api_draft` / `api_publish`——
    档位由**平台那边的权限**决定，不是由我们想不想自动决定；
-5. **定 `review`**：`none` / `platform` / `precheck`——
+6. **定 `review`**：`none` / `platform` / `precheck`——
    平台机审还是本地预检；
-6. **建 `outbox/`**（空的也行）与 `docs/`（写清楚这个平台的规矩）；
-7. **跑守卫**：`python3 -m pytest publish/tests -q`。
+7. **建 `outbox/`**（空的也行）与 `docs/`（写清楚这个平台的规矩）；
+8. **跑守卫**：`python3 -m pytest publish/tests -q`。
 
 **上游一个字都不用改**——`docs/` `video/` `drafts/` `review/` 都不动。
 这就是「加平台只动 `platforms/`」的意思。

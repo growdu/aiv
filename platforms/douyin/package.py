@@ -285,27 +285,18 @@ def _checklist(episode: str, copy: contract.DouyinCopy,
     return "\n".join(lines)
 
 
-def _douyin_limits_loader(platforms_dir: str | Path | None):
-    """能力声明的读法。默认读仓库里那份 `platforms/`。"""
-    if platforms_dir is None:
-        return epmeta.load_limits
-    base = Path(platforms_dir)
-
-    def load(platform: str) -> dict:
-        return epmeta.load_limits(platform, base)
-
-    return load
-
-
 def _douyin_only(meta: epmeta.EpisodeMeta) -> epmeta.EpisodeMeta:
     """只留抖音那一段。
 
-    `check_meta` 会把各平台都看一遍，但抖音的 adapter 只对抖音负责——
+    `check_meta` 会把所有平台都看一遍，但抖音的 adapter 只对抖音负责——
     「这一期没配 B站文案」不是抖音的发布问题，不该进抖音的清单。
     """
+    section = meta.platforms.get("douyin")
     return epmeta.EpisodeMeta(
         episode=meta.episode, title=meta.title, cover_at=meta.cover_at,
-        url=meta.url, douyin=meta.douyin, path=meta.path)
+        url=meta.url,
+        platforms={"douyin": section} if section is not None else {},
+        tier=meta.tier, path=meta.path)
 
 
 def _for_douyin(findings: list) -> list:
@@ -356,12 +347,13 @@ def preflight_findings(meta: epmeta.EpisodeMeta, info: preflight.VideoInfo,
 
     返回的 finding 里 `error` 的必须先改，`warning` 的要写进清单。
     """
-    limits_loader = _douyin_limits_loader(platforms_dir)
+    limits_loader = epmeta.scoped_loader(epmeta.load_limits, platforms_dir)
     findings = epmeta.check_meta(
         _douyin_only(meta),
         contract_episode=episode,
         duration=info.duration,
         limits_loader=limits_loader,
+        tiers_loader=epmeta.scoped_loader(epmeta.load_tiers, platforms_dir),
     )
     findings = _for_douyin(findings)
     findings.extend(preflight.check_video(info, "douyin", platforms_dir))
@@ -387,7 +379,8 @@ def build_package(episode: str, meta: epmeta.EpisodeMeta, video: str | Path,
         raise FileNotFoundError(f"成片不存在：{video_path}")
 
     info = preflight.probe(video_path)
-    limits = _limits_or_empty(_douyin_limits_loader(platforms_dir), "douyin")
+    limits = _limits_or_empty(
+        epmeta.scoped_loader(epmeta.load_limits, platforms_dir), "douyin")
     findings = preflight_findings(meta, info, episode, platforms_dir, limits)
     errors = [f for f in findings if f.level == epmeta.ERROR]
     if errors:

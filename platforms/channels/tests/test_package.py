@@ -166,7 +166,7 @@ def test_the_limits_are_errors_not_truncations(meta, video, tmp_path, section):
 
     broken = epmeta.EpisodeMeta(
         episode="ep01", title=meta.title, cover_at=meta.cover_at, url=meta.url,
-        channels=section,
+        platforms={"channels": section},
     )
     out = tmp_path / "out"
     with pytest.raises(package.PackageError):
@@ -280,7 +280,8 @@ def test_changing_the_copy_refreshes_the_package(meta, video, tmp_path):
     package.build_package("ep01", meta, video, out)
 
     changed = dataclasses.replace(
-        meta, channels={**meta.channels, "title": "新标题"})
+        meta, platforms={
+            "channels": {**meta.platforms["channels"], "title": "新标题"}})
     result = package.build_package("ep01", changed, video, out)
 
     assert result.reused is True          # 视频与封面确实复用了

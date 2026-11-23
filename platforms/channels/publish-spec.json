@@ -1,0 +1,17 @@
+{
+  "required": ["title", "description", "topics"],
+  "text_limits": {
+    "title": "title_chars",
+    "description": "description_chars"
+  },
+  "list_limits": {
+    "topics": {
+      "total": "topics_max",
+      "item": "topic_chars",
+      "measure": "count"
+    }
+  },
+  "int_fields": [],
+  "int_domains": {},
+  "required_when": {}
+}

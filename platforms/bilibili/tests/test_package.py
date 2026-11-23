@@ -36,8 +36,8 @@ def test_the_video_is_a_symlink_not_a_copy(meta, video, tmp_path):
 
 def test_the_text_files_hold_the_copy(meta, video, tmp_path):
     result = package.build_package("ep02", meta, video, tmp_path / "out")
-    assert result.files["title.txt"].read_text(encoding="utf-8") == meta.bilibili["title"]
-    assert result.files["description.txt"].read_text(encoding="utf-8") == meta.bilibili["description"]
+    assert result.files["title.txt"].read_text(encoding="utf-8") == meta.platforms["bilibili"]["title"]
+    assert result.files["description.txt"].read_text(encoding="utf-8") == meta.platforms["bilibili"]["description"]
     assert result.files["tags.txt"].read_text(encoding="utf-8") == "openGauss,数据库,源码"
 
 
@@ -218,7 +218,8 @@ def test_changing_the_copy_refreshes_the_package(meta, video, tmp_path):
     out = tmp_path / "out"
     package.build_package("ep02", meta, video, out)
 
-    changed = dataclasses.replace(meta, bilibili={**meta.bilibili, "title": "新标题"})
+    changed = dataclasses.replace(
+        meta, platforms={"bilibili": {**meta.platforms["bilibili"], "title": "新标题"}})
     result = package.build_package("ep02", changed, video, out)
 
     assert result.reused is True  # 视频与封面确实复用了
@@ -494,7 +495,7 @@ def test_the_limits_are_errors_not_truncations(meta, video, tmp_path, section):
         title=meta.title,
         cover_at=meta.cover_at,
         url=meta.url,
-        bilibili=section,
+        platforms={"bilibili": section},
     )
     out = tmp_path / "out"
     with pytest.raises(package.PackageError):
@@ -511,8 +512,7 @@ def test_the_channels_section_is_not_the_bilibili_adapters_business(meta, video,
         title=meta.title,
         cover_at=meta.cover_at,
         url=meta.url,
-        channels=None,
-        bilibili=meta.bilibili,
+        platforms={"bilibili": meta.platforms["bilibili"]},
     )
     result = package.build_package("ep02", only_bilibili, video, tmp_path / "out")
     assert result.warnings == []
@@ -785,8 +785,8 @@ def test_the_episode_on_disk_carries_the_episode_path_as_its_identity(
     那道闸）。填错了就是两期认成一期。
     """
     assert on_disk_meta.episode == EP_PATH
-    assert on_disk_meta.bilibili["tid"] == 231
-    assert on_disk_meta.bilibili["copyright"] == 1
+    assert on_disk_meta.platforms["bilibili"]["tid"] == 231
+    assert on_disk_meta.platforms["bilibili"]["copyright"] == 1
 
 
 # --- 转载那一档：copyright = 2 必须给 source ---------------------------------
@@ -822,7 +822,7 @@ def test_a_reprint_without_a_source_is_refused(episodes_root, tmp_path,
     from bilibili import cli
 
     payload = publish_payload(EP_PATH)
-    payload["bilibili"]["copyright"] = 2      # 转载，但不给 source
+    payload["platforms"]["bilibili"]["copyright"] = 2      # 转载，但不给 source
     write_episode(episodes_root, EP_PATH, payload)
     _stage_video(cli, monkeypatch, tmp_path, make_video)
 

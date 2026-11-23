@@ -209,7 +209,8 @@ def test_the_copy_is_rewritten_even_when_the_video_is_unchanged(meta, video, tmp
     result = _package(meta, video, tmp_path)
     changed = epmeta.EpisodeMeta(
         episode="ep01", title=meta.title, cover_at=meta.cover_at,
-        url=meta.url, douyin=dict(meta.douyin, title="改了标题"))
+        url=meta.url,
+        platforms={"douyin": dict(meta.platforms["douyin"], title="改了标题")})
     again = _package(changed, video, tmp_path)
     assert again.reused
     assert (again.dir / "title.txt").read_text(encoding="utf-8") == "改了标题"
@@ -220,7 +221,8 @@ def test_an_outbound_link_stops_the_package(meta, video, tmp_path):
     """带站外引流的文案**不出包**——出了也是发不出去（限流）。"""
     leaky = epmeta.EpisodeMeta(
         episode="ep01", title=meta.title, cover_at=meta.cover_at, url=meta.url,
-        douyin=dict(meta.douyin, description="完整版见 https://growdu.cn/x"))
+        platforms={"douyin": dict(meta.platforms["douyin"],
+                                description="完整版见 https://growdu.cn/x")})
     with pytest.raises(package.PackageError) as error:
         _package(leaky, video, tmp_path)
     assert any(f.rule_id == "douyin.outbound-link" for f in error.value.findings)
@@ -231,7 +233,7 @@ def test_an_overlong_text_stops_the_package(meta, video, tmp_path):
     """三段加起来超过平台上限，就不该出包。"""
     long_text = epmeta.EpisodeMeta(
         episode="ep01", title=meta.title, cover_at=meta.cover_at, url=meta.url,
-        douyin=dict(meta.douyin, description="字" * 1000))
+        platforms={"douyin": dict(meta.platforms["douyin"], description="字" * 1000)})
     with pytest.raises(package.PackageError) as error:
         _package(long_text, video, tmp_path)
     assert any(f.rule_id == "douyin.text-limit" for f in error.value.findings)
@@ -248,7 +250,8 @@ def test_other_platforms_missing_does_not_stop_the_douyin_package(video, tmp_pat
     """「这一期没配 B站文案」不是抖音的发布问题，不该拦住抖音出包。"""
     only_douyin = epmeta.EpisodeMeta(
         episode="ep01", title="x", cover_at=1.0,
-        douyin={"title": "钩子", "description": "正文", "topics": ["数据库"]})
+        platforms={"douyin": {
+            "title": "钩子", "description": "正文", "topics": ["数据库"]}})
     result = _package(only_douyin, video, tmp_path)
     assert result.status == "packaged"
 
@@ -340,7 +343,7 @@ def test_the_cover_is_re_extracted_when_the_frame_moves(meta, video, tmp_path):
 
     moved = epmeta.EpisodeMeta(
         episode="ep01", title=meta.title, cover_at=2.0, url=meta.url,
-        douyin=meta.douyin)
+        platforms=meta.platforms)
     again = _package(moved, video, tmp_path)
     cover_after = (again.dir / "cover.jpg").read_bytes()
 

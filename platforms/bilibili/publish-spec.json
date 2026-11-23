@@ -1,0 +1,25 @@
+{
+  "required": ["title", "description", "tags", "tid", "copyright", "no_reprint"],
+  "text_limits": {
+    "title": "title_chars",
+    "description": "description_chars"
+  },
+  "list_limits": {
+    "tags": {
+      "total": "tags_chars",
+      "item": "tag_chars",
+      "measure": "joined",
+      "separator": ","
+    }
+  },
+  "int_fields": ["tid", "copyright", "no_reprint"],
+  "int_domains": {
+    "copyright": [1, 2],
+    "no_reprint": [0, 1]
+  },
+  "required_when": {
+    "copyright": {
+      "2": ["source"]
+    }
+  }
+}

@@ -351,9 +351,13 @@ def cmd_publish(args: argparse.Namespace) -> int:
         meta, contract_episode=contract_episode, duration=duration)
     if info is not None:
         # 每个配了文案的平台都做一次成片预检。平台清单只有一个来源
-        # （epmeta 的 PLATFORM_SPECS）——在这里再抄一份，迟早会漏掉新平台。
-        for platform in epmeta.PLATFORM_SPECS:
-            findings.extend(preflight.check_video(info, platform))
+        # （期目录里的 platforms 段）——在这里再抄一份，迟早会漏掉新平台。
+        for platform in sorted(meta.platforms):
+            try:
+                findings.extend(preflight.check_video(info, platform))
+            except (OSError, ValueError) as exc:
+                print(f"WARNING preflight.video 平台 {platform} 的门槛读不出来"
+                      f"（{exc}），跳过这一个平台")
 
     for finding in findings:
         marker = "ERROR  " if finding.level == epmeta.ERROR else "WARNING"

@@ -47,10 +47,14 @@ def publish_payload(episode: str = EP_PATH, **overrides) -> dict:
         "title": "PostgreSQL 18 并行逻辑解码",
         "cover_at": 1.0,
         "url": "https://example.invalid/2026/11/12/postgres/",
-        "douyin": {
-            "title": "32 核机器，解码只占 1 核",
-            "description": "默认发布端只有一个解码线程，串行处理。",
-            "topics": ["PostgreSQL", "逻辑复制", "数据库内核"],
+        # 平台段落在 `platforms` 下面——平台清单是扫出来的，
+        # 顶层摊开的话「哪些键是平台」就又变成写死的清单了。
+        "platforms": {
+            "douyin": {
+                "title": "32 核机器，解码只占 1 核",
+                "description": "默认发布端只有一个解码线程，串行处理。",
+                "topics": ["PostgreSQL", "逻辑复制", "数据库内核"],
+            },
         },
     }
     payload.update(overrides)
@@ -219,10 +223,12 @@ def meta():
         title="PostgreSQL 18 并行逻辑解码",
         cover_at=1.0,
         url="https://growdu.cn/2026/11/12/life/aiv/",
-        douyin={
-            "title": "32 核机器，解码只占 1 核",
-            "description": "默认发布端只有一个解码线程，串行处理。",
-            "topics": ["PostgreSQL", "逻辑复制", "数据库内核"],
+        platforms={
+            "douyin": {
+                "title": "32 核机器，解码只占 1 核",
+                "description": "默认发布端只有一个解码线程，串行处理。",
+                "topics": ["PostgreSQL", "逻辑复制", "数据库内核"],
+            },
         },
     )
 

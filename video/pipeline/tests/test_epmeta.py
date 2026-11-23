@@ -8,6 +8,7 @@
 混为一谈的后果是：要么逼作者填一堆用不上的字段，
 要么让「配了但配漏了」悄悄溜过去。
 """
+import copy
 import json
 
 import pytest
@@ -32,20 +33,26 @@ BASE = {
     "episode": "ep01",
     "title": "标题",
     "cover_at": 3.0,
-    "channels": {"title": "短标题", "description": "简介", "topics": ["数据库"]},
-    "bilibili": {
-        "title": "标题",
-        "description": "简介",
-        "tags": ["数据库"],
-        "tid": 231,
-        "copyright": 1,
-        "no_reprint": 1,
+    # 平台段落在 `platforms` 下面——平台是动态的，顶层摊开的话
+    # 「哪些键是平台」这件事就又变成写死的清单了。
+    "platforms": {
+        "channels": {
+            "title": "短标题", "description": "简介", "topics": ["数据库"],
+        },
+        "bilibili": {
+            "title": "标题",
+            "description": "简介",
+            "tags": ["数据库"],
+            "tid": 231,
+            "copyright": 1,
+            "no_reprint": 1,
+        },
     },
 }
 
 
 def _meta(tmp_path, **overrides):
-    payload = dict(BASE)
+    payload = copy.deepcopy(BASE)
     payload.update(overrides)
     root = _write(tmp_path, payload)
     return epmeta.load_meta("ep01", root=root)
@@ -86,8 +93,8 @@ def test_cover_at_exactly_at_the_duration_is_allowed(tmp_path):
 
 
 def test_a_missing_platform_section_is_only_a_warning(tmp_path):
-    payload = dict(BASE)
-    payload.pop("channels")
+    payload = copy.deepcopy(BASE)
+    payload["platforms"].pop("channels")
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     findings = epmeta.check_meta(meta)
@@ -97,8 +104,8 @@ def test_a_missing_platform_section_is_only_a_warning(tmp_path):
 
 
 def test_a_missing_field_inside_a_platform_section_is_an_error(tmp_path):
-    payload = dict(BASE)
-    payload["channels"] = {"title": "短标题", "topics": ["数据库"]}
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["channels"] = {"title": "短标题", "topics": ["数据库"]}
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     findings = _errors(epmeta.check_meta(meta))
@@ -106,8 +113,8 @@ def test_a_missing_field_inside_a_platform_section_is_an_error(tmp_path):
 
 
 def test_a_title_over_the_limit_is_an_error_and_is_not_truncated(tmp_path):
-    payload = dict(BASE)
-    payload["channels"] = {
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["channels"] = {
         "title": "字" * 23, "description": "简介", "topics": ["数据库"],
     }
     root = _write(tmp_path, payload)
@@ -119,8 +126,8 @@ def test_a_title_over_the_limit_is_an_error_and_is_not_truncated(tmp_path):
 
 
 def test_too_many_topics_is_an_error(tmp_path):
-    payload = dict(BASE)
-    payload["channels"] = {
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["channels"] = {
         "title": "短标题", "description": "简介",
         "topics": ["一", "二", "三", "四", "五", "六"],
     }
@@ -131,8 +138,8 @@ def test_too_many_topics_is_an_error(tmp_path):
 
 
 def test_a_non_integer_tid_is_an_error(tmp_path):
-    payload = dict(BASE)
-    payload["bilibili"] = dict(BASE["bilibili"], tid="二百三十一")
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(BASE["platforms"]["bilibili"], tid="二百三十一")
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     findings = _errors(epmeta.check_meta(meta))
@@ -153,9 +160,9 @@ def test_too_many_tags_is_an_error(tmp_path):
     规格 §4.3：「英文逗号分隔后总长 < 200 字」。当成个数上限就放过了
     「199 个 1 字标签」这种真实超限的情况。
     """
-    payload = dict(BASE)
-    payload["bilibili"] = dict(
-        BASE["bilibili"],
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(
+        BASE["platforms"]["bilibili"],
         tags=["x" * 20] * 11,   # 11 项，单项没超 20 字，但总长 219 > 199
     )
     root = _write(tmp_path, payload)
@@ -166,9 +173,9 @@ def test_too_many_tags_is_an_error(tmp_path):
 
 def test_a_long_joined_tag_string_is_an_error_even_with_few_tags(tmp_path):
     """标签少但总长超限也要报错——这正是「当成个数上限」漏掉的那一类。"""
-    payload = dict(BASE)
-    payload["bilibili"] = dict(
-        BASE["bilibili"],
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(
+        BASE["platforms"]["bilibili"],
         tags=["a" * 20, "b" * 20, "c" * 20, "d" * 20, "e" * 20,
               "f" * 20, "g" * 20, "h" * 20, "i" * 20, "j" * 20],
     )
@@ -180,9 +187,9 @@ def test_a_long_joined_tag_string_is_an_error_even_with_few_tags(tmp_path):
 
 def test_the_joined_length_counts_the_separators(tmp_path):
     """分隔用的逗号也算进总长——平台收到的是拼好的那一串。"""
-    payload = dict(BASE)
-    payload["bilibili"] = dict(
-        BASE["bilibili"], tags=["a" * 20] * 10,
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(
+        BASE["platforms"]["bilibili"], tags=["a" * 20] * 10,
     )
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
@@ -193,8 +200,8 @@ def test_the_joined_length_counts_the_separators(tmp_path):
 
 def test_topics_still_use_the_count_limit(tmp_path):
     """视频号的话题上限是**个数**（5 个），口径不能跟着 B站一起改。"""
-    payload = dict(BASE)
-    payload["channels"] = {
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["channels"] = {
         "title": "短标题", "description": "简介",
         "topics": ["一", "二", "三", "四", "五", "六"],
     }
@@ -212,10 +219,10 @@ def test_topics_still_use_the_count_limit(tmp_path):
 
 
 def _douyin_meta(tmp_path, **overrides):
-    payload = dict(BASE)
+    payload = copy.deepcopy(BASE)
     section = {"title": "钩子", "description": "正文", "topics": ["数据库"]}
     section.update(overrides)
-    payload["douyin"] = section
+    payload["platforms"]["douyin"] = section
     root = _write(tmp_path, payload)
     return epmeta.load_meta("ep01", root=root)
 
@@ -227,7 +234,7 @@ def test_a_missing_field_inside_the_douyin_section_is_an_error(tmp_path):
     段内缺字段是 error（作者忘了填）。
     """
     meta = _douyin_meta(tmp_path)
-    meta.douyin.pop("topics")
+    meta.platforms["douyin"].pop("topics")
     findings = _errors(epmeta.check_meta(meta))
     assert any(f.rule_id == "epmeta.platform-required" for f in findings)
 
@@ -260,8 +267,8 @@ def test_a_long_douyin_topic_is_an_error(tmp_path):
 
 def test_a_douyin_section_is_never_required_to_exist(tmp_path):
     """整个抖音段缺失只是 warning——「这一期不发抖音」是合法的。"""
-    payload = dict(BASE)
-    payload.pop("douyin", None)
+    payload = copy.deepcopy(BASE)
+    payload["platforms"].pop("douyin", None)
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     findings = epmeta.check_meta(meta)
@@ -334,8 +341,8 @@ def test_meta_path_points_into_the_episode_dir(tmp_path):
 
 def test_an_out_of_domain_copyright_is_an_error(tmp_path):
     """copyright 只认 1（原创）与 2（转载）。3 是平台会拒的值。"""
-    payload = dict(BASE)
-    payload["bilibili"] = dict(BASE["bilibili"], copyright=3)
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(BASE["platforms"]["bilibili"], copyright=3)
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     findings = _errors(epmeta.check_meta(meta))
@@ -343,8 +350,8 @@ def test_an_out_of_domain_copyright_is_an_error(tmp_path):
 
 
 def test_an_out_of_domain_no_reprint_is_an_error(tmp_path):
-    payload = dict(BASE)
-    payload["bilibili"] = dict(BASE["bilibili"], no_reprint=2)
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(BASE["platforms"]["bilibili"], no_reprint=2)
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     findings = _errors(epmeta.check_meta(meta))
@@ -353,8 +360,8 @@ def test_an_out_of_domain_no_reprint_is_an_error(tmp_path):
 
 def test_a_reprint_without_a_source_is_an_error(tmp_path):
     """转载必须给 source——平台会拒没有来源的转载（规格 §4.3）。"""
-    payload = dict(BASE)
-    payload["bilibili"] = dict(BASE["bilibili"], copyright=2, no_reprint=0)
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(BASE["platforms"]["bilibili"], copyright=2, no_reprint=0)
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     findings = _errors(epmeta.check_meta(meta))
@@ -362,9 +369,9 @@ def test_a_reprint_without_a_source_is_an_error(tmp_path):
 
 
 def test_a_reprint_with_a_source_is_fine(tmp_path):
-    payload = dict(BASE)
-    payload["bilibili"] = dict(
-        BASE["bilibili"], copyright=2, no_reprint=0, source="https://example.com/x")
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(
+        BASE["platforms"]["bilibili"], copyright=2, no_reprint=0, source="https://example.com/x")
     root = _write(tmp_path, payload)
     meta = epmeta.load_meta("ep01", root=root)
     assert _errors(epmeta.check_meta(meta)) == []
@@ -382,7 +389,8 @@ def test_an_original_needs_no_source(tmp_path):
 
 def test_a_non_numeric_cover_at_raises_a_meta_error(tmp_path):
     """`float("x")` 抛的裸 ValueError 会被 CLI 漏成 traceback。"""
-    payload = dict(BASE, cover_at="第十八秒")
+    payload = copy.deepcopy(BASE)
+    payload["cover_at"] = "第十八秒"
     root = _write(tmp_path, payload)
     with pytest.raises(epmeta.MetaError):
         epmeta.load_meta("ep01", root=root)
@@ -466,3 +474,134 @@ def test_a_broken_exit_section_is_refused_loudly(tmp_path):
     with pytest.raises(epmeta.MetaError) as boolean:
         epmeta.load_exit_codes("douyin", platforms_dir=tmp_path)
     assert "ok" in str(boolean.value)
+
+
+# --- 平台清单是扫出来的，不写死 ----------------------------------------------
+#
+# 这一层**不认识任何平台名**。平台要什么字段、限额键叫什么，
+# 写在平台自己的目录里（`platforms/<plat>/publish-spec.json`），
+# 这一层只负责**读它、按它查**。
+#
+# 写死平台名的后果很具体：加一个平台要改视频线（上游），
+# 而「加平台只动 `platforms/`」这条规矩对视频平台就不成立——
+# 那条规矩是整个平台层的地基。
+
+
+def test_specs_are_discovered_from_the_platforms_directory():
+    specs = epmeta.load_specs()
+    assert set(specs) >= {"channels", "bilibili", "douyin"}
+    assert "required" in specs["bilibili"]
+
+
+def test_every_video_platform_carries_a_publish_spec():
+    """每个吃视频的平台都要有一份发布规格。
+
+    少一份的代价很具体：那一期的文案**根本没人查**——
+    字段缺了、字数超了，检查器一声不吭，平台当场拒稿。
+    """
+    import tomllib
+
+    base = epmeta.PLATFORMS_DIR
+    video_platforms = set()
+    for path in sorted(base.glob("*/capability.toml")):
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        if data.get("kind") == "video":
+            video_platforms.add(path.parent.name)
+    assert video_platforms, "仓库里一个吃视频的平台都没有了？"
+    assert video_platforms <= set(epmeta.load_specs())
+
+
+def test_the_meta_assembles_platform_sections_dynamically(tmp_path):
+    meta = epmeta.load_meta("ep01", root=_write(tmp_path, BASE))
+    assert set(meta.platforms) == {"channels", "bilibili"}
+    assert meta.platform("douyin") is None
+
+
+def test_a_platform_without_a_publish_spec_is_refused_loudly(tmp_path):
+    """配了文案却没有发布规格的平台，当场报错。
+
+    不报错的后果是「配了但没人查」——检查器跳过它，
+    平台拒稿的时候我们还不知道自己漏了什么。
+    """
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["nosuchplat"] = {"title": "标题"}
+    root = _write(tmp_path, payload)
+    with pytest.raises(epmeta.MetaError) as excinfo:
+        epmeta.load_meta("ep01", root=root)
+    assert "nosuchplat" in str(excinfo.value)
+
+
+def test_the_conditional_required_rule_survives_the_json_round_trip(tmp_path):
+    """`required_when` 的键是整数，但 JSON 的键只能是字符串。
+
+    规格里写 `{"copyright": {"2": ["source"]}}`——不把 `"2"` 还原成 `2`，
+    条件必填就永远不触发：转载没给来源地址，平台当场拒稿，
+    而我们的检查器一声不吭。**这道题是这一节存在的理由。**
+    """
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["bilibili"] = dict(
+        BASE["platforms"]["bilibili"], copyright=2, no_reprint=0)
+    root = _write(tmp_path, payload)
+    meta = epmeta.load_meta("ep01", root=root)
+    findings = _errors(epmeta.check_meta(meta))
+    assert any(f.rule_id == "epmeta.conditional-required" for f in findings)
+
+
+# --- 档位 ------------------------------------------------------------------
+#
+# **档位是期目录的最后一段**（`video/episodes/<系列>/<合集>/<文档>/<档位>/`），
+# 所以档位不用另外登记——路径说了就是。
+#
+# 平台收哪几档，写在它自己的 `capability.toml` 里。
+
+
+def test_the_tier_comes_from_the_episode_path(tmp_path):
+    root = _write(tmp_path, BASE)
+    meta = epmeta.load_meta("系列甲/合集甲/文档甲/mid", root=root)
+    assert meta.tier == "mid"
+
+
+def test_an_unrecognisable_tier_stays_empty(tmp_path):
+    """认不出来的档位就是空串——查不了就不判，不猜一个。"""
+    root = _write(tmp_path, BASE)
+    meta = epmeta.load_meta("ep01", root=root)
+    assert meta.tier == ""
+
+
+def test_a_platform_outside_its_tiers_is_rejected(tmp_path):
+    """抖音只收 short 档——给它发 mid 必须报红。"""
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["douyin"] = {
+        "title": "钩子", "description": "正文", "topics": ["数据库"]}
+    root = _write(tmp_path, payload)
+    meta = epmeta.load_meta("系列甲/合集甲/文档甲/mid", root=root)
+    findings = _errors(epmeta.check_meta(meta))
+    assert any(f.rule_id == "epmeta.tier-not-allowed" and "douyin" in f.message
+               for f in findings)
+
+
+def test_a_platform_inside_its_tiers_is_accepted(tmp_path):
+    """short 档抖音收——合法，就不该有档位 finding。"""
+    payload = copy.deepcopy(BASE)
+    payload["platforms"]["douyin"] = {
+        "title": "钩子", "description": "正文", "topics": ["数据库"]}
+    root = _write(tmp_path, payload)
+    meta = epmeta.load_meta("系列甲/合集甲/文档甲/short", root=root)
+    findings = _errors(epmeta.check_meta(meta))
+    assert [f for f in findings if f.rule_id == "epmeta.tier-not-allowed"] == []
+
+
+def test_the_tiers_come_from_the_platform_declaration():
+    """档位清单的出处是平台自己的能力声明，不在这里写死。"""
+    assert epmeta.load_tiers("bilibili") == ("short", "mid", "full")
+    assert epmeta.load_tiers("douyin") == ("short",)
+    assert epmeta.load_tiers("channels") == ("short",)
+
+
+def test_a_platform_without_declared_tiers_is_not_judged(tmp_path):
+    """没声明档位的平台查不了——不判，也不当成「全都收」。"""
+    directory = tmp_path / "someplat"
+    directory.mkdir()
+    (directory / "capability.toml").write_text(
+        'id = "someplat"\nkind = "video"\n', encoding="utf-8")
+    assert epmeta.load_tiers("someplat", platforms_dir=tmp_path) == ()
