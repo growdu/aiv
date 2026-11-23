@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1103 passed / 60 skipped | 1103 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1109 passed / 60 skipped | 1109 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -112,6 +112,18 @@
 | 2026-11-23（死路径守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
 | 2026-11-23（BGM 铺底循环那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1101 / 60 skip | 77 | 59 |
 | 2026-11-23（混音不重编码那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1103 / 60 skip | 77 | 59 |
+| 2026-11-23（align DP 剪枝那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1109 / 60 skip | 77 | 59 |
+
+> 2026-11-23（align DP 剪枝那轮）：**video +6 条**——新文件
+> `video/pipeline/tests/test_align_scaling.py`：旁白对齐的 DP 从
+> O(句数 × 片段数²) 剪到 O(句数 × 片段数)，**600 句从约 158 秒降到 1.3 秒**
+> （完整版有 200~600 句，原来那个规模出不了片）。
+> 剪枝是**凸包精确解**，不是近似：与穷举 DP **逐字相同**，守卫里对拍 24 组随机输入
+> （含「权重全相等」这种并列最多的情形——并列时两边必须挑到同一个解，
+> 否则拼出来的时间轴会跳）。
+> ⚠️ 计划原稿的「限窗剪枝」实测**会让答案变差**（200 句 / 600 片段：
+> DP 目标 42052 → 42190），所以没照做，改成精确解，限窗旋钮一并去掉。
+> 三条注入缺陷的实测结果记在计划的 Task 3 订正块里。
 
 > 2026-11-23（混音不重编码那轮）：**video +2 条**——新文件
 > `video/pipeline/tests/test_compose_no_reencode.py`：混音阶段**复制视频流**（`-c:v copy`），
