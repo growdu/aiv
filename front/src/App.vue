@@ -6,8 +6,9 @@
 import { onMounted, ref } from "vue";
 
 import { getJSON, postJSON, putJSON } from "./api/client";
-import type { DraftUnit } from "./api/types";
+import type { DraftUnit, ReviewReport } from "./api/types";
 import DraftPicker from "./views/DraftPicker.vue";
+import ReviewPanel from "./views/ReviewPanel.vue";
 import ScriptEditor from "./views/ScriptEditor.vue";
 
 const units = ref<DraftUnit[]>([]);
@@ -15,6 +16,28 @@ const selected = ref<DraftUnit | null>(null);
 const files = ref<Record<string, string>>({});
 const message = ref("");
 const manualSteps = ref<string[]>([]);
+const report = ref<ReviewReport | null>(null);
+const reviewing = ref(false);
+
+/**
+ * 草稿单元 → **母稿层**的坐标。
+ *
+ * 审校只在母稿层跑（规格 D10），所以审校面板问的是**它过审之后会落在哪**，
+ * 不是草稿本身。
+ */
+function motherSubject(unit: DraftUnit): { kind: string; id: string } | null {
+  if (unit.kind === "document") {
+    return { kind: "document", id: unit.draft_id };
+  }
+  if (unit.kind === "episode") {
+    // 草稿是 `_video/<分类>/<合集>/<文档>/<档位>`，期路径少一个前缀。
+    const parts = unit.draft_id.split("/").filter(Boolean);
+    if (parts[0] === "_video") parts.shift();
+    return { kind: "episode", id: parts.join("/") };
+  }
+  return null;
+}
+
 
 async function loadUnits(): Promise<void> {
   const body = await getJSON<{ units: DraftUnit[] }>("/drafts");
@@ -29,6 +52,28 @@ async function select(draftId: string): Promise<void> {
   files.value = body.contents ?? {};
   message.value = "";
   manualSteps.value = [];
+  await loadReview();
+}
+
+/** 拉这一稿的审校报告。**拉不到不是错**——母稿层里还没有它。 */
+async function loadReview(): Promise<void> {
+  if (!selected.value) return;
+  const subject = motherSubject(selected.value);
+  report.value = null;
+  if (!subject) return;
+  reviewing.value = true;
+  try {
+    const path =
+      subject.kind === "document"
+        ? "/review/documents/" + subject.id
+        : "/review/episodes/" + subject.id;
+    report.value = await getJSON<ReviewReport>(path);
+  } catch {
+    // 母稿层里还没有这一稿（或还没过审）——**不假装有报告**。
+    report.value = null;
+  } finally {
+    reviewing.value = false;
+  }
 }
 
 async function save(payload: Record<string, string>): Promise<void> {
@@ -75,6 +120,11 @@ onMounted(loadUnits);
       :files="files"
       @save="save"
       @promote="promote"
+    />
+
+    <ReviewPanel
+      :report="report"
+      :busy="reviewing"
     />
   </main>
 </template>
