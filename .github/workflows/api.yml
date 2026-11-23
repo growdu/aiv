@@ -1,0 +1,51 @@
+name: API
+
+# 创作平台的 HTTP 门面（api/）的测试。
+#
+# 为什么单独一个工作流，而不是塞进 contracts.yml：
+# contracts.yml 守的是**跨模块的约束**（内容契约违规 = 构建失败），
+# 这里是**一个模块自己的套件**——路由形状、作业与 SSE、审校面板的数据模型、
+# 「过审只复制」这几条。
+#
+# 门面的失败模式跟契约不同：契约破了是「内容不对」，
+# 门面破了是「界面拿不到数据」——两回事，各自报各自的账。
+#
+# 它是**本地单用户工具**的门面：跑在 127.0.0.1 上，测试用 FastAPI 的
+# TestClient（不起真服务、不发真请求）。
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: 门面测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 装依赖
+        # requirements/api.txt = dev.txt（pytest）+ fastapi + uvicorn。
+        # **不 import 契约层**，所以这里没有别的依赖。
+        run: python3 -m pip install -r requirements/api.txt
+
+      - name: 门面测试
+        # 每个模块一条命令，在**模块目录里**跑（验收按模块拆开）。
+        run: cd api && python3 -m pytest tests/ -q

@@ -1,0 +1,56 @@
+name: Front
+
+# 创作平台的前端（front/）的测试与构建。
+#
+# 它是**纯客户端**：零 import，只发 HTTP。所以这一条工作流不装 Python、
+# 不编译内容单元——它要守的东西只有两样：
+#
+#   test  —— 缝（不 import 仓库别处）、身份守卫（不出现站名）、组件行为
+#   build —— vite build 能过（类型与打包那一层）
+#
+# 它**不部署**：门面 `api/` 是本地单用户工具（127.0.0.1:8787），
+# 前端产物也是本地用，没有对外的地址。
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: front-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: 前端测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: 装依赖
+        run: npm ci
+        working-directory: front
+
+      - name: 前端测试
+        # vitest run。守卫都在这里：
+        #   seams.test.ts   —— front/src 不许 import 到 src/ 之外
+        #   identity.test.ts —— 站名/品牌名不许出现在 front/src
+        run: npm run test
+        working-directory: front
+
+      - name: 构建
+        # vite build：产物落在 front/dist/（**不入库**，见 .gitignore）。
+        run: npm run build
+        working-directory: front

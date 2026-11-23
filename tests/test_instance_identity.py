@@ -17,11 +17,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 #: 而且它**确实**写过实例名（Task 14 改的就是它）。
 #: 守卫不扫它，就没人拦得住它变回去。
 CODE_SUFFIXES = {".py", ".ts", ".tsx", ".mjs", ".js", ".astro", ".css", ".sh",
-                   ".template"}
+                   ".template", ".vue"}
 
 #: 扫哪些目录（相对仓库根）。
 SCAN_DIRS = ("tools", "publish", "platforms", "video/pipeline/pyv",
-              "video/brand/scripts", "browser/browser")
+              "video/brand/scripts", "browser/browser", "api", "front")
 
 #: 这些目录不扫：测试、构建产物、内容副本。
 SKIP_PARTS = {"tests", "test", "out", "outbox", "dist", "node_modules",

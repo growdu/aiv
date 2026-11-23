@@ -30,6 +30,8 @@
 | 视频号 adapter | `platforms/channels/` | `cd platforms/channels && python3 -m pytest tests/ -q` | 同上 |
 | 视频流水线 | `video/pipeline/` | `cd video/pipeline && python3 -m pytest tests/ -q` | 自己的套件 |
 | 发布执行器 | `browser/` | `cd browser && python3 -m pytest tests/ -q` | 浏览器流程的形状（真发不发） |
+| 创作平台门面 | `api/` | `cd api && python3 -m pytest tests/ -q` | HTTP 面的形状（路由、作业、审校、过审只复制） |
+| 创作平台前端 | `front/` | `cd front && npm run test` | 界面自己的规矩（缝、身份守卫、组件） |
 
 **每条命令都在模块目录里跑。** 这件事是靠两个约定成立的：
 
@@ -80,7 +82,7 @@
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
-| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫、内容坐标与层间边界、**死路径** | 129 passed / 3 skipped | 129 passed / 3 skipped |
+| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫、内容坐标与层间边界、**死路径** | 133 passed / 3 skipped | 133 passed / 3 skipped |
 | 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 125 passed / 1 skipped | 125 passed / 1 skipped |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
@@ -90,6 +92,8 @@
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
+| 11 | `cd api && python3 -m pytest tests/ -q` | 创作平台门面：路由形状、作业与 SSE、审校面板的数据模型、**过审只复制**、目录穿越 | 114 passed | 114 passed |
+| 12 | `cd front && npm run test` | 创作平台前端：**零 import 缝**、身份守卫、草稿箱与编辑器、审校面板、产物与作业 | 20 passed | 20 passed |
 
 ### 数字为什么变过（别拿旧基线来对账）
 
@@ -112,6 +116,7 @@
 | 2026-11-23（死路径守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
 | 2026-11-23（BGM 铺底循环那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1101 / 60 skip | 77 | 59 |
 | 2026-11-23（混音不重编码那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1103 / 60 skip | 77 | 59 |
+| 2026-11-23（创作平台那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1103 / 60 skip | 77 | 59 |
 
 > 2026-11-23（混音不重编码那轮）：**video +2 条**——新文件
 > `video/pipeline/tests/test_compose_no_reencode.py`：混音阶段**复制视频流**（`-c:v copy`），

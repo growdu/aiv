@@ -75,19 +75,30 @@ GUARD_FILE = "tests/test_stale_paths.py"
 #: 读者照着它去的是 HTTP 路由，不是仓库根下的那个目录。
 #: （创作平台的出包状态接口就长这样，见 `review/specs/2026-11-23-创作平台前端设计.md` §六。）
 #:
-#: 注意 `.` 不在排除集里——`./publish/outbox` 与 `../publish/outbox`
-#: **仍然是指那棵树**，只是路径前面带了个相对前缀。
-_DEAD_PATH_TEMPLATE = r"(?<![\w\-]/){path}"
-
-
+#: 判断「第一段」的两条：
+#:
+#: 1. 树前面**不是斜杠** → 它就是第一段（行首、`"publish/outbox"`、`[publish/outbox]` 都算）。
+#: 2. 树前面**是斜杠**，但斜杠前面是 `.`（`./publish/outbox`、`../publish/outbox`）
+#:    → 相对前缀后面还是第一段，**仍然指那棵树**。
+#:
+#: 反过来，`/publish/outbox`（斜杠前面不是 `.`）是**绝对地址或 URL 路径**——
+#: 要么指系统根，要么指某个路由，**都不是仓库根下的那个目录**。
 def _mentions_dead_tree(line: str, tree: str) -> bool:
     """这一行是不是在指那棵**仓库根下**的树。
 
-    `publish/outbox/xxx.json` 指它；`/api/publish/outbox` 不指——
-    后者是接口地址，读者不会照着它去建目录。
+    `publish/outbox/xxx.json` 指它；`/api/publish/outbox` 与 `/publish/outbox`
+    都不指——后者是绝对地址/URL 路径，读者不会照着它去建目录。
     """
-    return re.search(_DEAD_PATH_TEMPLATE.format(path=re.escape(tree)),
-                     line) is not None
+    for match in re.finditer(re.escape(tree), line):
+        prefix = line[:match.start()]
+        if not prefix:
+            return True
+        if prefix[-1] != "/":
+            return True
+        # 前面是斜杠：只有 `./` 与 `../` 后面还轮得到它当第一段。
+        if prefix.endswith("./"):
+            return True
+    return False
 
 
 def _walk(root: Path):
@@ -197,3 +208,22 @@ def test_the_guard_does_not_catch_an_api_route(tmp_path):
     (tmp_path / "client.test.ts").write_text(
         'client.get("/api/publish/outbox")\n', encoding="utf-8")
     assert _offenders("publish/outbox", root=tmp_path) == []
+
+
+def test_the_guard_does_not_catch_an_absolute_route(tmp_path):
+    """**绝对地址也不是那棵树**——`/publish/outbox` 是从根起算的路径。
+
+    前端把接口路径写成 `"/publish/outbox"`（`client.ts` 自己拼 `/api` 前缀），
+    那是在说 URL，不是说仓库根下有个同名目录。
+    """
+    (tmp_path / "app.vue").write_text(
+        'const body = await getJSON("/publish/outbox");\n', encoding="utf-8")
+    assert _offenders("publish/outbox", root=tmp_path) == []
+
+
+def test_the_guard_still_catches_a_relative_route_shape(tmp_path):
+    """相对前缀后面还是第一段——`./publish/outbox` 指的是仓库根下那棵树。"""
+    (tmp_path / "notes.md").write_text(
+        "见 ../publish/outbox/ 与 ./publish/outbox/。\n", encoding="utf-8")
+    hits = _offenders("publish/outbox", root=tmp_path)
+    assert len(hits) == 1, f"守卫漏了带相对前缀的死路径：{hits}"

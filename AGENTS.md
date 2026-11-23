@@ -38,6 +38,8 @@
 | **共享规则** | `rules/` | —— | 跨模块共享的规则（`urls.json`） | ——（读取器各自有测试） |
 | **验收矩阵** | `acceptance/` | —— | 各模块的验收命令与实测数字 | ——（文档，不是代码） |
 | **仓库根测试** | `tests/` | —— | 身份守卫、编译器、退出码、内容契约、死路径守卫 | `cd . && python3 -m pytest tests/ -q` |
+| **创作平台门面** | `api/` | `routes/`、`services/` | HTTP 门面（唯一允许 import `tools/` 与 `pyv/` 的地方） | `cd api && python3 -m pytest tests/ -q` |
+| **创作平台前端** | `front/` | `src/`、`tests/` | 纯客户端（只发 HTTP，零 import） | `cd front && npm run test` |
 
 **跳过**（AI 不读不改）：`content/units/`（构建产物）、`node_modules/`、`.venv/`、`__pycache__/`、
 `platforms/blog/site/themes/`（第三方主题）、`.remember/`（会话记忆）、`.worktrees/`（并行工作区）。
@@ -91,6 +93,29 @@ platforms/<平台>/outbox/<系列>-<合集>-<文档>-<档位>__<平台>.json  �
 **关键缝**：期目录（`video/episodes/`）、`video/config.toml`（身份与素材路径）、
 `platforms/<平台>/outbox/*.json`（扁平快照目录，每个视频平台各一份）、`content/units/video/`（视频内容单元）。
 
+### 3.3 创作平台（**不参与**上面两条流水线）
+
+```
+front/（浏览器里的界面）
+  │  HTTP（127.0.0.1:8787）
+  ▼
+api/（门面）
+  │  唯一写点：drafts/
+  ▼
+drafts/  ──（过审 = 复制）──▶  docs/ 与 video/episodes/
+```
+
+**创作平台是观察窗 + 编辑器，不是流水线的第三段。**
+
+- 它**不产出**母稿——母稿只从 `drafts/` 过审复制而来；
+- 它**不改变**两条流水的形状——内容从哪来、往哪去，跟有没有界面无关；
+- 它**唯一的写点是 `drafts/`**——其它目录它只读；
+- 审校与出片**仍然在母稿层跑**（规格 D10）：界面上的「过审」「出片」按钮，
+  底下走的还是仓库既有的命令（`tools/review-check.py`、`make`）。
+
+**关键缝**：**HTTP**。`api/` 是唯一持有这条缝的地方——它 import `tools/` 与 `pyv/`；
+`front/` **零 import**，只发 HTTP 请求。
+
 ---
 
 ## 四、AI 协作者的行为准则
@@ -113,6 +138,9 @@ platforms/<平台>/outbox/<系列>-<合集>-<文档>-<档位>__<平台>.json  �
 - **验收按模块拆开**：谁改了什么，只有谁的套件会红。跨模块只验接口，不验实现。
 - **改动稿先落 `drafts/`**：改 `docs/` 或 `video/` 里已有的内容，先改 `drafts/` 那份，过审再覆盖。
   框架代码（`tools/`、`platforms/`、`publish/`）不受此限——它们是代码，不是内容。
+- **创作平台的缝是 HTTP**：`front/` **零 import**——不 import `api/`、不 import 仓库里任何东西，
+  只发 HTTP 请求（`127.0.0.1:8787`）。`api/` 是唯一 import `tools/` 与 `pyv/` 的地方。
+  身份（站名、品牌名、平台名）**两边都不许写死**：值从缝里来。
 
 ### 4.3 禁碰
 
@@ -120,6 +148,7 @@ platforms/<平台>/outbox/<系列>-<合集>-<文档>-<档位>__<平台>.json  �
 - **`platforms/blog/site/themes/`**：第三方主题（hexo matery），不是本仓库的代码。
 - **`.remember/`、`.worktrees/`**：会话记忆与并行工作区，不是仓库的一部分。
 - **`out/`、`build/`**（视频线）：成片与片段产物，不入库。
+- **`front/dist/`、`front/node_modules/`**：前端的构建产物与依赖，不入库。
 
 ### 4.4 改之前先跑
 
@@ -128,6 +157,8 @@ platforms/<平台>/outbox/<系列>-<合集>-<文档>-<档位>__<平台>.json  �
 - **改某个平台 adapter**：先跑 `cd platforms/<平台> && python3 -m pytest tests/ -q`
 - **改站点**：先跑 `cd platforms/blog/site && python3 -m pytest tests/ -q`
 - **改视频线**：先跑 `cd video/pipeline && python3 -m pytest tests/ -q`
+- **改创作平台门面**：先跑 `cd api && python3 -m pytest tests/ -q`
+- **改创作平台前端**：先跑 `cd front && npm run test`
 
 ---
 
@@ -159,6 +190,17 @@ platforms/<平台>/outbox/<系列>-<合集>-<文档>-<档位>__<平台>.json  �
 **AI**通过**模块 README** 与**契约文档**理解边界，通过**验收命令**验证改动，通过**缝**（`content/units/`、`capability.toml`、
 `rules/urls.json`）跨模块通信，**不 import 其他模块的代码**。视频流的坐标口径在 `publish/publishkit/episode.py` 与
 `video/pipeline/pyv/episodes.py` **两处对齐**，改一处两处一起改。
+
+**创作平台（`front/` + `api/`）**是**另一个入口**——用户也可以不开 Claude Code，
+直接在浏览器里编辑草稿、读审校信号、看产物：
+
+```bash
+cd api && uvicorn api.app:app --port 8787   # 在**仓库根**跑
+cd front && npm run dev                     # 打开 http://127.0.0.1:5173/
+```
+
+界面能做的：编辑草稿、读审校面板、预览产物、看作业日志与出包状态、点「过审」（= 复制）。
+界面**不做**的：定审校判据、决定往哪个平台发、替你提交——那些还在自然语言这一侧。
 
 ---
 
