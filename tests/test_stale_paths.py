@@ -33,6 +33,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -68,6 +69,26 @@ HISTORICAL_WHITELIST: dict[str, str] = {}
 #: 守卫自己：它当然得**写出**那两个字才能找它们。
 GUARD_FILE = "tests/test_stale_paths.py"
 
+#: 「指向那棵树」的写法：`publish/outbox` 必须是**路径的第一段**。
+#:
+#: 它前面不能还有一段路径——`api/publish/outbox` 是**接口地址**，
+#: 读者照着它去的是 HTTP 路由，不是仓库根下的那个目录。
+#: （创作平台的出包状态接口就长这样，见 `review/specs/2026-11-23-创作平台前端设计.md` §六。）
+#:
+#: 注意 `.` 不在排除集里——`./publish/outbox` 与 `../publish/outbox`
+#: **仍然是指那棵树**，只是路径前面带了个相对前缀。
+_DEAD_PATH_TEMPLATE = r"(?<![\w\-]/){path}"
+
+
+def _mentions_dead_tree(line: str, tree: str) -> bool:
+    """这一行是不是在指那棵**仓库根下**的树。
+
+    `publish/outbox/xxx.json` 指它；`/api/publish/outbox` 不指——
+    后者是接口地址，读者不会照着它去建目录。
+    """
+    return re.search(_DEAD_PATH_TEMPLATE.format(path=re.escape(tree)),
+                     line) is not None
+
 
 def _walk(root: Path):
     """走一遍仓库，产出**入库范围内的**文本文件（相对路径）。"""
@@ -99,7 +120,7 @@ def _offenders(pattern: str, root: Path = REPO_ROOT) -> list[str]:
         except (UnicodeDecodeError, OSError):
             continue  # 二进制或读不动：不是我们要扫的东西
         for lineno, line in enumerate(text.splitlines(), 1):
-            if pattern in line:
+            if _mentions_dead_tree(line, pattern):
                 hits.append(f"{rel_str}:{lineno}: {line.strip()}")
     return hits
 
@@ -157,3 +178,22 @@ def test_the_guard_would_catch_a_stale_reference(tmp_path):
     hits = _offenders("publish/outbox", root=tmp_path)
     assert len(hits) == 1, f"守卫没抓到临时树里的死路径：{hits}"
     assert "notes.md:1" in hits[0]
+
+
+def test_the_guard_still_catches_a_relative_reference(tmp_path):
+    """带相对前缀的写法**也得抓到**——`./publish/outbox` 指向的还是那棵树。"""
+    (tmp_path / "notes.md").write_text(
+        "见 ./publish/outbox/ 与 ../publish/outbox/。\n", encoding="utf-8")
+    hits = _offenders("publish/outbox", root=tmp_path)
+    assert len(hits) == 1, f"守卫漏了带相对前缀的死路径：{hits}"
+
+
+def test_the_guard_does_not_catch_an_api_route(tmp_path):
+    """**接口地址不是那棵树**——`/api/publish/outbox` 是 HTTP 路由。
+
+    创作平台的出包状态接口就长这样（见 `review/specs/2026-11-23-创作平台前端设计.md` §六）。
+    读者照着它去的是接口，不是仓库根下那个已经不存在的目录。
+    """
+    (tmp_path / "client.test.ts").write_text(
+        'client.get("/api/publish/outbox")\n', encoding="utf-8")
+    assert _offenders("publish/outbox", root=tmp_path) == []
