@@ -11,6 +11,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routes import documents, drafts, jobs
+
 app = FastAPI(title="创作平台 API", version="1.0.0")
 
 # 本地单用户工具：只允许 vite dev server 那个来源。
@@ -20,6 +22,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(drafts.router)
+app.include_router(documents.router)
+app.include_router(jobs.router)
 
 
 @app.get("/api/health")
