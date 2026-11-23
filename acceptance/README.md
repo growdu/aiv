@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1133 passed / 60 skipped | 1133 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1148 passed / 60 skipped | 1148 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -116,6 +116,23 @@
 | 2026-11-23（字幕改二分那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1115 / 60 skip | 77 | 59 |
 | 2026-11-23（母稿解析器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1126 / 60 skip | 77 | 59 |
 | 2026-11-23（骨架依赖与形状守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1133 / 60 skip | 77 | 59 |
+| 2026-11-23（骨架派生三元组那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1148 / 60 skip | 77 | 59 |
+
+> 2026-11-23（骨架派生三元组那轮）：**video +15 条**——新文件
+> `video/pipeline/tests/test_derive.py` 与新模块 `video/pipeline/pyv/derive.py`：
+> 讲稿骨架 →（口播稿 / 字幕表 / 视觉契约）三元组。
+> 派生出来的**形状与流水线认得的一模一样**——口播稿是一段代码块每行一句、
+> 字幕表是每句一行的表格、契约是 `pyv/contract.py` 认识的那个 JSON，
+> 所以 `align` / `render` / `compose` 一行都不用改。
+> 端到端那条用例**亲自读回**：派生出的两节拼成口播稿，
+> `align.parse_script` / `parse_subtitle_table` 读得回去才算数。
+> **母稿引用当场查**：段里的 `ref` 指向母稿第 `nth` 个 mermaid / 代码 / 表格块，
+> 引用错了（母稿没了、`nth` 超范围）就报错——画面那一环会**静默缺一块**，
+> 而片子里看不出少了什么。
+> 契约的 `episode` 是**四层期路径**（`系列/合集/文档/档位`）：档位在路径里，
+> 不在骨架里（骨架是三档共用的）。
+> 三条注入缺陷都验过会红（`params["ref"]` 不带 → 1 条红；
+> 契约 `episode` 不带档位 → 1 条红；不查母稿引用 → 3 条红）。
 
 > 2026-11-23（骨架依赖与形状守卫那轮）：**video +7 条**——
 > 讲稿骨架（`pyv/skeleton.py`）的**坏骨架当场报错**：

@@ -18,6 +18,7 @@ video/pipeline/
 │   ├── epmeta.py    # 元数据/退出码读取
 │   ├── skeleton.py  # 讲稿骨架（文档级）+ 三档裁剪
 │   ├── motherdoc.py # 母稿解析：mermaid 块 / 代码块 / 表格 / 散文字数
+│   ├── derive.py    # 骨架 →（口播稿 / 字幕表 / 视觉契约）
 │   ├── contract.py  # 画面契约校验
 │   ├── align.py timeline.py compose.py render.py draw.py ...
 │   ├── scenes/      # 各场景绘制（s01_intro.py、s02_*、s03_*…）
