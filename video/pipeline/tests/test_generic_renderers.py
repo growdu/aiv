@@ -419,6 +419,25 @@ def test_the_mermaid_renderer_degrades_visibly(tmp_path, monkeypatch):
 # ---------------------------------------------------------------- 接线
 
 
+def test_the_generic_renderer_names_are_importable():
+    """契约按名字点名就要能用——名字错了当场报错，不许静默。"""
+    from pyv import derive
+
+    for kind, name in derive.GENERIC_RENDERERS.items():
+        module = render_mod.load_renderer(name)
+        assert callable(module.render), f"{kind} 的 {name} 没有 render"
+        assert isinstance(module.REQUIRED, tuple), f"{kind} 的 {name} 没有 REQUIRED"
+
+
+def test_a_missing_renderer_is_an_error_not_a_silent_skip():
+    try:
+        render_mod.load_renderer("pyv.generic.gen_does_not_exist")
+    except ValueError as exc:
+        assert "gen_does_not_exist" in str(exc)
+    else:
+        raise AssertionError("渲染器不存在时应当报错")
+
+
 def test_a_renderer_without_content_refuses_to_draw_a_blank_panel(monkeypatch):
     """拿不到内容就报错——不许画一个空面板当画面。
 

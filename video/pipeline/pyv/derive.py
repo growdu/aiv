@@ -29,13 +29,16 @@ from pyv import skeleton
 
 #: 画面类型 → 通用渲染器模块。
 #:
-#: 这些渲染器属于「计划二」（母稿画面资产与通用渲染器），还没落地——
-#: 契约只是**按名字**引用它们，出片那一步才 import。
+#: 通用渲染器住在 `pyv/generic/`，**不进 `pyv/scenes/`**——
+#: `scenes/` 里的每个模块都被两条按目录扫的守卫盯着（逐像素基准、
+#: 运行时字体探针），通用渲染器的基准要一期真实的期目录才抓得出来，
+#: 而视频线今天没有期（内容不入库）。详见
+#: `publish/plans/10-母稿画面资产与通用渲染器.md` 的 D2。
 GENERIC_RENDERERS = {
-    "mermaid": "pyv.scenes.gen_mermaid",
-    "code": "pyv.scenes.gen_code",
-    "table": "pyv.scenes.gen_table",
-    "card": "pyv.scenes.gen_card",
+    "mermaid": "pyv.generic.gen_mermaid",
+    "code": "pyv.generic.gen_code",
+    "table": "pyv.generic.gen_table",
+    "card": "pyv.generic.gen_card",
 }
 
 #: 要指向母稿里的块的那种画面——它们必须带 `ref`。

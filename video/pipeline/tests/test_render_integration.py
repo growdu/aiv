@@ -162,6 +162,21 @@ def _imported_pyv_modules(source: str) -> set[str]:
     return out
 
 
+def _candidates(module: str) -> list[str]:
+    """`pyv.foo` 这个模块名 → 可能的文件路径。
+
+    **包要展开成包里的文件**：`pyv.generic` 不是文件，是目录——
+    只登记 `generic.py` 的话，通用渲染器改了一个字节，片段还是被
+    当成「没过期」直接复用。
+    """
+    rel = "/".join(module.split(".")[1:])
+    base = PACKAGE / rel
+    if base.is_dir():
+        return [f"{rel}/{path.name}" for path in sorted(base.glob("*.py"))
+                if path.name != "__init__.py"]
+    return [rel + ".py"]
+
+
 def _modules_the_renderer_uses() -> set[str]:
     """渲染入口（传递地）用到的 `pyv` 模块的文件名。
 
@@ -170,12 +185,19 @@ def _modules_the_renderer_uses() -> set[str]:
     以及全部场景模块（`render.py` 用 `importlib` 动态 import 它们，
     静态扫不到）。
 
+    **通用渲染器（`pyv/generic/`）也是起点**：它们是契约直接点名的
+    渲染器（`derive.GENERIC_RENDERERS`），出片时会被 import——
+    静态扫不到，但它们改了就必须重渲。
+
     **场景模块自己不在结果里**：改一个场景不该作废其它场景的片段，
     场景自己的源码由 `newest_source_mtime` 单独算。
     """
     roots = ["render.py", "subtitle.py"]
     roots += sorted(f"scenes/{path.name}"
                     for path in (PACKAGE / "scenes").glob("*.py"))
+    roots += sorted(f"generic/{path.name}"
+                    for path in (PACKAGE / "generic").glob("*.py")
+                    if path.name != "__init__.py")
     seen: set[str] = set()
     queue = list(roots)
     while queue:
@@ -187,10 +209,10 @@ def _modules_the_renderer_uses() -> set[str]:
         if not path.exists():
             continue
         for module in _imported_pyv_modules(path.read_text(encoding="utf-8")):
-            candidate = "/".join(module.split(".")[1:]) + ".py"
-            if candidate.startswith("scenes/") or candidate in seen:
-                continue
-            queue.append(candidate)
+            for candidate in _candidates(module):
+                if candidate.startswith("scenes/") or candidate in seen:
+                    continue
+                queue.append(candidate)
     return {name for name in seen if not name.startswith("scenes/")}
 
 

@@ -108,7 +108,7 @@ def test_a_mermaid_segment_points_at_the_generic_renderer(tmp_path):
     doc = _motherdoc(tmp_path)
     result = derive.derive(_skeleton(doc), "full")
     segment = result.contract["segments"][1]
-    assert segment["renderer"] == "pyv.scenes.gen_mermaid"
+    assert segment["renderer"] == "pyv.generic.gen_mermaid"
     assert segment["params"]["ref"]["nth"] == 1
 
 
