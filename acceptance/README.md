@@ -92,10 +92,40 @@
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
-| 11 | `cd api && python3 -m pytest tests/ -q` | 创作平台门面：路由形状、作业与 SSE、审校面板的数据模型、**过审只复制**、目录穿越 | 114 passed | 114 passed |
+| 11 | `cd api && python3 -m pytest tests/ -q` | 创作平台门面：路由形状、作业与 SSE、审校面板的数据模型、**过审只复制**、目录穿越、**端到端六场景** | 124 passed | 124 passed |
 | 12 | `cd front && npm run test` | 创作平台前端：**零 import 缝**、身份守卫、草稿箱与编辑器、审校面板、产物与作业 | 20 passed | 20 passed |
 
-### 数字为什么变过（别拿旧基线来对账）
+### 创作平台的手测记录（2026-11-23）
+
+规格 §10.4 的六条，**在真浏览器里点了一遍**（Chrome + vite dev server +
+`uvicorn api.app:app`），每条记下实际结果。脚手架：`api/tests/test_end_to_end.py`
+把同样的六条**钉成用例**（审校信号用的是真的 `tools/review-check.py`，
+只把语料换到临时树）。
+
+| # | 场景 | 实际结果 |
+| --- | --- | --- |
+| 1 | 建空白文档草稿 → 平台里看到它 → 编辑 → 保存 → **文件确实变了** | 草稿箱列出它；改完点「存进草稿箱」，盘上的文件从 38 字节变成 347 字节（md5 变了），提示「已存进草稿箱。」 |
+| 2 | 建视频草稿单元 → 编辑口播稿 → 保存 → **契约校验过** | 口播稿改完存进草稿箱；`contract.json` 仍能 `json.loads`，`episode` 是**四层期路径**；口播稿 front matter 的 `episode` 是**三层文档路径**——界面把两者分成两块摆开，各带一行说明 |
+| 3 | 文档流的审校面板**出信号** | 母稿层那篇故意带 AI 味 → 面板出 **AIF-01 / AIF-02 / AIF-04** 等 4 条 warn + 5 条 info，**错误 0**；闸门写「待审 —— 还没有审校记录」。**信号不是门禁**——另一篇记录写着「已合入」的稿子，闸门放行 |
+| 4 | 点「出片」→ **先 promote 再跑 make** → 日志滚动 | 日志依次是：复制 3 个入库事实 → 报还差哪三步手工 →「这一期还没有旁白」→ 给出合成旁白的命令；作业**退出码 2（precondition）**。`make` 一次没跑（视频线今天是空壳，缺旁白与素材）——**次序**是对的 |
+| 5 | 「过审」复制进母稿层，且**草稿仍在**；提示还差哪三步 | `docs/<路径>.md` 出现，**草稿还在原地**；界面列出三条手工步骤（建/更新审校记录、补两个 `INDEX.md`、提交） |
+| 6 | 出包状态表显示各平台快照 | 表头五列（平台/状态/标题/更新时间/地址），读出 toutiao 的 `packaged` 快照 |
+
+> ⚠️ **两件手测查出来的事**（都已修）：
+>
+> 1. **「重建」作业对目录链是真的严**：临时稿子的上级目录没有 `_index.md`，
+>    编译器当场退出 2，日志写「目录链断了：… 的上级 … 没有 _index.md」。
+>    这不是平台的毛病，是**「目录即接口」**的规矩在起作用。
+> 2. **dev server 的日志原先落在 `platforms/blog/site/.dev-server.log`**——
+>    平台在**别人的模块目录里**留了个文件。平台的唯一写点是 `drafts/`，
+>    所以日志改落系统临时目录（`api/services/preview.py` 的 `DEV_SERVER_LOG`），
+>    并补了一条守卫钉住「它不在仓库里」。
+>
+> 顺带查清了两件**不是**平台的事：预览 iframe 指向的是站点 dev server 的**真页面**
+> （`http://127.0.0.1:4000/docs/<id>/`，单独开标签渲染正常）；头less 截图里
+> iframe 是白的，是**无头浏览器不把跨源 iframe 画进元素截图**，不是页面坏了。
+
+
 
 | 时间 | 根 | 站点 | publish | toutiao | wechat | douyin | video | bilibili | channels |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -330,6 +360,8 @@ B站与视频号两个 adapter 之前**既不在验收矩阵里，也不在任�
 | `.github/workflows/contracts.yml` | 母稿 / review 层、publish 契约层、头条 adapter、微信 adapter、抖音 adapter——**每个模块一条 step**，每条带 `if: ${{ !cancelled() }}`，一个模块红不挡住别的模块 |
 | `.github/workflows/site.yml` | 站点模块：`verify` job 守约束（内容单元 / 围栏 / 学习流数据），`build` job 出产物（`npm ci` + `npm run build`）+ 跑站点守卫测试（带 `::error::` 注解，不登录也能看到是哪条挂了） |
 | `.github/workflows/video-pipeline.yml` | 视频流水线 |
+| `.github/workflows/api.yml` | 创作平台门面（`api/`）：装 `requirements/api.txt`，跑 api 套件 |
+| `.github/workflows/front.yml` | 创作平台前端（`front/`）：`npm ci` → vitest → `npm run build` |
 
 **每个模块只在一个地方跑一次**——不重复收集，也就不会「多出一条用例」。
 
