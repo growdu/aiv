@@ -12,6 +12,7 @@
 #   images/   —— 母稿里的图片（build-posts.py）
 #   lib/      —— 第三方库（copy-vendor.py）
 #   learning/ —— 学习流的页面（build-learning-path.py）
+#   redirects/ —— URL 级跳转页（build-posts.py，按 data/url-redirects.json 编）
 #   about/    —— 关于页（apply-site-config.py）
 #   docs/     —— 目录导航页（build-posts.py，kind: category 的单元）
 #   robots.txt / manifest.json —— 跟着身份走的两个小文件
@@ -21,6 +22,7 @@
 /platforms/blog/site/source/images/
 /platforms/blog/site/source/lib/
 /platforms/blog/site/source/learning/
+/platforms/blog/site/source/redirects/
 /platforms/blog/site/source/about/
 /platforms/blog/site/source/robots.txt
 /platforms/blog/site/source/manifest.json

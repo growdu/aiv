@@ -10,6 +10,8 @@
 - `source/_posts/<单元 id>.md` —— 一篇一个 markdown，front matter 里带
   `permalink`（站上的地址）与 `layout: post`。
 - `source/docs/<路径>/index.md` —— 目录导航页（`kind: category` 的单元）。
+- `source/redirects/<旧路径>/index.md` —— URL 级跳转页（旧地址 → 新地址），
+  地址由 `data/url-redirects.json` 那张表说了算。
 - `source/_data/urls.json` —— 单元 id → 站点地址的对照表。
   **链接重写器（`tools/rewrite-links.mjs`）读它**：正文里那些相对链接
   （`../某篇.md`）要换成站上的地址，形状只有一处说了算——就是这张表。
@@ -23,6 +25,9 @@
 4. **视频单元不进站点**（作者拍板：站上没有视频页）。它们给发布层用。
    但它们**仍然在地址表里**——正文里指向视频的相对链接要有个地址可换，
    那个地址归发布层负责落地，站内不生成页面。
+5. **跳转页不许盖掉一个活着的页面**：旧地址必须已经是空的（没人再往那儿
+   放东西），否则这条跳转就是自相矛盾。测试层盯着这件事（见
+   `tests/test_url_redirects.py`）。
 
 用法::
 
@@ -51,6 +56,24 @@ POSTS_DIR = SITE / "source" / "_posts"
 PAGES_DIR = SITE / "source" / "docs"
 DATA_DIR = SITE / "source" / "_data"
 IMAGES_DIR = SITE / "source" / "images"
+
+#: URL 级重定向表：键是旧地址，值是新地址。
+#: 两边都是**站内完整路径**（以 `/` 开头、以 `/` 结尾）。
+#:
+#: 这张表跟 ``rules/urls.json`` 是两件事：后者说的是「地址长什么样」，
+#: 这张表说的是「某个地址搬去哪儿了」。地址是**推导**出来的（从 git 日期 +
+#: slug 算），推导不出来的那几张表才手写。
+REDIRECT_TABLE = SITE / "data" / "url-redirects.json"
+
+#: 跳转页的落点。**一个目录装下所有跳转页**，整目录是构建产物
+#: （``.gitignore`` 挡掉）——不用为每一条跳转单独加一条忽略规则。
+#:
+#: 页面的地址**不由它在 ``source/`` 里的位置决定**，由 front matter 的
+#: ``permalink:`` 决定——hexo 对页面也认这个字段
+#: （``node_modules/hexo/dist/plugins/processor/asset.js``：
+#: ``data.permalink`` → ``data.path``）。所以旧地址是什么形状都行，
+#: 不必在磁盘上把它的目录结构镜像出来。
+REDIRECT_DIR = SITE / "source" / "redirects"
 
 #: 图片扩展名。正文里的图片指向这些后缀的文件时才做重写。
 IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif")
@@ -259,6 +282,149 @@ def write_all(
                 existing.unlink()
 
 
+# --- URL 级重定向 ----------------------------------------------------------
+#
+# **为什么要这张表**：赛道改名、文章搬家之后，旧地址不会自己消失。
+# 站点对未知路径返回 **HTTP 200 + 首页**（见 `review/specs/`），
+# 所以「旧 URL 有跳转」这件事**不会靠 404 暴露**——必须显式验。
+#
+# **为什么不复用地址规则表**：规则表说的是「地址长什么样」（推导出来的），
+# 这张表说的是「某个地址搬去哪儿了」（推导不出来，只能逐条写）。
+#
+# **为什么跳转页落一个专门的目录**：整目录是构建产物，一条忽略规则就够；
+# 页面的地址由 front matter 的 `permalink:` 决定，跟它在磁盘上的位置无关。
+
+
+def load_redirect_table(path: Path | None = None) -> dict:
+    """读 URL 级重定向表。表不存在 = 还没配过跳转 = 空表。"""
+    target = Path(path) if path is not None else REDIRECT_TABLE
+    if not target.is_file():
+        return {}
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"重定向表不是合法 JSON：{target}：{exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"重定向表必须是对象（键是旧地址，值是新地址）：{target}")
+    for old_url, new_url in data.items():
+        if not isinstance(old_url, str) or not isinstance(new_url, str):
+            raise ValueError(f"重定向表的键与值都必须是字符串：{target}")
+    return data
+
+
+def _check_redirect_url(value: str, what: str, source: Path) -> None:
+    """一条地址必须是站内完整路径：以 `/` 开头，以 `/` 结尾。"""
+    if not value.startswith("/"):
+        raise ValueError(f"重定向的{what}必须以 / 开头：{value!r}（{source}）")
+    if not value.endswith("/"):
+        raise ValueError(f"重定向的{what}必须以 / 结尾：{value!r}（{source}）")
+
+
+def redirect_page(old_url: str, new_url: str) -> str:
+    """一个跳转页的完整内容：front matter + 一个裸 HTML 文档。
+
+    **front matter 里的 `permalink:` 是必须的**：hexo 的页面处理
+    （``processor/asset.js``）把 ``data.permalink`` 直接当成页面地址，
+    少了它，页面就落在它在 ``source/`` 里的位置（``source/redirects/…``），
+    旧地址上什么都不会有。
+
+    **``layout: false``**：跳转页不要站点的框——它不是给人读的，
+    是给浏览器读的。裸 HTML 文档里只有一个 ``meta refresh`` 与一个兜底链接。
+    """
+    title = old_url.strip("/").split("/")[-1] or "旧地址"
+    fm = {
+        "title": f"{title}（已迁移）",
+        # 不套主题的框：跳转页是给浏览器读的。
+        "layout": False,
+        # 页面地址由它决定，不由它在 source/ 里的位置决定。
+        "permalink": old_url,
+        # 跳到哪儿。写进 front matter 是为了**能被工具读出来**——
+        # 测试要能对着它断言，不必去解析 HTML。
+        "url-redirect": new_url,
+        # 旧地址不该出现在 sitemap 里（那是给搜索引擎看的「有什么内容」）。
+        # hexo-generator-sitemap 认这一行：`post.sitemap !== false` 才收录。
+        "sitemap": False,
+    }
+    head = yaml.safe_dump(
+        fm, allow_unicode=True, sort_keys=False, default_flow_style=False
+    ).rstrip("\n")
+    body = (
+        "<!DOCTYPE html>\n"
+        '<html lang="zh-CN">\n'
+        "<head>\n"
+        '<meta charset="utf-8">\n'
+        f'<meta http-equiv="refresh" content="0; url={new_url}">\n'
+        f'<link rel="canonical" href="{new_url}">\n'
+        "<title>地址已迁移</title>\n"
+        "</head>\n"
+        "<body>\n"
+        f'<p>这个地址已经迁移到 <a href="{new_url}">{new_url}</a>。</p>\n'
+        "</body>\n"
+        "</html>\n"
+    )
+    # ⚠️ **正文里不许有空行**：markdown 会把空行当成段落分隔，
+    # 那样这段 HTML 会被拆成「一段原文 + 几段被转义的标签」。
+    return f"---\n{head}\n---\n{body}"
+
+
+def redirect_pages(table: dict) -> dict[str, str]:
+    """重定向表 → {相对路径: 页面内容}。
+
+    表里形状不对的条目**当场报错**，不悄悄跳过——一份写坏的重定向表
+    意味着「旧地址没人接」，那是比构建失败更坏的结果（链接悄悄 404）。
+    """
+    source = REDIRECT_TABLE
+    pages: dict[str, str] = {}
+    for old_url, new_url in sorted(table.items()):
+        _check_redirect_url(old_url, "旧地址", source)
+        _check_redirect_url(new_url, "新地址", source)
+        if old_url == new_url:
+            raise ValueError(f"重定向的旧地址与新地址相同：{old_url!r}（{source}）")
+        if not old_url.strip("/"):
+            raise ValueError(f"重定向的旧地址不能是站点根：{old_url!r}（{source}）")
+        rel = f"{old_url.strip('/')}/index.md"
+        pages[rel] = redirect_page(old_url, new_url)
+    return pages
+
+
+def write_url_redirects(table: dict | None = None) -> int:
+    """按重定向表写 URL 级跳转页，返回写了几个。
+
+    整目录重写：表里删掉的条目不许留在产物里（跟文章同一个道理——
+    源表删了一条，产物里就得没有它）。
+    """
+    if table is None:
+        table = load_redirect_table()
+    pages = redirect_pages(table)
+    if REDIRECT_DIR.exists():
+        shutil.rmtree(REDIRECT_DIR)
+    for rel, text in pages.items():
+        target = REDIRECT_DIR / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+    return len(pages)
+
+
+def check_url_redirects(table: dict | None = None) -> list[str]:
+    """查跳转页与重定向表是否同步。返回不一致的清单。"""
+    if table is None:
+        table = load_redirect_table()
+    pages = redirect_pages(table)
+    problems: list[str] = []
+    for rel, text in pages.items():
+        target = REDIRECT_DIR / rel
+        if not target.exists():
+            problems.append(f"{rel}：跳转页不存在（该跑一次 build-posts.py）")
+        elif target.read_text(encoding="utf-8") != text:
+            problems.append(f"{rel}：跳转页与重定向表不同步")
+    if REDIRECT_DIR.exists():
+        for existing in sorted(REDIRECT_DIR.rglob("index.md")):
+            rel = existing.relative_to(REDIRECT_DIR).as_posix()
+            if rel not in pages:
+                problems.append(f"{rel}：跳转页还在，但重定向表里已经删掉了这条")
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="把内容单元编成站点要的文章")
     ap.add_argument("--check", action="store_true", help="只检查，不写文件")
@@ -278,8 +444,14 @@ def main() -> int:
         print(f"文章编译失败：{exc}", file=sys.stderr)
         return 2
 
+    try:
+        redirect_problems = check_url_redirects()
+    except (OSError, ValueError) as exc:
+        print(f"重定向表有问题：{exc}", file=sys.stderr)
+        return 2
+
     if args.check:
-        problems = []
+        problems = list(redirect_problems)
         for unit_id, text in posts.items():
             target = POSTS_DIR / f"{unit_id}.md"
             if not target.exists():
@@ -310,9 +482,11 @@ def main() -> int:
         return 0
 
     write_all(posts, pages, urls, images)
+    n_redirects = write_url_redirects()
     print(
         f"文章：{len(posts)} 篇，目录页 {len(pages)} 个，"
-        f"视频单元 {kinds.get('video', 0)} 个（不进站点），图片 {len(images)} 张"
+        f"视频单元 {kinds.get('video', 0)} 个（不进站点），图片 {len(images)} 张，"
+        f"URL 跳转 {n_redirects} 条"
     )
     return 0
 
