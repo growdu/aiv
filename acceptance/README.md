@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1148 passed / 60 skipped | 1148 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1170 passed / 60 skipped | 1170 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -117,6 +117,26 @@
 | 2026-11-23（母稿解析器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1126 / 60 skip | 77 | 59 |
 | 2026-11-23（骨架依赖与形状守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1133 / 60 skip | 77 | 59 |
 | 2026-11-23（骨架派生三元组那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1148 / 60 skip | 77 | 59 |
+| 2026-11-23（三档档位守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1170 / 60 skip | 77 | 59 |
+
+> 2026-11-23（三档档位守卫那轮）：**video +22 条**——新文件
+> `video/pipeline/tests/test_tiers.py` 与新模块 `video/pipeline/pyv/tiers.py`：
+> 三档的档位阈值（字数、时长、压缩比）与判据。
+> **阈值三份取值、两两对拍**：生产代码（`pyv/tiers.py`）里是**字面量**，
+> 测试里抄一份，**第三份直接解析规格文档的表**
+> （`publish/spec/09-长视频三档.md` §三）——
+> 生产代码改了而规格没改 → 红；规格改了而代码没改 → 也红。
+> 少解析那一份，两份手工抄的常量可能**一起漂**而守卫照样绿。
+> ⚠️ 代价：视频套件读 `publish/spec/` 的文档，规格的表改了视频套件会红——
+> 这是有意的，阈值是判据。
+> ⚠️ 计划原稿要对拍的 `tests/test_podcast_spec.py` 已经不在仓库里
+> （内容清空那轮删的，只剩 `__pycache__` 里的 `.pyc`）；
+> 原稿引的 `episodes.MOTHER_DOCS` / `episodes.EPISODES` /
+> `skeleton.SKELETON_PATH` 在新坐标下也不存在——
+> 母稿路径改从骨架的 `source:` 字段读，为此给 `episodes.py` 加了
+> `skeleton_path_at(root, doc)`（默认根那条路径照旧，测试夹具另指根）。
+> 三处注入都验过会红：生产侧字数上限 4310 → 4 条红；
+> 时长上限 600.0 → 3 条红；规格侧「≤ 431」改成「≤ 430」 → 1 条红。
 
 > 2026-11-23（骨架派生三元组那轮）：**video +15 条**——新文件
 > `video/pipeline/tests/test_derive.py` 与新模块 `video/pipeline/pyv/derive.py`：
