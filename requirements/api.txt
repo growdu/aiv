@@ -1,0 +1,7 @@
+# 创作平台的 HTTP 门面（api/）。
+#
+# **运行时依赖只有两个**：fastapi + uvicorn。
+# **不 import 契约层**（publish/publishkit）——所以这里没有别的依赖。
+-r dev.txt
+fastapi>=0.115,<1.0
+uvicorn>=0.34,<1.0
