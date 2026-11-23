@@ -81,7 +81,7 @@
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
 | 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 121 passed | 121 passed |
-| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 115 passed | 115 passed |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 116 passed | 116 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
@@ -106,6 +106,12 @@
 | 2026-11-23（`epmeta` 变通用加载器那轮） | 121 | 107 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1071 / 60 skip | 77 | 59 |
 | 2026-11-23（赛道改名 + Ceph 筹备中那轮） | 121 | 115 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1071 / 60 skip | 77 | 59 |
 | 2026-11-23（讲稿骨架那轮） | 121 | 115 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
+| 2026-11-23（学习流视频条目那轮） | 121 | 116 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
+
+> 2026-11-23（学习流视频条目那轮）：**站点 +1 条**——视频条目按**期号**写
+> （`video/<期号>`），守卫钉住「不带档位后缀」；顺带删掉视频线清空重来前
+> 留下的六条旧期号条目（`video/row-lock` 之类）——那些期不存在了，
+> 也不会再有那样的 content_id。**其余九套件一条没动。**
 
 > 2026-11-23（讲稿骨架那轮）：**视频线 +14 条**——`pyv/skeleton.py` 落地
 > （骨架解析 + 按 role 裁三档）：一条守卫钉住 `ROLE_TIERS` 是《长视频三档》§5.2

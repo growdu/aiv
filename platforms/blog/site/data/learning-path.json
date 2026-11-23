@@ -2,7 +2,7 @@
   "version": 2,
   "enabled": true,
   "updated": "2026-11-23",
-  "note": "学习路径的分类规则表。**这里是人工策展的部分**，site/tools/build-learning-path.py 按它把每篇内容单元落到「赛道 + 阶段」。\n\n规则从上往下第一条命中即生效；track_match 决定内容单元属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**规则匹配的是内容单元的路径**（相对 content/units/，不带 .md）：\n\n- path_prefix —— 前缀匹配，目录用（source-tracks/postgresql/）\n- path_exact —— 全等匹配，单篇用（video/row-lock）\n- path_regex —— 正则匹配\n- category / tag / title_contains —— 其它匹配键\n- catch_all —— 无条件匹配，只能写在最后一个阶段\n\n**映射的是内容单元里的文档与视频**（kind = document / video）。分类页（kind = category，目录的 _index.md）不进学习流——它是目录导航，站点另有分类浏览。\n\n**drafts/ 不参与映射**：草稿还没过审，不在 docs/ 里，也就不在站上。\n\n每篇内容都该有一条自己的规则：fallback_stage 只是防崩溃的兜底（没有专属规则的内容单元会落进去），守卫测试 site/tests/test_learning_path.py 钉住它是空的 —— 加了新内容，就得给它写规则。\n\n**status 字段**：赛道对象上可以写 status（缺省是 active）。planned = 筹备中——这条赛道的阶段是**公开宣布的课程大纲**，文章还没写。筹备中的赛道允许一个阶段都没有文章；其余赛道出现空阶段就是课程里留了洞（守卫会红）。「筹备中」和「规则缺失」在数据上长得一样（都是 0 篇），靠这个状态位区分。",
+  "note": "学习路径的分类规则表。**这里是人工策展的部分**，site/tools/build-learning-path.py 按它把每篇内容单元落到「赛道 + 阶段」。\n\n规则从上往下第一条命中即生效；track_match 决定内容单元属于哪条赛道，stages[].match 决定落在哪个阶段。\n\n**规则匹配的是内容单元的路径**（相对 content/units/，不带 .md）：\n\n- path_prefix —— 前缀匹配，目录用（source-tracks/postgresql/）\n- path_exact —— 全等匹配，单篇用（video/ep01）\n- path_regex —— 正则匹配\n- category / tag / title_contains —— 其它匹配键\n- catch_all —— 无条件匹配，只能写在最后一个阶段\n\n**映射的是内容单元里的文档与视频**（kind = document / video）。分类页（kind = category，目录的 _index.md）不进学习流——它是目录导航，站点另有分类浏览。\n\n**drafts/ 不参与映射**：草稿还没过审，不在 docs/ 里，也就不在站上。\n\n每篇内容都该有一条自己的规则：fallback_stage 只是防崩溃的兜底（没有专属规则的内容单元会落进去），守卫测试 site/tests/test_learning_path.py 钉住它是空的 —— 加了新内容，就得给它写规则。\n\n**status 字段**：赛道对象上可以写 status（缺省是 active）。planned = 筹备中——这条赛道的阶段是**公开宣布的课程大纲**，文章还没写。筹备中的赛道允许一个阶段都没有文章；其余赛道出现空阶段就是课程里留了洞（守卫会红）。「筹备中」和「规则缺失」在数据上长得一样（都是 0 篇），靠这个状态位区分。\n\n**视频条目按期号写**：`path_exact: \"video/<期号>\"`（期号就是 content_id，例如 `video/ep01`）——**不带档位后缀**。档位不在 content_id 里：一期就是一期，三档各出一个内容单元的话，同一期会在学习流里出现三次。视频线 2026-11-18 清空重来，旧的六条期号条目（row-lock 之类）已经删掉——那些期不存在了，也不会有那样的 content_id；新条目随第一期一起补。",
   "tracks": [
     {
       "id": "postgresql",
@@ -58,12 +58,6 @@
           "match": [
             {
               "path_prefix": "source-tracks/postgresql/transaction-mvcc/"
-            },
-            {
-              "path_exact": "video/row-lock"
-            },
-            {
-              "path_exact": "video/csn-total-ordering"
             }
           ]
         },
@@ -74,9 +68,6 @@
           "match": [
             {
               "path_prefix": "source-tracks/postgresql/wal-and-recovery/"
-            },
-            {
-              "path_exact": "video/wal-interleave"
             }
           ]
         },
@@ -97,15 +88,6 @@
           "match": [
             {
               "path_prefix": "source-tracks/postgresql/logical-replication/"
-            },
-            {
-              "path_exact": "video/pg-parallel-decode"
-            },
-            {
-              "path_exact": "video/parallel-apply"
-            },
-            {
-              "path_exact": "video/structured-ddl"
             }
           ]
         },

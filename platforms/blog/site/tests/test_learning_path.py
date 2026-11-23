@@ -242,6 +242,24 @@ def test_every_stage_declares_where_its_articles_come_from(rules):
             )
 
 
+def test_video_entries_are_keyed_by_episode_number(rules):
+    """视频条目按**期号**写（`video/<期号>`），**不带档位后缀**。
+
+    档位不在 content_id 里——一期就是一期。带档位后缀的话，
+    三档各出一个内容单元，同一期在学习流里就会出现三次：
+    读者在同一级阶梯上看见三条几乎一样的视频。
+    """
+    for track in rules["tracks"]:
+        for stage in track["stages"]:
+            for rule in stage.get("match", []):
+                exact = rule.get("path_exact")
+                if not exact or not exact.startswith("video/"):
+                    continue
+                assert not re.search(r"-(short|mid|full)$", exact), (
+                    f"{track['id']}/{stage['id']} 的视频条目 {exact} 带档位后缀"
+                )
+
+
 def test_stage_ids_increase_within_a_track(rules):
     for track in rules["tracks"]:
         numbers = [int(s["id"][1:]) for s in track["stages"]]
