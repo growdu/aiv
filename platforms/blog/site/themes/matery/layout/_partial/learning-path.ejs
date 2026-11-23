@@ -40,11 +40,17 @@
 
     <div class="lane-grid lane-grid--tracks">
       <% _lpTracks.forEach(function (track) {
-           var _stages = track.stages || []; %>
-      <a class="lane-card lane-card--<%= track.id %>" href="<%- url_for('/learning/' + track.id + '/') %>">
+           var _stages = track.stages || [];
+           var _planned = track.status === 'planned'; %>
+      <a class="lane-card lane-card--<%= track.id %><% if (_planned) { %> lane-card--planned<% } %>" href="<%- url_for('/learning/' + track.id + '/') %>">
         <div class="lane-card__head">
           <i class="<%= track.icon %> lane-card__icon"></i>
           <h3 class="lane-card__title"><%= track.title %></h3>
+          <%# 筹备中的赛道挂一个徽标：「筹备中」和「规则缺失」在数据上
+              长得一样（都是 0 篇），读者看的是页面——区别得看得见。 %>
+          <% if (_planned) { %>
+            <span class="lane-badge lane-badge--planned">筹备中</span>
+          <% } %>
           <span class="lane-card__count"><%= track.count %> 篇</span>
         </div>
         <p class="lane-card__desc"><%= track.summary %></p>

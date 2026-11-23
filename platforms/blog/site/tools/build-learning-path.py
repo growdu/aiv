@@ -318,6 +318,17 @@ def site_view(result: dict, units: list[dict]) -> dict:
     }
 
 
+def _planned_badge(track: dict) -> str:
+    """筹备中的赛道在标题旁边挂一个徽标。
+
+    **「筹备中」和「规则缺失」在数据上长得一样**（都是 0 篇）。
+    读者看的是页面，不是数据——所以区别得**看得见**。
+    """
+    if track.get("status") != "planned":
+        return ""
+    return ' <span class="lane-badge lane-badge--planned">筹备中</span>'
+
+
 def render_learning_pages(result: dict, units: list[dict]) -> dict[str, str]:
     """编出学习流的页面。返回 {相对 source/ 的路径: 正文}。
 
@@ -346,7 +357,9 @@ def render_learning_pages(result: dict, units: list[dict]) -> dict[str, str]:
     ]
     for track in tracks:
         icon = f"{track['icon']} " if track.get("icon") else ""
-        lines.append(f"### [{track['title']}](/learning/{track['id']}/) · {track['count']} 篇")
+        badge = _planned_badge(track)
+        lines.append(
+            f"### [{track['title']}](/learning/{track['id']}/){badge} · {track['count']} 篇")
         lines.append("")
         if track.get("summary"):
             lines.append(track["summary"])
@@ -360,9 +373,10 @@ def render_learning_pages(result: dict, units: list[dict]) -> dict[str, str]:
 
     # ── 每条赛道一页 ───────────────────────────────────────────────
     for track in tracks:
+        badge = _planned_badge(track)
         lines = [
             _front_matter(f"{track['title']} · 学习路径"),
-            f"# {track['title']}",
+            f"# {track['title']}{badge}",
             "",
         ]
         if track.get("summary"):

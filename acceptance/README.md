@@ -81,7 +81,7 @@
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
 | 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫 | 121 passed | 121 passed |
-| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 116 passed | 116 passed |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 119 passed | 119 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
@@ -107,6 +107,13 @@
 | 2026-11-23（赛道改名 + Ceph 筹备中那轮） | 121 | 115 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1071 / 60 skip | 77 | 59 |
 | 2026-11-23（讲稿骨架那轮） | 121 | 115 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
 | 2026-11-23（学习流视频条目那轮） | 121 | 116 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
+| 2026-11-23（筹备中标记那轮） | 121 | 119 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
+
+> 2026-11-23（筹备中标记那轮）：**站点 +3 条**——筹备中的赛道在
+> 总览页、赛道页与首页赛道卡上都挂「筹备中」徽标（虚线顶边 + 灰调徽标）：
+> 「筹备中」和「规则缺失」在数据上长得一样（都是 0 篇），读者看的是页面，
+> 区别得**看得见**。守卫钉住「总览页与赛道页都标」「正常赛道不标」
+> 「徽标真的渲染到浏览器里」。**其余九套件一条没动。**
 
 > 2026-11-23（学习流视频条目那轮）：**站点 +1 条**——视频条目按**期号**写
 > （`video/<期号>`），守卫钉住「不带档位后缀」；顺带删掉视频线清空重来前

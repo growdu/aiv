@@ -261,6 +261,40 @@ body.DarkMode .learning-page__crumb a:focus-visible {
 .lane-card--life           { --lane-color: #6d4c41; --lane-tint: rgba(109, 76, 65, .12); }
 .lane-card--blogging       { --lane-color: #3949ab; --lane-tint: rgba(57, 73, 171, .12); }
 
+/* 筹备中（status: planned）的赛道：虚线顶边 + 灰调徽标。
+   「筹备中」不是洞，是**公开宣布的课程大纲**——所以它仍然用自己的赛道色，
+   只是**看起来还没开张**：读者一眼知道这条赛道有规划、还没有内容。
+   虚线顶边而不是灰底：灰底会把赛道色盖掉，读者分不清这是哪条赛道。 */
+.lane-card--planned {
+  border-top-style: dashed;
+}
+
+.lane-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* 徽标用灰调：筹备中的赛道还没开张，别跟开张了的抢注意力。 */
+.lane-badge--planned {
+  color: #607d8b;
+  background: rgba(96, 125, 139, .12);
+  border: 1px dashed rgba(96, 125, 139, .45);
+}
+
+body.DarkMode .lane-badge--planned {
+  color: #b0bec5;
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(176, 190, 197, .45);
+}
+
 @media (max-width: 992px) {
   .lane-grid--tracks {
     grid-template-columns: repeat(2, 1fr);

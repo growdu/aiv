@@ -125,10 +125,14 @@ def test_every_track_has_exactly_one_lane_color(rules):
     不换的后果很具体：那条赛道**掉回默认色**
     （`var(--lane-color, #009688)`）——页面看上去还是好的，
     只是几条赛道撞了色，谁也说不清哪条是哪条。
+
+    **只数「定义了赛道色」的 class**：`.lane-card--planned` 那种
+    状态修饰符（虚线边）不是配色，不算一条赛道。
     """
     css = (SITE_ROOT / "themes" / "matery" / "source" / "css"
            / "tech.css").read_text(encoding="utf-8")
-    classes = set(re.findall(r"\.lane-card--([a-z0-9-]+)", css))
+    classes = set(re.findall(
+        r"\.lane-card--([a-z0-9-]+)\s*\{[^}]*--lane-color:", css))
     ids = {t["id"] for t in rules["tracks"]}
     assert classes == ids, (
         "赛道配色与赛道 id 对不上："
@@ -258,6 +262,67 @@ def test_video_entries_are_keyed_by_episode_number(rules):
                 assert not re.search(r"-(short|mid|full)$", exact), (
                     f"{track['id']}/{stage['id']} 的视频条目 {exact} 带档位后缀"
                 )
+
+
+# ── 「筹备中」要看得见 ─────────────────────────────────────
+
+
+def _view_with_status(status: str) -> dict:
+    """一份只含一条赛道的站上视图（`status` 可变）。"""
+    return {
+        "total": 0,
+        "enabled": True,
+        "tracks": [
+            {
+                "id": "示例",
+                "title": "示例赛道",
+                "icon": "",
+                "summary": "",
+                "audience": "",
+                "goal": "",
+                "status": status,
+                "stages": [
+                    {"id": "L1", "title": "第一段", "goal": "",
+                     "units": [], "count": 0},
+                ],
+                "count": 0,
+            }
+        ],
+    }
+
+
+def test_the_learning_page_marks_a_planned_track():
+    """筹备中的赛道在学习路径页上带「筹备中」标记。
+
+    **「筹备中」和「规则缺失」在数据上长得一样**（都是 0 篇）——
+    读者看的是页面，不是数据，所以区别得**看得见**。
+    """
+    pages = build_learning_path.render_learning_pages(
+        _view_with_status("planned"), [])
+    assert "筹备中" in pages["learning/index.md"], "总览页上没标「筹备中」"
+    assert "筹备中" in pages["learning/示例/index.md"], "赛道页上没标「筹备中」"
+
+
+def test_an_active_track_is_not_marked_as_planned():
+    """正常赛道不许挂「筹备中」——那个标记有分量。"""
+    pages = build_learning_path.render_learning_pages(
+        _view_with_status("active"), [])
+    assert "筹备中" not in pages["learning/index.md"]
+    assert "筹备中" not in pages["learning/示例/index.md"]
+
+
+def test_the_planned_badge_reaches_the_browser():
+    """徽标要真的渲染出来——页面上得**看得见**那个标记。"""
+    dist = SITE_ROOT / "dist"
+    if not dist.exists():
+        pytest.skip("还没构建（先跑 npm run build）")
+    for name in ("index.html", "learning/index.html", "learning/ceph/index.html"):
+        path = dist / name
+        if not path.exists():
+            continue
+        assert "筹备中" in path.read_text(encoding="utf-8"), (
+            f"{name} 上没有「筹备中」标记"
+        )
 
 
 def test_stage_ids_increase_within_a_track(rules):
