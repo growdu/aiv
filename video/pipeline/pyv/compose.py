@@ -38,6 +38,22 @@ def concat_encode_args() -> list[str]:
     return encode_args(FPS_BASE)
 
 
+def video_stream_args(fps: int) -> list[str]:
+    """混音阶段的视频流参数。
+
+    `silent.mp4` 已经是 libx264 / yuv420p / 时间基 fps×1000，
+    混音时**直接复制**就好——再编码一遍纯属浪费，长版尤其吃不消
+    （12 分钟的片子能省掉十几分钟）。
+
+    ⚠️ `-c:v copy` 时**不能**同时给 `-pix_fmt` / `-r` 之类只对编码器
+    有效的参数，否则 ffmpeg 会报错。所以这里不能照抄 `encode_args`。
+
+    `fps` 参数留着是为了接口整齐（调用方与 `encode_args` 同形），
+    但 copy 路径用不上它——**帧率由 `silent.mp4` 决定**。
+    """
+    return ["-c:v", "copy"]
+
+
 # 旁白与品牌片音轨的通道：上混成立体声，音量不动。
 # pan 而不是 aformat=channel_layouts=stereo：后者把单声道上混时
 # 会按功率衰减 3dB，旁白会比立体声的品牌音轨明显小声一截。
@@ -164,7 +180,7 @@ def _mux_cmd(silent: Path, out_path: Path, storyboard: Storyboard,
     cmd += [
         "-filter_complex", ";".join(chains),
         "-map", "0:v:0", "-map", "[mix]",
-        *encode_args(fps),
+        *video_stream_args(fps),
     ]
     cmd += ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2"]
     cmd += ["-t", f"{duration:.3f}", "-movflags", "+faststart", str(out_path)]

@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1101 passed / 60 skipped | 1101 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1103 passed / 60 skipped | 1103 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -111,6 +111,14 @@
 | 2026-11-23（总验收那轮） | 125 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
 | 2026-11-23（死路径守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
 | 2026-11-23（BGM 铺底循环那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1101 / 60 skip | 77 | 59 |
+| 2026-11-23（混音不重编码那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1103 / 60 skip | 77 | 59 |
+
+> 2026-11-23（混音不重编码那轮）：**video +2 条**——新文件
+> `video/pipeline/tests/test_compose_no_reencode.py`：混音阶段**复制视频流**（`-c:v copy`），
+> 不再把视频编码第三遍（12 分钟的片子能省十几分钟）。
+> 守卫分两层：命令层查 `-c:v copy`、成片层比**帧校验和 + 码流指纹**。
+> ⚠️ 夹具**不能用纯色画面**——纯色重编码后逐帧一模一样，断言会恒真；
+> 这里用 `testsrc2`。注入缺陷（退回 `encode_args`）两条都红。
 
 > 2026-11-23（BGM 铺底循环那轮）：**video +9 条**——新文件
 > `video/pipeline/tests/test_bgm_loop.py`：**曲子不够长时循环接回**，接缝落在最安静处，
