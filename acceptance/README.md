@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1092 passed / 60 skipped | 1092 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1101 passed / 60 skipped | 1101 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -110,6 +110,15 @@
 | 2026-11-23（筹备中标记那轮） | 121 | 119 | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1085 / 60 skip | 77 | 59 |
 | 2026-11-23（总验收那轮） | 125 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
 | 2026-11-23（死路径守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
+| 2026-11-23（BGM 铺底循环那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1101 / 60 skip | 77 | 59 |
+
+> 2026-11-23（BGM 铺底循环那轮）：**video +9 条**——新文件
+> `video/pipeline/tests/test_bgm_loop.py`：**曲子不够长时循环接回**，接缝落在最安静处，
+> 铺底盖住整段正文（原来取 `min(曲子长度, 旁白长度)`，300 秒旁白只铺出 209 秒）。
+> 成片级判据 `measure_duck_depth` 的**对照物换成同一份循环铺底**（拿原母带当对照，
+> 量到的是两段不同素材的 RMS 差，实测能偏到 20 dB）。
+> 两条守卫都**注入缺陷验过会红**——包括一条曾因夹具对称而**空转**的
+> （夹具形状记在那个文件的 docstring 里，别改回对称样子）。
 
 > 2026-11-23（死路径守卫那轮）：**根 +4 条**——新文件 `test_stale_paths.py`：
 > 2026-11-17 目录重构搬走的那两棵平台私有目录（**能力模型**与**发布快照**）

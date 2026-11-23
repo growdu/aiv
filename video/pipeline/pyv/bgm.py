@@ -570,6 +570,89 @@ def _write_wav(path: str | Path, samples: np.ndarray, sample_rate: int = 48000) 
     return file
 
 
+# 循环铺底的接缝淡入淡出长度（秒）。
+LOOP_FADE_S = 0.25
+
+
+def _quiet_seam(song: np.ndarray, window: int) -> int:
+    """找最安静窗口的中心，作为循环接缝点。
+
+    窗口长度是 2×window：接缝左右各 window 个样本都要落在安静区里，
+    这样淡化处理的两段素材本身就已经很安静，淡化不会引入咔哒声。
+
+    **按逐声道功率算**（不是带符号的单声道均值）：
+    左右反相的立体声，用带符号均值可以很小而实际很响，
+    会把接缝选到响处。
+    """
+    if song.shape[0] == 0:
+        return 0
+    power = (song ** 2).mean(axis=1)
+    if power.size < 2 * window:
+        return power.size // 2
+    cumulative = np.concatenate([[0.0], np.cumsum(power)])
+    energy = cumulative[2 * window:] - cumulative[:-2 * window]
+    index = int(np.argmin(energy))
+    return index + window
+
+
+def loop_bgm(path: str | Path, duration_s: float, sample_rate: int = 48000,
+             fade_s: float = LOOP_FADE_S) -> np.ndarray:
+    """把曲子循环铺满 ``duration_s`` 秒，返回 (n, 2) 的 float64 立体声。
+
+    曲子够长时直接取前 N 秒（**已有成片不受影响**）；
+    不够长时把曲子从最安静处切开、循环拼接，接缝做「淡出到零 + 从零淡入」。
+
+    **为什么是淡出淡入而不是等功率交叉淡化**：
+    淡出淡入**不改变输出长度**（``need`` 恒等于
+    ``int(round(duration_s * sample_rate))``）、**不改变循环周期**，
+    接缝处两边都是 0、连续、不会咔哒。
+    代价是每个接缝有一个 0.25 s 的近静默凹坑（实测比整曲低 23~27 dB）。
+
+    **内存**（52 分钟档）：输出**预分配后逐段填**，不用 ``np.tile`` 再 copy——
+    整段 tile 会让峰值多占几 GB。
+    """
+    song = _decode_stereo(path, sample_rate)
+    if song.shape[0] == 0:
+        raise ValueError(f"BGM 是空的：{path}")
+    need = int(round(duration_s * sample_rate))
+    if need <= 0:
+        return song[:0]
+    period = song.shape[0]
+    if period >= need:
+        return song[:need]
+
+    fade = max(1, min(int(round(fade_s * sample_rate)), period // 4))
+    seam = _quiet_seam(song, fade)
+    # 旋转曲子，让接缝落在位置 0：接缝左右各 fade 个样本都安静
+    unit = np.concatenate([song[seam:], song[:seam]], axis=0)
+
+    # 预分配输出、逐段填——避免 np.tile 整段铺满再 copy（长片会多占几 GB）
+    out = np.empty((need, 2), dtype=np.float64)
+    written = 0
+    while written < need:
+        take = min(period, need - written)
+        out[written:written + take] = unit[:take]
+        written += take
+
+    # 每个 unit 边界做「淡出到零 + 从零淡入」。
+    #
+    # 前一段的尾巴乘 cos（1→0），后一段的头乘 sin（0→1），
+    # 接缝处两边都是 0，**连续，不会咔哒**。
+    ramp_down = np.cos((np.arange(fade) + 0.5) / fade * (np.pi / 2))
+    ramp_up = np.sin((np.arange(fade) + 0.5) / fade * (np.pi / 2))
+    boundary = period
+    while boundary < need:
+        start = boundary - fade
+        if start >= 0:
+            out[start:boundary] *= ramp_down[:, None]
+            end = min(boundary + fade, need)
+            if end > boundary:
+                out[boundary:end] *= ramp_up[: end - boundary, None]
+        boundary += period
+
+    return out
+
+
 def duck_bgm(bgm_path: str | Path, narration_path: str | Path,
              out_path: str | Path, depth_db: float = DUCK_DEPTH_DB,
              sample_rate: int = 48000,
@@ -579,25 +662,22 @@ def duck_bgm(bgm_path: str | Path, narration_path: str | Path,
     深度是**精确**的：旁白持续段正好压 `depth_db` dB，句间停顿处回到 0 dB。
     这正是不用 sidechaincompress 的原因——压缩器的压深随语音包络浮动，
     同一个参数在不同稿子上能差 2 dB 以上，规则就没法机器判定了。
-    """
-    raw = _run([
-        "ffmpeg", "-v", "error", "-i", str(bgm_path),
-        "-f", "f32le", "-ac", "2", "-ar", str(sample_rate), "-",
-    ], text=False).stdout
-    frames = np.frombuffer(raw, dtype=np.float32).astype(np.float64)
-    if frames.size % 2:
-        frames = frames[:-1]
-    bgm = frames.reshape(-1, 2)
 
+    **铺底盖住整段正文**：曲子不够长时循环接回（`loop_bgm`）。
+    取 min() 会让 20 分钟的片子在 209 秒后就没音乐了（实测）。
+    """
     narration = decode_mono(narration_path, sample_rate)
     if duration_s is not None:
         limit = int(duration_s * sample_rate)
-        bgm = bgm[:limit]
         narration = narration[:limit]
+
+    cover_s = narration.size / sample_rate
+    bgm = loop_bgm(bgm_path, cover_s, sample_rate=sample_rate)
     length = min(bgm.shape[0], narration.size)
     bgm = bgm[:length]
     curve = duck_curve(narration[:length], depth_db, sample_rate)
-    ducked = bgm * curve[:length, None]
+    ducked = bgm
+    ducked *= curve[:length, None]   # 原地乘：少留一份大数组
     return _write_wav(out_path, ducked, sample_rate)
 
 
@@ -742,15 +822,34 @@ def measure_duck_depth(bgm_path: str | Path, narration_path: str | Path,
                        duration_s: float | None = None) -> float:
     """量稳态 duck 深度（dB，正数）。
 
-    跑一遍 duck，把母带与 duck 后的 BGM 在旁白**饱和帧**上比 RMS：
+    跑一遍 duck，把**同一份铺底**与 duck 后的 BGM 在旁白**饱和帧**上比 RMS：
     饱和帧里包络恒为 1，增益恒为 10^(depth/20)，量出来的就是设定深度。
+
+    ⚠️ **对照物必须是循环后的那份铺底**，不是原母带：
+    循环之后 ducked 已经不是原母带的前缀了，拿原母带当对照，
+    相减得到的是「两段不同素材的 RMS 差」——量到的不是 duck 深度
+    （实测能偏到 20 dB，设定 7 dB）。
+
+    ⚠️ **两边必须用同一种下混**：母带侧与 ducked 侧都走
+    「写 16 bit 立体声 wav → `decode_mono`」这条路。
+    一边用 ffmpeg 的下混、一边用算术平均，两边就不是同一个信号了
+    （实测能差 10 dB）。
     """
+    sample_rate = 48000
     with tempfile.TemporaryDirectory() as tmp:
         ducked_path = Path(tmp) / "ducked.wav"
+        bed_path = Path(tmp) / "bed.wav"
         duck_bgm(bgm_path, narration_path, ducked_path, duration_s=duration_s)
-        master = decode_mono(bgm_path)
-        ducked = decode_mono(ducked_path)
-    narration = decode_mono(narration_path)
+        ducked = decode_mono(ducked_path, sample_rate)
+        narration = decode_mono(narration_path, sample_rate)
+        if duration_s is not None:
+            limit = int(duration_s * sample_rate)
+            narration = narration[:limit]
+        bed = loop_bgm(bgm_path, narration.size / sample_rate,
+                       sample_rate=sample_rate)
+        _write_wav(bed_path, bed, sample_rate)
+        del bed
+        master = decode_mono(bed_path, sample_rate)
     mask = saturated_mask(narration)
     length = min(master.size, ducked.size, mask.size)
     mask = mask[:length]
