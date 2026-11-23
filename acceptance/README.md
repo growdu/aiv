@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1115 passed / 60 skipped | 1115 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1126 passed / 60 skipped | 1126 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -114,6 +114,19 @@
 | 2026-11-23（混音不重编码那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1103 / 60 skip | 77 | 59 |
 | 2026-11-23（align DP 剪枝那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1109 / 60 skip | 77 | 59 |
 | 2026-11-23（字幕改二分那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1115 / 60 skip | 77 | 59 |
+| 2026-11-23（母稿解析器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1126 / 60 skip | 77 | 59 |
+
+> 2026-11-23（母稿解析器那轮）：**video +11 条**——新文件
+> `video/pipeline/tests/test_motherdoc.py` 与新模块 `video/pipeline/pyv/motherdoc.py`：
+> 母稿解析（mermaid 块 / 代码块 / 表格 / 散文字数），是「画面不用手写」的第一步。
+> ⚠️ 计划原稿的夹具是**六期真实母稿**，但那六期 2026-11-18 已清空
+> （规格 §2.4 明说「这六期已清空」），文件不在仓库里了——
+> 夹具改成**合成的小母稿**：口径由规格的定义决定，不该依赖某几篇具体文章。
+> 计数口径与《长视频三档》§2.1 / §2.4 一致：散文去掉 front matter / 标题行 /
+> 代码块内 / 表格行；mermaid 块单独一类，`count("mermaid") + count("code")`
+> = 围栏块总数（规格的 377），`count("code")` = 纯代码 306。
+> 三条注入缺陷都验过会红（mermaid 判成 code → 3 条红；不剥 front matter → 2 条红；
+> 标题行也算散文 → 2 条红）。
 
 > 2026-11-23（字幕改二分那轮）：**video +6 条**——新文件
 > `video/pipeline/tests/test_subtitle_lookup.py`：字幕事件定位从「每帧从头扫」改成二分。
