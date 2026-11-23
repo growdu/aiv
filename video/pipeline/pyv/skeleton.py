@@ -55,6 +55,10 @@ ROLE_TIERS: dict[str, tuple[str, ...]] = {
 }
 
 
+#: 画面类型（《长视频三档》§5.3 那张表）。
+VISUAL_KINDS: tuple[str, ...] = ("scene", "mermaid", "code", "table", "card")
+
+
 class SkeletonError(ValueError):
     """骨架本身坏了：读不了、形状不对、role 不认识。"""
 
@@ -63,11 +67,54 @@ class TierError(ValueError):
     """档位不认识。"""
 
 
-def parse_skeleton(text: str) -> dict:
-    """解析骨架 YAML。
+def _check_segment(segment: dict, index: int) -> None:
+    """查一段骨架有没有坏掉的地方。
 
-    只做**解析**：形状对不对、role 认不认识，留给 `select_segments`，
-    因为那才是真正用骨架的地方（在这里查一遍，等于查两遍）。
+    **坏掉的骨架要炸，不许安静地少东西**：
+
+    - `role` 拼错（`mechanim`）→ 那段在「按 role 过滤」的口径下从**三档里同时消失**，
+      而页面上看不出少了东西；
+    - `visual.kind` 不认识 → 画面那一环不知道要画什么；
+    - 口播句数与字幕行数不一致 → 字幕会跟口播错位（`align` 只查得出总数对不上，
+      错位它看不出来）；
+    - 段 id 重复 → 引用「第 3 段」时指向哪一段说不清。
+
+    **没写的字段不查**：一段可以没有 `visual`（纯口播段），也可以没有 `subtitles`
+    （字幕由 `align` 派生）。写了就要写对。
+    """
+    if not isinstance(segment, dict):
+        raise SkeletonError(f"第 {index} 段不是一个对象")
+    sid = str(segment.get("id") or "").strip()
+    if not sid:
+        raise SkeletonError(f"第 {index} 段没有 id")
+    role = segment.get("role")
+    if role not in ROLE_TIERS:
+        raise SkeletonError(
+            f"段 {sid} 的 role 是 {role!r}，只认 {'、'.join(ROLE_TIERS)}"
+        )
+    visual = segment.get("visual")
+    if visual is not None:
+        if not isinstance(visual, dict):
+            raise SkeletonError(f"段 {sid} 的 visual 不是一个对象")
+        kind = visual.get("kind")
+        if kind not in VISUAL_KINDS:
+            raise SkeletonError(
+                f"段 {sid} 的 visual.kind 是 {kind!r}，只认 {'、'.join(VISUAL_KINDS)}"
+            )
+    narration = segment.get("narration")
+    subtitles = segment.get("subtitles")
+    if isinstance(narration, list) and isinstance(subtitles, list):
+        if len(narration) != len(subtitles):
+            raise SkeletonError(
+                f"段 {sid} 的口播 {len(narration)} 句与字幕 {len(subtitles)} 行不一致"
+            )
+
+
+def parse_skeleton(text: str) -> dict:
+    """解析骨架 YAML，并把**坏掉的地方**指出来。
+
+    形状对不对、role 认不认识，在这里就查——骨架是入库的输入，
+    坏掉的东西要当场报错，而不是等到出片那天才发现少了段。
     """
     data = yaml.safe_load(text)
     if data is None:
@@ -77,6 +124,13 @@ def parse_skeleton(text: str) -> dict:
     segments = data.get("segments")
     if not isinstance(segments, list):
         raise SkeletonError("骨架里没有 segments 列表")
+    seen: set[str] = set()
+    for index, segment in enumerate(segments):
+        _check_segment(segment, index)
+        sid = str(segment.get("id") or "").strip()
+        if sid in seen:
+            raise SkeletonError(f"骨架里有重复的段 id：{sid}")
+        seen.add(sid)
     return data
 
 

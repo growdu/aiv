@@ -39,7 +39,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             ffmpeg fontconfig fonts-noto-cjk make \
-            python3-cairo python3-numpy python3-pil python3-scipy python3-pytest
+            python3-cairo python3-numpy python3-pil python3-scipy python3-pytest \
+            python3-yaml
           fc-cache -f
           # `fonts-noto-cjk` 是**兜底**——内置子集装不上时的退路。
           # 主力是仓库里那份 `AIV Sans CJK SC`（下一步装）：
@@ -50,7 +51,7 @@ jobs:
         run: |
           # 系统包装的版本与发行版一起走，最稳；只有在装不上时才退回 pip。
           # 不无条件跑 pip：它会把 apt 的 numpy 升到 2.x，和 apt 的 scipy 打架。
-          python3 -c "import cairo, numpy, PIL, scipy, pytest" || \
+          python3 -c "import cairo, numpy, PIL, scipy, pytest, yaml" || \
             python3 -m pip install --break-system-packages -r video/pipeline/requirements.txt
           # fontTools 只用来读内置字体的 cmap（缺字守卫要用）。纯 Python，
           # 不碰 numpy/scipy，不会和 apt 的版本打架。

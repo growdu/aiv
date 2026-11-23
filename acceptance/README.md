@@ -86,7 +86,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1126 passed / 60 skipped | 1126 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1133 passed / 60 skipped | 1133 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -115,6 +115,20 @@
 | 2026-11-23（align DP 剪枝那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1109 / 60 skip | 77 | 59 |
 | 2026-11-23（字幕改二分那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1115 / 60 skip | 77 | 59 |
 | 2026-11-23（母稿解析器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1126 / 60 skip | 77 | 59 |
+| 2026-11-23（骨架依赖与形状守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1133 / 60 skip | 77 | 59 |
+
+> 2026-11-23（骨架依赖与形状守卫那轮）：**video +7 条**——
+> 讲稿骨架（`pyv/skeleton.py`）的**坏骨架当场报错**：
+> `role` 拼错、`visual.kind` 不认识、口播句数与字幕行数不一致、段 id 重复，
+> 四条都在读骨架时就炸（拼错的 role 会让那一段从**三档里同时消失**，
+> 而页面上看不出少了东西；字幕错位 `align` 只查得出总数对不上）。
+> 另加一条**依赖同步守卫**
+> `test_every_third_party_dependency_is_installed_on_linux`：
+> doctor 名单里的每个模块都必须出现在 CI 的 import 检查行与上机脚本里——
+> `pyyaml` 就是这么漏过三处的（requirements.txt 有了，doctor / CI / 上机脚本没有，
+> 本机有所以看不出来，Linux 上 `import yaml` 直接炸）。
+> ⚠️ Task 7（三档裁剪）的主体是并行会话落的（`ded4bb2c`），
+> 本轮只做台账核对与注入复核：把 `ROLE_TIERS["aside"]` 改成 `("mid","full")` → **3 条红**。
 
 > 2026-11-23（母稿解析器那轮）：**video +11 条**——新文件
 > `video/pipeline/tests/test_motherdoc.py` 与新模块 `video/pipeline/pyv/motherdoc.py`：
