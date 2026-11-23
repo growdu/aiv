@@ -51,8 +51,11 @@ cd platforms/blog/site
 npm run build      # 编译 + 注入身份 + 生成（= npm run sync && npm run clean && hexo generate）
 npm run sync       # 只做前面那几样（不生成站点）
 npm run clean      # 清掉上一次的产物
-npm run server     # 本地起一个 hexo 服务器
+npm run server     # 本地起一个 hexo 服务器（http://localhost:4000）
 ```
+
+`npm run server` 依赖 `hexo-server`（在 `dependencies` 里），起的是**常驻进程**——
+用 `timeout 15 npm run server` 试一把，被掐掉是正常的。
 
 > `npm run build` 需要 `content/units/` 在（那是上游内容单元层的产物）。
 > 没有它，构建会**报错并告诉你先跑什么**——不会编出一份「0 篇内容」的站点
