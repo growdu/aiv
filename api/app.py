@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import documents, drafts, episodes, jobs, review
+from .routes import artifacts, documents, drafts, episodes, jobs, review
 
 app = FastAPI(title="创作平台 API", version="1.0.0")
 
@@ -24,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(drafts.router)
+app.include_router(artifacts.router)
 app.include_router(documents.router)
 app.include_router(episodes.router)
 app.include_router(jobs.router)

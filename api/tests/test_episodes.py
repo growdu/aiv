@@ -92,6 +92,17 @@ def test_the_draft_route_finds_the_draft_unit(client, tmp_path, monkeypatch):
     assert body["kind"] == "episode"
 
 
+def test_the_artifacts_route_lists_the_episode_products(client, tmp_path,
+                                                        monkeypatch):
+    episodes_dir, _ = _episodes(tmp_path, monkeypatch)
+    path = _make_episode(episodes_dir)
+    (path / "narration.mp3").write_bytes(b"x")
+
+    body = client.get(f"/api/episodes/{EPISODE}/artifacts").json()
+    names = {item["name"]: item["kind"] for item in body["artifacts"]}
+    assert names["narration.mp3"] == "narration"
+
+
 def test_the_build_route_starts_a_job(client, tmp_path, monkeypatch):
     episodes_dir, _ = _episodes(tmp_path, monkeypatch)
     _make_episode(episodes_dir)

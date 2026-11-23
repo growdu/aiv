@@ -16,7 +16,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ..services import commands, frontmatter
+from ..services import artifacts, commands, frontmatter
 from ..services import drafts as draft_service
 from ..services import review as review_service
 from ..services.jobs import RUNNER, Job
@@ -233,6 +233,19 @@ def package_episode(episode: str, body: PackageBody):
     job = RUNNER.submit("package", command.argv, command.cwd,
                         key=f"package:{platform}:{episode}")
     return {"job_id": job.id, "status": job.status}
+
+
+@router.get("/{episode:path}/artifacts")
+def episode_artifacts(episode: str):
+    """这一期的产物清单：成片、旁白、时间轴、抽帧、片段。
+
+    **每项带一个 `artifact_id`**——前端拿它去 `GET /api/artifacts/{id}` 取字节。
+    """
+    episode = episode.strip("/")
+    if _split(episode) is None:
+        raise HTTPException(status_code=404, detail="没有这一期")
+    return {"artifacts": artifacts.episode_artifacts(episode,
+                                                      repo_root=REPO_ROOT)}
 
 
 @router.get("/{episode:path}")
