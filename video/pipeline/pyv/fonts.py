@@ -45,6 +45,15 @@ FONT_ENV = "AIV_FONT_FAMILY"
 #: 平台上挑到的就不是同一个字体。
 BUNDLED_FAMILY = "AIV Sans CJK SC"
 
+#: **等宽**那一族的族名（代码块用）。
+#:
+#: **为什么代码块不能凑合用比例字体**：比例字体的字宽不等，
+#: 一行代码画出来对不齐列——代码要能一眼看出缩进层级。
+#:
+#: 同样必须唯一——跟系统里任何字体重名，fontconfig 就在两份之间
+#: 二选一，机器之间就不一致了。
+BUNDLED_MONO_FAMILY = "AIV Mono CJK SC"
+
 #: 内置字体文件在仓库里的位置。
 #:
 #: **两个字重都要在**：只装 Regular 的时候，cairo 会**合成**粗体——
@@ -54,7 +63,8 @@ BUNDLED_FAMILY = "AIV Sans CJK SC"
 BUNDLED_DIR = Path(__file__).resolve().parents[1] / "assets" / "fonts"
 BUNDLED_REGULAR_PATH = BUNDLED_DIR / "AIVSansCJKSC-Regular.otf"
 BUNDLED_BOLD_PATH = BUNDLED_DIR / "AIVSansCJKSC-Bold.otf"
-BUNDLED_PATHS = (BUNDLED_REGULAR_PATH, BUNDLED_BOLD_PATH)
+BUNDLED_MONO_PATH = BUNDLED_DIR / "AIVMonoCJKSC-Regular.otf"
+BUNDLED_PATHS = (BUNDLED_REGULAR_PATH, BUNDLED_BOLD_PATH, BUNDLED_MONO_PATH)
 
 INSTALL_HINT = (
     "装一套中文字体：\n"

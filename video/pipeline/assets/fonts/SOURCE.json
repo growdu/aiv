@@ -1,28 +1,57 @@
 {
   "family": "AIV Sans CJK SC",
+  "mono_family": "AIV Mono CJK SC",
   "license": "SIL Open Font License 1.1",
   "license_url": "https://github.com/notofonts/noto-cjk/blob/Sans2.004/LICENSE",
   "version": "2.004",
-  "chars": 778,
+  "chars": 7544,
+  "charset": "ASCII + **GB 2312-80 全集**（汉字区 6763 字 + 符号区）+ 常用标点 + 仓库用到的字符。\n**按标准算，不按仓库内容算**：母稿（`docs/`）不在本仓库的字符集口径里，按仓库算出来的子集盖不住母稿的汉字——实测仓库里那篇母稿有 120 个字不在按仓库算的子集里。",
   "faces": [
     {
       "style": "Regular",
+      "family": "AIV Sans CJK SC",
       "file": "AIVSansCJKSC-Regular.otf",
       "postscript_name": "AIVSansCJKSC-Regular",
       "upstream": "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@Sans2.004/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
-      "sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b",
-      "subset_sha256": "d12fbf2d20acfbfa09b916c016dd984ab195523030868d0ab58f612232429dc1",
-      "subset_bytes": 327856
+      "subset_sha256": "f78c9039f3b8b89324af1663fab488739ee12fc5b5b177a75d7c5b2ae038113d",
+      "subset_bytes": 3517284,
+      "source": "upstream",
+      "upstream_sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b"
     },
     {
       "style": "Bold",
+      "family": "AIV Sans CJK SC",
       "file": "AIVSansCJKSC-Bold.otf",
       "postscript_name": "AIVSansCJKSC-Bold",
       "upstream": "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@Sans2.004/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Bold.otf",
-      "sha256": "b5f0d1a190a7f9b43c310a8850630af12553df32c4c050543f9059732d9b4c0a",
-      "subset_sha256": "3d2c7e1af3ec6f48824b17383782726276990b3e504a7a1c664cabc5bfb57e4c",
-      "subset_bytes": 335712
+      "subset_sha256": "178200b1d9f31054a6369e829bde3496515d4d053f51544ec3a86992cebc4085",
+      "subset_bytes": 3608116,
+      "source": "upstream",
+      "upstream_sha256": "b5f0d1a190a7f9b43c310a8850630af12553df32c4c050543f9059732d9b4c0a"
+    },
+    {
+      "style": "Regular",
+      "family": "AIV Mono CJK SC",
+      "file": "AIVMonoCJKSC-Regular.otf",
+      "postscript_name": "AIVMonoCJKSC-Regular",
+      "upstream": "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@Sans2.004/Sans/Mono/OTF/SimplifiedChinese/NotoSansMonoCJKsc-Regular.otf",
+      "subset_sha256": "f6d081e1a43fac3081e39af59f41ce631b9c561895c360cee793b3a48d23ddc5",
+      "subset_bytes": 3482348,
+      "source": "offline_source",
+      "source_postscript_name": "NotoSansMonoCJKsc-Regular",
+      "source_ttc": "NotoSansCJK-Regular.ttc"
     }
   ],
-  "note": "按仓库实际用到的字符子集化。**字符集由 `scripts/build_font_subset.py` 从仓库自动提取**，不手工维护——`tests/test_font_subset.py` 独立复算一遍，对不上就红。\n上游钉在 2.004：Debian/Ubuntu 的 fonts-noto-cjk 就是这个版本，系统字体与内置子集的字形一致。\n**两个字重都是真的字形**：只装 Regular 的话，cairo 会用各后端自己的办法合成粗体，两个后端合成出来的不一样（实测轮廓差 3.14px）。"
+  "offline_source": {
+    "package": "fonts-noto-cjk",
+    "version": "20220127+repack1-1",
+    "url": "https://deb.debian.org/debian/pool/main/f/fonts-noto-cjk/fonts-noto-cjk_20220127+repack1-1_all.deb",
+    "sha256": "4a2515eb6db3978b897fef9709ed0d2b1f4c6c4df4d83d6c4ef65f71f1b1f502",
+    "ttc": {
+      "Regular": "NotoSansCJK-Regular.ttc",
+      "Bold": "NotoSansCJK-Bold.ttc"
+    },
+    "version_string": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603"
+  },
+  "note": "按**标准**（GB 2312-80 全集）加仓库用到的字符子集化。**字符集由 `scripts/build_font_subset.py` 算出来**，不手工维护——`tests/test_font_subset.py` 独立复算一遍，对不上就红。\n上游钉在 2.004：Debian/Ubuntu 的 fonts-noto-cjk 就是这个版本，系统字体与内置子集的字形一致。\n**两个字重都是真的字形**：只装 Regular 的话，cairo 会用各后端自己的办法合成粗体，两个后端合成出来的不一样（实测轮廓差 3.14px）。\n**另有一族等宽**（代码块用）：上游的 Noto Sans Mono CJK SC，同版本同授权。\n**离线源**：上游 CDN 连不上的机器，用 `offline_source` 那个 Debian 包——脚本会先验字形（outline 与 advance 逐字相同），对不上直接拒绝（2.001 那种源会被挡住：字宽差 1/1000 em，版面会整体移位）。"
 }

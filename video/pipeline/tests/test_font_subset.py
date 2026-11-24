@@ -57,8 +57,27 @@ SUBSETS = {
     "Bold": FONT_DIR / "AIVSansCJKSC-Bold.otf",
 }
 
+#: **等宽**那一族（代码块用）。**也要查缺字**——代码里的中文注释
+#: 一样是画面上的字。
+MONO_SUBSET = FONT_DIR / "AIVMonoCJKSC-Regular.otf"
+
+#: **GB 2312-80** 的汉字区与符号区。
+#:
+#: **为什么要按标准算，而不是按「仓库用到的字符」算**：母稿不在仓库里。
+#: 仓库里那篇母稿有 597 个不同的字，其中 **120 个不在**按仓库算出来的
+#: 子集里——照仓库算，母稿画出来一半是豆腐块，而且**画面照样生成、
+#: 时长照样对**，没有任何报错。
+#:
+#: 这里**独立复算**一遍（与 `scripts/build_font_subset.py` 里那份各写一份）：
+#: GB 2312-80 是**按字节两两解码**的，枚举 0xA1–0xFE × 0xA1–0xFE
+#: 就能把汉字区与符号区全部列出来——**不依赖任何外部数据**。
+GB2312_LEAD = 0xA1
+GB2312_TRAIL = 0xA1
+GB2312_LEAD_MAX = 0xFE
+GB2312_TRAIL_MAX = 0xFE
+
 #: 常用中英标点——画面上会用到，但不一定出现在任何一份数据里。
-EXTRA_PUNCTUATION = "　·—…、。《》「」『』（）：；？！，－×÷±≤≥≠→←↑↓∵∴√∞°′″¥$%#@&*"
+EXTRA_PUNCTUATION = "　·—–…、。《》「」『』（）：；？！，－×÷±≤≥≠→←↑↓∵∴√∞°′″¥$%#@&*"
 
 #: 字符从哪来：**代码与数据**里所有会被画出来的地方。
 #:
@@ -79,6 +98,7 @@ EXTRA_PUNCTUATION = "　·—…、。《》「」『』（）：；？！，－
 #: 时长照常对，没有任何报错，只有盯着字才看得见。
 DRAWING_MODULES = (
     "pipeline/pyv/scenes/*.py",
+    "pipeline/pyv/generic/*.py",
     "pipeline/pyv/subtitle.py",
     "pipeline/pyv/layout.py",
     "pipeline/pyv/components.py",
@@ -357,12 +377,35 @@ def _cmap(style: str) -> dict:
     return TTFont(str(SUBSETS[style])).getBestCmap()
 
 
+def _mono_cmap() -> dict:
+    from fontTools.ttLib import TTFont
+
+    return TTFont(str(MONO_SUBSET)).getBestCmap()
+
+
+def _gb2312_chars() -> set[str]:
+    """**GB 2312-80 全集**（独立复算）。
+
+    汉字区与符号区都是**两字节 GB2312 编码**，首字节 0xA1–0xFE、
+    次字节 0xA1–0xFE。逐个解码，解不出来的（空码位）跳过。
+    """
+    chars: set[str] = set()
+    for lead in range(GB2312_LEAD, GB2312_LEAD_MAX + 1):
+        for trail in range(GB2312_TRAIL, GB2312_TRAIL_MAX + 1):
+            try:
+                chars.add(bytes((lead, trail)).decode("gb2312"))
+            except UnicodeDecodeError:
+                continue
+    return chars
+
+
 # ---------------------------------------------------------------- 存在与来源
 
 
 def test_the_bundled_font_is_present():
     for style, path in SUBSETS.items():
         assert path.is_file(), f"内置字体（{style}）不在：{path}"
+    assert MONO_SUBSET.is_file(), f"内置等宽字体不在：{MONO_SUBSET}"
     assert MANIFEST.is_file(), f"字体出处台账不在：{MANIFEST}"
 
 
@@ -370,14 +413,38 @@ def test_the_manifest_pins_the_upstream_source():
     """出处台账必须钉住版本与 sha256——不然换一份字体没人知道。"""
     data = _manifest()
     assert data["family"] == fonts.BUNDLED_FAMILY
+    assert data["mono_family"] == fonts.BUNDLED_MONO_FAMILY
     assert data["license"] == "SIL Open Font License 1.1"
     assert data["version"]
 
-    styles = [face["style"] for face in data["faces"]]
-    assert styles == ["Regular", "Bold"], f"台账里的字重不对：{styles}"
-    for face in data["faces"]:
-        assert re.fullmatch(r"[0-9a-f]{64}", face["sha256"]), face
+    # **三面**：正文的 Regular / Bold + 等宽的 Regular。
+    faces = data["faces"]
+    assert [(face["family"], face["style"]) for face in faces] == [
+        ("AIV Sans CJK SC", "Regular"),
+        ("AIV Sans CJK SC", "Bold"),
+        ("AIV Mono CJK SC", "Regular"),
+    ], faces
+    for face in faces:
         assert face["upstream"].startswith("https://"), face
+        assert re.fullmatch(r"[0-9a-f]{64}", face["subset_sha256"]), face
+        assert face["subset_bytes"] > 0, face
+        # 走上游的那两面钉上游 sha256；走离线源的那面钉离线源里的面名。
+        if face["source"] == "upstream":
+            assert re.fullmatch(r"[0-9a-f]{64}", face["upstream_sha256"]), face
+        else:
+            assert face["source"] == "offline_source", face
+            assert face["source_postscript_name"], face
+            assert face["source_ttc"], face
+
+
+def test_the_manifest_records_the_offline_source():
+    """台账里要钉住**离线源**——上游 CDN 连不上的机器靠它重建。"""
+    data = _manifest()
+    offline = data["offline_source"]
+    assert re.fullmatch(r"[0-9a-f]{64}", offline["sha256"]), offline
+    assert offline["url"].startswith("https://"), offline
+    assert offline["version_string"].startswith("Version "), offline
+    assert set(offline["ttc"]) == {"Regular", "Bold"}, offline
 
 
 def test_the_subset_file_matches_the_recorded_hash():
@@ -425,6 +492,40 @@ def test_both_weights_are_really_different_faces():
 
 
 # ---------------------------------------------------------------- 缺字守卫
+
+
+def test_the_subset_covers_the_whole_gb2312_standard():
+    """**内置字体必须盖住 GB 2312-80 全集**。
+
+    **为什么要按标准算**：母稿（`docs/` 里的文章）不在本仓库，
+    仓库里那篇母稿有 **120 个字**不在按仓库算出来的子集里——
+    照仓库算，母稿画出来一半是豆腐块，而且**画面照样生成、
+    时长照样对**，没有任何报错。
+
+    **判据在 CI 里跑得动**：GB 2312-80 是两字节编码，
+    枚举 0xA1–0xFE × 0xA1–0xFE 就是全集，**不依赖外部数据**。
+
+    **三面都要盖住**：正文的两个字重与等宽那一面。代码块里的
+    中文注释一样是画面上的字。
+    """
+    standard = _gb2312_chars()
+    assert len(standard) > 7000, (
+        f"GB 2312-80 全集只有 {len(standard)} 个字——枚举口径不对")
+
+    for style in SUBSETS:
+        cmap = _cmap(style)
+        missing = sorted(ch for ch in standard if ord(ch) not in cmap)
+        assert not missing, (
+            f"内置字体（{style}）缺 GB 2312-80 里的 {len(missing)} 个字："
+            f"{missing[:20]}——跑 scripts/build_font_subset.py 重生成子集"
+        )
+
+    mono = _mono_cmap()
+    missing = sorted(ch for ch in standard if ord(ch) not in mono)
+    assert not missing, (
+        f"内置等宽字体缺 GB 2312-80 里的 {len(missing)} 个字："
+        f"{missing[:20]}——跑 scripts/build_font_subset.py 重生成子集"
+    )
 
 
 def test_the_subset_covers_every_character_we_draw():
@@ -510,10 +611,17 @@ def test_every_visual_segment_is_covered_by_the_runtime_probe():
 
 
 def test_the_subset_is_small():
-    """子集的意义在于小。超了说明提取范围写宽了。"""
+    """子集的意义在于小。超了说明提取范围写宽了。
+
+    **上限是 GB 2312-80 全集的自然结果**：6763 个汉字的字形本身
+    就要 3 MB 上下（实测每面 3.4–3.5 MB）。这个上限定在 5 MiB——
+    再大就不是「按标准算」而是「提取范围写宽了」。
+    """
     for style, path in SUBSETS.items():
         size = path.stat().st_size
-        assert size < 2 * 1024 * 1024, f"子集（{style}）{size} 字节，太大了"
+        assert size < 5 * 1024 * 1024, f"子集（{style}）{size} 字节，太大了"
+    size = MONO_SUBSET.stat().st_size
+    assert size < 5 * 1024 * 1024, f"等宽子集 {size} 字节，太大了"
 
 
 def test_the_bundled_family_name_is_unique():
