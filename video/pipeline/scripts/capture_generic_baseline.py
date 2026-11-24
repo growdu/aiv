@@ -34,7 +34,8 @@ from pyv import baseline  # noqa: E402
 from pyv import contract as contract_mod  # noqa: E402
 
 FIXTURES = PIPELINE_ROOT / "tests" / "fixtures"
-CONTRACT = FIXTURES / "通用契约.json"
+#: 合成契约：与预览共用同一份（见 `pyv/baseline.py` 的 `GENERIC_CONTRACT`）。
+CONTRACT = baseline.GENERIC_CONTRACT
 BASELINE = FIXTURES / "generic_baseline.json"
 
 NOTE = (

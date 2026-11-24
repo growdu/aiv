@@ -163,3 +163,32 @@ def test_both_baselines_use_the_same_capture_convention():
         assert "from pyv import baseline" in source, (
             f"{script.name} 没有用 pyv.baseline 的共用口径"
         )
+
+
+def test_the_preview_uses_the_same_frames_as_the_baseline():
+    """**预览看的，就是基准量的那张画布**——同一套画法，不另起炉灶。
+
+    预览另写一套画法（自己的底色、自己的尺寸），过眼的就是另一张图：
+    「我看过了」跟「基准盖住了」对不上号。
+    """
+    source = (PIPELINE_DIR / "scripts" / "preview_generic.py").read_text(
+        encoding="utf-8")
+    tree = ast.parse(source)
+
+    # 谁都不许自己搭一套画布
+    defined = {node.name for node in ast.walk(tree)
+               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    assert "render_frame" not in defined, (
+        "preview_generic.py 自己定义了一份 render_frame——"
+        "预览要走 pyv/baseline.py 里那一处"
+    )
+    assert "baseline.render_frame(" in source, (
+        "preview_generic.py 没有用 pyv.baseline.render_frame——"
+        "预览看的不是基准量的那张画布"
+    )
+
+    # 契约也要共用一份（预览与基准看的不是同一批段，就白看了）
+    assert "baseline.GENERIC_CONTRACT" in source, (
+        "preview_generic.py 没有用 pyv.baseline.GENERIC_CONTRACT——"
+        "预览与基准看的不是同一份契约"
+    )

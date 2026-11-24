@@ -37,6 +37,13 @@ CANVASES = ((1920, 1080), (1080, 1920))
 #: 基准抓的时刻。
 TIMES = (0.0, 0.45, 0.9)
 
+#: 通用渲染器的**合成契约**：基准抓取与预览都看它。
+#:
+#: **为什么要共用一份**：看的东西和测的东西不是一回事，就白看了——
+#: 预览过了眼，基准却没盖住那一段（或者反过来），两边各说各话。
+GENERIC_CONTRACT = (Path(__file__).resolve().parents[1] / "tests" / "fixtures"
+                    / "通用契约.json")
+
 #: mermaid 夹具图的标记：源码里有这一行的，画那张夹具图。
 FIXTURE_PNG_MARKER = "fixture-png"
 
@@ -47,6 +54,22 @@ def frame_key(canvas: tuple[int, int], segment_id: str, renderer: str,
     return f"{canvas[0]}x{canvas[1]}/{segment_id}/{renderer}@{t}"
 
 
+def render_frame(module_name: str, params: dict, t: float,
+                width: int = 1920, height: int = 1080) -> cairo.ImageSurface:
+    """画一帧（**底色已刷**），把画布交出去。
+
+    **预览也走这里**：预览图要看的，就是基准量的那张画布——底色、
+    尺寸、画法都一样。预览另起一套画法，看的就是另一张图。
+    """
+    module = importlib.import_module(module_name)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+    ctx = cairo.Context(surface)
+    ctx.set_source_rgb(*hex_to_rgb(COLORS["bg"]))
+    ctx.paint()
+    module.render(ctx, t, width, height, params)
+    return surface
+
+
 def frame_hash(module_name: str, params: dict, t: float,
                width: int = 1920, height: int = 1080) -> str:
     """画一帧，取整帧字节的 sha256。
@@ -55,12 +78,7 @@ def frame_hash(module_name: str, params: dict, t: float,
     只差「画了什么」——那是对的（我们要比的就是画出来的东西），
     但空帧的哈希会跟任何一张同尺寸的空画布一样，比较时看不出「什么都没画」。
     """
-    module = importlib.import_module(module_name)
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-    ctx = cairo.Context(surface)
-    ctx.set_source_rgb(*hex_to_rgb(COLORS["bg"]))
-    ctx.paint()
-    module.render(ctx, t, width, height, params)
+    surface = render_frame(module_name, params, t, width, height)
     return hashlib.sha256(bytes(surface.get_data())).hexdigest()
 
 
