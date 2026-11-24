@@ -761,3 +761,225 @@ def test_the_text_report_shows_the_total_figure_count(tmp_path):
     module.REPO_ROOT = tmp_path
     rendered = module.render_text([doc])
     assert "图 2（mermaid 1 + 图片 1）" in rendered
+
+
+# --- TERM 规则（术语纪律）-------------------------------------------------
+#
+# 判据在 review/specs/2026-11-24-术语纪律与反造词.md：
+# 要么用有公认定义的术语，要么用通用描述，不造词。
+
+
+def test_term_01_flags_a_coined_term(tmp_path):
+    doc = make_doc(tmp_path, "# 标题\n\n发布管线分三步。\n")
+    signals = load_tool().rule_term_01(doc)
+    assert len(signals) == 1
+    assert signals[0].rule == "TERM-01"
+    assert signals[0].severity == "warn"
+    assert "流程" in signals[0].detail
+
+
+def test_term_01_scans_the_front_matter(tmp_path):
+    """description 会出现在站点列表页——读者看得见，就得一并查。"""
+    text = "---\ntitle: 一篇文章\ndescription: 一条查询管线。\n---\n\n# 标题\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_term_01(doc)
+    assert len(signals) == 1
+    assert signals[0].line == 3
+
+
+def test_term_01_scans_code_blocks(tmp_path):
+    """mermaid 的标签会出现在图上，图上的词也是词。"""
+    text = ("# 标题\n\n```mermaid\ngraph TB\n    A[发布管线] --> B\n```\n")
+    doc = make_doc(tmp_path, text)
+    assert len(load_tool().rule_term_01(doc)) == 1
+
+
+def test_term_02_is_info_level(tmp_path):
+    """行话那一档是「建议」，不是「硬禁」。"""
+    doc = make_doc(tmp_path, "# 标题\n\n这一版沉淀了一批改动。\n")
+    signals = load_tool().rule_term_02(doc)
+    assert len(signals) == 1
+    assert signals[0].rule == "TERM-02"
+    assert signals[0].severity == "info"
+
+
+def test_term_03_flags_a_rejected_name(tmp_path):
+    doc = make_doc(tmp_path, "# 起步与全景\n\n这一段讲整体。\n")
+    signals = load_tool().rule_term_03(doc)
+    assert len(signals) == 1
+    assert signals[0].rule == "TERM-03"
+    assert signals[0].severity == "warn"
+
+
+def test_clean_text_has_no_term_signal(tmp_path):
+    doc = make_doc(tmp_path, "# 架构总览\n\n一条 SQL 从解析到返回要穿过哪些文件。\n")
+    module = load_tool()
+    assert module.rule_term_01(doc) == []
+    assert module.rule_term_02(doc) == []
+    assert module.rule_term_03(doc) == []
+
+
+def content_surface() -> list[Path]:
+    """对外内容：`docs/` 与 `drafts/` 里的 markdown。
+
+    审的是 `drafts/` 里那一份（改动稿不覆盖 `docs/`），所以两棵都要看。
+    隐藏目录不进（`.remember/`、`.worktrees/` 这些不是仓库的一部分）。
+    """
+    out: list[Path] = []
+    for root in (DOCS, REPO_ROOT / "drafts"):
+        for path in sorted(root.rglob("*.md")):
+            rel = path.relative_to(REPO_ROOT).as_posix()
+            if any(part.startswith(".") for part in rel.split("/")):
+                continue
+            out.append(path)
+    return out
+
+
+def test_content_has_no_coined_term_or_rejected_name():
+    """集成：对外内容不该带自造术语，也不该用已被否掉的命名。
+
+    只卡 warn 档（TERM-01/TERM-03）。TERM-02 是「建议具体化」，
+    改不改由人定，不该让测试红。
+    """
+    for path in content_surface():
+        result = run_tool(str(path), "--json")
+        assert result.returncode == 0, result.stderr
+        payload = json.loads(result.stdout)
+        hits = [s for s in payload["docs"][0]["signals"]
+                if s["rule"] in ("TERM-01", "TERM-03") and s["severity"] == "warn"]
+        assert not hits, f"{path} 还有自造术语或不合格命名：{hits}"
+
+
+def test_learning_path_stage_titles_follow_the_terminology_rule():
+    """学习流的阶段名登记在 JSON 里，检查器只读 markdown——这一条由人守。
+
+    阶段名要跟 `docs/` 里的目录页标题一致，两边都得说人话。
+    """
+    module = load_tool()
+    data = json.loads(
+        (REPO_ROOT / "platforms" / "blog" / "site" / "data" / "learning-path.json")
+        .read_text(encoding="utf-8")
+    )
+    bad = []
+    for track in data["tracks"]:
+        for stage in track["stages"]:
+            for word in list(module.TERM_BANNED) + list(module.TERM_BAD_NAMES):
+                if word in stage["title"]:
+                    bad.append(f"{track['id']}/{stage['id']}「{stage['title']}」含「{word}」")
+    assert not bad, bad
+
+
+# --- HEAD 规则（标题判据）------------------------------------------------
+#
+# 判据在 review/specs/2026-11-24-标题与章节顺序.md：
+# 层级要断得住、顺序跟读者的疑问顺序一致、标题要概括这一节、标题要精简紧凑。
+
+
+def test_head_01_flags_a_second_h1(tmp_path):
+    text = "# 标题\n\n正文。\n\n# 另一个标题\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_01(doc)
+    assert len(signals) == 1
+    assert signals[0].rule == "HEAD-01"
+
+
+def test_head_01_flags_a_skipped_level(tmp_path):
+    text = "# 标题\n\n## 二级\n\n正文。\n\n#### 四级\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_01(doc)
+    assert len(signals) == 1
+    assert "跳到 H4" in signals[0].detail
+
+
+def test_head_02_flags_a_long_title(tmp_path):
+    text = "# 标题\n\n## " + "很长的标题" * 6 + "\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_02(doc)
+    assert len(signals) == 1
+    assert signals[0].rule == "HEAD-02"
+
+
+def test_head_03_flags_a_marketing_word(tmp_path):
+    text = "# 标题\n\n## 一文读懂 PostgreSQL 内核\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_03(doc)
+    assert len(signals) == 1
+    assert signals[0].severity == "warn"
+
+
+def test_head_03_reports_a_lazy_word_as_info(tmp_path):
+    text = "# 标题\n\n## 深入 WAL\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_03(doc)
+    assert len(signals) == 1
+    assert signals[0].severity == "info"
+
+
+def test_head_04_flags_a_closing_heading_in_the_middle(tmp_path):
+    text = "# 标题\n\n## 原理\n\n正文。\n\n## 小结\n\n正文。\n\n## 验证\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_04(doc)
+    assert len(signals) == 1
+    assert "收束标题" in signals[0].detail
+
+
+def test_head_04_flags_stages_in_the_wrong_order(tmp_path):
+    text = "# 标题\n\n## 实践：怎么用\n\n正文。\n\n## 原理：为什么\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_04(doc)
+    assert len(signals) == 1
+    assert "顺序不对" in signals[0].detail
+
+
+def test_head_05_flags_an_empty_section(tmp_path):
+    text = "# 标题\n\n## 空的一节\n\n## 有内容的一节\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_05(doc)
+    assert len(signals) == 1
+    assert signals[0].rule == "HEAD-05"
+
+
+def test_head_05_accepts_a_section_whose_content_is_a_subheading(tmp_path):
+    text = "# 标题\n\n## 有子标题的一节\n\n### 子标题\n\n正文。\n"
+    doc = make_doc(tmp_path, text)
+    assert load_tool().rule_head_05(doc) == []
+
+
+def test_head_06_flags_a_term_the_section_never_mentions(tmp_path):
+    text = "# 标题\n\n## WAL 与检查点\n\n这一节讲的是别的。\n"
+    doc = make_doc(tmp_path, text)
+    signals = load_tool().rule_head_06(doc)
+    assert len(signals) == 1
+    assert signals[0].severity == "info"
+
+
+def test_head_06_accepts_a_term_the_section_uses(tmp_path):
+    text = "# 标题\n\n## WAL 与检查点\n\n这一节讲 WAL 怎么落盘。\n"
+    doc = make_doc(tmp_path, text)
+    assert load_tool().rule_head_06(doc) == []
+
+
+def test_head_rules_skip_module_readme(tmp_path):
+    """README 是模块说明，不是稿子——它的空节是刻意的。"""
+    module = load_tool()
+    path = tmp_path / "README.md"
+    path.write_text("# 说明\n\n## 七、这个目录现在是空的\n\n## 下一节\n\n正文。\n",
+                    encoding="utf-8")
+    doc = module.load_doc(path)
+    assert module.rule_head_02(doc) == []
+    assert module.rule_head_05(doc) == []
+
+
+def test_content_has_no_broken_heading_structure():
+    """集成：对外内容的标题层级、长度、顺序不该有问题。
+
+    只卡 warn 档。HEAD-03（info 级）、HEAD-06（info 级）不卡——
+    标题用词与「标题的词正文没跟着用」都要人判断。
+    """
+    for path in content_surface():
+        result = run_tool(str(path), "--json")
+        assert result.returncode == 0, result.stderr
+        payload = json.loads(result.stdout)
+        hits = [s for s in payload["docs"][0]["signals"]
+                if s["rule"].startswith("HEAD-") and s["severity"] == "warn"]
+        assert not hits, f"{path} 的标题有问题：{hits}"

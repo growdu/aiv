@@ -35,7 +35,7 @@
 | **平台适配层** | `platforms/` | `wechat/`、`toutiao/`、`bilibili/`、`channels/`、`douyin/` | 五个第三方平台 adapter | 各自目录内 `python3 -m pytest tests/ -q` |
 | **契约与发布层** | `publish/` | `publishkit/`、`spec/`、`deploy/`、`plans/` | 能力模型、内容契约、发布清单、调度、规格 | `cd publish && python3 -m pytest tests/ -q` |
 | **发布执行器** | `browser/` | `browser/`、`scripts/`、`selectors/`、`docs/` | 浏览器自动化（只服务没有公开 API 的平台） | `cd browser && python3 -m pytest tests/ -q` |
-| **共享规则** | `rules/` | —— | 跨模块共享的规则（`urls.json`） | ——（读取器各自有测试） |
+| **共享规则** | `rules/` | —— | 跨模块共享的规则（`urls.json` 地址形状、`terminology.json` 术语词表） | ——（读取器各自有测试） |
 | **验收矩阵** | `acceptance/` | —— | 各模块的验收命令与实测数字 | ——（文档，不是代码） |
 | **仓库根测试** | `tests/` | —— | 身份守卫、编译器、退出码、内容契约、死路径守卫 | `cd . && python3 -m pytest tests/ -q` |
 | **创作平台门面** | `api/` | `routes/`、`services/` | HTTP 门面（唯一允许 import `tools/` 与 `pyv/` 的地方） | `cd api && python3 -m pytest tests/ -q` |

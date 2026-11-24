@@ -13,8 +13,9 @@
 | `build-content-units.py` | `docs/` → `content/units/`：只拷 front matter + 正文，正文一字不改 |
 | `build-video-pages.py` | `video/episodes/` → `content/units/video/<期号>.md`：口播稿变内容单元 |
 | `check-content-contract.py` | 内容契约闸门：把所有内容单元过一遍契约，违规即构建失败 |
-| `review-check.py` | 审校信号检查器：把 `review/README.md` 里的机械指标（AI 味、证据密度、结构）变成带编号的信号，只标不下结论 |
+| `review-check.py` | 审校信号检查器：把 `review/README.md` 里的机械指标（AI 味、证据密度、结构、术语纪律）变成带编号的信号，只标不下结论 |
 | `url_rules.py` | 共享 URL 规则的**读取器**（规则只有一份：`rules/urls.json`） |
+| `terminology_rules.py` | 共享术语词表的**读取器**（规则只有一份：`rules/terminology.json`） |
 | `paths.py` | 仓库里所有构建脚本的**路径常量——唯一一处** |
 | `nginx_soft404.py` / `fix-soft-404.sh` | 运维辅助（软 404 排查），非流水线 |
 
@@ -31,3 +32,4 @@
 - 想校一篇稿的审校信号 → `python3 tools/review-check.py <文章路径>`。
 - 想校验内容契约 → `python3 tools/check-content-contract.py`（CI 里也跑这一道）。
 - **URL 形状永远从 `url_rules.py` 取，不要在别处写死前缀。**
+- **术语词表永远从 `terminology_rules.py` 取，不要在别处写死词。**

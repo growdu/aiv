@@ -82,7 +82,7 @@
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
-| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫、内容坐标与层间边界、**死路径** | 133 passed / 3 skipped | 133 passed / 3 skipped |
+| 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫、内容坐标与层间边界、**死路径**、**术语纪律**、**标题判据** | 162 passed / 3 skipped | 162 passed / 3 skipped |
 | 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 125 passed / 1 skipped | 125 passed / 1 skipped |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
@@ -156,6 +156,30 @@
 | 2026-11-23（通用渲染器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1234 / 60 skip | 77 | 59 |
 | 2026-11-23（创作平台并进 main 那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1234 / 60 skip | 77 | 59 |
 | 2026-11-23（字体覆盖与通用渲染器基准那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1280 / 58 skip | 77 | 59 |
+| 2026-11-24（术语纪律那轮） | 149 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1280 / 58 skip | 77 | 59 |
+| 2026-11-24（标题判据那轮） | 162 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1280 / 58 skip | 77 | 59 |
+
+> 2026-11-24（术语纪律那轮）：review 层加了一条**术语纪律**判据
+> （`review/specs/2026-11-24-术语纪律与反造词.md`），检查器加三条信号
+> （TERM-01 硬禁词 / TERM-02 行话 / TERM-03 不合格命名），
+> 词表是**共享规则文件** `rules/terminology.json`（读取器 `tools/terminology_rules.py`）。
+> **新测试**：`tests/test_terminology_rules.py`（7 条：规则文件在仓库根、词表长什么样、
+> 文件坏了怎么报错），`tests/test_review_check.py`（+8 条：三条信号各自的判法、
+> front matter 与代码块也在扫描范围内、对外内容与学习流阶段名不带自造词）。
+> 视频线只动了一处：`video/pipeline/pyv/persona.py` 的 `METHOD_WORDS`
+> 把「心智模型」换成「方法论」——它是**口播稿的用词**，受这条判据管。
+> `front` 那套件在这台机器上**没跑成**（`vitest` 没装，属环境缺依赖）。
+
+> 2026-11-24（标题判据那轮）：review 层又加了一条**标题判据**
+> （`review/specs/2026-11-24-标题与章节顺序.md`），检查器加六条信号
+> （HEAD-01 层级 / HEAD-02 长度 / HEAD-03 措辞 / HEAD-04 顺序 / HEAD-05 空节 /
+> HEAD-06 标题与正文对不上）。标题里的营销词与懒词进了共享规则文件
+> `rules/terminology.json` 的 `title_words` / `title_words_soft` 两张表。
+> **新测试**：`tests/test_review_check.py`（+13 条：六条信号各自的判法、
+> `README.md` 不受标题规则管、对外内容标题层级不破）。
+> 现有两篇稿子（`docs/distributed/foundations/cap-consistency-tradeoffs.md` 与
+> PostgreSQL 那篇草稿）**零 warn 误报**；只出两条 HEAD-06（info）——
+> 标题用「宕机」「停机」「在线」「告知」，正文换了说法，是给人看的一处提醒。
 
 > 2026-11-23（创作平台并进 main 那轮）：创作平台的 18 个 Task **并进 `main`**。
 > 两条线是**并行**做的——创作平台在 `worktree-creation-platform` 分支上，

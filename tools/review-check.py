@@ -36,6 +36,12 @@ from urllib.parse import unquote
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = REPO_ROOT / "docs"
 
+# 术语词表是**共享规则文件**（仓库根 `rules/terminology.json`），
+# 读取器是 `tools/terminology_rules.py`。脚本自己跑时 `sys.path[0]`
+# 就是 `tools/`，被当模块 import 时（测试里）未必在——所以自己塞进去。
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from terminology_rules import load_terminology  # noqa: E402
+
 HEADING = "heading"
 PARAGRAPH = "paragraph"
 CODE = "code"
@@ -503,6 +509,325 @@ def rule_met_02(doc: Doc) -> list[Signal]:
     if any(b.kind == HEADING and b.level == 1 for b in doc.blocks):
         return []
     return [Signal("MET-02", "info", 1, "", "缺少 H1 标题")]
+
+
+# --- 术语纪律 -------------------------------------------------------------
+#
+# 对应 review/README.md 的「术语纪律」一节。要点只有一句：
+# **要么用本领域有公认定义的术语，要么用通用描述，不造词。**
+#
+# 三条规则分工不同：
+#   TERM-01 硬禁词——这些词在本领域**没有公认定义**，读者得先猜作者在说什么；
+#   TERM-02 常见行话——能用，但换成具体说法更好，改不改由人定；
+#   TERM-03 命名黑名单——已经判过「不合格」的名字（对仗式抽象短语）。
+#
+# 通用规则靠人判断（什么算「公认术语」不是机器能定的），机械能做的只有两件：
+# 把硬禁词挑出来，把已被否掉的名字挑出来。
+
+#: 词表从共享规则文件读一次就够了——同一轮检查里它不会变。
+_TERMINOLOGY = load_terminology()
+TERM_BANNED = _TERMINOLOGY["banned"]
+TERM_SOFT = _TERMINOLOGY["soft"]
+TERM_BAD_NAMES = _TERMINOLOGY["bad_names"]
+TITLE_HARD_WORDS = _TERMINOLOGY["title_words"]
+TITLE_SOFT_WORDS = _TERMINOLOGY["title_words_soft"]
+
+
+def _term_hits(doc: Doc, table: dict) -> list[tuple[int, str]]:
+    """Reader-visible lines containing any word from ``table``.
+
+    扫**整篇原文**（含 front matter 与代码块），而不是只扫段落：
+    front matter 的 description 会出现在站点列表页，mermaid 里的标签
+    也会出现在图上——都是读者看得见的地方。front matter 的 ``---``
+    分隔行跳过（里面没有词）。
+    """
+    hits: list[tuple[int, str]] = []
+    for number, raw in enumerate(doc.lines, 1):
+        text = raw.strip()
+        if not text or text == "---":
+            continue
+        for word in table:
+            if word in text:
+                hits.append((number, word))
+    return hits
+
+
+def rule_term_01(doc: Doc) -> list[Signal]:
+    """Terms with no agreed definition in this field."""
+    hits = _term_hits(doc, TERM_BANNED)
+    if not hits:
+        return []
+    line = hits[0][0]
+    detail = f"{len(hits)} 处自造术语: " + "、".join(
+        f"L{ln} {word}（{TERM_BANNED[word]}）" for ln, word in hits[:8])
+    return [Signal("TERM-01", "warn", line, doc.excerpt(line), detail)]
+
+
+def rule_term_02(doc: Doc) -> list[Signal]:
+    """Common jargon that reads better when spelled out."""
+    hits = _term_hits(doc, TERM_SOFT)
+    if not hits:
+        return []
+    line = hits[0][0]
+    detail = f"{len(hits)} 处行话建议具体化: " + "、".join(
+        f"L{ln} {word}（{TERM_SOFT[word]}）" for ln, word in hits[:8])
+    return [Signal("TERM-02", "info", line, doc.excerpt(line), detail)]
+
+
+def rule_term_03(doc: Doc) -> list[Signal]:
+    """Names already rejected: paired abstract phrases."""
+    hits = _term_hits(doc, TERM_BAD_NAMES)
+    if not hits:
+        return []
+    line = hits[0][0]
+    detail = f"{len(hits)} 处命名不合格: " + "、".join(
+        f"L{ln} {word}（{TERM_BAD_NAMES[word]}）" for ln, word in hits[:8])
+    return [Signal("TERM-03", "warn", line, doc.excerpt(line), detail)]
+
+
+RULES.extend([rule_term_01, rule_term_02, rule_term_03])
+
+
+# --- 章节标题 -------------------------------------------------------------
+#
+# 对应 review/README.md 的「标题：层级、顺序、信息量」一节。
+# 标题是读者唯一的导航：层级断了、顺序乱了、标题说的东西正文没讲，
+# 读者都得自己猜。这一组规则机械上判得了的几件事：
+#
+#   HEAD-01 层级 —— H1 只能有一个且在最前；不允许跳级（H2 直接到 H4）
+#   HEAD-02 长度 —— 标题要短，一眼扫得完
+#   HEAD-03 措辞 —— 标题不用营销词与口水词（词表在 rules/terminology.json）
+#   HEAD-04 顺序 —— 收束标题不能在中间；阶段词要按「背景→原理→实践→验证→扩展→总结」
+#   HEAD-05 空节 —— 标题下面得有事讲
+#   HEAD-06 对得上 —— 标题里的术语，这一节正文里得出现（info）
+#
+# 「标题能不能概括这一节」整体上要人判断：机器只能查机械的部分。
+
+#: H2/H3 标题的字数上限。中文标题超过这个长度，读者扫目录就得多看一眼。
+HEADING_MAX_CHARS = 24
+
+#: 标题里的收束词：出现在后面还有同级标题的位置，就是顺序不对。
+CLOSING_WORDS = ("总结", "小结", "结语", "回顾", "写在最后")
+
+#: 一篇文章的阶段次序。同一组里的词不分先后，跨组就按这个顺序排。
+#: 判据是读者的疑问顺序：先问「为什么/是什么」，再问「怎么做」，
+#: 再问「怎么验证」，最后才是「还能怎么玩」。
+STAGE_GROUPS = (
+    ("背景", "问题", "现象", "动机"),
+    ("原理", "机制", "原理与机制"),
+    ("实现", "实践", "上手", "实战", "用法"),
+    ("验证", "测试", "基准", "观测"),
+    ("扩展", "进阶", "优化"),
+    ("总结", "小结", "清单", "延伸"),
+)
+
+#: 标题里不查的英文词——它们是英文句子里到处都有的连接词，
+#: 不是「这一节讲的东西」。
+TITLE_STOPWORDS = {
+    "the", "and", "of", "to", "in", "for", "on", "with", "by", "be",
+    "as", "at", "from", "or", "an", "a", "is", "are", "it", "its",
+    "this", "that", "we", "you", "how", "what", "why", "not",
+}
+
+
+def _headings(doc: Doc) -> list[tuple[int, Block]]:
+    """All heading blocks, in document order."""
+    return [(i, b) for i, b in enumerate(doc.blocks) if b.kind == HEADING]
+
+
+def _is_module_readme(doc: Doc) -> bool:
+    """``README.md`` 是模块说明与流程文档，**不是稿子**。
+
+    标题规则管的是读者读到的文章骨架；模块说明里「## 七、这个目录现在是空的」
+    这样的空节是刻意的，不是缺陷。
+    """
+    return doc.path.name == "README.md"
+
+
+def _section_body(doc: Doc, start: int) -> str:
+    """The text of the section that starts at block ``start``.
+
+    到下一个**同级或更高级**的标题为止；子标题下的正文算这一节的内容。
+    """
+    level = doc.blocks[start].level
+    parts: list[str] = []
+    for block in doc.blocks[start + 1:]:
+        if block.kind == HEADING and block.level <= level:
+            break
+        parts.append(block.text)
+    return "\n".join(parts)
+
+
+def _title_tokens(title: str) -> list[str]:
+    """标题里的「专名」：ASCII 术语与引号里的说法。
+
+    只取查得准的那两类——中文分词做不准，宁可不查：
+    一个标题里的中文实词往往是普通名词（查了全是误报），
+    而英文术语（WAL、MVCC）与引号里的说法（「三选二」）是能对上的。
+    """
+    tokens = []
+    for word in re.findall(r"[A-Za-z][A-Za-z0-9_]*", title):
+        if len(word) < 2 or word.lower() in TITLE_STOPWORDS:
+            continue
+        tokens.append(word)
+    for quoted in re.findall(r"[「『《]([^」』》]{2,})[」』》]", title):
+        tokens.append(quoted)
+    return tokens
+
+
+def rule_head_01(doc: Doc) -> list[Signal]:
+    """The heading tree is broken: several H1s, an H1 in the middle, or a jump."""
+    if _is_module_readme(doc):
+        return []
+    headings = _headings(doc)
+    if not headings:
+        return []
+    problems: list[str] = []
+    h1s = [(i, b) for i, b in headings if b.level == 1]
+    if len(h1s) > 1:
+        problems.append(f"{len(h1s)} 个 H1（L{h1s[0][1].line}、L{h1s[1][1].line}…）")
+    elif h1s and h1s[0][0] != 0:
+        problems.append(f"H1 不在最前（L{h1s[0][1].line}）")
+    previous = 0
+    for _, block in headings:
+        if block.level > previous + 1:
+            problems.append(f"L{block.line} 从 H{previous} 跳到 H{block.level}")
+        previous = block.level
+    if not problems:
+        return []
+    line = headings[0][1].line
+    return [Signal("HEAD-01", "warn", line, doc.excerpt(line),
+                   "标题层级断了: " + "；".join(problems))]
+
+
+def rule_head_02(doc: Doc) -> list[Signal]:
+    """Titles too long to scan in a table of contents."""
+    if _is_module_readme(doc):
+        return []
+    hits = []
+    for _, block in _headings(doc):
+        if block.level < 2:
+            continue
+        length = len(block.text.strip())
+        if length > HEADING_MAX_CHARS:
+            hits.append((block.line, length))
+    if not hits:
+        return []
+    line = hits[0][0]
+    detail = f"{len(hits)} 个标题超过 {HEADING_MAX_CHARS} 字: " + \
+             "、".join(f"L{ln}({size}字)" for ln, size in hits[:8])
+    return [Signal("HEAD-02", "warn", line, doc.excerpt(line), detail)]
+
+
+def rule_head_03(doc: Doc) -> list[Signal]:
+    """Marketing words and filler in titles.
+
+    硬的一档（营销词）报 warn：这类词进标题就是跟内容抢戏。
+    软的一档（深入、详解、初探……）报 info：它们不算错，
+    但标题得另有「讲什么」的那一半。
+    """
+    if _is_module_readme(doc):
+        return []
+    hard: list[tuple[int, str]] = []
+    soft: list[tuple[int, str]] = []
+    for _, block in _headings(doc):
+        title = block.text
+        for word in TITLE_HARD_WORDS:
+            if word in title:
+                hard.append((block.line, word))
+        for word in TITLE_SOFT_WORDS:
+            if word in title:
+                soft.append((block.line, word))
+    if hard:
+        line = hard[0][0]
+        detail = f"{len(hard)} 个标题带营销词: " + \
+                 "、".join(f"L{ln} {word}" for ln, word in hard[:8])
+        return [Signal("HEAD-03", "warn", line, doc.excerpt(line), detail)]
+    if soft:
+        line = soft[0][0]
+        detail = f"{len(soft)} 个标题带懒词: " + \
+                 "、".join(f"L{ln} {word}" for ln, word in soft[:8])
+        return [Signal("HEAD-03", "info", line, doc.excerpt(line), detail)]
+    return []
+
+
+def rule_head_04(doc: Doc) -> list[Signal]:
+    """The order of the sections does not follow the reader's questions."""
+    if _is_module_readme(doc):
+        return []
+    problems: list[str] = []
+    headings = [(i, b) for i, b in _headings(doc) if b.level == 2]
+    for position, (_, block) in enumerate(headings):
+        if any(word in block.text for word in CLOSING_WORDS) and position != len(headings) - 1:
+            problems.append(f"L{block.line}「{block.text}」是收束标题，后面还有 {len(headings) - position - 1} 节")
+    stages: list[tuple[int, int, str]] = []
+    for _, block in headings:
+        for index, group in enumerate(STAGE_GROUPS):
+            if any(word in block.text for word in group):
+                stages.append((index, block.line, block.text))
+                break
+    for (before, line_a, title_a), (after, line_b, title_b) in zip(stages, stages[1:]):
+        if after < before:
+            problems.append(
+                f"L{line_a}「{title_a}」排在 L{line_b}「{title_b}」前面，但后者的阶段更靠前")
+    if not problems:
+        return []
+    line = headings[0][1].line if headings else 1
+    return [Signal("HEAD-04", "warn", line, doc.excerpt(line),
+                   "章节顺序不对: " + "；".join(problems))]
+
+
+def rule_head_05(doc: Doc) -> list[Signal]:
+    """A heading with nothing under it."""
+    if _is_module_readme(doc):
+        return []
+    headings = _headings(doc)
+    hits = []
+    for position, (index, block) in enumerate(headings):
+        if block.level < 2:
+            continue
+        body = _section_body(doc, index)
+        if body.strip():
+            continue
+        nxt = headings[position + 1][1] if position + 1 < len(headings) else None
+        if nxt is not None and nxt.level > block.level:
+            continue      # 下面有子标题，不是空节
+        hits.append(block.line)
+    if not hits:
+        return []
+    line = hits[0]
+    detail = f"{len(hits)} 个标题下面没有内容: " + \
+             "、".join(f"L{ln}" for ln in hits[:8])
+    return [Signal("HEAD-05", "warn", line, doc.excerpt(line), detail)]
+
+
+def rule_head_06(doc: Doc) -> list[Signal]:
+    """The terms in the title never show up in the section it names."""
+    if _is_module_readme(doc):
+        return []
+    hits = []
+    for index, block in _headings(doc):
+        if block.level < 2:
+            continue
+        tokens = _title_tokens(block.text)
+        if not tokens:
+            continue
+        body = _section_body(doc, index)
+        if not body.strip():
+            continue
+        missing = [t for t in tokens if t.lower() not in body.lower()]
+        if missing and len(missing) == len(tokens):
+            hits.append((block.line, missing))
+    if not hits:
+        return []
+    line = hits[0][0]
+    detail = f"{len(hits)} 个标题里的说法在本节正文里没出现: " + \
+             "、".join(f"L{ln}（{'、'.join(words)}）" for ln, words in hits[:6])
+    return [Signal("HEAD-06", "info", line, doc.excerpt(line), detail)]
+
+
+RULES.extend([rule_head_01, rule_head_02, rule_head_03,
+              rule_head_04, rule_head_05, rule_head_06])
 
 
 # --- 图示可读性 --------------------------------------------------------
