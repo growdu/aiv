@@ -88,7 +88,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1234 passed / 60 skipped | 1234 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1280 passed / 58 skipped | 1280 passed / 58 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -155,6 +155,7 @@
 | 2026-11-23（创作平台那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1170 / 60 skip | 77 | 59 |
 | 2026-11-23（通用渲染器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1234 / 60 skip | 77 | 59 |
 | 2026-11-23（创作平台并进 main 那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1234 / 60 skip | 77 | 59 |
+| 2026-11-23（字体覆盖与通用渲染器基准那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1280 / 58 skip | 77 | 59 |
 
 > 2026-11-23（创作平台并进 main 那轮）：创作平台的 18 个 Task **并进 `main`**。
 > 两条线是**并行**做的——创作平台在 `worktree-creation-platform` 分支上，
@@ -168,6 +169,35 @@
 > ⚠️ `browser/` 在这台机器上是 **1 failed / 99 passed / 64 errors**——
 > 那 64 条是**环境红**（playwright 的 driver 缺 `libatomic.so.1`），不是逻辑红；
 > `browser/` 这轮两边都没碰。
+
+> 2026-11-23（字体覆盖与通用渲染器基准那轮）：**video 1294 → 1338 条**
+> （passed 1234 → 1280，skip 60 → 58）——计划四（`publish/plans/12-…`）落地。
+> **新测试**：`test_build_font_subset.py`（10 条：字体源能离线重建、
+> 字形与步进逐字对拍）、`test_font_subset.py`（+2 条：子集盖住 GB 2312-80 全集，
+> 独立复算）、`test_fonts.py`（+2 条：装了就要说认得）、`test_mono_font.py`
+> （4 条：真等宽）、`test_missing_glyphs.py`（12 条：缺字当场报错）、
+> `test_generic_baseline.py`（10 条：通用渲染器的逐像素基准、栅格化探针）、
+> `test_preview_generic.py`（4 条：预览图）。
+> **新模块**：`pyv/baseline.py`（抓取口径共用一处）；
+> **新脚本**：`scripts/capture_generic_baseline.py`（重抓基准）、
+> `scripts/preview_generic.py`（出预览图，默认落在**仓库外**）。
+> **内置字体多了一面等宽**（`assets/fonts/AIVMonoCJKSC-Regular.otf`），
+> 子集重建成 GB 2312-80 全集。
+> ⚠️ **逐像素基准还绑在栅格化上**：基准是在某台机器上抓的，换个 cairo /
+> FreeType 版本画出来的像素就不同——不绑着就会**拿噪声当信号**（这台机器是
+> cairo 1.15.12，CI 是别的版本；没有这条，CI 上那条守卫会**假红**）。
+> `pyv/baseline.py` 的 `raster_probe()`（画几个字取 sha256）把探针记进基准，
+> 探针对不上就**跳过并说清楚为什么**。
+> **skip 60 → 58**：内置字体装上以后，`test_layout_fingerprint.py` 那三条
+> 「本机字体不是内置那份」的 skip **跑起来了**（三条里两条过、一条改说
+> 「磁盘上没有期，没有段可探」——视频线还没有真实期目录）；场景基准的
+> 跳过理由也从「跨字体」变成「跨平台」（字体对上了，平台还是不对）。
+> **计划二的「遗留」四条已清**（计划二文档里改写成指向计划四）：通用渲染器的
+> 逐像素基准（靠**合成夹具**，不靠真实期目录）/ 母稿汉字在不在字体子集里
+> （盖不住的字当场报错）/ 等宽字体 / 画面人眼过了一遍。
+> ⚠️ 「通用渲染器不进 `pyv/scenes/`」的口径**保留**（计划十的 D2）——
+> 有真实期目录再合流。
+> ⚠️ 这一轮**只重跑了根与视频线两套件**（各自只碰自己那条），其余各列沿用上一行的实测值。
 
 > 2026-11-23（通用渲染器那轮）：**video +64 条**——新模块
 > `video/pipeline/pyv/generic/`（四个通用渲染器：`gen_code` / `gen_table` /
@@ -187,6 +217,8 @@
 > 两份实现的版本号与关键参数用 `ast` **读文件**对拍，不 import 那个模块。
 > ⚠️ 通用渲染器的**逐像素基准**与「母稿里的汉字在不在字体子集里」仍是遗留项
 > （前者要真实期目录，后者要真实母稿）。
+> → **这两条已清**（见上面「字体覆盖与通用渲染器基准那轮」）：基准靠**合成夹具**，
+> 子集改成 GB 2312-80 全集，盖不住的字当场报错。
 
 > 2026-11-23（三档档位守卫那轮）：**video +22 条**——新文件
 > `video/pipeline/tests/test_tiers.py` 与新模块 `video/pipeline/pyv/tiers.py`：
