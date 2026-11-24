@@ -24,7 +24,6 @@
 """
 
 import ast
-import hashlib
 import importlib
 import json
 from pathlib import Path
@@ -305,15 +304,10 @@ def _without_mascot(monkeypatch) -> None:
 
 
 def _scene_frame_hash(module_name: str, params: dict, t: float) -> str:
-    from pyv.palette import COLORS, hex_to_rgb
+    """帧指纹——**口径与通用渲染器基准共用一处**（`pyv/baseline.py`）。"""
+    from pyv import baseline
 
-    module = importlib.import_module(module_name)
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1920, 1080)
-    ctx = cairo.Context(surface)
-    ctx.set_source_rgb(*hex_to_rgb(COLORS["bg"]))
-    ctx.paint()
-    module.render(ctx, t, 1920, 1080, params)
-    return hashlib.sha256(bytes(surface.get_data())).hexdigest()
+    return baseline.frame_hash(module_name, params, t)
 
 
 @pytest.fixture
@@ -332,26 +326,14 @@ def baseline_frames():
     做成 fixture 而不是每次手动调一次：**要跟基准比像素的测试必须伸手要它**，
     于是「忘了加守卫」这件事不会再发生（跨平台 CI 第一次就抓到了这种漏）。
     """
-    import platform
+    from pyv import baseline
 
     data = _baseline_data()
-    from pyv import fonts
-
-    baseline_font = data["capture"].get("font", "")
-    current = fonts.font_family()
-    if baseline_font and baseline_font != current:
-        pytest.skip(
-            f"基准是在「{baseline_font}」下抓的，当前机器是「{current}」——"
-            f"跨字体像素本来就不同，这条基准在这里测不出东西"
-        )
-    baseline_platform = data["capture"].get("platform", "")
-    if baseline_platform and baseline_platform != platform.system():
-        pytest.skip(
-            f"基准是在 {baseline_platform} 上抓的，当前机器是 {platform.system()}——"
-            f"cairo 在两边用的栅格化器不同（macOS 走 CoreText，Linux 走 "
-            f"FreeType），跨平台比像素是拿噪声当信号。"
-            f"跨机的版式由 tests/test_layout_fingerprint.py 守"
-        )
+    # **什么时候该跳过，也是共用一处**（`pyv/baseline.py`）——
+    # 场景基准与通用渲染器基准绑在同两样东西上（字体族、平台）。
+    reason = baseline.skip_reason(data)
+    if reason:
+        pytest.skip(reason)
     return data["frames"]
 
 

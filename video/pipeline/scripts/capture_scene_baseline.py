@@ -10,32 +10,29 @@ cairo ARGB32 1920×1080，刷 `COLORS['bg']` 底色，对整帧字节取 sha256�
 基准若带着素材抓，换台机器、换个干净检出就必然对不上，
 那条测试会退化成「看本机有没有图」，而不是「看这次改造有没有改到画面」。
 
+**抓取口径与通用渲染器基准共用一处**：`pyv/baseline.py`
+（帧指纹怎么算、基准绑在字体族与平台上、什么时候该跳过）。
+
 **什么时候该重抓**：画面文案或版式**有意**改了之后。
 那条守卫的本意是「文案搬进契约不该动到画面」，所以基准一红，
 先问是不是手滑改了画面；确认是有意的，再跑这个脚本重抓。
 """
 from __future__ import annotations
 
-import hashlib
-import importlib
-import json
-import platform
-import subprocess
 import sys
 from pathlib import Path
-
-import cairo
 
 PIPELINE_ROOT = Path(__file__).resolve().parents[1]
 AIV_ROOT = PIPELINE_ROOT.parent
 sys.path.insert(0, str(PIPELINE_ROOT))
 
+from pyv import baseline  # noqa: E402
 from pyv import contract as contract_mod  # noqa: E402
 from pyv import episodes as episodes_mod  # noqa: E402
-from pyv import fonts  # noqa: E402
-from pyv.palette import COLORS, hex_to_rgb  # noqa: E402
 
-TIMES = (0.0, 0.45, 0.9)
+#: 抓取口径与通用渲染器基准**共用一处**（`pyv/baseline.py`）：
+#: 帧指纹怎么算、基准绑在字体族与平台上、什么时候该跳过。
+TIMES = baseline.TIMES
 BASELINE = PIPELINE_ROOT / "tests" / "fixtures" / "scene_baseline.json"
 
 NOTE = (
@@ -81,27 +78,6 @@ def _without_mascot() -> None:
     character.Mascot._load = _no_mascot
 
 
-def frame_hash(module_name: str, params: dict, t: float) -> str:
-    module = importlib.import_module(module_name)
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1920, 1080)
-    ctx = cairo.Context(surface)
-    ctx.set_source_rgb(*hex_to_rgb(COLORS["bg"]))
-    ctx.paint()
-    module.render(ctx, t, 1920, 1080, params)
-    return hashlib.sha256(bytes(surface.get_data())).hexdigest()
-
-
-def _captured_from() -> str:
-    try:
-        sha = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=PIPELINE_ROOT, check=True, capture_output=True, text=True,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        sha = "unknown"
-    return f"{sha}（重抓于本脚本）"
-
-
 def main() -> None:
     _without_mascot()
     frames: dict[str, str] = {}
@@ -113,28 +89,20 @@ def main() -> None:
 
     payload = {
         "note": NOTE,
-        "capture": {
-            "size": "1920x1080",
-            "times": list(TIMES),
-            "mascot": "none",
-            "captured_from": _captured_from(),
-            # 基准**绑在字体上**：换一款字体，同一段文字的像素就不同。
-            # 记下来，测试才知道什么时候这条基准不适用于当前机器。
-            "font": fonts.font_family(),
-            # 基准**也绑在平台上**：macOS 的 cairo 走 CoreText，Linux 走
-            # FreeType，栅格化不同 → 同一个字体、同一段文字，像素仍然不同。
-            # 跨平台比像素是拿噪声当信号，所以**平台不同就跳过**——
-            # 跨机的版式由 `tests/test_layout_fingerprint.py` 守。
-            "platform": platform.system(),
+        # 基准**绑在字体与平台上**：换一款字体、换个平台，同一段文字的
+        # 像素就不同——记下来，测试才知道什么时候这条基准不适用于当前机器
+        #（见 `pyv/baseline.py` 的说明）。
+        "capture": baseline.capture_meta(
+            size="1920x1080",
+            times=list(TIMES),
+            mascot="none",
             # 覆盖了多少段——条数由所有期的契约推导，加期不用改这里，
             # 但漏抓会红（`tests/test_contract.py` 里有覆盖声称的守卫）。
-            "segments": sum(1 for _ in _all_segments()),
-        },
+            segments=sum(1 for _ in _all_segments()),
+        ),
         "frames": frames,
     }
-    BASELINE.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    baseline.save_baseline(BASELINE, payload)
     print(f"已写入 {BASELINE}（{len(frames)} 帧）")
 
 

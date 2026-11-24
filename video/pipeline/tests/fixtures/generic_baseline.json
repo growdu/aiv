@@ -1,0 +1,53 @@
+{
+  "note": "通用渲染器的基准指纹。**内容不入库**，所以基准靠**合成夹具**：一份合成的母稿（tests/fixtures/通用母稿.md，带代码 / 表格 / 图块）加一份合成的契约（tests/fixtures/通用契约.json）。**mermaid 的输出钉死成固定夹具**——mermaid-cli 要 npx + Chrome，跨机不一致，真跑记下来的就不是画面而是「这台机器的 mermaid 版本」。抓取方式：cairo ARGB32，刷 COLORS['bg'] 底色，对整帧字节取 sha256。**基准绑在字体族与平台上**——换字体、换平台像素就不同，测试会跳过并说明原因。键是 画幅/段 id/渲染器@时刻。重抓脚本：pipeline/scripts/capture_generic_baseline.py",
+  "capture": {
+    "font": "AIV Sans CJK SC",
+    "mono_font": "AIV Mono CJK SC",
+    "platform": "Linux",
+    "captured_from": "9dd93ba9（重抓于本脚本）",
+    "canvases": [
+      "1920x1080",
+      "1080x1920"
+    ],
+    "times": [
+      0.0,
+      0.45,
+      0.9
+    ],
+    "mermaid": "fixture",
+    "segments": 5,
+    "contract": "通用契约.json"
+  },
+  "frames": {
+    "1920x1080/s01_code/pyv.generic.gen_code@0.0": "63edae36ac2a0b33ff6d47767d7537701e69f7bce63de5d71f978dfdea2d20ba",
+    "1920x1080/s01_code/pyv.generic.gen_code@0.45": "63edae36ac2a0b33ff6d47767d7537701e69f7bce63de5d71f978dfdea2d20ba",
+    "1920x1080/s01_code/pyv.generic.gen_code@0.9": "63edae36ac2a0b33ff6d47767d7537701e69f7bce63de5d71f978dfdea2d20ba",
+    "1920x1080/s02_table/pyv.generic.gen_table@0.0": "21d74dbb50e08f72dae4e6ae01c920af2af4fbfbb2563a18c4f42b62ac48927c",
+    "1920x1080/s02_table/pyv.generic.gen_table@0.45": "21d74dbb50e08f72dae4e6ae01c920af2af4fbfbb2563a18c4f42b62ac48927c",
+    "1920x1080/s02_table/pyv.generic.gen_table@0.9": "21d74dbb50e08f72dae4e6ae01c920af2af4fbfbb2563a18c4f42b62ac48927c",
+    "1920x1080/s03_card/pyv.generic.gen_card@0.0": "a86a382f3fdb78a36c3ff1377d1bd2942960546f702aae428da1d324146b5882",
+    "1920x1080/s03_card/pyv.generic.gen_card@0.45": "a86a382f3fdb78a36c3ff1377d1bd2942960546f702aae428da1d324146b5882",
+    "1920x1080/s03_card/pyv.generic.gen_card@0.9": "a86a382f3fdb78a36c3ff1377d1bd2942960546f702aae428da1d324146b5882",
+    "1920x1080/s04_mermaid_png/pyv.generic.gen_mermaid@0.0": "fe37edacd5786dbe42d7aa0a3c16c35cd5fc85d16ff70564579de78f816c01b0",
+    "1920x1080/s04_mermaid_png/pyv.generic.gen_mermaid@0.45": "fe37edacd5786dbe42d7aa0a3c16c35cd5fc85d16ff70564579de78f816c01b0",
+    "1920x1080/s04_mermaid_png/pyv.generic.gen_mermaid@0.9": "fe37edacd5786dbe42d7aa0a3c16c35cd5fc85d16ff70564579de78f816c01b0",
+    "1920x1080/s05_mermaid_degraded/pyv.generic.gen_mermaid@0.0": "7afd4d4accf9d11b660326795e4a5fe6a46ac94b1644133c334c913478b00061",
+    "1920x1080/s05_mermaid_degraded/pyv.generic.gen_mermaid@0.45": "7afd4d4accf9d11b660326795e4a5fe6a46ac94b1644133c334c913478b00061",
+    "1920x1080/s05_mermaid_degraded/pyv.generic.gen_mermaid@0.9": "7afd4d4accf9d11b660326795e4a5fe6a46ac94b1644133c334c913478b00061",
+    "1080x1920/s01_code/pyv.generic.gen_code@0.0": "fb969cfa9905b701e541be3d00aad3f1147fcbc81c2f8118de9a462b8d034130",
+    "1080x1920/s01_code/pyv.generic.gen_code@0.45": "fb969cfa9905b701e541be3d00aad3f1147fcbc81c2f8118de9a462b8d034130",
+    "1080x1920/s01_code/pyv.generic.gen_code@0.9": "fb969cfa9905b701e541be3d00aad3f1147fcbc81c2f8118de9a462b8d034130",
+    "1080x1920/s02_table/pyv.generic.gen_table@0.0": "41f384bbf17f5fb387a8654c2a74e0e23c80a7f7bcb69a977f96efbb64b950ac",
+    "1080x1920/s02_table/pyv.generic.gen_table@0.45": "41f384bbf17f5fb387a8654c2a74e0e23c80a7f7bcb69a977f96efbb64b950ac",
+    "1080x1920/s02_table/pyv.generic.gen_table@0.9": "41f384bbf17f5fb387a8654c2a74e0e23c80a7f7bcb69a977f96efbb64b950ac",
+    "1080x1920/s03_card/pyv.generic.gen_card@0.0": "e3b6ef8a91a39a848f2f01ebc614e3f23eda96b6e99347433e408585adba35e0",
+    "1080x1920/s03_card/pyv.generic.gen_card@0.45": "e3b6ef8a91a39a848f2f01ebc614e3f23eda96b6e99347433e408585adba35e0",
+    "1080x1920/s03_card/pyv.generic.gen_card@0.9": "e3b6ef8a91a39a848f2f01ebc614e3f23eda96b6e99347433e408585adba35e0",
+    "1080x1920/s04_mermaid_png/pyv.generic.gen_mermaid@0.0": "f98825d188f8cf07333340324c9a32845149f03c2fde3fcac6dede4464eb56fe",
+    "1080x1920/s04_mermaid_png/pyv.generic.gen_mermaid@0.45": "f98825d188f8cf07333340324c9a32845149f03c2fde3fcac6dede4464eb56fe",
+    "1080x1920/s04_mermaid_png/pyv.generic.gen_mermaid@0.9": "f98825d188f8cf07333340324c9a32845149f03c2fde3fcac6dede4464eb56fe",
+    "1080x1920/s05_mermaid_degraded/pyv.generic.gen_mermaid@0.0": "0b2587d94e353d6c858d2e0e35122b3d93f969c8b548479512b05c89f0c95486",
+    "1080x1920/s05_mermaid_degraded/pyv.generic.gen_mermaid@0.45": "0b2587d94e353d6c858d2e0e35122b3d93f969c8b548479512b05c89f0c95486",
+    "1080x1920/s05_mermaid_degraded/pyv.generic.gen_mermaid@0.9": "0b2587d94e353d6c858d2e0e35122b3d93f969c8b548479512b05c89f0c95486"
+  }
+}

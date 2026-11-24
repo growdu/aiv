@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "episode": "夹具系列/夹具合集/通用母稿/short",
+  "title": "通用渲染器夹具",
+  "segments": [
+    {
+      "id": "s01_code",
+      "renderer": "pyv.generic.gen_code",
+      "sentences": [0],
+      "params": {
+        "title": "代码块",
+        "ref": {
+          "doc": "video/pipeline/tests/fixtures/通用母稿.md",
+          "nth": 1
+        }
+      }
+    },
+    {
+      "id": "s02_table",
+      "renderer": "pyv.generic.gen_table",
+      "sentences": [1],
+      "params": {
+        "title": "表格块",
+        "ref": {
+          "doc": "video/pipeline/tests/fixtures/通用母稿.md",
+          "nth": 1
+        }
+      }
+    },
+    {
+      "id": "s03_card",
+      "renderer": "pyv.generic.gen_card",
+      "sentences": [2],
+      "params": {
+        "title": "要点卡",
+        "subtitle": "合成契约给的字幕",
+        "items": [
+          "第一条要点：锁的类型决定谁等谁",
+          "第二条要点：拿不到锁就跳过",
+          "第三条要点：等锁超时就是死锁"
+        ]
+      }
+    },
+    {
+      "id": "s04_mermaid_png",
+      "renderer": "pyv.generic.gen_mermaid",
+      "sentences": [3],
+      "params": {
+        "title": "图（贴图那条路）",
+        "ref": {
+          "doc": "video/pipeline/tests/fixtures/通用母稿.md",
+          "nth": 1
+        }
+      }
+    },
+    {
+      "id": "s05_mermaid_degraded",
+      "renderer": "pyv.generic.gen_mermaid",
+      "sentences": [4],
+      "params": {
+        "title": "图（降级那条路）",
+        "ref": {
+          "doc": "video/pipeline/tests/fixtures/通用母稿.md",
+          "nth": 2
+        }
+      }
+    }
+  ]
+}
