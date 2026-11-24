@@ -54,10 +54,21 @@ EXCLUDED_PREFIXES = (
 )
 
 #: 构建产物与依赖：不扫（也不入库）。
+#:
+#: `.claude` 在这一列里**不是因为它是构建产物**，而是因为里面装的是
+#: **整棵仓库的副本**（agent 在 `.claude/worktrees/` 下开的 worktree）。
+#: 副本里的文件相对仓库根的前缀变了——`publish/plans/` 不再是 `publish/plans/`，
+#: 而是 `.claude/worktrees/<名>/publish/plans/`——于是 `EXCLUDED_PREFIXES`
+#: 那份「计划文档是历史记录，刻意保留」的豁免**对它不生效**，
+#: 副本里那些**早就改干净的**旧计划又被扫出来，报成死路径。
+#: （实测：`.claude/worktrees/creation-platform/` 一处就让本守卫报出 75 处，
+#: 而仓库自己那份一处都没有。）
+#:
+#: 扫副本等于**拿别人的旧版本判今天的仓库**——所以副本一律不扫。
 SKIP_DIR_NAMES = {
     ".git", "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache",
     ".ruff_cache", ".mypy_cache", "dist", "build", "out", ".worktrees",
-    ".remember",
+    ".remember", ".claude",
 }
 
 #: 允许提到死路径的文件 → 理由。
@@ -189,6 +200,26 @@ def test_the_guard_would_catch_a_stale_reference(tmp_path):
     hits = _offenders("publish/outbox", root=tmp_path)
     assert len(hits) == 1, f"守卫没抓到临时树里的死路径：{hits}"
     assert "notes.md:1" in hits[0]
+
+
+def test_a_repo_copy_under_claude_dir_is_not_scanned(tmp_path):
+    """仓库的**副本**（`.claude/worktrees/` 里的 worktree）不参与判定。
+
+    副本里的文件相对仓库根的前缀变了——`publish/plans/` 变成了
+    `.claude/worktrees/<分支>/publish/plans/`——于是 `EXCLUDED_PREFIXES`
+    那份「计划文档是历史记录」的豁免**对它不生效**，
+    副本里那些**早就改干净的**旧计划又被扫出来，报成死路径。
+
+    扫副本等于**拿别人的旧版本判今天的仓库**，所以副本一律不扫。
+    """
+    line = "快照写到 publish/outbox/ 里。\n"
+    copy_dir = tmp_path / ".claude" / "worktrees" / "some-branch"
+    (copy_dir / "publish" / "plans").mkdir(parents=True)
+    (copy_dir / "publish" / "plans" / "07-计划.md").write_text(
+        line, encoding="utf-8")
+    assert _offenders("publish/outbox", root=tmp_path) == [], (
+        "仓库的副本被扫进来了——拿别人的旧版本判今天的仓库"
+    )
 
 
 def test_the_guard_still_catches_a_relative_reference(tmp_path):

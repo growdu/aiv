@@ -56,6 +56,13 @@ __pycache__/
 # Ignored so a worktree checkout is never mistaken for repository content.
 .worktrees/
 
+# Claude Code session state: local settings and the worktrees the agent
+# creates under `.claude/worktrees/`. Same reasoning as `.worktrees/` above —
+# a checkout inside the repo is a **copy** of the repo, not the repo.
+# Left ignored wholesale (rather than just the worktrees) so a stale copy
+# never leaks into a commit or into a directory-scanning guard.
+.claude/
+
 # Superpowers scratch: SDD ledgers, task briefs, review packages.
 .superpowers/
 
