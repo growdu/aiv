@@ -26,6 +26,7 @@ import glob
 import os
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -80,6 +81,26 @@ INSTALL_HINT = (
 
 # 探测不到字形时的探针字符（Unicode 私有区，字体一般没有）
 _MISSING_GLYPH = "\ue000"
+
+
+#: 已经说过的提醒（**同一件事只说一次**）。
+#:
+#: 为什么：批渲染时每一帧都会调 `mono_family()`，不合并的话，一段
+#: 一分钟的片子能喊上千遍同一句话——那是噪音，不是提醒。
+_WARNED: set[str] = set()
+
+
+def _warn_once(message: str) -> None:
+    """往 stderr 说一声，**同一句话只说一次**。"""
+    if message in _WARNED:
+        return
+    _WARNED.add(message)
+    print(message, file=sys.stderr)
+
+
+def reset_warnings() -> None:
+    """把「已经说过」清空——让下一句提醒重新说一遍（测试用）。"""
+    _WARNED.clear()
 
 
 @dataclass(frozen=True)
@@ -208,11 +229,56 @@ def _resolved_width(family: str, sample: str = "并行解码") -> float:
     return ctx.text_extents(sample).width
 
 
+@lru_cache(maxsize=1)
+def _fc_families() -> frozenset[str] | None:
+    """系统里 fontconfig 认得的**所有**族名。
+
+    **fontconfig 不可用时返回 `None`**（macOS 上没有 `fc-list`）——
+    调用方据此退回宽度判定。
+
+    **为什么不用 `fc-list :family=X` 过滤**：那走的是 pattern 匹配，
+    族名里的 `*` `?` 会被当通配符。列全量再精确比对，没有这种坑。
+    """
+    exe = shutil.which("fc-list")
+    if not exe:
+        return None
+    try:
+        proc = subprocess.run(
+            [exe, "--format=%{family}\\n"],
+            capture_output=True, text=True, timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    names: set[str] = set()
+    for line in proc.stdout.splitlines():
+        for name in line.split(","):
+            name = name.strip()
+            if name:
+                names.add(name)
+    return frozenset(names)
+
+
 def family_resolves(family: str) -> bool:
     """这个族名能不能被 cairo 解析出来（而不是静默回退到默认字体）。
 
-    判定方式：真字体族与不存在字体的文本宽度必然不同。
+    **两种判法，按系统选**：
+
+    - **fontconfig 在场（Linux）**：直接问它「这个族名在不在」。
+      **不能只看宽度**——本仓库内置的子集就是 Noto Sans CJK SC 的子集，
+      与系统里那款 Noto 的字宽**逐项相同**。宽度比法在这里必然失手：
+      实测同机上「AIV Sans CJK SC」与「__NoSuchFontFamily__」的宽度
+      只差 **0.2px**（门槛是 0.5px），于是「装没装」判不出来——
+      **没装的会被当成装了的（用了系统 Noto 却以为用了内置子集），
+      装了的反而被当成没装**（内置子集明明在位却一直没人用）。
+    - **没有 fontconfig（macOS）**：退回宽度判定。那边的默认字体是
+      PingFang SC，与内置子集的字宽差得开，宽度比法有效。
     """
+    families = _fc_families()
+    if families is not None:
+        return family in families
+
     try:
         fallback = _resolved_width("__NoSuchFontFamily__")
         return abs(_resolved_width(family) - fallback) > 0.5
@@ -252,6 +318,35 @@ def bold_face_resolves(family: str | None = None) -> bool:
     except Exception:
         return False
     return abs(bold - regular) > 0.5
+
+
+def mono_family() -> str:
+    """给**代码块**用的字体族名。
+
+    **等宽那族认不到就退回比例字体，并把这件事说清楚**——代码块
+    画出来对不齐列，人一眼能看出来，但「为什么对不齐」不该靠猜。
+
+    退回时不报错：比例字体照样能画，只是列对不齐。**报错会让整条
+    流水线在没装字体的机器上停摆**，而那台机器本来也能出片。
+
+    认得到的时候一律用等宽那族——**不混排**：一段代码要么全等宽，
+    要么全比例。
+    """
+    if family_resolves(BUNDLED_MONO_FAMILY):
+        return BUNDLED_MONO_FAMILY
+
+    fallback = font_family()
+    _warn_once(
+        f"等宽字体「{BUNDLED_MONO_FAMILY}」认不到"
+        f"（装了吗：python3 scripts/install_font.py），"
+        f"代码块退回比例字体「{fallback}」——列会对不齐。",
+    )
+    return fallback
+
+
+def mono_family_resolves() -> bool:
+    """等宽那族认不认得（不退回、不出声）。"""
+    return family_resolves(BUNDLED_MONO_FAMILY)
 
 
 def _fc_chinese_families() -> list[str]:
@@ -315,6 +410,9 @@ def resolve_font() -> ResolvedFont:
 def reset_font_cache() -> None:
     """改完环境变量或装完字体后，让下一次解析重新探测。"""
     resolve_font.cache_clear()
+    # **族名清单也要重新读**：装完字体之后系统里多了一个族，
+    # 清单还是旧的就会说「认不得」。
+    _fc_families.cache_clear()
 
 
 def font_family() -> str:

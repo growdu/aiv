@@ -289,7 +289,7 @@ def _drawn_chars() -> set[str]:
     seen: set[str] = set()
 
     def recorder(ctx, s, x, y, size, color, anchor="left", bold=False,
-                 alpha=1.0):
+                 alpha=1.0, family=None):
         seen.update(s)
         return None
 

@@ -59,10 +59,14 @@ def arrow(ctx: cairo.Context, x1: float, y1: float, x2: float, y2: float,
 
 def text(ctx: cairo.Context, s: str, x: float, y: float, size: float,
          color: str, anchor: str = "left", bold: bool = False,
-         alpha: float = 1.0) -> None:
-    """绘制一行文字，anchor 取 left / center / right。"""
+         alpha: float = 1.0, family: str | None = None) -> None:
+    """绘制一行文字，anchor 取 left / center / right。
+
+    `family` 给了就画那一族（代码块用等宽那族）；不给就用当前解析到的
+    中文字体。**不给就不给**——族名写死在调用点上的话，跨机器就对不上。
+    """
     _set_source(ctx, color, alpha)
-    fonts.select_font(ctx, bold=bold)
+    fonts.select_font(ctx, family=family, bold=bold)
     ctx.set_font_size(size)
     width = ctx.text_extents(s).width
     if anchor == "center":
@@ -74,7 +78,7 @@ def text(ctx: cairo.Context, s: str, x: float, y: float, size: float,
 
 
 def text_width(ctx: cairo.Context, s: str, size: float,
-               bold: bool = False) -> float:
+               bold: bool = False, family: str | None = None) -> float:
     """量一行字的宽度。
 
     **也要走 `fonts.select_font`**：不选字体的话，量的是 ctx 上「上一个」
@@ -82,8 +86,10 @@ def text_width(ctx: cairo.Context, s: str, size: float,
 
     `bold` 要跟着画的时候一致：粗体的字宽不一样，量细体、画粗体，
     就会把「放不下」量成「放得下」。
+
+    `family` 也要跟着画的时候一致：量一族、画另一族，宽度对不上。
     """
-    fonts.select_font(ctx, bold=bold)
+    fonts.select_font(ctx, family=family, bold=bold)
     ctx.set_font_size(size)
     return ctx.text_extents(s).width
 

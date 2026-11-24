@@ -21,6 +21,7 @@ from pygments.token import Token
 from pygments.util import ClassNotFound
 
 from pyv import draw
+from pyv import fonts
 from pyv import layout
 from pyv.generic import common
 from pyv.palette import COLORS
@@ -104,14 +105,18 @@ def _plain(lines: list[list[tuple[object, str]]]) -> list[str]:
 
 def _fit(ctx: cairo.Context, raw: list[str],
          runs_by_line: list[list[tuple[object, str]]], inner_w: float,
-         box_h: float, base_size: float) -> tuple[float, list[tuple[str, object]],
-                                                  int]:
+         box_h: float, base_size: float,
+         family: str | None = None) -> tuple[float, list[tuple[str, object]],
+                                             int]:
     """把代码块排进面板。返回 `(字号, 显示用的行, 放不下的行数)`。
 
     字号取两个方向的较小值：竖着放得下（高度）、横着放得下（宽度）。
     横着放不下的行会**折行**（不截断）；折完还放不下，就报还差几行。
 
     每行带着自己的 token 片段；折出来的续行没有高亮（`None`）。
+
+    `family` 给了就**量与画都用那一族**——代码块用等宽那族，
+    量与画必须是同一族，否则量出来的宽度跟画出来的对不上。
     """
     size = base_size
     for _ in range(5):
@@ -124,17 +129,18 @@ def _fit(ctx: cairo.Context, raw: list[str],
             break
 
     # 横着放不下 → 收字号（折行是最后一步）
-    widest = max((common.advance_width(ctx, line, size) for line in raw),
-                 default=0.0)
+    widest = max((common.advance_width(ctx, line, size, family=family)
+                  for line in raw), default=0.0)
     if widest > inner_w and widest > 0:
         size = max(layout.MIN_SIZE, size * inner_w / widest)
 
     display: list[tuple[str, object]] = []
     for index, line in enumerate(raw):
-        if common.advance_width(ctx, line, size) <= inner_w:
+        if common.advance_width(ctx, line, size, family=family) <= inner_w:
             display.append((line, runs_by_line[index]))
         else:
-            for part in common.wrap_text(ctx, line, size, inner_w):
+            for part in common.wrap_text(ctx, line, size, inner_w,
+                                         family=family):
                 display.append((part, None))
 
     _, fits = common.fit_lines(ctx, [text for text, _ in display], box_h, size)
@@ -163,8 +169,12 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
     lexer = _lexer_for(block.lang)
     runs_by_line = _runs_by_line(block.content, lexer)
     raw_lines = _plain(runs_by_line)
+    # **代码用等宽字体**：比例字体的代码对不齐列——缩进层级看不出来。
+    # 等宽那族认不到时 `fonts.mono_family()` 会退回比例字体并出声，
+    # 这里不重复判断。
+    family = fonts.mono_family()
     size, display, dropped = _fit(ctx, raw_lines, runs_by_line, inner_w,
-                                  inner_h, common.BASE_SIZE)
+                                  inner_h, common.BASE_SIZE, family=family)
 
     line_h = size * common.LINE_RATIO
     # **面板贴着内容长**：一屏代码三行，面板却占满整屏——那不是代码块，
@@ -179,22 +189,24 @@ def render(ctx, t: float, w: int, h: int, params=None) -> None:
             break
         if runs is None:
             draw.text(ctx, line, inner_x, baseline + index * line_h, size,
-                      common.PANEL_INK)
+                      common.PANEL_INK, family=family)
             continue
         cursor = inner_x
         for token, value in runs:
             draw.text(ctx, value, cursor, baseline + index * line_h, size,
-                      _token_color(token))
-            cursor += common.advance_width(ctx, value, size)
+                      _token_color(token), family=family)
+            cursor += common.advance_width(ctx, value, size, family=family)
 
     # 语言标注（右上角）——让人知道这段是什么语言的代码。
+    # **也用等宽那一族**：代码块里的东西**不混排**——一半等宽一半比例，
+    # 看着像排版没对齐。
     if block.lang:
         draw.text(ctx, block.lang, x + box_w - common.PANEL_PAD * 1.2,
                   top + common.PANEL_PAD * 1.1, size * 0.62,
-                  common.PANEL_MUTED, anchor="right")
+                  common.PANEL_MUTED, anchor="right", family=family)
 
     # **放不下的部分要看得见**：不许静默截断。
     if dropped > 0:
         draw.text(ctx, f"+{dropped} more lines", inner_x,
                   top + panel_h - common.PANEL_PAD * 0.5, size * 0.8,
-                  NOTICE_COLOR)
+                  NOTICE_COLOR, family=family)

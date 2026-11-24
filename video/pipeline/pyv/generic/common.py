@@ -66,26 +66,29 @@ def content_of(params, kind: str, root=None) -> motherdoc.Block:
 
 
 def text_width(ctx: cairo.Context, s: str, size: float,
-               bold: bool = False) -> float:
+               bold: bool = False, family: str | None = None) -> float:
     """量一行字的**墨迹**宽度（与画的时候用同一套度量）。"""
-    return draw.text_width(ctx, s, size, bold=bold)
+    return draw.text_width(ctx, s, size, bold=bold, family=family)
 
 
 def advance_width(ctx: cairo.Context, s: str, size: float,
-                  bold: bool = False) -> float:
+                  bold: bool = False, family: str | None = None) -> float:
     """量一行字的**步进宽度**（含空格）。
 
     **墨迹宽度量不出空格**：`text_extents().width` 是墨迹包围盒，
     行尾那个空格一个字宽都不占——按它排版，「SELECT id」会排成
     「SELECTid」。排版要按步进宽度算。
+
+    `family` 给了就量那一族（代码块用等宽那族）——**量与画必须是
+    同一族**，否则量出来的宽度跟画出来的对不上。
     """
-    fonts.select_font(ctx, bold=bold)
+    fonts.select_font(ctx, family=family, bold=bold)
     ctx.set_font_size(size)
     return ctx.text_extents(s).x_advance
 
 
 def wrap_text(ctx: cairo.Context, s: str, size: float, max_width: float,
-              bold: bool = False) -> list[str]:
+              bold: bool = False, family: str | None = None) -> list[str]:
     """把一段文字排成若干行。
 
     **中文逐字断，英文尽量在空格处断**——英文单词被劈成两半很难看，
@@ -101,7 +104,9 @@ def wrap_text(ctx: cairo.Context, s: str, size: float, max_width: float,
         current = ""
         for ch in paragraph:
             candidate = current + ch
-            if current and advance_width(ctx, candidate, size, bold) > max_width:
+            if (current
+                    and advance_width(ctx, candidate, size, bold,
+                                      family=family) > max_width):
                 cut = current.rfind(" ")
                 if cut > 0 and len(current) - cut <= 12:
                     lines.append(current[:cut].rstrip())

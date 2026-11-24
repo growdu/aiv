@@ -179,7 +179,7 @@ def test_every_drawn_character_is_in_the_bundled_font(monkeypatch):
     original = draw.text
 
     def recorder(ctx, s, x, y, size, color, anchor="left", bold=False,
-                 alpha=1.0):
+                 alpha=1.0, family=None):
         drawn.update(s)
         return None
 
@@ -230,7 +230,7 @@ def _draw_calls(monkeypatch, module, params, w, h) -> list[tuple]:
     calls: list[tuple] = []
 
     def recorder(ctx, s, x, y, size, color, anchor="left", bold=False,
-                 alpha=1.0):
+                 alpha=1.0, family=None):
         calls.append((s, x, y))
         return None
 

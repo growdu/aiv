@@ -38,7 +38,7 @@ sys.path.insert(0, str(PIPELINE_ROOT))
 
 from pyv import fonts  # noqa: E402
 
-#: 要装进 OS 字体目录的内置字体文件（两个字重）。
+#: 要装进 OS 字体目录的内置字体文件（正文的两个字重 + 等宽那一面）。
 FONT_SOURCES = fonts.BUNDLED_PATHS
 
 
@@ -104,12 +104,22 @@ def _wait_until_resolved() -> int:
     **两个字重都要认得**：认得 Regular 不等于认得 Bold——粗体没认到
     的话，cairo 会**合成**一份，两个平台的合成方式还不一样（实测轮廓
     差 3.14px）。所以这里查的是「粗体能不能量出 Bold 的步进」。
+
+    **等宽那族认不认得是另一回事**：认不得不影响出片（代码块退回
+    比例字体），但要说清楚——代码列对不齐是看得见的。
     """
     for attempt in range(6):
         if fonts.family_resolves(fonts.BUNDLED_FAMILY):
             print(f"cairo 认得「{fonts.BUNDLED_FAMILY}」了")
             if fonts.bold_face_resolves():
                 print("粗体也认得了（用真的 Bold 字形，不是合成的）")
+                if fonts.mono_family_resolves():
+                    print(f"等宽「{fonts.BUNDLED_MONO_FAMILY}」也认得了")
+                else:
+                    print(
+                        f"等宽「{fonts.BUNDLED_MONO_FAMILY}」还没认到——"
+                        f"代码块会退回比例字体（列对不齐）"
+                    )
                 return 0
             print("粗体还没认到——cairo 会合成粗体，跨机版式会对不上")
         if attempt < 5:
@@ -138,6 +148,8 @@ def check() -> int:
     print(f"cairo 解析  {'认得' if fonts.family_resolves(fonts.BUNDLED_FAMILY) else '认不得'}"
           f"「{fonts.BUNDLED_FAMILY}」")
     print(f"粗体        {'认得（真的 Bold 字形）' if fonts.bold_face_resolves() else '认不得——会合成粗体'}")
+    print(f"等宽        {'认得' if fonts.mono_family_resolves() else '认不得——代码块退回比例字体'}"
+          f"「{fonts.BUNDLED_MONO_FAMILY}」")
     print(f"当前在用    {resolved}")
 
     if fonts.family_resolves(fonts.BUNDLED_FAMILY) and fonts.bold_face_resolves():

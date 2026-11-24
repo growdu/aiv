@@ -128,13 +128,17 @@ class Arrow:
 
 
 def ink_box(ctx: cairo.Context, s: str, x: float, y: float, size: float,
-            anchor: str, bold: bool) -> tuple[float, float, float, float]:
+            anchor: str, bold: bool,
+            family: str | None = None) -> tuple[float, float, float, float]:
     """量出这行字的**墨迹**包围盒。
 
     跟 `draw.text` 用同一套度量（`fonts.select_font` 关 hinting、
     `.width` 居中），不然量出来的位置跟画出来的位置对不上。
+
+    `family` 也要跟画的时候一致——代码块画在等宽那族里，
+    量的时候用比例字体，量出来的位置跟画出来的对不上。
     """
-    fonts.select_font(ctx, bold=bold)
+    fonts.select_font(ctx, family=family, bold=bold)
     ctx.set_font_size(size)
     width = ctx.text_extents(s).width
     if anchor == "center":
@@ -163,9 +167,10 @@ class Probe:
 
     # -- 记录 ----------------------------------------------------------
     def text(self, ctx, s, x, y, size, color, anchor="left", bold=False,
-             alpha=1.0):
+             alpha=1.0, family=None):
         if alpha >= self.alpha_floor and s.strip():
-            x0, y0, x1, y1 = ink_box(ctx, s, x, y, size, anchor, bold)
+            x0, y0, x1, y1 = ink_box(ctx, s, x, y, size, anchor, bold,
+                                      family)
             self.texts.append(Text(s, x0, y0, x1, y1, color, size, alpha))
         return None
 
@@ -222,11 +227,11 @@ class Session:
         session = self
 
         def recording_text(ctx, s, x, y, size, color, anchor="left", bold=False,
-                           alpha=1.0):
+                           alpha=1.0, family=None):
             session.probe.text(ctx, s, x, y, size, color, anchor=anchor,
-                               bold=bold, alpha=alpha)
+                               bold=bold, alpha=alpha, family=family)
             return original_text(ctx, s, x, y, size, color, anchor=anchor,
-                                 bold=bold, alpha=alpha)
+                                 bold=bold, alpha=alpha, family=family)
 
         def recording_rect(ctx, x, y, w, h, r, color, alpha=1.0):
             session.probe.rounded_rect(ctx, x, y, w, h, r, color, alpha=alpha)

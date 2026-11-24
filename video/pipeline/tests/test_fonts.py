@@ -30,6 +30,56 @@ def test_resolve_font_finds_a_usable_family():
     assert font.family.strip()
 
 
+def _installed_copy(path: Path) -> Path | None:
+    """这个字体文件在 OS 字体目录里的副本（装了才有）。"""
+    for directory in (Path.home() / ".local" / "share" / "fonts",
+                      Path.home() / "Library" / "Fonts",
+                      Path("/usr/local/share/fonts")):
+        candidate = directory / path.name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def test_an_installed_bundled_font_counts_as_resolvable():
+    """**装了就要说认得**——哪怕它的字宽跟系统默认一模一样。
+
+    为什么这条要紧：内置子集就是 Noto Sans CJK SC 的子集，**字宽跟
+    系统里那款 Noto 逐项相同**。用「宽度差 > 0.5px」判装没装，在这种
+    机器上必然失手（实测同机上「AIV Sans CJK SC」与「__NoSuchFontFamily__」
+    的宽度只差 **0.2px**）——于是「装了」被说成「没装」，内置子集一直
+    没人用，跨机的步进也就一直对不上。
+
+    没装（或者装的是旧版本）的机器上这条会说明原因（skip）。
+    """
+    import hashlib
+
+    if not fonts.BUNDLED_REGULAR_PATH.is_file():
+        pytest.skip(f"内置字体不在仓库里：{fonts.BUNDLED_REGULAR_PATH}")
+
+    installed = _installed_copy(fonts.BUNDLED_REGULAR_PATH)
+    if installed is None:
+        pytest.skip(
+            "内置字体没装进 OS 字体目录（跑 python3 scripts/install_font.py）"
+        )
+
+    def sha256(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    if sha256(installed) != sha256(fonts.BUNDLED_REGULAR_PATH):
+        pytest.skip(f"装的是旧版本（{installed}），不是仓库里这一份")
+
+    assert fonts.family_resolves(fonts.BUNDLED_FAMILY), (
+        f"字体已经装在 {installed}，却说不认得「{fonts.BUNDLED_FAMILY}」——"
+        f"内置子集等于没用上"
+    )
+
+
+def test_a_family_that_does_not_exist_is_not_resolvable():
+    """**不存在的族名必须说认不得**——否则「认得」这个词就没意义了。"""
+    assert not fonts.family_resolves("__NoSuchFontFamily__")
+
+
 def test_environment_variable_wins(monkeypatch):
     monkeypatch.setenv(fonts.FONT_ENV, "Some Explicit Family")
     fonts.reset_font_cache()
