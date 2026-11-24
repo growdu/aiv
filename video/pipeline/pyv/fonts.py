@@ -487,3 +487,238 @@ def missing_glyph(ch: str) -> bool:
         return bytes(surface.get_data())
 
     return pixels(ch) == pixels(_MISSING_GLYPH)
+
+
+# ---- 缺字判定（D5：盖不住的那些字当场报错） ----------------------------
+
+#: 放行缺字的环境变量。
+#:
+#: **放行时必须往 stderr 出声**——「不静默」的底线是：可以放行，不许无声。
+ALLOW_MISSING_ENV = "AIV_ALLOW_MISSING_GLYPHS"
+
+#: 认可「放行」的值（其余一律当没设）。
+ALLOW_MISSING_VALUES = ("1", "true", "yes", "on")
+
+#: 内置子集文件 → 族名（查 cmap 用）。
+BUNDLED_FAMILY_FILES = {
+    BUNDLED_FAMILY: BUNDLED_REGULAR_PATH,
+    BUNDLED_MONO_FAMILY: BUNDLED_MONO_PATH,
+}
+
+
+class MissingGlyphs(RuntimeError):
+    """字体盖不住要画的字。
+
+    **当场报，不画豆腐块**：豆腐块在成片里是「一段没有人声的旁白配着一屏
+    方框」，观众看不懂是内容的问题还是片子的问题。
+    """
+
+
+def _format4_intervals(data: bytes, base: int) -> list[tuple[int, int]]:
+    """cmap 格式 4（BMP）盖住的码位区间。
+
+    **逐个码位查一遍**：只有映射到**真字形**的才算盖住——映射到
+    `.notdef`（0）的码位画出来是豆腐块。
+    """
+    seg_count = int.from_bytes(data[base + 6:base + 8], "big") // 2
+    end_base = base + 14
+    start_base = end_base + seg_count * 2 + 2
+    delta_base = start_base + seg_count * 2
+    range_base = delta_base + seg_count * 2
+
+    intervals: list[tuple[int, int]] = []
+    for index in range(seg_count):
+        end = int.from_bytes(data[end_base + index * 2:end_base + index * 2 + 2],
+                             "big")
+        start = int.from_bytes(
+            data[start_base + index * 2:start_base + index * 2 + 2], "big")
+        if start > end or start == 0xFFFF:
+            continue
+        delta = int.from_bytes(
+            data[delta_base + index * 2:delta_base + index * 2 + 2],
+            "big", signed=True)
+        range_offset = int.from_bytes(
+            data[range_base + index * 2:range_base + index * 2 + 2], "big")
+
+        run_start: int | None = None
+        for code in range(start, min(end, 0xFFFE) + 1):
+            if range_offset == 0:
+                glyph = (code + delta) & 0xFFFF
+            else:
+                at = range_base + index * 2 + range_offset + (code - start) * 2
+                if at + 2 > len(data):
+                    glyph = 0
+                else:
+                    glyph = int.from_bytes(data[at:at + 2], "big")
+                    if glyph:
+                        glyph = (glyph + delta) & 0xFFFF
+            if glyph:
+                if run_start is None:
+                    run_start = code
+            elif run_start is not None:
+                intervals.append((run_start, code - 1))
+                run_start = None
+        if run_start is not None:
+            intervals.append((run_start, min(end, 0xFFFE)))
+    return intervals
+
+
+def _format12_intervals(data: bytes, base: int) -> list[tuple[int, int]]:
+    """cmap 格式 12（可扩到 U+10FFFF）盖住的码位区间。
+
+    格式 12 的字形号在每组里**连续**，所以一组里只有**第一个**码位可能
+    映射到 `.notdef`（起始字形号是 0 时）——不用逐个码位查。
+    """
+    groups = int.from_bytes(data[base + 12:base + 16], "big")
+    intervals: list[tuple[int, int]] = []
+    for index in range(groups):
+        at = base + 16 + index * 12
+        start = int.from_bytes(data[at:at + 4], "big")
+        end = int.from_bytes(data[at + 4:at + 8], "big")
+        first_glyph = int.from_bytes(data[at + 8:at + 12], "big")
+        if start > end:
+            continue
+        if first_glyph == 0:
+            start += 1
+            if start > end:
+                continue
+        intervals.append((start, end))
+    return intervals
+
+
+def _merge_intervals(intervals: list[tuple[int, int]]) -> tuple[tuple[int, int], ...]:
+    """区间排序并合并（相邻的接起来）。"""
+    if not intervals:
+        return ()
+    ordered = sorted(intervals)
+    merged: list[tuple[int, int]] = []
+    for start, end in ordered:
+        if merged and start <= merged[-1][1] + 1:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return tuple(merged)
+
+
+def _parse_cmap(data: bytes) -> tuple[tuple[int, int], ...]:
+    """cmap 表 → 盖住的码位区间。"""
+    count = int.from_bytes(data[2:4], "big")
+    intervals: list[tuple[int, int]] = []
+    for index in range(count):
+        at = 4 + index * 8
+        sub = int.from_bytes(data[at + 4:at + 8], "big")
+        fmt = int.from_bytes(data[sub:sub + 2], "big")
+        if fmt == 4:
+            intervals.extend(_format4_intervals(data, sub))
+        elif fmt == 12:
+            intervals.extend(_format12_intervals(data, sub))
+    return _merge_intervals(intervals)
+
+
+@lru_cache(maxsize=4)
+def _read_coverage(path: str) -> tuple[tuple[int, int], ...]:
+    """读一个字体文件的 cmap，返回它盖住的码位区间。
+
+    **纯 Python，不引 fontTools**：fontTools 只在**构建期**用（生成与
+    校验子集）。运行时多一个依赖，就多一份「装不上」的风险。
+    """
+    file_path = Path(path)
+    with file_path.open("rb") as handle:
+        header = handle.read(12)
+        if len(header) < 12:
+            raise ValueError(f"{file_path} 不是字体文件（头太短）")
+        table_count = int.from_bytes(header[4:6], "big")
+        handle.seek(12)
+        directory = handle.read(16 * table_count)
+        offset = length = None
+        for index in range(table_count):
+            entry = directory[index * 16:(index + 1) * 16]
+            if entry[:4] == b"cmap":
+                offset = int.from_bytes(entry[8:12], "big")
+                length = int.from_bytes(entry[12:16], "big")
+                break
+        if offset is None or length is None:
+            raise ValueError(f"{file_path} 里没有 cmap 表")
+        handle.seek(offset)
+        data = handle.read(length)
+    return _parse_cmap(data)
+
+
+def bundled_coverage(family: str | None = None) -> tuple[tuple[int, int], ...]:
+    """内置子集盖住的码位区间（按族名选文件）。"""
+    path = BUNDLED_FAMILY_FILES.get(family or BUNDLED_FAMILY,
+                                    BUNDLED_REGULAR_PATH)
+    return _read_coverage(str(path))
+
+
+def covers(intervals: tuple[tuple[int, int], ...], code: int) -> bool:
+    """码位在不在这些区间里（二分）。"""
+    low, high = 0, len(intervals) - 1
+    while low <= high:
+        mid = (low + high) // 2
+        start, end = intervals[mid]
+        if code < start:
+            high = mid - 1
+        elif code > end:
+            low = mid + 1
+        else:
+            return True
+    return False
+
+
+def missing_chars(text: str, family: str | None = None) -> list[str]:
+    """text 里**内置子集盖不住**的字（按出现顺序，不重复）。
+
+    **为什么按内置子集判，而不是按当前这台机器解析到的族**：内置子集是
+    **入库的事实**（它盖住 GB 2312-80 全集，是 CI 里跑得动的判据）。
+    当前机器恰好用着系统字体、盖得更多，不代表入库的资产盖得住——
+    换台机器、换个 CI runner 就画成豆腐块。
+
+    **控制字符不算缺**（换行、制表不是字形）。
+    """
+    intervals = bundled_coverage(family)
+    missing: list[str] = []
+    for ch in text:
+        if ord(ch) < 0x20 or ord(ch) == 0x7F:
+            continue
+        if covers(intervals, ord(ch)):
+            continue
+        if ch not in missing:
+            missing.append(ch)
+    return missing
+
+
+def _allow_missing() -> bool:
+    """放行开关开了没有。"""
+    return os.environ.get(ALLOW_MISSING_ENV, "").strip().lower() \
+        in ALLOW_MISSING_VALUES
+
+
+def check_glyphs(text: str, family: str | None = None) -> None:
+    """画之前查缺字。
+
+    - **缺了当场报错**（`MissingGlyphs`）：报出是哪些字，并给出补救办法；
+    - 设了 `AIV_ALLOW_MISSING_GLYPHS=1` 就放行，但**往 stderr 出声**
+      （可以放行，不许无声）。
+    """
+    missing = missing_chars(text, family)
+    if not missing:
+        return
+
+    if _allow_missing():
+        _warn_once(
+            f"字体盖不住 {len(missing)} 个字（{''.join(missing[:20])}）——"
+            f"按 {ALLOW_MISSING_ENV} 放行，画出来是豆腐块。"
+        )
+        return
+
+    listed = "".join(missing[:20]) + ("…" if len(missing) > 20 else "")
+    raise MissingGlyphs(
+        f"字体盖不住要画的 {len(missing)} 个字：{listed}\n"
+        f"当场报错，不画豆腐块。\n"
+        f"补救：把用到的字并进 assets/fonts/extra_chars.txt，重跑\n"
+        f"  python3 scripts/build_font_subset.py\n"
+        f"重建子集（上游字体本身没有的字，要先解决上游）。\n"
+        f"确实要放过：设 {ALLOW_MISSING_ENV}=1（会往 stderr 出声）。"
+    )
+

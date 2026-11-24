@@ -64,7 +64,11 @@ def text(ctx: cairo.Context, s: str, x: float, y: float, size: float,
 
     `family` 给了就画那一族（代码块用等宽那族）；不给就用当前解析到的
     中文字体。**不给就不给**——族名写死在调用点上的话，跨机器就对不上。
+
+    **画之前查缺字**：字画不出来（豆腐块）就**当场报错**——
+    成片里的一段方框比一次报错难懂得多。
     """
+    fonts.check_glyphs(s, family)
     _set_source(ctx, color, alpha)
     fonts.select_font(ctx, family=family, bold=bold)
     ctx.set_font_size(size)
