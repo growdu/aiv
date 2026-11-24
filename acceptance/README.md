@@ -88,7 +88,7 @@
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
-| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1103 passed / 60 skipped | 1103 passed / 60 skipped |
+| 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1234 passed / 60 skipped | 1234 passed / 60 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
@@ -146,7 +146,127 @@
 | 2026-11-23（死路径守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1092 / 60 skip | 77 | 59 |
 | 2026-11-23（BGM 铺底循环那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1101 / 60 skip | 77 | 59 |
 | 2026-11-23（混音不重编码那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1103 / 60 skip | 77 | 59 |
-| 2026-11-23（创作平台那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1103 / 60 skip | 77 | 59 |
+| 2026-11-23（align DP 剪枝那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1109 / 60 skip | 77 | 59 |
+| 2026-11-23（字幕改二分那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1115 / 60 skip | 77 | 59 |
+| 2026-11-23（母稿解析器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1126 / 60 skip | 77 | 59 |
+| 2026-11-23（骨架依赖与形状守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1133 / 60 skip | 77 | 59 |
+| 2026-11-23（骨架派生三元组那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1148 / 60 skip | 77 | 59 |
+| 2026-11-23（三档档位守卫那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1170 / 60 skip | 77 | 59 |
+| 2026-11-23（创作平台那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1170 / 60 skip | 77 | 59 |
+| 2026-11-23（通用渲染器那轮） | 129 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1234 / 60 skip | 77 | 59 |
+| 2026-11-23（创作平台并进 main 那轮） | 133 / 3 skip | 125 / 1 skip | 356 / 1 skip | 399 / 2 skip | 521 / 1 skip | 117 | 1234 / 60 skip | 77 | 59 |
+
+> 2026-11-23（创作平台并进 main 那轮）：创作平台的 18 个 Task **并进 `main`**。
+> 两条线是**并行**做的——创作平台在 `worktree-creation-platform` 分支上，
+> 视频线直接在 `main` 上；两边只碰过同一个文件，就是这张表。
+> 合并后**逐套件重跑**：根 133/3 skip、站点 125/1 skip、publish 356/1 skip、
+> toutiao 399/2 skip、wechat 521/1 skip、douyin 117、video 1234/60 skip、
+> bilibili 77、channels 59——与上两行**逐列一致**（根与视频线各取自己那条，
+> 其余一条没动）。创作平台自己的两套件不在本表的列里：**api 124 passed、front 20 passed**。
+> ⚠️ 「创作平台那轮」那行的视频线数字是 **1170**——那一轮量的是**两边合起来的仓库**
+> （视频线在 `main` 上的当时值），不是创作平台分支上的值（分支上没有视频线那几条提交）。
+> ⚠️ `browser/` 在这台机器上是 **1 failed / 99 passed / 64 errors**——
+> 那 64 条是**环境红**（playwright 的 driver 缺 `libatomic.so.1`），不是逻辑红；
+> `browser/` 这轮两边都没碰。
+
+> 2026-11-23（通用渲染器那轮）：**video +64 条**——新模块
+> `video/pipeline/pyv/generic/`（四个通用渲染器：`gen_code` / `gen_table` /
+> `gen_card` / `gen_mermaid` + 共用件 `common.py`）、`video/pipeline/pyv/mermaid.py`
+> （视频侧自持的 mermaid → PNG），新测试 `video/pipeline/tests/test_generic_renderers.py`
+> 与 `video/pipeline/tests/test_mermaid.py`。
+> **通用渲染器不进 `pyv/scenes/`**（偏离规格 §6.1，记在计划二的 D2）：
+> `scenes/` 里每个模块都被逐像素基准与字体探针**按目录扫**着，
+> 而通用渲染器的基准要一期真实的期目录才抓得出来（视频线今天没有期，
+> 内容不入库）。所以它们自带一套**元素级**守卫：字不压字、字在自己那块底色里、
+> 字不跑出画布、字与底色对比度够、字在字体子集里、放不下要明说还差几行、
+> mermaid 失败要看得见地降级。
+> **十条注入缺陷都验过会红**（高亮失效 / 墨迹宽度推进（空格丢了）/
+> 代码静默截断 / 表格静默截断 / 深底深字 / 字画出面板 / mermaid 静默跳过 /
+> 画出子集外的字 / 重渲染输入清单漏登记 / 渲染器名不存在）。
+> ⚠️ 视频侧**自持**一份 mermaid 渲染器（层间零 import，平台层不许被视频线 import）：
+> 两份实现的版本号与关键参数用 `ast` **读文件**对拍，不 import 那个模块。
+> ⚠️ 通用渲染器的**逐像素基准**与「母稿里的汉字在不在字体子集里」仍是遗留项
+> （前者要真实期目录，后者要真实母稿）。
+
+> 2026-11-23（三档档位守卫那轮）：**video +22 条**——新文件
+> `video/pipeline/tests/test_tiers.py` 与新模块 `video/pipeline/pyv/tiers.py`：
+> 三档的档位阈值（字数、时长、压缩比）与判据。
+> **阈值三份取值、两两对拍**：生产代码（`pyv/tiers.py`）里是**字面量**，
+> 测试里抄一份，**第三份直接解析规格文档的表**
+> （`publish/spec/09-长视频三档.md` §三）——
+> 生产代码改了而规格没改 → 红；规格改了而代码没改 → 也红。
+> 少解析那一份，两份手工抄的常量可能**一起漂**而守卫照样绿。
+> ⚠️ 代价：视频套件读 `publish/spec/` 的文档，规格的表改了视频套件会红——
+> 这是有意的，阈值是判据。
+> ⚠️ 计划原稿要对拍的 `tests/test_podcast_spec.py` 已经不在仓库里
+> （内容清空那轮删的，只剩 `__pycache__` 里的 `.pyc`）；
+> 原稿引的 `episodes.MOTHER_DOCS` / `episodes.EPISODES` /
+> `skeleton.SKELETON_PATH` 在新坐标下也不存在——
+> 母稿路径改从骨架的 `source:` 字段读，为此给 `episodes.py` 加了
+> `skeleton_path_at(root, doc)`（默认根那条路径照旧，测试夹具另指根）。
+> 三处注入都验过会红：生产侧字数上限 4310 → 4 条红；
+> 时长上限 600.0 → 3 条红；规格侧「≤ 431」改成「≤ 430」 → 1 条红。
+
+> 2026-11-23（骨架派生三元组那轮）：**video +15 条**——新文件
+> `video/pipeline/tests/test_derive.py` 与新模块 `video/pipeline/pyv/derive.py`：
+> 讲稿骨架 →（口播稿 / 字幕表 / 视觉契约）三元组。
+> 派生出来的**形状与流水线认得的一模一样**——口播稿是一段代码块每行一句、
+> 字幕表是每句一行的表格、契约是 `pyv/contract.py` 认识的那个 JSON，
+> 所以 `align` / `render` / `compose` 一行都不用改。
+> 端到端那条用例**亲自读回**：派生出的两节拼成口播稿，
+> `align.parse_script` / `parse_subtitle_table` 读得回去才算数。
+> **母稿引用当场查**：段里的 `ref` 指向母稿第 `nth` 个 mermaid / 代码 / 表格块，
+> 引用错了（母稿没了、`nth` 超范围）就报错——画面那一环会**静默缺一块**，
+> 而片子里看不出少了什么。
+> 契约的 `episode` 是**四层期路径**（`系列/合集/文档/档位`）：档位在路径里，
+> 不在骨架里（骨架是三档共用的）。
+> 三条注入缺陷都验过会红（`params["ref"]` 不带 → 1 条红；
+> 契约 `episode` 不带档位 → 1 条红；不查母稿引用 → 3 条红）。
+
+> 2026-11-23（骨架依赖与形状守卫那轮）：**video +7 条**——
+> 讲稿骨架（`pyv/skeleton.py`）的**坏骨架当场报错**：
+> `role` 拼错、`visual.kind` 不认识、口播句数与字幕行数不一致、段 id 重复，
+> 四条都在读骨架时就炸（拼错的 role 会让那一段从**三档里同时消失**，
+> 而页面上看不出少了东西；字幕错位 `align` 只查得出总数对不上）。
+> 另加一条**依赖同步守卫**
+> `test_every_third_party_dependency_is_installed_on_linux`：
+> doctor 名单里的每个模块都必须出现在 CI 的 import 检查行与上机脚本里——
+> `pyyaml` 就是这么漏过三处的（requirements.txt 有了，doctor / CI / 上机脚本没有，
+> 本机有所以看不出来，Linux 上 `import yaml` 直接炸）。
+> ⚠️ Task 7（三档裁剪）的主体是并行会话落的（`ded4bb2c`），
+> 本轮只做台账核对与注入复核：把 `ROLE_TIERS["aside"]` 改成 `("mid","full")` → **3 条红**。
+
+> 2026-11-23（母稿解析器那轮）：**video +11 条**——新文件
+> `video/pipeline/tests/test_motherdoc.py` 与新模块 `video/pipeline/pyv/motherdoc.py`：
+> 母稿解析（mermaid 块 / 代码块 / 表格 / 散文字数），是「画面不用手写」的第一步。
+> ⚠️ 计划原稿的夹具是**六期真实母稿**，但那六期 2026-11-18 已清空
+> （规格 §2.4 明说「这六期已清空」），文件不在仓库里了——
+> 夹具改成**合成的小母稿**：口径由规格的定义决定，不该依赖某几篇具体文章。
+> 计数口径与《长视频三档》§2.1 / §2.4 一致：散文去掉 front matter / 标题行 /
+> 代码块内 / 表格行；mermaid 块单独一类，`count("mermaid") + count("code")`
+> = 围栏块总数（规格的 377），`count("code")` = 纯代码 306。
+> 三条注入缺陷都验过会红（mermaid 判成 code → 3 条红；不剥 front matter → 2 条红；
+> 标题行也算散文 → 2 条红）。
+
+> 2026-11-23（字幕改二分那轮）：**video +6 条**——新文件
+> `video/pipeline/tests/test_subtitle_lookup.py`：字幕事件定位从「每帧从头扫」改成二分。
+> 完整版 600 条字幕 × 5 万帧 = 3,000 万次比较。
+> ⚠️ 计划里那条**计时守卫抓不住东西**——本机线性扫 5 万次只要 0.54 秒，
+> 落在 2 秒阈值里，换不换实现都绿。所以另加一条**数属性访问次数**的守卫：
+> 1000 次查找允许读 1 万次，线性扫读了 111550 次，二分只读约 2000 次。
+> 另有守卫盯着「事件重叠时语义不许变」——二分挑的是「最后一条起点不晚于 t 的」，
+> 与线性扫的「第一条命中的」在重叠时不一样，所以那种输入退回线性扫。
+
+> 2026-11-23（align DP 剪枝那轮）：**video +6 条**——新文件
+> `video/pipeline/tests/test_align_scaling.py`：旁白对齐的 DP 从
+> O(句数 × 片段数²) 剪到 O(句数 × 片段数)，**600 句从约 158 秒降到 1.3 秒**
+> （完整版有 200~600 句，原来那个规模出不了片）。
+> 剪枝是**凸包精确解**，不是近似：与穷举 DP **逐字相同**，守卫里对拍 24 组随机输入
+> （含「权重全相等」这种并列最多的情形——并列时两边必须挑到同一个解，
+> 否则拼出来的时间轴会跳）。
+> ⚠️ 计划原稿的「限窗剪枝」实测**会让答案变差**（200 句 / 600 片段：
+> DP 目标 42052 → 42190），所以没照做，改成精确解，限窗旋钮一并去掉。
+> 三条注入缺陷的实测结果记在计划的 Task 3 订正块里。
 
 > 2026-11-23（混音不重编码那轮）：**video +2 条**——新文件
 > `video/pipeline/tests/test_compose_no_reencode.py`：混音阶段**复制视频流**（`-c:v copy`），

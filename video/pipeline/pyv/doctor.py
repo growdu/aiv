@@ -34,11 +34,16 @@ INFO = "info"
 MIN_PYTHON = (3, 11)
 
 #: 第三方库 → pip 包名（导入名和安装名不一致的写在这里）
+#:
+#: **漏了会静默出事**：CI 的依赖检查是「import 一下，通过就不装 pip」，
+#: 上机脚本同理。这张表里的每一个模块都必须出现在那两处——
+#: `tests/test_portability.py` 里有一条守卫盯着这件事。
 THIRD_PARTY = (
     ("cairo", "pycairo"),
     ("numpy", "numpy"),
     ("PIL", "Pillow"),
     ("scipy", "scipy"),
+    ("yaml", "pyyaml"),
 )
 
 #: 出片必需的媒体素材：**由配置声明**。

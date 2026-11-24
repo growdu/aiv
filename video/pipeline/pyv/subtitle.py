@@ -6,6 +6,8 @@
 """
 from __future__ import annotations
 
+import bisect
+
 import cairo
 
 from pyv import fonts
@@ -143,17 +145,38 @@ def draw_event(ctx: cairo.Context, text: str, style: SubtitleStyle,
 
 
 class SubtitleBurner:
-    """按绝对时间把字幕烧进画面。"""
+    """按绝对时间把字幕烧进画面。
+
+    定位用**二分**而不是从头扫：完整版有 600 条字幕 × 5 万帧，
+    线性扫是 3,000 万次比较（纯 Python 要几十秒）。
+
+    二分只认「字幕事件不重叠」这一条：事件重叠时二分会挑到另一条，
+    所以那种输入退回线性扫——**语义与从前完全一样**，
+    不因为换了实现就换个答案。正常素材不重叠。
+    """
 
     def __init__(self, events: list[SubtitleEvent], style: SubtitleStyle) -> None:
         self.events = sorted(events, key=lambda e: e.start)
         self.style = style
+        self._starts = [event.start for event in self.events]
+        # 有重叠就说明二分不成立——记下来，定位时走线性扫。
+        self._overlaps = any(
+            self.events[i].end > self.events[i + 1].start
+            for i in range(len(self.events) - 1)
+        )
 
     def event_at(self, t: float) -> SubtitleEvent | None:
-        for event in self.events:
-            if event.start <= t < event.end:
-                return event
-        return None
+        if self._overlaps:
+            for event in self.events:
+                if event.start <= t < event.end:
+                    return event
+            return None
+        # 起点不晚于 t 的最后一条，就是唯一可能覆盖 t 的那条
+        index = bisect.bisect_right(self._starts, t) - 1
+        if index < 0:
+            return None
+        event = self.events[index]
+        return event if event.start <= t < event.end else None
 
     def draw(self, ctx: cairo.Context, t: float, width: int, height: int) -> None:
         event = self.event_at(t)

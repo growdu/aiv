@@ -162,3 +162,89 @@ def test_a_skeleton_without_segments_is_refused():
 def test_a_missing_skeleton_file_is_refused(tmp_path):
     with pytest.raises(SkeletonError):
         skeleton_mod.load_skeleton(tmp_path / "skeleton.yaml")
+
+
+# ---- 骨架本身的形状：坏掉的地方要当场说出来 ------------------------------
+#
+# 上面那些用例查的是「裁剪」的口径；这里查的是「这份骨架本身是不是坏的」。
+# 坏骨架的共同点是**坏得看不出来**：拼错的 role、错位的字幕、重复的 id，
+# 都不会让命令报错，只会让片子少东西或者字幕错位——所以要在读的时候炸。
+
+GOOD_SKELETON = """
+episode: 系列甲/合集甲/文档甲
+source: docs/甲.md
+segments:
+  - id: s01
+    role: hook
+    visual:
+      kind: scene
+      renderer: pyv.scenes.s01_intro
+      params: {title: "甲"}
+    narration:
+      - "开场白。"
+    subtitles:
+      - "开场白"
+"""
+
+
+def test_a_skeleton_with_an_unknown_role_is_refused_at_parse_time():
+    """role 拼错的那一段从**三档里同时消失**——所以读的时候就要炸。
+
+    `mechanim`（少个 s）在「按 role 过滤」的口径下没人要它：
+    short 本来就不要机制，mid 与 full 要——但拼错的那份表里没有它，
+    于是它在三档里全没了，而页面上看不出少了东西。
+    """
+    broken = GOOD_SKELETON.replace("role: hook", "role: mechanim")
+    with pytest.raises(SkeletonError, match="role"):
+        skeleton_mod.parse_skeleton(broken)
+
+
+def test_a_skeleton_with_an_unknown_visual_kind_is_refused():
+    """画面类型不认识 → 画面那一环不知道要画什么。"""
+    broken = GOOD_SKELETON.replace("kind: scene", "kind: hologram")
+    with pytest.raises(SkeletonError, match="kind"):
+        skeleton_mod.parse_skeleton(broken)
+
+
+def test_a_skeleton_whose_subtitles_do_not_match_the_narration_is_refused():
+    """口播句数与字幕行数不一致 → 字幕会跟口播错位。
+
+    `align` 只查得出**总数**对不上；错位它看不出来——所以在读骨架时就查。
+    """
+    broken = GOOD_SKELETON.replace(
+        '      - "开场白"',
+        '      - "开场白"\n      - "多出来的一行"',
+    )
+    with pytest.raises(SkeletonError, match="不一致"):
+        skeleton_mod.parse_skeleton(broken)
+
+
+def test_duplicate_segment_ids_are_refused():
+    """段 id 重复 → 「引用第 3 段」时指向哪一段说不清。"""
+    broken = GOOD_SKELETON + """  - id: s01
+    role: conclusion
+    narration:
+      - "收束。"
+"""
+    with pytest.raises(SkeletonError, match="重复"):
+        skeleton_mod.parse_skeleton(broken)
+
+
+def test_a_segment_without_an_id_is_refused():
+    """没有 id 的段没法被引用——也不该留在骨架里。"""
+    broken = GOOD_SKELETON.replace("  - id: s01", "  - role: hook")
+    with pytest.raises(SkeletonError, match="id"):
+        skeleton_mod.parse_skeleton(broken)
+
+
+def test_a_segment_without_visual_or_subtitles_is_still_fine():
+    """没写的字段不查——纯口播段没有画面、没有字幕表是正常的。"""
+    data = skeleton_mod.parse_skeleton(
+        "episode: 甲\n"
+        "segments:\n"
+        "  - id: s01\n"
+        "    role: hook\n"
+        "    narration:\n"
+        '      - "只有口播。"\n'
+    )
+    assert data["segments"][0]["id"] == "s01"

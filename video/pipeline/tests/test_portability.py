@@ -32,6 +32,7 @@ THIRD_PARTY_PACKAGES = {
     "numpy": "numpy",
     "scipy": "scipy",
     "pytest": "pytest",
+    "yaml": "PyYAML",
 }
 
 STDLIB = {
@@ -150,3 +151,34 @@ def test_ci_actually_runs_the_pipeline_on_linux():
     assert "ubuntu" in text, "CI 没有跑在 ubuntu 上"
     assert "fonts-noto-cjk" in text, "CI 没装中文字体"
     assert "pytest" in text, "CI 没跑测试"
+
+
+def test_every_third_party_dependency_is_installed_on_linux():
+    """新增依赖必须同步进上机脚本与 Linux CI——漏一处，Linux 上就装不上。
+
+    CI 的依赖检查**通过就不会跑 pip**（那行 `python3 -c "import ..."` 通过就跳过），
+    所以 doctor 名单里的每一个模块都必须出现在那行 import 里；上机脚本同理。
+
+    讲稿骨架是 YAML（`pyv/skeleton.py` 读它）——`pyyaml` 就是这么漏过一次：
+    requirements.txt 里加了，doctor、CI、上机脚本三处没加，
+    Linux 上 `import yaml` 直接炸，而本地机器上有，所以看不出来。
+    """
+    from pyv import doctor
+
+    workflow = (REPO_ROOT / ".github" / "workflows" / "video-pipeline.yml").read_text(
+        encoding="utf-8")
+    bootstrap = (PIPELINE / "scripts" / "bootstrap_linux.sh").read_text(
+        encoding="utf-8")
+
+    checks = [line for line in workflow.splitlines() if "python3 -c" in line]
+    assert checks, "CI 里没有依赖检查那一行"
+    checked = checks[0]
+
+    for module_name, package in doctor.THIRD_PARTY:
+        assert module_name in checked, (
+            f"CI 的依赖检查里没有 {module_name}"
+            "——Linux 上装不上，doctor 会判红、流水线挂掉"
+        )
+        assert package in bootstrap, (
+            f"上机脚本里没有 {package}——新机器上装不上"
+        )

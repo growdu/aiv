@@ -235,9 +235,18 @@ def frames_manifest_path(ep: str) -> Path:
     return episode(ep).frames_manifest
 
 
+def skeleton_path_at(root: str | Path, doc: str) -> Path:
+    """指定根下的讲稿骨架（文档级，三档共用）。
+
+    测试夹具与外部调用走这条：期目录不在默认根下时，
+    路径照样由目录说了算。
+    """
+    return Path(root) / doc / SKELETON_NAME
+
+
 def skeleton_path(doc: str) -> Path:
     """讲稿骨架（文档级，三档共用）。"""
-    return doc_root(doc) / SKELETON_NAME
+    return skeleton_path_at(EPISODES_DIR, doc)
 
 
 def _front_matter(path: Path) -> dict[str, str]:

@@ -27,7 +27,28 @@ RENDER_INPUT_MODULES = (
     "character.py", "components.py", "config.py", "draw.py", "easing.py",
     "fonts.py", "layout.py", "palette.py", "params.py", "render.py",
     "scene_layout.py", "subtitle.py", "timeline.py",
+    # 通用渲染器（`pyv/generic/`）与它们用到的两个模块：
+    # `motherdoc.py` 决定画面上的内容（母稿里的那一块），
+    # `mermaid.py` 决定图渲染成什么样。改了它们，片段必须作废重渲。
+    "mermaid.py", "motherdoc.py",
+    "generic/common.py", "generic/gen_card.py", "generic/gen_code.py",
+    "generic/gen_mermaid.py", "generic/gen_table.py",
 )
+
+
+def load_renderer(name: str):
+    """按名字取渲染器模块。
+
+    **名字错了当场报错**，不许静默跳过——契约里写了一个不存在的
+    渲染器，出片那一步必须炸：悄悄跳过的那一段在成片里就是一段
+    没有画面的旁白，而时长照样对。
+    """
+    if not name:
+        raise ValueError("场景缺少 renderer")
+    try:
+        return importlib.import_module(name)
+    except ImportError as exc:
+        raise ValueError(f"渲染器 {name} 导入不了：{exc}") from exc
 
 
 def newest_source_mtime(scene: Scene, extra_mtime: float | None = None) -> float:
@@ -52,7 +73,7 @@ def newest_source_mtime(scene: Scene, extra_mtime: float | None = None) -> float
     if extra_mtime:
         candidates.append(extra_mtime)
     # 只看这个场景自己的源码：改一个场景不该作废其它场景的片段
-    module = importlib.import_module(scene.renderer or "")
+    module = load_renderer(scene.renderer or "")
     source = Path(module.__file__ or "")
     if source.exists():
         candidates.append(source.stat().st_mtime)
@@ -93,7 +114,7 @@ def render_scene(scene: Scene, out_path: str | Path,
     """
     if not scene.renderer:
         raise ValueError(f"场景 {scene.id} 缺少 renderer")
-    module = importlib.import_module(scene.renderer)
+    module = load_renderer(scene.renderer)
     # 场景参数来自契约（本期内容）。缺了就当场报错，不能悄悄退回旧文案。
     check_required(scene.params, getattr(module, "REQUIRED", ()), scene.id)
     total = max(1, int(round(scene.duration * fps)))

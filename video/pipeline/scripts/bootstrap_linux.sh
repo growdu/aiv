@@ -10,7 +10,7 @@
 # 装的是：
 #   * 系统工具：ffmpeg（含 libx264 与原生 aac）、fontconfig、make、python3
 #   * 中文字体：Noto Sans CJK（PingFang 是 Apple 授权字体，不能随仓库分发）
-#   * Python 依赖：pycairo / numpy / Pillow / scipy / pytest
+#   * Python 依赖：pycairo / numpy / Pillow / scipy / pytest / pyyaml
 #
 # 已经装过的会被跳过（apt/dnf 本身幂等）。
 set -euo pipefail
@@ -33,6 +33,7 @@ SYS_PKGS_PY=(
   python3-pil
   python3-scipy
   python3-pytest
+  python3-yaml
 )
 
 PY_DEPS=(
@@ -41,6 +42,7 @@ PY_DEPS=(
   Pillow
   scipy
   pytest
+  pyyaml
 )
 
 if [ "$(id -u)" -ne 0 ]; then

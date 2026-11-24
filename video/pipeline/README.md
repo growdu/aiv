@@ -17,9 +17,19 @@ video/pipeline/
 │   ├── episodes.py  # 期坐标（四层：系列/合集/文档/档位）
 │   ├── epmeta.py    # 元数据/退出码读取
 │   ├── skeleton.py  # 讲稿骨架（文档级）+ 三档裁剪
+│   ├── motherdoc.py # 母稿解析：mermaid 块 / 代码块 / 表格 / 散文字数
+│   ├── mermaid.py   # 视频侧的 mermaid → PNG（视频线自持，不 import 平台层）
+│   ├── derive.py    # 骨架 →（口播稿 / 字幕表 / 视觉契约）
+│   ├── tiers.py     # 三档的档位守卫：字数、时长、压缩比
 │   ├── contract.py  # 画面契约校验
 │   ├── align.py timeline.py compose.py render.py draw.py ...
 │   ├── scenes/      # 各场景绘制（s01_intro.py、s02_*、s03_*…）
+│   ├── generic/     # 通用渲染器：母稿里的图 / 代码 / 表格 / 卡片直接变成画面
+│   │   ├── common.py       # 内容解析、量宽、折行、面板、收字号
+│   │   ├── gen_mermaid.py  # 图：有 PNG 就贴，没 PNG 就看得见地降级
+│   │   ├── gen_code.py     # 代码块：pygments 高亮
+│   │   ├── gen_table.py    # 表格：markdown 表
+│   │   └── gen_card.py     # 章节卡 / 要点卡
 │   └── ...
 ├── assets/          # 字体等（fonts/）
 ├── scripts/         # 辅助脚本（装字体、抓场景基线、字体子集…）
@@ -54,4 +64,10 @@ python3 -m pyv.cli config <key>       # 读配置里一个值（给脚本用；k
 - 成片产物（`out/`、`build/`）**不入库**，改它没用；改的是 `pyv/` 引擎与期目录。
 - 期坐标口径与 `publish/publishkit/episode.py` **同一套**——改一处两处对齐。
 - 素材位置在 [`video/config.toml`](../config.toml)（缝），**不写死在 Makefile/代码里**。
+- **通用渲染器（`pyv/generic/`）的内容从母稿取**：契约里只带一个引用
+  （`ref = {doc, nth}`），渲染器在渲染期解析出母稿里的那一块；
+  母稿引用解析不了就报错，不许画一个空面板当画面。
+- **通用渲染器不进 `pyv/scenes/`**：那里的每个模块都被逐像素基准与字体探针
+  按目录扫着，而通用渲染器的基准要一期真实的期目录才抓得出来。
+  它自己有一套元素级守卫（`tests/test_generic_renderers.py`）。
 - 总入口说明见 [`../README.md`](../README.md)（视频层）。
