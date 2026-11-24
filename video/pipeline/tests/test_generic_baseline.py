@@ -109,8 +109,8 @@ def test_the_baseline_covers_both_canvases():
 def test_the_frames_match_the_baseline(tmp_path):
     """**帧指纹一致**——画面改坏了就红。
 
-    基准不适用于当前机器时（换过字体、换过平台、没装等宽字体）
-    **跳过并说明原因**：跨平台比像素是拿噪声当信号。
+    基准不适用于当前机器时（换过字体、换过平台、没装等宽字体、
+    换了 cairo / FreeType 版本）**跳过并说明原因**：跨机比像素是拿噪声当信号。
     """
     data = _baseline()
     reason = baseline.skip_reason(data)
@@ -134,6 +134,48 @@ def test_the_frames_match_the_baseline(tmp_path):
             f"确认是有意的改动再重抓："
             f"python3 scripts/capture_generic_baseline.py"
         )
+
+
+def test_the_raster_probe_is_stable():
+    """**探针在同一台机器上要稳**——它不稳，基准就没法绑。
+
+    探针是「这台机器画出来的像素」的指纹：同一台机器、同一份字体，
+    两次画出来必须一模一样（不一样的话，跳过理由会一会儿有一会儿没，
+    基准忽而能比忽而不能比）。
+    """
+    assert baseline.raster_probe() == baseline.raster_probe()
+
+
+def test_the_baseline_records_the_raster_probe():
+    """**基准里必须记着探针**——不记就没法判断「像素能不能比」。
+
+    探针对得上，这条基准在这台机器上才真的能比；对不上（别的机器、
+    别的 cairo 版本），它必须**跳过并说清楚为什么**——而不是照样比，
+    拿噪声当信号。
+    """
+    meta = _baseline()["capture"]
+    recorded = meta.get("raster_probe", "")
+    assert recorded, "基准里没记栅格化探针——换个 cairo 版本就会拿噪声当信号"
+    current = baseline.raster_probe()
+    if recorded == current:
+        return
+    reason = baseline.skip_reason(_baseline())
+    assert reason and "栅格化" in reason, (
+        f"探针对不上（基准 {recorded[:12]}，当前 {current[:12]}），"
+        f"却没跳过这条基准——像素根本不能比"
+    )
+
+
+def test_a_different_rasterizer_is_skipped_with_a_reason(monkeypatch):
+    """**换了栅格化要跳过并说清楚为什么**——不是红，也不是假装绿。
+
+    cairo / FreeType 的版本变了，画出来的像素就变了。那时候比出来的是
+    噪声不是信号——**跳过并说明**，比拿噪声当信号强。
+    """
+    monkeypatch.setattr(baseline, "raster_probe", lambda: "0" * 64)
+    reason = baseline.skip_reason(_baseline())
+    assert reason, "换了栅格化却没跳过——像素根本不能比"
+    assert "栅格化" in reason, f"跳过理由没提栅格化：{reason}"
 
 
 def test_both_baselines_use_the_same_capture_convention():

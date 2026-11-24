@@ -4,7 +4,8 @@
     "font": "AIV Sans CJK SC",
     "mono_font": "AIV Mono CJK SC",
     "platform": "Linux",
-    "captured_from": "9dd93ba9（重抓于本脚本）",
+    "raster_probe": "279161a457f648ceb28c1f78f1fee48ab0521eb01ca79eb27927f4ec9c1ed2e1",
+    "captured_from": "fc49a607（重抓于本脚本）",
     "canvases": [
       "1920x1080",
       "1080x1920"

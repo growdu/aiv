@@ -5,11 +5,15 @@
 「帧指纹怎么算」「基准绑在什么上」「什么时候该跳过」，过一阵两边就会
 不一样——那时候「基准」只是个文件，测不出任何东西。
 
-**基准绑在两样东西上**：
+**基准绑在三样东西上**：
 
 - **字体族**——换一款字体，同一段文字的像素就不同，比出来的是噪声；
 - **平台**——macOS 的 cairo 走 CoreText，Linux 走 FreeType，栅格化不同，
-  同一个字体、同一段文字，像素仍然不同。
+  同一个字体、同一段文字，像素仍然不同；
+- **栅格化本身**——同一个平台上，cairo / FreeType 的版本不同，画出来的
+  像素也不同（抗锯齿的算法随版本变）。所以基准里记一个**栅格化探针**
+  （`raster_probe()`：画几个字，取像素的 sha256）：探针对不上就跳过，
+  不拿噪声当信号。
 
 跨机的版式由 `tests/test_layout_fingerprint.py` 守（比轮廓、坐标与步进
 宽度，那三样来自字体文件与代码，与栅格化无关）。
@@ -28,6 +32,7 @@ from pathlib import Path
 
 import cairo
 
+from pyv import draw
 from pyv import fonts
 from pyv.palette import COLORS, hex_to_rgb
 
@@ -52,6 +57,39 @@ def frame_key(canvas: tuple[int, int], segment_id: str, renderer: str,
               t: float) -> str:
     """基准的键。"""
     return f"{canvas[0]}x{canvas[1]}/{segment_id}/{renderer}@{t}"
+
+
+#: 栅格化探针画的那几个字（ASCII + 汉字）。
+RASTER_PROBE_TEXT = "Ab1 字形"
+
+
+def raster_probe() -> str:
+    """**这台机器的栅格化指纹**：画几个字，取像素的 sha256。
+
+    **为什么要有它**：同一段文字，在不同的 cairo / FreeType 版本上
+    栅格化出来的像素不一样（抗锯齿的算法随版本变）。基准记的是
+    「抓基准那台机器画出来的像素」——换一台机器、换一个版本，比出来的
+    是噪声不是信号。探针就是那几笔的指纹：**探针对不上，说明像素没法比**，
+    跳过并说清楚为什么，而不是拿噪声当信号。
+
+    **探针走 `draw.text`**（画字只有这一条路）——量的是**画面上真正用的
+    那条画法**（同一族字体、同一个关 hinting 的设置）。绕过去自己
+    `ctx.show_text` 的话，量到的是另一条路。
+
+    **探针画的是当前在用的那一族**（`fonts.font_family()`）——字体换了
+    探针就对不上，这是对的：换了字体的像素本来也不能比。
+    """
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 240, 64)
+    ctx = cairo.Context(surface)
+    ctx.set_source_rgb(1, 1, 1)
+    ctx.paint()
+    try:
+        draw.text(ctx, RASTER_PROBE_TEXT, 8, 44, 28, "#000000")
+    except fonts.MissingGlyphs:
+        # 兜底的字体连这几个字都没有——那就只画 ASCII（探针照样能比）。
+        draw.text(ctx, "Ab1", 8, 44, 28, "#000000")
+    return hashlib.sha256(bytes(surface.get_data())).hexdigest()
+
 
 
 def render_frame(module_name: str, params: dict, t: float,
@@ -105,6 +143,7 @@ def capture_meta(**fields) -> dict:
         "font": fonts.font_family(),
         "mono_font": fonts.BUNDLED_MONO_FAMILY,
         "platform": platform.system(),
+        "raster_probe": raster_probe(),
         "captured_from": captured_from(),
     }
     meta.update(fields)
@@ -137,6 +176,15 @@ def skip_reason(payload: dict) -> str:
                 f"（macOS 走 CoreText，Linux 走 FreeType），跨平台比像素是"
                 f"拿噪声当信号。跨机的版式由 "
                 f"tests/test_layout_fingerprint.py 守")
+
+    baseline_probe = meta.get("raster_probe", "")
+    if baseline_probe:
+        current_probe = raster_probe()
+        if baseline_probe != current_probe:
+            return (f"基准是在另一套栅格化下抓的（探针对不上：基准 "
+                    f"{baseline_probe[:12]}，当前 {current_probe[:12]}）——"
+                    f"cairo / FreeType 版本不同，同一段文字画出来的像素就不同，"
+                    f"比出来的是噪声不是信号")
     return ""
 
 

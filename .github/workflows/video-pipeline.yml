@@ -10,8 +10,12 @@ name: AIV pipeline
 # 见 tests/test_compose_end_to_end.py），并按规格核对——所以这条流水线
 # 证明的不只是「零件能用」，而是「整条能走通」。
 #
-# 已知差异：逐像素基准是按 PingFang SC 抓的，Linux 上字体不同，
+# 已知差异：逐像素基准**绑在字体族、平台与栅格化上**——基准是在 macOS
+# （Darwin）上抓的，Linux 上 cairo 走 FreeType（macOS 走 CoreText），
+# 栅格化不同；同一个平台上换了 cairo / FreeType 版本，画的像素也不同。
 # 那条守卫会**跳过并说明原因**（不是红，也不是假装绿）。
+# 跨机的版式由 tests/test_layout_fingerprint.py 守（比轮廓、坐标与步进宽度，
+# 那三样来自字体文件与代码，与栅格化无关）。
 
 on:
   push:
@@ -43,7 +47,7 @@ jobs:
             python3-yaml
           fc-cache -f
           # `fonts-noto-cjk` 是**兜底**——内置子集装不上时的退路。
-          # 主力是仓库里那份 `AIV Sans CJK SC`（下一步装）：
+          # 主力是仓库里那份 `AIV Sans CJK SC`（下面「装上内置字体」那步装的）：
           # 跨机版式一致靠的是「两台机器用同一个字体文件」，
           # 系统字体只是「没装内置字体时也能出片」的保险。
 
