@@ -1,0 +1,13 @@
+{
+  "automation": "api_draft",
+  "content_id": "source-tracks/postgresql/getting-started/postgresql19-concurrency-persistence-extension",
+  "kind": "document",
+  "package_dir": "",
+  "platform": "wechat",
+  "published_url": null,
+  "reason": "已进草稿箱，待人工在公众号后台发表",
+  "retryable": false,
+  "status": "drafted",
+  "title": "PostgreSQL 19 的并发、持久性与扩展",
+  "updated_at": "2026-11-25T04:28:27+00:00"
+}
