@@ -20,6 +20,9 @@
  * 3. 相对图片（`./图.png`）→ `/images/<相对路径>`；
  * 4. 正文开头那个 H1 —— 页面顶部已经渲染过 front matter 里的 title 了，
  *    两处一模一样看着像渲染坏了。
+ * 5. **目录导航页**（`source/docs/<目录>/index.md`）里的相对链接 ——
+ *    它们跟文章走同一套规则，只是**开头那个 H1 要留着**：
+ *    目录页的版面（`docs-index.ejs`）只渲染正文，标题就是正文里的那个 H1。
  *
  * **跑几遍都是同一个结果**（幂等）：改完的地址是绝对的（以文档前缀开头），
  * 下一次直接跳过；开头的 H1 摘掉之后就没有了。
@@ -40,6 +43,7 @@ import remarkParse from 'remark-parse';
 
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const POSTS_DIR = path.join(SITE, 'source', '_posts');
+const PAGES_DIR = path.join(SITE, 'source', 'docs');
 const DATA_DIR = path.join(SITE, 'source', '_data');
 const IMAGES_DIR = path.join(SITE, 'source', 'images');
 const URLS_FILE = path.join(DATA_DIR, 'urls.json');
@@ -146,7 +150,7 @@ function urlSpanInInline(raw) {
 /**
  * 相对链接 → 内容单元 id。
  *
- * `postRel` 是文章相对 `source/_posts/` 的路径（带 `.md`），
+ * `postRel` 是文件在**内容单元树**里的位置（带 `.md`），
  * `linkPath` 是链接里的路径部分。返回 null 表示「指到站外去了」。
  */
 function unitIdOf(postRel, linkPath) {
@@ -158,8 +162,8 @@ function unitIdOf(postRel, linkPath) {
   return id || null;
 }
 
-/** 一篇文章重写后的样子。 */
-function rewritePost(text, postRel, urls) {
+/** 一篇文章（或一页目录导航）重写后的样子。 */
+function rewritePost(text, postRel, urls, stripH1 = true) {
   const { head, body } = splitFrontMatter(text);
   const tree = processor.parse(body);
   const { links, images } = collect(tree);
@@ -232,8 +236,11 @@ function rewritePost(text, postRel, urls) {
   }
 
   // 正文开头那个 H1：页面顶部已经渲染过标题了。
+  //
+  // **目录导航页例外**：它的版面（`docs-index.ejs`）只渲染正文，
+  // 标题就是正文里那个 H1——摘掉的话页面就没标题了。
   const first = tree.children && tree.children[0];
-  if (first && first.type === 'heading' && first.depth === 1) {
+  if (stripH1 && first && first.type === 'heading' && first.depth === 1) {
     edits.push({
       start: first.position.start.offset,
       end: first.position.end.offset,
@@ -269,6 +276,45 @@ function postFiles() {
   return out.sort();
 }
 
+/**
+ * 站点里所有目录导航页（`source/docs/<目录>/index.md`）。
+ *
+ * **它们也要重写**：目录页正文里那些「进子目录」的入口写的是仓库里的
+ * 相对路径（`./子目录/_index.md`），不重写就是站上的死链。
+ */
+function pageFiles() {
+  if (!fs.existsSync(PAGES_DIR)) return [];
+  const out = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.md')) out.push(full);
+    }
+  };
+  walk(PAGES_DIR);
+  return out.sort();
+}
+
+/**
+ * 目录页文件 → 它在**内容单元树**里的位置。
+ *
+ * `source/docs/<目录>/index.md` 对应单元 `<目录>/_index.md`。
+ *
+ * **为什么按内容单元树算**：相对链接是按母稿自己的位置解析的。
+ * 目录页在站点源目录里的文件名是 `index.md`，但它站在单元树里的位置是
+ * `<目录>/_index.md`——`../` 往上一层这种事，只有按单元树算才对得上。
+ */
+function pageUnitRel(file) {
+  const rel = path.relative(PAGES_DIR, file).split(path.sep).join('/');
+  const dir = path.posix.dirname(rel);
+  const name = path.posix.basename(rel, '.md');
+  if (name === 'index') {
+    return dir === '.' ? '_index.md' : `${dir}/_index.md`;
+  }
+  return rel;
+}
+
 function main() {
   const check = process.argv.includes('--check');
 
@@ -278,30 +324,51 @@ function main() {
   }
   const urls = JSON.parse(fs.readFileSync(URLS_FILE, 'utf8'));
 
-  const files = postFiles();
+  const posts = postFiles();
+  const pages = pageFiles();
+
   let changedCount = 0;
   const unresolved = [];
 
-  for (const file of files) {
-    const postRel = path.relative(POSTS_DIR, file).split(path.sep).join('/');
-    const original = fs.readFileSync(file, 'utf8');
-    const { text, changed, unresolved: misses } = rewritePost(original, postRel, urls);
-    unresolved.push(...misses);
-    if (!changed) continue;
-    changedCount += 1;
-    if (check) {
-      console.error(`${postRel}：还没重写`);
-    } else {
-      fs.writeFileSync(file, text, 'utf8');
+  /**
+   * 重写一批文件。
+   *
+   * `unitRelOf` 把文件换算成它在**内容单元树**里的位置（相对链接按它解析）；
+   * `stripH1` 决定要不要摘掉正文开头那个标题。
+   */
+  const rewriteFiles = (files, unitRelOf, stripH1) => {
+    for (const file of files) {
+      const unitRel = unitRelOf(file);
+      const original = fs.readFileSync(file, 'utf8');
+      const { text, changed, unresolved: misses } = rewritePost(
+        original,
+        unitRel,
+        urls,
+        stripH1,
+      );
+      unresolved.push(...misses);
+      if (!changed) continue;
+      changedCount += 1;
+      if (check) {
+        console.error(`${unitRel}：还没重写`);
+      } else {
+        fs.writeFileSync(file, text, 'utf8');
+      }
     }
-  }
+  };
+
+  rewriteFiles(posts, (file) => path.relative(POSTS_DIR, file).split(path.sep).join('/'), true);
+  // 目录导航页：标题就是正文里那个 H1，不能摘。
+  rewriteFiles(pages, pageUnitRel, false);
+
+  const total = posts.length + pages.length;
 
   if (check) {
     if (changedCount > 0) {
-      console.error(`\n${changedCount} 篇文章还没重写（跑一次 rewrite-links.mjs）`);
+      console.error(`\n${changedCount} 个文件还没重写（跑一次 rewrite-links.mjs）`);
       return 1;
     }
-    console.log(`链接已重写（${files.length} 篇）`);
+    console.log(`链接已重写（${total} 个文件）`);
     return 0;
   }
 
@@ -311,7 +378,9 @@ function main() {
       console.log(`  ${item.post}：${item.url} —— ${item.reason}`);
     }
   }
-  console.log(`链接重写：${files.length} 篇文章，改了 ${changedCount} 篇`);
+  console.log(
+    `链接重写：${posts.length} 篇文章 + ${pages.length} 页目录导航，改了 ${changedCount} 个`,
+  );
   return 0;
 }
 

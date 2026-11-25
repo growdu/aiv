@@ -79,11 +79,12 @@
 数字是 **2026-11-23**（站点以 hexo+matery 为准）**逐条单独跑**量出来的。
 **归位之后，总数必须与合并跑时一致**——少一条就是某条用例消失了，
 多一条就是某个目录被收集了两次。
+站点那一行是 **2026-11-25** 重测的（+3 条相对链接守卫，其余各行沿用 11-23 的实测值）。
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
 | 1 | `python3 -m pytest tests/ -q`（仓库根） | 母稿 / review 层：审校信号、审校记录、身份守卫、内容坐标与层间边界、**死路径**、**术语纪律**、**标题判据** | 162 passed / 3 skipped | 162 passed / 3 skipped |
-| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转 | 125 passed / 1 skipped | 125 passed / 1 skipped |
+| 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转、**相对链接翻译** | 129 passed | 129 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
 | 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
@@ -590,3 +591,20 @@ B站与视频号两个 adapter 之前**既不在验收矩阵里，也不在任�
 > ⚠️ 两条工作流（`contracts.yml`、`site.yml`）在 2026-11-19 之前一直
 > 监听 `master`，而这个仓库的默认分支是 `main`——**闸门从来没跑过**。
 > 已修（`d1da8f2d`）。
+
+> 2026-11-25（目录导航页的相对链接那轮）：链接重写器
+> （`platforms/blog/site/tools/rewrite-links.mjs`）**只遍历 `source/_posts/`**，
+> 目录导航页（`source/docs/<目录>/index.md`）不在范围里——
+> 于是目录页正文里那些「进子目录」的入口（`./子目录/_index.md`）
+> 原样进了站点，**点下去是 404，而且构建不报错**。
+> 第一篇（架构总览）那行「L1 → 架构总览」就是这么变成死链的。
+> 这轮把重写器扩到 `source/docs/`：**按内容单元树解析**相对链接
+> （`source/docs/<目录>/index.md` 对应单元 `<目录>/_index.md`，
+> 所以 `../` 往上一层才走得对），**但开头那个 H1 要留着**——
+> 目录页的版面（`docs-index.ejs`）只渲染正文，标题就是正文里那个 H1。
+> **新测试**：`platforms/blog/site/tests/test_relative_links.py`（3 条：
+> 产物里没有残留的相对 `.md` 链接、目录页的标题还在、
+> 目录页的入口是站上真地址）。
+> ⚠️ 死链守卫（`test_pages.py`）**抓不到这种**：它只查以 `/` 开头的站内地址，
+> 没被翻译的相对链接连 `/` 都不带。
+> **实测**：站点 **129 passed**、根 **162 / 3 skip**、`npm run build` 通过。
