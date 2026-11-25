@@ -1,9 +1,9 @@
 # 审校进度索引
 
-审校范围：`docs/` 全树（7 个文件——5 张目录页、1 份模块说明
-`docs/README.md`，编译器按保留名跳过、1 篇技术文章）里**面向读者的技术文章**（1 篇）。
+审校范围：`docs/` 全树（9 个文件——6 张目录页、1 份模块说明
+`docs/README.md`，编译器按保留名跳过、2 篇技术文章）里**面向读者的技术文章**（2 篇）。
 非内容（站点目录页、代码仓库说明、内部工作文档、外链指北、模块说明、只有标题的未成稿）、
-速查/清单/操作类、非技术内容与**转载稿**共 6 篇已排除——分类与逐篇清单见
+速查/清单/操作类、非技术内容与**转载稿**共 7 篇已排除——分类与逐篇清单见
 [`scope/2026-11-14-scope-classification.md`](scope/2026-11-14-scope-classification.md)。
 
 > 转载稿（正文顶部有 `> 来源:`，署名他人）不按原创稿审改——改写等于改别人的东西。
@@ -40,15 +40,19 @@
 
 同日新稿进来：PostgreSQL 19 的第一篇（模块、进程与扩展）过审，
 落 `docs/source-tracks/postgresql/getting-started/`，两张目录页随它一起改指。
+第二篇（行锁）同日过审，落 `docs/source-tracks/postgresql/transaction-mvcc/`，
+L4 那一行从「未开目录」变成链接，系列页与 L4 站页随它一起改指。
 
 | 记录 | 支柱 | 状态 | 信号 | 待确认 | 不阻塞 | 批次 |
 | --- | --- | --- | --- | --- | --- | --- |
 | [postgresql19-architecture](source-tracks/postgresql/getting-started/postgresql19-architecture.md) | source-tracks | 已合入 | 0 | 0 | 0 | 1 |
+| [postgresql19-row-lock](source-tracks/postgresql/transaction-mvcc/postgresql19-row-lock.md) | source-tracks | 已合入 | 0 | 0 | 0 | 1 |
 
 当前工作面（桶 5 技术文章）：
 
 | 支柱 | 原文 |
 | --- | --- |
 | source-tracks | `docs/source-tracks/postgresql/getting-started/postgresql19-architecture.md` |
+| source-tracks | `docs/source-tracks/postgresql/transaction-mvcc/postgresql19-row-lock.md` |
 
 新文章进来时按五个桶重新分一次，工作面跟着长。

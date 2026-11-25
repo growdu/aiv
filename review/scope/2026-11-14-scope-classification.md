@@ -8,7 +8,8 @@
   两篇 PostgreSQL 19 的稿子落桶 5；
   **2026-11-25 三篇稿子全部撤下**——第一篇（`distributed`）与两篇 PostgreSQL 19 的，
   连审校记录一起删。`docs/` 回到「只有目录页」的状态，桶 5 归零；
-  同日 PostgreSQL 19 的第一篇（模块、进程与扩展）重新过审，文章落桶 5，桶 5 回到 1 篇）
+  同日 PostgreSQL 19 的第一篇（模块、进程与扩展）重新过审，文章落桶 5，桶 5 回到 1 篇；
+  当日第二篇（行锁）过审，文章落桶 5，桶 5 回到 2 篇——同时新开 L4 站页，目录页多一张）
 - 依据：`tools/review-check.py` 对 `docs/` 全树（0 篇）跑出的信号，加逐篇读原文的判断
 - 目的：把审校范围限定在**面向读者的技术文章**上，
   免得把站点目录页、规则模板也按技术深度五要素去审。
@@ -17,17 +18,18 @@
 
 | 桶 | 含义 | 篇数 | 技术深度五要素 |
 | --- | --- | --- | --- |
-| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、模块说明（README.md）、只有标题的未成稿 | 6 | 不审 |
+| 1 非内容 | 根本不面向读者：站点目录页、代码仓库说明、内部工作文档、外链指北、模块说明（README.md）、只有标题的未成稿 | 7 | 不审 |
 | 2 速查/清单/操作类 | 面向读者，但形态是命令表、步骤、清单，没有成篇解释 | 0 | 不适用 |
 | 3 非技术内容 | 面向读者，但写的是生活、备考、内部规范 | 0 | 不适用 |
 | 4 转载内容 | 标了来源、署名他人的转载稿 | 0 | 不按原创稿审改 |
-| 5 技术文章 | 面向读者的技术解释 | 1 | **审** |
+| 5 技术文章 | 面向读者的技术解释 | 2 | **审** |
 
-**审校工作面 = 1 篇**（桶 5）——PostgreSQL 19 的第一篇：
-`docs/source-tracks/postgresql/getting-started/postgresql19-architecture.md`。
-`docs/` 全树 7 个 `.md`——5 张目录页、1 份模块说明（`docs/README.md`，编译器按保留名跳过）、
-1 篇技术文章。目录页还在，是因为**分类与系列的骨架已经定好**，新稿子进来时直接落位；
-目录页**只能列已经过审的内容**，所以它们现在列的文章数是一。
+**审校工作面 = 2 篇**（桶 5）——PostgreSQL 19 的头两篇：
+`docs/source-tracks/postgresql/getting-started/postgresql19-architecture.md`
+与 `docs/source-tracks/postgresql/transaction-mvcc/postgresql19-row-lock.md`。
+`docs/` 全树 9 个 `.md`——6 张目录页、1 份模块说明（`docs/README.md`，编译器按保留名跳过）、
+2 篇技术文章。目录页还在，是因为**分类与系列的骨架已经定好**，新稿子进来时直接落位；
+目录页**只能列已经过审的内容**，所以它们现在列的文章数是二。
 
 桶 2、3 面向读者但不是技术文章，可选做表达与结构审，不套五要素；
 桶 1 不审；桶 4 是转载稿，怎么处理（保留标注 / 删除 / 重写）是站长的决定。
@@ -64,6 +66,7 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 | --- | --- | --- |
 | `distributed` | `foundations`（分布式基础） | 0 篇 |
 | `source-tracks` | `postgresql/getting-started`（PostgreSQL 19 / 入门） | 1 篇 |
+| `source-tracks` | `postgresql/transaction-mvcc`（PostgreSQL 19 / 事务与并发） | 1 篇 |
 
 `source-tracks` 这一条是源码主线——按上游源码的读法讲。
 它下面的三级目录 `postgresql/getting-started/` 是一站，
@@ -76,7 +79,7 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 下面四桶逐篇列出。**桶 5 = `docs/` 全集减去这份清单**，不单独列。
 契约测试守着两件事：清单里的路径不许悬空；审校记录的原文不许落在清单里。
 
-### 桶 1 非内容（6 篇）
+### 桶 1 非内容（7 篇）
 
 - `docs/README.md`
 - `docs/distributed/_index.md`
@@ -84,15 +87,16 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 - `docs/source-tracks/_index.md`
 - `docs/source-tracks/postgresql/_index.md`
 - `docs/source-tracks/postgresql/getting-started/_index.md`
+- `docs/source-tracks/postgresql/transaction-mvcc/_index.md`
 
 `docs/README.md` 是**母稿层的模块说明**，编译器按**保留名**跳过它
 （跟 `docs/images/` 同一个道理），不是稿子。
 
-五个 `_index.md` 是**站点目录页**——它们是导航（列出这一层下面有什么），
+六个 `_index.md` 是**站点目录页**——它们是导航（列出这一层下面有什么），
 不是文章。目录页本身要跟它列的文章一起过审，但它不套技术深度五要素：
 一篇目录页没有「机制解释」，不是因为写得不好，是因为它不是文章。
 
-`source-tracks` 这一条的三张目录页是三级链：
+`source-tracks` 这一条的四张目录页是三级链：
 分类页（这一类有什么）→ 系列页（这个系列分几个阶段）→ 站页（这一站有哪些稿子）。
 链的每一级都要在下一级建好之后才写——**目录页只能列已经过审的内容**。
 
@@ -108,10 +112,12 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 
 当前为空。
 
-### 桶 5 技术文章（1 篇）
+### 桶 5 技术文章（2 篇）
 
-当前一篇：PostgreSQL 19 的模块、进程与扩展
-（`docs/source-tracks/postgresql/getting-started/postgresql19-architecture.md`）。
+当前两篇：PostgreSQL 19 的模块、进程与扩展
+（`docs/source-tracks/postgresql/getting-started/postgresql19-architecture.md`）、
+行锁——一次 UPDATE 加锁、等待与唤醒
+（`docs/source-tracks/postgresql/transaction-mvcc/postgresql19-row-lock.md`）。
 逐篇清单在 [`../INDEX.md`](../INDEX.md) 的进度表里——这里不重复列，
 免得同一份路径在两个地方各写一遍、写散了。
 
