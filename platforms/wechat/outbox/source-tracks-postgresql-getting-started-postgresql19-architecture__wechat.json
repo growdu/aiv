@@ -1,0 +1,13 @@
+{
+  "automation": "api_draft",
+  "content_id": "source-tracks/postgresql/getting-started/postgresql19-architecture",
+  "kind": "document",
+  "package_dir": "",
+  "platform": "wechat",
+  "published_url": null,
+  "reason": "已进草稿箱，待人工在公众号后台发表",
+  "retryable": false,
+  "status": "drafted",
+  "title": "PostgreSQL 19 的模块、进程与扩展",
+  "updated_at": "2026-11-25T07:00:43+00:00"
+}

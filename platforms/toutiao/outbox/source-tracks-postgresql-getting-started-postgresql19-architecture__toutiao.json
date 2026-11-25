@@ -1,0 +1,11 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/getting-started/postgresql19-architecture",
+  "package_dir": "platforms/toutiao/out/source-tracks-postgresql-getting-started-postgresql19-architecture",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "manual 档：账号暂无开放平台 API 权限，已出包待人工上传",
+  "status": "packaged",
+  "title": "PostgreSQL 19 的模块、进程与扩展",
+  "updated_at": "2026-11-25T02:04:44-05:00"
+}
