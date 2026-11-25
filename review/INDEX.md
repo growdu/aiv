@@ -1,7 +1,7 @@
 # 审校进度索引
 
-审校范围：`docs/` 全树（9 个文件——3 篇文章、5 张目录页、1 份模块说明
-`docs/README.md`，编译器按保留名跳过）里**面向读者的技术文章**（3 篇）。
+审校范围：`docs/` 全树（6 个文件——5 张目录页、1 份模块说明
+`docs/README.md`，编译器按保留名跳过）里**面向读者的技术文章**（0 篇）。
 非内容（站点目录页、代码仓库说明、内部工作文档、外链指北、模块说明、只有标题的未成稿）、
 速查/清单/操作类、非技术内容与**转载稿**共 6 篇已排除——分类与逐篇清单见
 [`scope/2026-11-14-scope-classification.md`](scope/2026-11-14-scope-classification.md)。
@@ -20,7 +20,7 @@
 | 记录 | 审校记录；逐条建议 |
 | 支柱 | `docs/` 下的一级目录 |
 | 状态 | 待审 → 审校中 → 建议中 → 已确认 → 已合入 |
-| 信号 | 检查器给出的 warn 级信号条数（warn 规则共 16 条，所以是 0~16；当前 `docs/` 实测 0 条） |
+| 信号 | 检查器给出的 warn 级信号条数（warn 规则共 16 条，所以是 0~16） |
 | 待确认 | 「事实待核」里还没销掉的条目数——状态为「已合入」时必须是 0 |
 | 不阻塞 | 标了「不适用」的条目数：事实本身还没核实，但本次改动没碰它，不卡合并 |
 | 批次 | 试点 / 1 / 2 … |
@@ -35,27 +35,15 @@
 [`scope/2026-11-14-scope-classification.md`](scope/2026-11-14-scope-classification.md) 里，
 新文章进来时按那两份重新起记录。
 
-2026-11-23 起，`docs/` 里重新有内容了——第一篇稿子走完了
-「`drafts/` → `review/` → `docs/`」这条流程，批次表也跟着重新起头。
-2026-11-24 第二个支柱 `source-tracks` 进来，两篇 PostgreSQL 19 的稿子同批过审。
+2026-11-25 三篇稿子全部撤下——`distributed` 的 CAP 一篇与两篇 PostgreSQL 19 的稿子，
+连审校记录一起删。`docs/` 回到「只有目录页」的状态。
 
 | 记录 | 支柱 | 状态 | 信号 | 待确认 | 不阻塞 | 批次 |
 | --- | --- | --- | --- | --- | --- | --- |
-| [cap-consistency-tradeoffs](distributed/foundations/cap-consistency-tradeoffs.md) | distributed | 已合入 | 0 | 0 | 0 | 1 |
-| [postgresql19-architecture](source-tracks/postgresql/getting-started/postgresql19-architecture.md) | source-tracks | 已合入 | 0 | 0 | 0 | 2 |
-| [postgresql19-concurrency-persistence-extension](source-tracks/postgresql/getting-started/postgresql19-concurrency-persistence-extension.md) | source-tracks | 已合入 | 0 | 0 | 0 | 2 |
 
 当前工作面（桶 5 技术文章）：
 
 | 支柱 | 原文 |
 | --- | --- |
-| distributed | `docs/distributed/foundations/cap-consistency-tradeoffs.md` |
-| source-tracks | `docs/source-tracks/postgresql/getting-started/postgresql19-architecture.md` |
-| source-tracks | `docs/source-tracks/postgresql/getting-started/postgresql19-concurrency-persistence-extension.md` |
-
-第一篇是 `distributed` 这条线的第一篇，也是整条流水线（编译器 → 内容契约 →
-站点 → 平台 adapter）第一次吃上真实输入。
-第二篇支柱 `source-tracks` 走的是源码主线——按上游源码的读法讲，
-一篇整体架构、一篇并发与持久化，两篇都对着 `REL_19_STABLE` 的源码核过。
 
 新文章进来时按五个桶重新分一次，工作面跟着长。
