@@ -60,6 +60,11 @@ src: source-tracks/postgresql/getting-started/postgresql19-architecture.md
    - 建议：行号从「`launcher.c:518`」改成「`launcher.c:518` 往下——518、526、536、545 四处」
    - 原因：四个 `bgw_type` 分别落在 518、526、536、545 行，只给 518 会让读者以为只找到一种。
 
+10. 位置：`## 小结与延伸`，预告下一篇的那一段
+    - 问题（类别）：事实
+    - 建议：原文「锁有三级（表级、行级、页级），但加锁的入口只有一个」改成「表级锁走 heavyweight lock 那一套……但**行级锁不走那一套**，它写在元组头里」
+    - 原因：这是全篇最该被读者记住的一句，写错了代价最大。**行级锁根本不走 heavyweight lock**：正常的 `UPDATE` 撞上行锁时，行锁记在元组头的 `t_xmax` 加 `HEAP_XMAX_EXCL_LOCK` / `HEAP_XMAX_KEYSHR_LOCK` / `HEAP_XMAX_LOCK_ONLY` 标志位里（`src/include/access/htup_details.h:220-226`），不经过 `LockAcquire`。页级的 heavyweight lock 倒是有——`LOCKTAG_PAGE`（`src/include/storage/locktag.h:40`）配 `LockPage()`——但全树只有 GIN 拿它锁元页（`src/backend/access/gin/ginfast.c:815`）。「加锁的入口只有一个」把三条路说成了一条，读者照着它去找 `LockAcquire` 就会扑空。
+
 ## 事实待核
 
 - [x] `src/backend/` 下是 **28** 个子目录、`.c` 与 `.h` 合计 **1 161 472** 行——依据：`ls -d src/backend/*/ | wc -l` = 28；`find src/backend -name '*.c' -o -name '*.h' | xargs wc -l | tail -1` = 1161472。分组表六行相加也是 1 161 472：163 828 + 206 996 + 289 998 + 67 881 + 305 688 + 127 081。
@@ -88,6 +93,8 @@ src: source-tracks/postgresql/getting-started/postgresql19-architecture.md
 - [x] `wal_level = replica` 时逻辑复制可以不再重启就打开——依据：release-19.sgml 第 48-50 行的 Highlights 原句。
 - [x] 19 的发布日期是 2026-11-19——依据：`doc/src/sgml/release-19.sgml` 第 9 行 `<para>2026-11-19</para>`。
 - [x] `contrib/` 下是 61 个目录、55 个 `.control` 文件、分布在 49 个目录里——依据：`ls -d contrib/*/ | wc -l` = 61；`find contrib -name '*.control' | wc -l` = 55；按顶层目录去重后 = 49。
+- [x] **行级锁不走 heavyweight lock**——依据：`src/include/access/htup_details.h:220-226` 的 `HEAP_XMAX_EXCL_LOCK`（0x0040）、`HEAP_XMAX_LOCK_ONLY`（0x0080）、`HEAP_XMAX_SHR_LOCK`；行锁写在元组头的 `t_xmax` 加这几个标志位里。`LockAcquire()` 那条路是表级、对象级、advisory lock 走的。
+- [x] 页级的 heavyweight lock 存在但几乎不用——依据：`src/include/storage/locktag.h:40` 的 `LOCKTAG_PAGE` 与 `SET_LOCKTAG_PAGE`（`src/backend/storage/lmgr/lmgr.c:511-546`）；全树用 `LockPage()` 的只有 GIN 锁元页（`src/backend/access/gin/ginfast.c:815`）与 `ConditionalLockPage()`（827 行）。
 
 ## 可补的技术证据或产物
 
@@ -99,6 +106,7 @@ src: source-tracks/postgresql/getting-started/postgresql19-architecture.md
 ## 已确认的改动
 
 - 数字与行号修了九处，全部改在 `drafts/source-tracks/postgresql/getting-started/postgresql19-architecture.md`，与 `docs/` 那份逐字节一致（`diff` 无差异）：目录数 26→28、「二十几块目录」→「二十八个目录」；`parallel.c:583`→`:630`；contrib 的 55→49（两处，含配图框标题）；逻辑复制四种 `bgw_type` 的行号补全；`pg_settings` 那条 SQL 去重并换 `io_max_workers`；第三条 SQL 的排除列表按 description 重列；`ps` 命令 `-o …,args` 与样例输出；`src/interfaces/` 补 `libpq-oauth`。
+- 第九处之后又改了第十处（预告第二篇的那段）：「锁有三级……加锁的入口只有一个」改成「表级锁走 heavyweight lock 那一套……但行级锁不走那一套，它写在元组头里」。这一处是**合入后才发现的**——初稿把行锁与表级锁当成同一条路，而第二篇要往下拆的正是行锁，读者照着这句去找 `LockAcquire` 会扑空。
 - 补了一段说明十八条 `PG_PROCTYPE` 与十七种进程的差（`B_INVALID` 是第 0 项哨兵），补在十七行进程表之后。
 - 三张目录页（`docs/source-tracks/postgresql/_index.md`、`docs/source-tracks/postgresql/getting-started/_index.md`，以及随之更新的 `drafts/` 那两份）**与这篇文章一起过审**：目录页只能列已过审的内容，两张页原先指向的是 11-24 撤下的那两篇稿子，现在改指这一篇。`docs/source-tracks/_index.md` 不需要改——它只指向「PostgreSQL」这个二级目录。
 - 机械检查：`python3 tools/review-check.py drafts/source-tracks/postgresql/getting-started/postgresql19-architecture.md` → **0 警告 0 提示**，技术深度五要素全过（DEP-01=28、DEP-02=47、DEP-03=7、DEP-04=6、DEP-05=5）。目录页按文件名分流，只查链接、拼写、H1 与图示。

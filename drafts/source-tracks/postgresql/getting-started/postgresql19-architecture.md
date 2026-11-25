@@ -601,11 +601,12 @@ PostgreSQL 19 这一版的几处改动，正好落在前面讲的三块上。
 后台工作进程（进程层）。
 `contrib/` 有 55 个官方扩展，社区还有 PostGIS、pgvector、TimescaleDB 这一批。
 
-下一篇往下拆一层：**行锁是怎么加上去的**——
-从 `LockAcquire()` 进 `ProcSleep()`，到等待队列怎么排、
-死锁检测怎么在 `DeadLockCheck()` 里跑完一圈。
-锁有三级（表级、行级、页级），但加锁的入口只有一个，
-从那儿往下读，能看清 PostgreSQL 的并发控制到底长什么样。
+下一篇往下拆一层：**行锁是怎么加上去的**。
+这件事有个反直觉的地方：表级锁走 heavyweight lock 那一套——
+`LockAcquire()` 进 `ProcSleep()`，等待队列怎么排、
+死锁检测怎么在 `DeadLockCheck()` 里跑完一圈；
+但**行级锁不走那一套**，它写在元组头里。
+从这两条岔路分别读进去，能看清 PostgreSQL 的并发控制到底长什么样。
 
 想自己核对的话，源码树拿 `REL_19_STABLE` 分支，
 关键入口是这几个：
