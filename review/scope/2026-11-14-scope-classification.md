@@ -7,7 +7,8 @@
   2026-11-24 第二个支柱 `source-tracks` 进来——分类页、系列页、站页三张目录页落桶 1，
   两篇 PostgreSQL 19 的稿子落桶 5；
   **2026-11-25 三篇稿子全部撤下**——第一篇（`distributed`）与两篇 PostgreSQL 19 的，
-  连审校记录一起删。`docs/` 回到「只有目录页」的状态，桶 5 归零）
+  连审校记录一起删。`docs/` 回到「只有目录页」的状态，桶 5 归零；
+  同日 PostgreSQL 19 的第一篇（模块、进程与扩展）重新过审，文章落桶 5，桶 5 回到 1 篇）
 - 依据：`tools/review-check.py` 对 `docs/` 全树（0 篇）跑出的信号，加逐篇读原文的判断
 - 目的：把审校范围限定在**面向读者的技术文章**上，
   免得把站点目录页、规则模板也按技术深度五要素去审。
@@ -20,14 +21,13 @@
 | 2 速查/清单/操作类 | 面向读者，但形态是命令表、步骤、清单，没有成篇解释 | 0 | 不适用 |
 | 3 非技术内容 | 面向读者，但写的是生活、备考、内部规范 | 0 | 不适用 |
 | 4 转载内容 | 标了来源、署名他人的转载稿 | 0 | 不按原创稿审改 |
-| 5 技术文章 | 面向读者的技术解释 | 0 | **审** |
+| 5 技术文章 | 面向读者的技术解释 | 1 | **审** |
 
-**审校工作面 = 0 篇**（桶 5）——2026-11-25 三篇稿子全部撤下：
-`distributed` 那一篇与两篇 PostgreSQL 19 的稿子，连审校记录一起删。
-`docs/` 回到「只有目录页」的状态：全树 6 个 `.md`——
-5 张目录页、1 份模块说明（`docs/README.md`，编译器按保留名跳过）。
-目录页还在，是因为**分类与系列的骨架已经定好**，新稿子进来时直接落位；
-但目录页**只能列已经过审的内容**，所以它们现在列的文章数为零。
+**审校工作面 = 1 篇**（桶 5）——PostgreSQL 19 的第一篇：
+`docs/source-tracks/postgresql/getting-started/postgresql19-architecture.md`。
+`docs/` 全树 7 个 `.md`——5 张目录页、1 份模块说明（`docs/README.md`，编译器按保留名跳过）、
+1 篇技术文章。目录页还在，是因为**分类与系列的骨架已经定好**，新稿子进来时直接落位；
+目录页**只能列已经过审的内容**，所以它们现在列的文章数是一。
 
 桶 2、3 面向读者但不是技术文章，可选做表达与结构审，不套五要素；
 桶 1 不审；桶 4 是转载稿，怎么处理（保留标注 / 删除 / 重写）是站长的决定。
@@ -58,12 +58,12 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 
 ## 逐支柱分布
 
-`docs/` 现在有两个支柱，都还没有稿子：
+`docs/` 现在有两个支柱：
 
 | 支柱 | 目录层 | 稿子 |
 | --- | --- | --- |
 | `distributed` | `foundations`（分布式基础） | 0 篇 |
-| `source-tracks` | `postgresql/getting-started`（PostgreSQL 19 / 入门） | 0 篇 |
+| `source-tracks` | `postgresql/getting-started`（PostgreSQL 19 / 入门） | 1 篇 |
 
 `source-tracks` 这一条是源码主线——按上游源码的读法讲。
 它下面的三级目录 `postgresql/getting-started/` 是一站，
@@ -108,9 +108,12 @@ python3 tools/review-check.py docs --json --out /tmp/all_docs.json
 
 当前为空。
 
-### 桶 5 技术文章（0 篇）
+### 桶 5 技术文章（1 篇）
 
-当前为空。
+当前一篇：PostgreSQL 19 的模块、进程与扩展
+（`docs/source-tracks/postgresql/getting-started/postgresql19-architecture.md`）。
+逐篇清单在 [`../INDEX.md`](../INDEX.md) 的进度表里——这里不重复列，
+免得同一份路径在两个地方各写一遍、写散了。
 
 桶 5 是**算出来的**，不是列出来的：`docs/` 全集减去上面四桶的清单。
 所以新稿子进 `docs/`，这一栏的数字自己就变了——但清单要跟着重列，
