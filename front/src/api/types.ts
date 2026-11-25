@@ -40,6 +40,23 @@ export interface DraftUnit {
   reason: string;
 }
 
+/** 目录树的一个节点——目录名 + 下一层。 */
+export interface CoordinateNode {
+  name: string;
+  children: CoordinateNode[];
+}
+
+/**
+ * 坐标选项：界面做下拉框用的两棵树。
+ *
+ * **目录即接口**——分类、二级内容、系列、合集都只存在于目录里，
+ * 这里没有登记表，只有扫出来的目录名。
+ */
+export interface DraftOptions {
+  document: { categories: CoordinateNode[] };
+  episode: { series: CoordinateNode[]; tiers: string[] };
+}
+
 export interface Job {
   id: string;
   kind: string;

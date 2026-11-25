@@ -75,8 +75,9 @@ def classify_draft(rel: str) -> str:
     - 视频线以 `_video/` 开头：去掉前缀后，**四段**且末段是
       `skeleton.yaml` → 骨架；**四段**且末段 ∈ `TIERS` → 一期。
     - 文档线：末段是 `README.md` → 说明文件（**不是可编辑单元**）；
-      末段是 `_index.md` → 索引页；**三段**且末段是 `.md` → 扁平稿；
-      **四段**且末段是 `index.md` → bundle 稿（目录里带素材的那种）。
+      末段是 `_index.md` → 索引页；末段是 `index.md` 且四段 → bundle 稿
+      （目录里带素材的那种）；**三级以上**且末段是别的 `.md` → 扁平稿
+      （**深度不写死**：源向线比扁平稿深两级）。
     """
     parts = [p for p in rel.strip("/").split("/") if p]
     if not parts:
@@ -94,10 +95,13 @@ def classify_draft(rel: str) -> str:
         return "readme"
     if parts[-1] == "_index.md":
         return "index"
-    if len(parts) == 3 and parts[-1].endswith(".md"):
-        return "document"
     if len(parts) == 4 and parts[-1] == "index.md":
         return "bundle"
+    # 扁平稿：**至少三级目录**（分类 / 二级内容 / 期号）。
+    # **深度不写死**——源向线多两级（方向 / 系列），那也是一篇文档。
+    # （`index.md` 是 bundle 的标记，不算扁平稿。）
+    if len(parts) >= 3 and parts[-1].endswith(".md") and parts[-1] != "index.md":
+        return "document"
     return "unknown"
 
 

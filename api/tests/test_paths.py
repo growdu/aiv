@@ -17,6 +17,29 @@ def test_the_index_page_is_its_own_kind():
     assert classify_draft("distributed/_index.md") == "index"
 
 
+def test_a_flat_markdown_deeper_than_three_segments_is_still_a_document():
+    """**目录的深度是仓库的事，不是形状的规则。**
+
+    源向线比扁平稿深两级（方向/系列）——
+    `source-tracks/postgresql/getting-started/篇.md` 仍是**一篇文档**，
+    不是「形状对不上」。判它 unknown 的话，草稿箱会**跳过它**，
+    建完的稿子就看不见了。
+    """
+    assert classify_draft(
+        "source-tracks/postgresql/getting-started/pg19.md") == "document"
+
+
+def test_listing_finds_a_deeper_flat_document(tmp_path):
+    deep = tmp_path / "source-tracks" / "postgresql" / "getting-started"
+    deep.mkdir(parents=True)
+    (deep / "pg19.md").write_text("x", encoding="utf-8")
+
+    units = list_draft_units(tmp_path)
+    assert [u.draft_id for u in units] == [
+        "source-tracks/postgresql/getting-started/pg19"]
+    assert units[0].kind == "document"
+
+
 def test_a_skeleton_lives_at_the_document_level_not_under_a_tier():
     assert classify_draft("_video/系列/合集/文档/skeleton.yaml") == "skeleton"
 

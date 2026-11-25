@@ -5,11 +5,12 @@
 // 身份（站名、品牌名、平台名）**不在源码里**——它们从接口面来。
 import { onMounted, ref } from "vue";
 
-import { getJSON, postJSON, putJSON } from "./api/client";
-import type { DraftUnit, OutboxSnapshot, ReviewReport } from "./api/types";
+import { ApiError, getJSON, postJSON, putJSON } from "./api/client";
+import type { DraftOptions, DraftUnit, OutboxSnapshot, ReviewReport } from "./api/types";
 import JobLog from "./components/JobLog.vue";
 import DocPreview from "./views/DocPreview.vue";
 import DraftPicker from "./views/DraftPicker.vue";
+import NewDraftForm from "./views/NewDraftForm.vue";
 import PublishStatus from "./views/PublishStatus.vue";
 import ReviewPanel from "./views/ReviewPanel.vue";
 import ScriptEditor from "./views/ScriptEditor.vue";
@@ -24,6 +25,10 @@ const report = ref<ReviewReport | null>(null);
 const reviewing = ref(false);
 const jobId = ref<string | null>(null);
 const snapshots = ref<OutboxSnapshot[]>([]);
+/** 坐标选项（目录树）——建草稿的表单要靠它。 */
+const options = ref<DraftOptions | null>(null);
+/** 开着的新建表单：空 = 不开。 */
+const newKind = ref<"document" | "episode" | null>(null);
 
 
 /**
@@ -99,8 +104,49 @@ async function promote(): Promise<void> {
 }
 
 async function create(kind: string): Promise<void> {
-  message.value = "新建要在服务端定路径——这一版的界面还没接新建表单。";
-  void kind;
+  message.value = "";
+  try {
+    options.value = await getJSON<DraftOptions>("/drafts/options");
+  } catch (err) {
+    message.value = errorText(err);
+    return;
+  }
+  newKind.value = kind === "episode" ? "episode" : "document";
+}
+
+/** 建好了：刷新列表，**并自动选中**新的一稿。 */
+async function submitDraft(payload: {
+  kind: string;
+  draft_id: string;
+  title: string;
+}): Promise<void> {
+  try {
+    await postJSON("/drafts", payload);
+  } catch (err) {
+    // 建不出来 → 把后端的话报出来，**不假装成功**。
+    message.value = errorText(err);
+    return;
+  }
+  newKind.value = null;
+  message.value = "建好了：" + payload.draft_id;
+  await loadUnits();
+  await select(payload.draft_id);
+}
+
+/** AI 起草——**这一版没做**（规格 §二 N2）。按钮在位，点了报后端的原话。 */
+async function aiDraft(): Promise<void> {
+  try {
+    await postJSON("/drafts/draft");
+    message.value = "起草成功了。";
+  } catch (err) {
+    message.value = errorText(err);
+  }
+}
+
+/** 后端说的话。 */
+function errorText(err: unknown): string {
+  if (err instanceof ApiError) return err.detail;
+  return err instanceof Error ? err.message : String(err);
 }
 
 /** 出片：**先过审再出片**（规格 D10）——服务端那一步自己会先复制。 */
@@ -146,6 +192,15 @@ onMounted(() => {
       :units="units"
       @select="select"
       @create="create"
+      @draft="aiDraft"
+    />
+
+    <NewDraftForm
+      v-if="newKind && options"
+      :kind="newKind"
+      :options="options"
+      @submit="submitDraft"
+      @cancel="newKind = null"
     />
 
     <p v-if="message" data-test="message">{{ message }}</p>

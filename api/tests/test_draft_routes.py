@@ -113,3 +113,38 @@ def test_creating_an_episode_draft_writes_the_three_facts(client, tmp_path, monk
     tier = root / "_video" / "系列" / "合集" / "文档" / "short"
     contract = json.loads((tier / "contract.json").read_text(encoding="utf-8"))
     assert contract["episode"] == "系列/合集/文档/short"
+
+
+def test_the_options_endpoint_lists_both_coordinate_trees(client, tmp_path, monkeypatch):
+    """坐标选项：界面做下拉框要用的两棵树。
+
+    **并集**：草稿箱里的分类与母稿层里的分类都要能选——
+    只在草稿箱里的是「还没写」，只在母稿层里的是「已经过了审」。
+    """
+    monkeypatch.setattr(drafts, "DRAFTS_DIR", tmp_path / "drafts")
+    monkeypatch.setattr(drafts, "DOCS_DIR", tmp_path / "docs")
+    monkeypatch.setattr(drafts, "EPISODES_DIR", tmp_path / "video" / "episodes")
+    (tmp_path / "drafts" / "分类" / "二级").mkdir(parents=True)
+    (tmp_path / "docs" / "源向" / "系列" / "阶段").mkdir(parents=True)
+    (tmp_path / "video" / "episodes" / "AIV" / "合集" / "文档" / "short").mkdir(
+        parents=True)
+
+    body = client.get("/api/drafts/options").json()
+    assert body["document"]["categories"] == [
+        {"name": "分类", "children": [{"name": "二级", "children": []}]},
+        {"name": "源向", "children": [{"name": "系列",
+                                       "children": [{"name": "阶段",
+                                                     "children": []}]}]},
+    ]
+    assert body["episode"]["series"] == [
+        {"name": "AIV", "children": [{"name": "合集",
+                                      "children": [{"name": "文档",
+                                                    "children": []}]}]},
+    ]
+    assert body["episode"]["tiers"] == ["short", "mid", "full"]
+
+
+def test_the_options_endpoint_is_not_eaten_by_the_draft_id_route(client):
+    """`/api/drafts/options` **必须注册在 `/{draft_id:path}` 之前**——
+    否则「options」正好是一个合法的 draft_id，被吃掉。"""
+    assert client.get("/api/drafts/options").status_code == 200

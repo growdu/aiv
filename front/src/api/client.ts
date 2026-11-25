@@ -15,13 +15,38 @@ function endpoint(path: string): string {
   return path === BASE || path.startsWith(`${BASE}/`) ? path : `${BASE}${path}`;
 }
 
+/** 接口面回的话——状态码 + 人话。 */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly detail: string;
+
+  constructor(status: number, detail: string) {
+    super(`${status} ${detail}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+/** 报错时取后端说的那句——JSON 的 `detail`；不是 JSON 就原样。 */
+async function readDetail(response: Response): Promise<string> {
+  const text = await response.text();
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed.detail === "string") return parsed.detail;
+  } catch {
+    // 不是 JSON——原样报出去。
+  }
+  return text;
+}
+
 async function request<T>(url: string, init: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
   });
   if (!response.ok) {
-    throw new Error(`${response.status} ${await response.text()}`);
+    throw new ApiError(response.status, await readDetail(response));
   }
   if (response.status === 204) {
     return undefined as T;

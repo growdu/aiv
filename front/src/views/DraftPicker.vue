@@ -11,6 +11,7 @@ const props = defineProps<{ units: DraftUnit[] }>();
 const emit = defineEmits<{
   (event: "select", draftId: string): void;
   (event: "create", kind: string): void;
+  (event: "draft"): void;
 }>();
 
 /** 搜索框里的字。 */
@@ -76,6 +77,15 @@ const groups = computed(() => {
         @click="emit('create', 'episode')"
       >
         新建视频草稿
+      </button>
+      <!-- **AI 起草这一版没做**（规格 §二 N2）——按钮在位，
+           点了把后端的原话报出来，不假装能做。 -->
+      <button
+        data-test="ai-draft"
+        type="button"
+        @click="emit('draft')"
+      >
+        起草（未启用）
       </button>
     </header>
 

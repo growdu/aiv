@@ -10,8 +10,18 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from ..services import coordinates
 from ..services import drafts
-from ..services.paths import DRAFTS_DIR, REPO_ROOT, DraftUnit, list_draft_units
+from ..services.paths import (
+    DRAFTS_DIR,
+    DOCS_DIR,
+    EPISODES_DIR,
+    REPO_ROOT,
+    TIERS,
+    VIDEO_DRAFT_PREFIX,
+    DraftUnit,
+    list_draft_units,
+)
 
 router = APIRouter(prefix="/api/drafts", tags=["drafts"])
 
@@ -57,6 +67,27 @@ def ai_draft():
     """
     raise HTTPException(status_code=501,
                         detail="AI 起草这一版还没做：先手写稿子，或用 POST /api/drafts 建一个单元")
+
+
+@router.get("/options")
+def draft_options():
+    """坐标选项：界面做下拉框要用的两棵树。
+
+    **并集**：草稿箱里的分类与母稿层里的分类都要能选——
+    只在草稿箱里的是「还没写」，只在母稿层里的是「已经过了审」。
+
+    **只返回目录名**——站名、品牌名、平台名一个都没有。
+    """
+    return {
+        "document": {
+            "categories": coordinates.document_tree(DRAFTS_DIR, DOCS_DIR),
+        },
+        "episode": {
+            "series": coordinates.episode_tree(
+                DRAFTS_DIR / VIDEO_DRAFT_PREFIX, EPISODES_DIR),
+            "tiers": list(TIERS),
+        },
+    }
 
 
 @router.get("")

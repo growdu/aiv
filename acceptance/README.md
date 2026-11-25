@@ -92,8 +92,8 @@
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
-| 11 | `cd api && python3 -m pytest tests/ -q` | 创作平台门面：路由形状、作业与 SSE、审校面板的数据模型、**过审只复制**、目录穿越、**端到端六场景** | 124 passed | 124 passed |
-| 12 | `cd front && npm run test` | 创作平台前端：**零 import 缝**、身份守卫、草稿箱与编辑器、审校面板、产物与作业 | 20 passed | 20 passed |
+| 11 | `cd api && python3 -m pytest tests/ -q` | 创作平台门面：路由形状、作业与 SSE、审校面板的数据模型、**过审只复制**、目录穿越、**坐标选项**、**深一层的扁平稿**、**端到端六场景** | 132 passed | 132 passed |
+| 12 | `cd front && npm run test` | 创作平台前端：**零 import 缝**、身份守卫、草稿箱与编辑器、审校面板、产物与作业、**新建表单**、**门面接线** | 31 passed | 31 passed |
 
 ### 创作平台的手测记录（2026-11-23）
 
@@ -168,7 +168,8 @@
 > front matter 与代码块也在扫描范围内、对外内容与学习流阶段名不带自造词）。
 > 视频线只动了一处：`video/pipeline/pyv/persona.py` 的 `METHOD_WORDS`
 > 把「心智模型」换成「方法论」——它是**口播稿的用词**，受这条判据管。
-> `front` 那套件在这台机器上**没跑成**（`vitest` 没装，属环境缺依赖）。
+> （2026-11-25 订正：`front` 那套件**跑成了**——是这台机器 `node_modules`
+> 没装，`npm ci` 之后 31 passed。）
 
 > 2026-11-24（标题判据那轮）：review 层又加了一条**标题判据**
 > （`review/specs/2026-11-24-标题与章节顺序.md`），检查器加六条信号
@@ -193,6 +194,26 @@
 > ⚠️ `browser/` 在这台机器上是 **1 failed / 99 passed / 64 errors**——
 > 那 64 条是**环境红**（playwright 的 driver 缺 `libatomic.so.1`），不是逻辑红；
 > `browser/` 这轮两边都没碰。
+
+> 2026-11-25（新建草稿表单那轮）：创作平台补上**「新建草稿」表单**——
+> 规格 §7.1 要求的「起草（未启用）」按钮也一并补齐。
+> **坐标由目录树驱动**（新增 `GET /api/drafts/options`，并集
+> `drafts/` + `docs/` 与 `drafts/_video/` + `video/episodes/`），
+> 因为**坐标的深度不统一**：`distributed/foundations/篇.md` 两级目录，
+> `source-tracks/postgresql/getting-started/篇.md` 三级。
+> 顺带修了一个**真 bug**：`api/services/paths.py` 的 `classify_draft`
+> 把「正好三段」当成扁平稿的形状，源向线那种**深一层的稿子被判成
+> `unknown`**，而 `list_draft_units` 会跳过 unknown——**建完的稿子在草稿箱里看不见**。
+> 现在 document 是「三级以上且末段是 `.md`」（`_index.md` 仍是 index、
+> `index.md` 仍是 bundle，优先级不变）。
+> **新测试**：`api/tests/test_coordinates.py`（4 条：两棵树并起来、
+> `_` 保留名不算分类、视频树截到三层、空树）、`api/tests/test_draft_routes.py`
+> （+2 条：坐标选项接口、路由不被 `{draft_id:path}` 吃掉）、
+> `api/tests/test_paths.py`（+2 条：深一层的扁平稿）、
+> `front/tests/new-draft.test.ts`（7 条）、`front/tests/app.test.ts`（4 条）。
+> **实测**：api **132 passed**、front **31 passed**、根 **162 / 3 skip**、
+> `npm run build` 通过；真浏览器手测走通「三层坐标 → 建 → 落盘 → 自动选中 →
+> 打开编辑器」，手测产物已删。
 
 > 2026-11-23（字体覆盖与通用渲染器基准那轮）：**video 1294 → 1338 条**
 > （passed 1234 → 1280，skip 60 → 58）——计划四（`publish/plans/12-…`）落地。
