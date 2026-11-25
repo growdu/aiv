@@ -6,7 +6,7 @@ import { computed, ref } from "vue";
 
 import type { DraftUnit } from "../api/types";
 
-const props = defineProps<{ units: DraftUnit[] }>();
+const props = defineProps<{ units: DraftUnit[]; selected?: string | null }>();
 
 const emit = defineEmits<{
   (event: "select", draftId: string): void;
@@ -65,6 +65,7 @@ const groups = computed(() => {
         placeholder="按草稿号过滤"
       />
       <button
+        class="btn--primary"
         data-test="create-document"
         type="button"
         @click="emit('create', 'document')"
@@ -81,6 +82,7 @@ const groups = computed(() => {
       <!-- **AI 起草这一版没做**（规格 §二 N2）——按钮在位，
            点了把后端的原话报出来，不假装能做。 -->
       <button
+        class="btn--ghost"
         data-test="ai-draft"
         type="button"
         @click="emit('draft')"
@@ -97,13 +99,18 @@ const groups = computed(() => {
         <li v-for="unit in group.units" :key="unit.draft_id">
           <button
             type="button"
+            :class="{ 'picker__item--active': unit.draft_id === props.selected }"
             :data-test="`unit-${unit.draft_id}`"
             @click="emit('select', unit.draft_id)"
           >
             {{ unit.draft_id }}
           </button>
-          <!-- 索引页与合集稿**不过审**：把原因摆在行里。 -->
-          <span v-if="!unit.promotable" class="picker__reason">
+          <!-- 索引页与合集稿**不过审**：原因挂在行上，不刷一整屏。 -->
+          <span
+            v-if="!unit.promotable"
+            class="picker__reason"
+            :title="unit.reason"
+          >
             {{ unit.reason }}
           </span>
         </li>
@@ -111,3 +118,103 @@ const groups = computed(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.picker__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.picker__head input[type="search"] {
+  font-size: var(--fs-2);
+}
+
+.picker__head button {
+  width: 100%;
+  font-size: var(--fs-2);
+}
+
+.picker__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+/* 分组标题：小写、淡、窄——它是路标，不是标题。 */
+.picker__group h3 {
+  font-size: var(--fs-1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+
+.picker__group ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.picker__group li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 一行稿子：左边一截路径，右边一个状态点。 */
+.picker__group button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--text-2);
+  padding: 5px var(--sp-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker__group button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-hover);
+}
+
+/* 当前选中的那一行——一眼看得见。 */
+.picker__group button.picker__item--active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-hover);
+  font-weight: 600;
+}
+
+/* 不过审的原因：**默认收起来**——一屏索引页各挂一句同样的理由太吵。
+ * 悬停或选中那一行时才展开，完整的话也在 title 里。 */
+.picker__reason {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding-left: var(--sp-2);
+  color: var(--text-3);
+  font-size: var(--fs-1);
+  white-space: nowrap;
+  transition: max-height 0.15s ease, opacity 0.15s ease;
+}
+
+.picker__group li:hover .picker__reason,
+.picker__group li:has(.picker__item--active) .picker__reason {
+  max-height: 2em;
+  opacity: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>

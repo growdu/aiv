@@ -57,3 +57,44 @@ watch(() => props.docId, load);
     <p v-else data-test="hint">{{ hint || "预览服务没跑起来。" }}</p>
   </section>
 </template>
+
+<style scoped>
+.preview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.preview__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.preview__head h2 {
+  font-size: var(--fs-4);
+}
+
+/* 站点页面嵌进来——给它一块白底和边框，像一张纸。 */
+.preview iframe {
+  width: 100%;
+  height: 70vh;
+  min-height: 360px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-1);
+  background: var(--surface);
+}
+
+.preview p {
+  padding: var(--sp-5);
+  background: var(--surface-2);
+  border-radius: var(--r-1);
+  color: var(--text-3);
+  font-size: var(--fs-2);
+  text-align: center;
+}
+</style>

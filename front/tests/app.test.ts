@@ -52,6 +52,21 @@ function plainHandler(url: string) {
 }
 
 describe("创作平台的门面", () => {
+  it("两栏工作台：草稿列表在左，编辑与审校在右", async () => {
+    fakeFetch(plainHandler);
+    const wrapper = mount(App);
+    await flushPromises();
+
+    const side = wrapper.find("[data-test='side']");
+    const main = wrapper.find("[data-test='main']");
+    expect(side.exists()).toBe(true);
+    expect(main.exists()).toBe(true);
+    // 草稿箱在左栏。
+    expect(side.find("button[data-test='create-document']").exists()).toBe(true);
+    // 审校面板在右栏。
+    expect(main.find(".review").exists()).toBe(true);
+  });
+
   it("点「新建文档草稿」把表单打开", async () => {
     fakeFetch(plainHandler);
     const wrapper = mount(App);

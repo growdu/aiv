@@ -75,3 +75,64 @@ watch(() => props.episode, load);
     </div>
   </section>
 </template>
+
+<style scoped>
+.preview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.preview__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.preview__head h2 {
+  font-size: var(--fs-4);
+}
+
+.preview p {
+  color: var(--text-3);
+  font-size: var(--fs-2);
+  margin-bottom: var(--sp-2);
+}
+
+/* 一个产物一块地——视频、音频、帧、链接各归各的。 */
+.preview__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.preview__item video {
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--r-1);
+  background: var(--surface-3);
+}
+
+.preview__item audio {
+  width: 100%;
+  max-width: 480px;
+}
+
+.preview__item img {
+  max-width: 320px;
+  border-radius: var(--r-1);
+  border: 1px solid var(--border);
+}
+
+.preview__size {
+  color: var(--text-3);
+  font-size: var(--fs-1);
+  font-variant-numeric: tabular-nums;
+}
+</style>

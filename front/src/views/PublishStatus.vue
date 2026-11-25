@@ -45,3 +45,35 @@ defineProps<{ snapshots: OutboxSnapshot[] }>();
     </table>
   </section>
 </template>
+
+<style scoped>
+.publish {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.publish h2 {
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-4);
+}
+
+.publish p {
+  color: var(--text-3);
+  font-size: var(--fs-2);
+}
+
+.publish td {
+  vertical-align: top;
+}
+
+/* 出包失败的原因——跟在标题下面，一眼看得到。 */
+.publish__reason {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: var(--fs-1);
+}
+</style>

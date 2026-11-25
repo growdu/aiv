@@ -100,3 +100,46 @@ onBeforeUnmount(close);
     </template>
   </section>
 </template>
+
+<style scoped>
+.job {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.job h2 {
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-4);
+}
+
+.job p {
+  color: var(--text-2);
+  font-size: var(--fs-2);
+  margin-bottom: var(--sp-2);
+}
+
+/* 退出码：原始的那个数，别被标签盖过去。 */
+.job span[data-test="exit"] {
+  margin-left: var(--sp-2);
+  padding: 1px var(--sp-2);
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+}
+
+/* 日志：一块等宽的底稿。 */
+.job pre {
+  max-height: 320px;
+  overflow: auto;
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--r-1);
+  color: var(--text-2);
+  font-size: var(--fs-1);
+}
+</style>

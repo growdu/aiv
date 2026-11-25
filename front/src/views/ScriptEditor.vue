@@ -56,7 +56,7 @@ function onSave(): void {
       <span class="editor__kind">{{ unit.kind }}</span>
     </header>
 
-    <p v-for="name in names" :key="`note-${name}`" class="editor__note">
+    <p v-for="name in names" :key="`note-${name}`" class="editor__note" v-show="noteFor(name)">
       {{ noteFor(name) }}
     </p>
 
@@ -75,6 +75,7 @@ function onSave(): void {
       <!-- 索引页与合集稿**不过审**——按钮压根不渲染。 -->
       <button
         v-if="unit.promotable"
+        class="btn--primary"
         data-test="promote"
         type="button"
         @click="emit('promote')"
@@ -85,3 +86,78 @@ function onSave(): void {
     </footer>
   </section>
 </template>
+
+<style scoped>
+.editor {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.editor__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.editor__head h2 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-3);
+  word-break: break-all;
+}
+
+/* 形态标签：一枚小徽章。 */
+.editor__kind {
+  flex: none;
+  padding: 1px var(--sp-2);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-hover);
+  font-size: var(--fs-1);
+}
+
+/* 文件名旁边的说明——一句话摆清楚，别让人猜。 */
+.editor__note {
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--info-soft);
+  border-bottom: 1px solid var(--border);
+  color: var(--info);
+  font-size: var(--fs-2);
+}
+
+.editor__file {
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.editor__file h4 {
+  margin-bottom: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+  color: var(--text-2);
+}
+
+.editor__file textarea {
+  min-height: 220px;
+  background: var(--surface-2);
+}
+
+.editor__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--surface-2);
+}
+
+.editor__reason {
+  color: var(--text-3);
+  font-size: var(--fs-2);
+}
+</style>

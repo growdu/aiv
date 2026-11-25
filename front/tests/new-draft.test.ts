@@ -125,6 +125,20 @@ describe("NewDraftForm", () => {
     });
   });
 
+  it("层没填全时不摆坐标——不摆一个残缺的", async () => {
+    const wrapper = mount(NewDraftForm, { props: { kind: "episode", options } });
+    // 一层都没填，只选了档位。
+    await wrapper.find("[data-test='select-tier']").setValue("short");
+    expect(wrapper.find("[data-test='preview']").exists()).toBe(false);
+
+    await pick(wrapper, 0, "AIV");
+    await pick(wrapper, 1, "合集");
+    await pick(wrapper, 2, "文档");
+    expect(wrapper.find("[data-test='preview']").text()).toBe(
+      "drafts/_video/AIV/合集/文档/short",
+    );
+  });
+
   it("坐标没填全就不许提交", async () => {
     const wrapper = mount(NewDraftForm, { props: { kind: "document", options } });
     await pick(wrapper, 0, "distributed");

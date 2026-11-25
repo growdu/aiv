@@ -82,3 +82,152 @@ const counts = computed(() => props.report?.counts ?? { error: 0, warn: 0, info:
     </template>
   </section>
 </template>
+
+<style scoped>
+.review {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.review__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.review__head h2 {
+  font-size: var(--fs-4);
+}
+
+.review__head p {
+  color: var(--text-3);
+  font-size: var(--fs-2);
+}
+
+/* 门禁状态：不是信号说了算，是审校记录的状态。 */
+.review__gate--blocking {
+  display: inline-block;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-1);
+  background: var(--error-soft);
+  border: 1px solid #f2cfcb;
+  color: var(--error);
+  font-size: var(--fs-2);
+}
+
+.review__counts {
+  display: flex;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0;
+}
+
+.review__counts span {
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: var(--fs-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.review__signals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+/* 一条信号：左边一竖条，颜色就是严重程度。 */
+.review__signals li {
+  border-left: 3px solid var(--border-strong);
+  padding: var(--sp-2) 0 var(--sp-2) var(--sp-3);
+}
+
+.review__signals li[data-severity="error"] {
+  border-left-color: var(--error);
+}
+
+.review__signals li[data-severity="warn"] {
+  border-left-color: var(--warn);
+}
+
+.review__signals li[data-severity="info"] {
+  border-left-color: var(--info);
+}
+
+.review__signals button {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+  padding: 2px var(--sp-1);
+}
+
+.review__signals button:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: transparent;
+}
+
+/* 严重程度：既给颜色也给词——不能只靠颜色。 */
+.review__severity {
+  flex: none;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-1);
+  font-size: var(--fs-1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+li[data-severity="error"] .review__severity {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+li[data-severity="warn"] .review__severity {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+li[data-severity="info"] .review__severity {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.review__rule {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--text);
+}
+
+.review__target {
+  color: var(--text-3);
+  font-size: var(--fs-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 摘录：原样摆出来，不改写。 */
+.review__excerpt {
+  margin-top: var(--sp-1);
+  padding: var(--sp-2);
+  background: var(--surface-2);
+  border-radius: var(--r-1);
+  color: var(--text-2);
+  font-size: var(--fs-1);
+}
+
+.review__detail {
+  margin-top: var(--sp-1);
+  color: var(--text-3);
+  font-size: var(--fs-1);
+}
+</style>

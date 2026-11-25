@@ -85,6 +85,15 @@ describe("DraftPicker", () => {
     expect(wrapper.find("[data-test='unit-distributed/_index']").exists()).toBe(true);
   });
 
+  it("当前选中的那一行标出来", async () => {
+    const wrapper = mount(DraftPicker, {
+      props: { units, selected: "distributed/a" },
+    });
+    const active = wrapper.findAll(".picker__item--active");
+    expect(active.length).toBe(1);
+    expect(active[0].attributes("data-test")).toBe("unit-distributed/a");
+  });
+
   it("选一行发 select，新建发 create", async () => {
     const wrapper = mount(DraftPicker, { props: { units } });
     await wrapper.find("[data-test='unit-distributed/a']").trigger("click");

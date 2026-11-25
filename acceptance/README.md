@@ -93,7 +93,7 @@
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
 | 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
 | 11 | `cd api && python3 -m pytest tests/ -q` | 创作平台门面：路由形状、作业与 SSE、审校面板的数据模型、**过审只复制**、目录穿越、**坐标选项**、**深一层的扁平稿**、**端到端六场景** | 132 passed | 132 passed |
-| 12 | `cd front && npm run test` | 创作平台前端：**零 import 缝**、身份守卫、草稿箱与编辑器、审校面板、产物与作业、**新建表单**、**门面接线** | 31 passed | 31 passed |
+| 12 | `cd front && npm run test` | 创作平台前端：**零 import 缝**、身份守卫、草稿箱与编辑器、审校面板、产物与作业、**新建表单**、**门面接线**、**两栏工作台** | 34 passed | 34 passed |
 
 ### 创作平台的手测记录（2026-11-23）
 
@@ -214,6 +214,24 @@
 > **实测**：api **132 passed**、front **31 passed**、根 **162 / 3 skip**、
 > `npm run build` 通过；真浏览器手测走通「三层坐标 → 建 → 落盘 → 自动选中 →
 > 打开编辑器」，手测产物已删。
+
+> 2026-11-25（界面样式那轮）：`front/` 之前**一行 CSS 都没有**——
+> 只有 BEM 式的 class 名，浏览器里渲染的是浏览器默认控件。这轮补上
+> **设计 token 层**（`front/src/styles/tokens.css`：颜色/间距/圆角/字体/
+> 控件基线）与**两栏工作台**布局（顶栏 + 左栏草稿箱 + 右栏编辑与审校，
+> 窄屏叠成一栏）。class 名沿用原有的 BEM，**没改组件结构**。
+> **手测查出来并修掉的四处**：
+> 1. `ScriptEditor` 对**没有说明的文件**渲染了一条**空的蓝条**（`v-show` 收掉）；
+> 2. 侧栏一屏索引页各挂一句**同样的「不过审」理由**，刷屏——收成
+>    **悬停或选中才展开**，完整的话在 `title` 里；
+> 3. 选中的那一稿在列表里**看不出来**——加了 `picker__item--active`；
+> 4. 新建表单**层没填全时仍摆一个残缺的坐标**（`drafts/_video/short`）——
+>    `draftId` 改成「层数对不上就没有坐标」。
+> **新测试**：`front/tests/app.test.ts`（+1 条：两栏工作台的结构）、
+> `front/tests/drafts.test.ts`（+1 条：选中态）、`front/tests/new-draft.test.ts`
+> （+1 条：层没填全不摆坐标）。
+> **实测**：front **34 passed**、api **132 passed**、根 **162 / 3 skip**、
+> `npm run build` 通过；真浏览器在 1440×960 与 430×900 两档都看过。
 
 > 2026-11-23（字体覆盖与通用渲染器基准那轮）：**video 1294 → 1338 条**
 > （passed 1234 → 1280，skip 60 → 58）——计划四（`publish/plans/12-…`）落地。

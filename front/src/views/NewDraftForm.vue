@@ -92,9 +92,11 @@ function setManualLevel(level: number, value: string): void {
   levels.value[level] = value;
 }
 
-/** 拼出来的坐标。 */
+/** 拼出来的坐标。**填不满就不给**——不摆一个残缺的地址。 */
 const draftId = computed(() => {
   const parts = levels.value.map((part) => part.trim());
+  // 层数对不上（还没选完 / 还有空层）→ 没有坐标。
+  if (parts.length !== levelCount.value) return "";
   if (parts.some((part) => part.length === 0)) return "";
   if (props.kind === "episode") {
     return tier.value ? ["_video", ...parts, tier.value].join("/") : "";
@@ -171,9 +173,77 @@ function submit(): void {
 
     <p v-if="draftId" data-test="preview">drafts/{{ draftId }}</p>
 
-    <button data-test="submit" type="button" :disabled="!valid" @click="submit">
+    <button
+      class="btn--primary"
+      data-test="submit"
+      type="button"
+      :disabled="!valid"
+      @click="submit"
+    >
       创建
     </button>
-    <button data-test="cancel" type="button" @click="emit('cancel')">取消</button>
+    <button class="btn--ghost" data-test="cancel" type="button" @click="emit('cancel')">
+      取消
+    </button>
   </section>
 </template>
+
+<style scoped>
+.new-draft {
+  background: var(--surface);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.new-draft h2 {
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-4);
+}
+
+/* 策展提醒：淡一点，但它得在那儿。 */
+.new-draft__note {
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--warn-soft);
+  border-radius: var(--r-1);
+  color: var(--warn);
+  font-size: var(--fs-2);
+}
+
+/* 一层一行：标签在左，控件在右。 */
+.new-draft__level {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
+.new-draft__level > span {
+  color: var(--text-2);
+  font-size: var(--fs-2);
+  text-align: right;
+}
+
+/* 拼出来的坐标——等宽，摆在那儿给你看。 */
+.new-draft p[data-test="preview"] {
+  margin: var(--sp-3) 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--r-1);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+  word-break: break-all;
+}
+
+.new-draft button {
+  font-size: var(--fs-2);
+}
+
+.new-draft button[data-test="cancel"] {
+  margin-left: var(--sp-2);
+}
+</style>

@@ -185,56 +185,166 @@ onMounted(() => {
 </script>
 
 <template>
-  <main>
-    <h1>创作平台</h1>
+  <div class="shell">
+    <!-- 顶栏：只是门面的名字，不是站名——身份在缝里。 -->
+    <header class="shell__bar">
+      <h1 class="shell__title">创作平台</h1>
+      <p class="shell__sub">草稿箱 · 审校 · 产物 · 出包</p>
+    </header>
 
-    <DraftPicker
-      :units="units"
-      @select="select"
-      @create="create"
-      @draft="aiDraft"
-    />
+    <!-- 一条消息占满一整行——出错时它得在哪儿都看得见。 -->
+    <p v-if="message" class="flash" data-test="message">{{ message }}</p>
 
-    <NewDraftForm
-      v-if="newKind && options"
-      :kind="newKind"
-      :options="options"
-      @submit="submitDraft"
-      @cancel="newKind = null"
-    />
+    <div class="shell__body">
+      <aside class="shell__side" data-test="side">
+        <DraftPicker
+          :units="units"
+          :selected="selected?.draft_id ?? null"
+          @select="select"
+          @create="create"
+          @draft="aiDraft"
+        />
+      </aside>
 
-    <p v-if="message" data-test="message">{{ message }}</p>
-    <ol v-if="manualSteps.length" data-test="manual-steps">
-      <li v-for="step in manualSteps" :key="step">{{ step }}</li>
-    </ol>
+      <main class="shell__main" data-test="main">
+        <ol v-if="manualSteps.length" class="steps" data-test="manual-steps">
+          <li v-for="step in manualSteps" :key="step">{{ step }}</li>
+        </ol>
 
-    <ScriptEditor
-      v-if="selected"
-      :unit="selected"
-      :files="files"
-      @save="save"
-      @promote="promote"
-    />
+        <NewDraftForm
+          v-if="newKind && options"
+          :kind="newKind"
+          :options="options"
+          @submit="submitDraft"
+          @cancel="newKind = null"
+        />
 
-    <ReviewPanel
-      :report="report"
-      :busy="reviewing"
-    />
+        <ScriptEditor
+          v-if="selected"
+          :unit="selected"
+          :files="files"
+          @save="save"
+          @promote="promote"
+        />
 
-    <VideoPreview
-      v-if="selected && selected.kind === 'episode'"
-      :episode="(motherSubject(selected) ?? { id: '' }).id"
-      @build="build"
-    />
+        <ReviewPanel
+          :report="report"
+          :busy="reviewing"
+        />
 
-    <DocPreview
-      v-if="selected && selected.kind === 'document'"
-      :doc-id="(motherSubject(selected) ?? { id: '' }).id"
-      @rebuild="rebuild"
-    />
+        <VideoPreview
+          v-if="selected && selected.kind === 'episode'"
+          :episode="(motherSubject(selected) ?? { id: '' }).id"
+          @build="build"
+        />
 
-    <JobLog :job-id="jobId" />
+        <DocPreview
+          v-if="selected && selected.kind === 'document'"
+          :doc-id="(motherSubject(selected) ?? { id: '' }).id"
+          @rebuild="rebuild"
+        />
 
-    <PublishStatus :snapshots="snapshots" />
-  </main>
+        <JobLog :job-id="jobId" />
+
+        <PublishStatus :snapshots="snapshots" />
+      </main>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+/* 工作台：**两栏**。
+ *
+ * 左栏是草稿箱（平台的入口），右栏是这一稿的内容。
+ * 窄屏时两栏叠起来——手机上先看稿子。
+ */
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.shell__bar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.shell__title {
+  font-size: var(--fs-5);
+  letter-spacing: 0.01em;
+}
+
+.shell__sub {
+  color: var(--text-3);
+  font-size: var(--fs-1);
+}
+
+/* 一条消息 */
+.flash {
+  padding: var(--sp-2) var(--sp-5);
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--accent-border);
+  color: var(--accent-hover);
+  font-size: var(--fs-2);
+}
+
+.shell__body {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  align-items: start;
+  flex: 1;
+}
+
+.shell__side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.shell__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding: var(--sp-5);
+  min-width: 0;
+}
+
+/* 欠你的手工步骤——一份待办清单。 */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-6);
+  background: var(--warn-soft);
+  border: 1px solid #f0dcc0;
+  border-radius: var(--r-2);
+  color: var(--warn);
+  font-size: var(--fs-2);
+}
+
+.steps li {
+  list-style: decimal;
+}
+
+@media (max-width: 900px) {
+  .shell__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shell__side {
+    position: static;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+</style>
