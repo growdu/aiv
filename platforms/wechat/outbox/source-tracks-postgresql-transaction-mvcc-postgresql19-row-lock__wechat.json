@@ -1,0 +1,13 @@
+{
+  "automation": "api_draft",
+  "content_id": "source-tracks/postgresql/transaction-mvcc/postgresql19-row-lock",
+  "kind": "document",
+  "package_dir": "",
+  "platform": "wechat",
+  "published_url": null,
+  "reason": "已进草稿箱，待人工在公众号后台发表",
+  "retryable": false,
+  "status": "drafted",
+  "title": "行锁：一次 UPDATE 加锁、等待与唤醒",
+  "updated_at": "2026-11-25T08:03:20+00:00"
+}

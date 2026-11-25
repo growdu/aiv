@@ -1,0 +1,11 @@
+{
+  "automation": "manual",
+  "content_id": "source-tracks/postgresql/transaction-mvcc/postgresql19-row-lock",
+  "package_dir": "platforms/toutiao/out/source-tracks-postgresql-transaction-mvcc-postgresql19-row-lock",
+  "platform": "toutiao",
+  "published_url": null,
+  "reason": "manual 档：账号暂无开放平台 API 权限，已出包待人工上传",
+  "status": "packaged",
+  "title": "行锁：一次 UPDATE 加锁、等待与唤醒",
+  "updated_at": "2026-11-25T03:02:45-05:00"
+}
