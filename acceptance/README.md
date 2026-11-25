@@ -79,7 +79,9 @@
 数字是 **2026-11-23**（站点以 hexo+matery 为准）**逐条单独跑**量出来的。
 **归位之后，总数必须与合并跑时一致**——少一条就是某条用例消失了，
 多一条就是某个目录被收集了两次。
-站点那一行是 **2026-11-25** 重测的（+3 条相对链接守卫，其余各行沿用 11-23 的实测值）。
+**12 行都在 2026-11-25 重测过一遍**：wechat 521 → **523**、
+browser 那行的「64 skipped」其实是 **64 errors**（这台机器上没有可连的
+浏览器驱动，基线里就红着）、站点 **+3 条**相对链接守卫；其余各行与 11-23 相同。
 
 | # | 命令（各自在模块目录里跑） | 跑的是什么 | Expected | 实测 |
 | --- | --- | --- | --- | --- |
@@ -87,12 +89,12 @@
 | 2 | `cd platforms/blog/site && npm run build && python3 -m pytest tests/ -q` | 站点：身份通用性、地址形状、学习流归属、死链、页面齐全、首页一屏、目录页渲染、URL 跳转、**相对链接翻译** | 129 passed | 129 passed |
 | 3 | `cd publish && python3 -m pytest tests/ -q` | publish 契约层：内容契约、能力模型、发布清单、调度、退出码 | 356 passed / 1 skipped | 356 passed / 1 skipped |
 | 4 | `cd platforms/toutiao && python3 -m pytest tests/ -q` | 头条 adapter：切片、出包、草稿箱 | 399 passed / 2 skipped | 399 passed / 2 skipped |
-| 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 521 passed / 1 skipped | 521 passed / 1 skipped |
+| 5 | `cd platforms/wechat && python3 -m pytest tests/ -q` | 微信 adapter：同上 | 523 passed / 1 skipped | 523 passed / 1 skipped |
 | 6 | `cd platforms/douyin && python3 -m pytest tests/ -q` | 抖音 adapter：出包不带上站外地址、无品牌导流版、档位闸 | 117 passed | 117 passed |
 | 7 | `cd video/pipeline && python3 -m pytest tests/ -q` | 视频流水线：自己的套件 | 1280 passed / 58 skipped | 1280 passed / 58 skipped |
 | 8 | `cd platforms/bilibili && python3 -m pytest tests/ -q` | B站 adapter：出包、条件必填、状态回填 | 77 passed | 77 passed |
 | 9 | `cd platforms/channels && python3 -m pytest tests/ -q` | 视频号 adapter：同上 | 59 passed | 59 passed |
-| 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 skipped | 1 failed / 99 passed / 64 skipped |
+| 10 | `cd browser && python3 -m pytest tests/ -q` | 发布执行器：浏览器流程的形状 | 1 failed / 99 passed / 64 errors | 1 failed / 99 passed / 64 errors |
 | 11 | `cd api && python3 -m pytest tests/ -q` | 创作平台门面：路由形状、作业与 SSE、审校面板的数据模型、**过审只复制**、目录穿越、**坐标选项**、**深一层的扁平稿**、**端到端六场景** | 132 passed | 132 passed |
 | 12 | `cd front && npm run test` | 创作平台前端：**零 import 缝**、身份守卫、草稿箱与编辑器、审校面板、产物与作业、**新建表单**、**门面接线**、**两栏工作台** | 34 passed | 34 passed |
 
