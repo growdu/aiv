@@ -65,12 +65,26 @@ src: source-tracks/postgresql/getting-started/postgresql19-architecture.md
     - 建议：原文「锁有三级（表级、行级、页级），但加锁的入口只有一个」改成「表级锁走 heavyweight lock 那一套……但**行级锁是两段**——谁锁住了这一行，记在元组头里；而一个 UPDATE 真正在等的那把锁，是对方事务的 `transactionid` 锁，不是行锁本身。」
     - 原因：这是全篇最该被读者记住的一句，写错了代价最大。三处都要说清：**行锁的「真值」在元组头**——`t_xmax` 加 `HEAP_XMAX_EXCL_LOCK` / `HEAP_XMAX_KEYSHR_LOCK` / `HEAP_XMAX_LOCK_ONLY` 标志位（`src/include/access/htup_details.h:218-224`）；**排队号牌是另一把锁**——`LOCKTAG_TUPLE`，`LockTuple()`（`src/backend/storage/lmgr/lmgr.c:562`）拿的，用完就放（`README.tuplock:191`）；**真正阻塞的是对方事务的锁**——`XactLockTableWait()`（`src/backend/storage/lmgr/lmgr.c:663`）去拿 `LOCKTAG_TRANSACTION` 的 `ShareLock`，`dontWait=false`，会一路走到 `ProcSleep`。原句把行锁当成一把锁、又把加锁入口说成只有一个，读者照着它去找 `LockAcquire` 会扑空；页级的 heavyweight lock 倒是有——`LOCKTAG_PAGE`（`src/include/storage/locktag.h:40`）配 `LockPage()`——但全树只有 GIN 拿它锁元页（`src/backend/access/gin/ginfast.c:815`）。
 
+11. 位置：`## 内核的七块`（标题、首段「是七块」）与 `## 小结与延伸` 的「归成七块」
+    - 问题（类别）：事实
+    - 建议：全部改成「**六块**」，并把分组图拆成两张
+    - 原因：分组表只有**六行**，逐目录对数也对得上——请求进来 4 个（parser / rewrite / optimizer / nodes）、把计划做出来 3 个、数据落在哪 4 个（access / storage / catalog / partitioning）、谁来跑 3 个、通用设施 3 个（utils / lib / port）、剩下 11 个，合计 28；六行的行数相加也正好是 1 161 472。原稿写「七块」，是**句子跟表对不上**——与第 1 条那处「26 个目录」同一类错误，通读时最容易蒙过去。原配图只画了五块、且第四块的标题（「把话变成计划」）跟表里的行名（「请求进来」）还不一样，两处一起改：图拆成两张（14 个框 + 14 个框，都在 15 框的上限内），框名改成跟表一致。
+12. 位置：全篇措辞（「顶层只分三摊」「中间是五站」等）
+    - 问题（类别）：措辞
+    - 建议：自造的分类单位改成现成的说法
+    - 原因：作者点名「三摊」不是计算机里的术语。读者在句子里遇到一个没有公认定义的词，只能从上下文反推作者想数什么——这是 [`review/specs/2026-11-24-术语纪律与反造词.md`](../specs/2026-11-24-术语纪律与反造词.md) 说的第一类造词。已改的八处：「三摊」→「三类」「五站」→「五个环节」（四处连用）→「防呆门」→「防呆检查」「版本门」→「版本检查」「落地过程」→「装进系统目录」「底子」→「跨平台那层代码」「试金石」→「最直接的办法」「哪扇门通往哪一间屋子」→「哪个目录归哪一块」。判据本身不放松：`rules/terminology.json` 的 `banned` 收了「三摊」——子串匹配只能收整词，「拿一个字当分类单位」这个**类别**仍然靠人判。
+13. 位置：`## 源码树` 首段与 `## 怎么验证`
+    - 问题（类别）：事实
+    - 建议：把源码树钉到提交号 `20d6f4a`（2026-11-24 的分支头），并说明行数只在干净 checkout 上成立
+    - 原因：`REL_19_STABLE` 是**活的分支**——文章写的是「源码取自 `REL_19_STABLE` 分支」，读者下周 checkout 到的行号就对不上了。另一个坑：构建过的树里多出 37 个生成文件（`gram.c`、`copyfuncs.funcs.c`、`nodetags.h` 等），加起来约 145 000 行，同一条 `find … | wc -l` 在两种树上给出 1 161 472 与 1 306 452 两个数。所以「怎么验证」那节补了两条命令，并写清这个数得在干净树上量。
+
 ## 事实待核
 
-- [x] `src/backend/` 下是 **28** 个子目录、`.c` 与 `.h` 合计 **1 161 472** 行——依据：`ls -d src/backend/*/ | wc -l` = 28；`find src/backend -name '*.c' -o -name '*.h' | xargs wc -l | tail -1` = 1161472。分组表六行相加也是 1 161 472：163 828 + 206 996 + 289 998 + 67 881 + 305 688 + 127 081。
+- [x] `src/backend/` 下是 **28** 个子目录、`.c` 与 `.h` 合计 **1 161 472** 行——依据：`ls -d src/backend/*/ | wc -l` = 28；在 `20d6f4a` 的干净 checkout 上 `find src/backend \( -name '*.c' -o -name '*.h' \) -type f -print0 | xargs -0 cat | wc -l` = 1161472。分组表六行相加也是 1 161 472：163 828 + 206 996 + 289 998 + 67 881 + 305 688 + 127 081。**这个数只在干净树上成立**：构建过的树里另有 37 个生成文件（`gram.c`、`copyfuncs.funcs.c`、`nodetags.h` 等，约 145 000 行），同一条命令会给出 1 306 452。
+- [x] 分组是**六块**不是七块——依据：分组表六行，逐目录对数 4 + 3 + 4 + 3 + 3 + 11 = 28；六行行数相加 = 1 161 472。原稿写「七块」，与表对不上。
 - [x] 三大目录的代码量：`utils/` = 297 115、`access/` = 165 968、`commands/` = 114 136——依据：逐目录 `find … | xargs wc -l`。三者合计 577 219，占 1 161 472 的 **49.70%**。
 - [x] `access/` 下七个访问方法 = `heap`、`nbtree`、`hash`、`gist`、`spgist`、`brin`、`gin`——依据：`ls -d src/backend/access/*/`。另有 `table/`、`index/`、`transam/`。原稿把 B-tree 目录写成 `btree/`，已改。
-- [x] `src/bin/` 下是 **21** 个可执行程序（目录 22 个，其中一个是 `scripts/`）——依据：`ls -d src/bin/*/ | wc -l` = 22，去掉 `scripts`。
+- [x] `src/bin/` 顶层是 **21** 个可执行程序目录，`src/bin/scripts/` 里另有 **8** 个客户端小工具（`createdb`、`createuser`、`dropdb`、`dropuser`、`clusterdb`、`reindexdb`、`vacuumdb`、`pg_isready`）——依据：`ls -d src/bin/*/ | wc -l` = 22，逐个目录读 `Makefile` 的 `PROGAMS`。原文只写「共 21 个」，`scripts/` 里那 8 个程序被漏掉了。
 - [x] `src/interfaces/` 下是 `libpq`、`ecpg`、`libpq-oauth` 三个目录；`libpq-oauth` 是 19 新增的可选模块，实现 OAuth 设备授权流程——依据：`src/interfaces/libpq-oauth/README`。
 - [x] 进程类型是 **18** 条 `PG_PROCTYPE` 宏，其中 `B_INVALID` 是第 0 项哨兵，实际类型 **17** 种——依据：`src/include/postmaster/proctypelist.h`（`grep -c "^PG_PROCTYPE"` = 18，逐条读出 `B_INVALID = 0`）；`src/include/miscadmin.h:340` 的 `typedef enum BackendType`。
 - [x] `backend_type` 的取值就是 `proctypelist.h` 第三列的 description——依据：18 条宏逐条读过，取值如 `client backend`、`background writer`、`walwriter`、`archiver`、`startup`、`io worker`、`slot sync worker`、`syslogger`、`walreceiver`、`walsummarizer`、`checkpointer`、`autovacuum launcher`、`autovacuum worker`、`dead-end client backend`、`standalone backend`。
@@ -109,6 +123,7 @@ src: source-tracks/postgresql/getting-started/postgresql19-architecture.md
 - 第九处之后又改了第十处（预告第二篇的那段）：「锁有三级……加锁的入口只有一个」改成「表级锁走 heavyweight lock 那一套……但行级锁是两段——谁锁住了这一行，记在元组头里；而一个 UPDATE 真正在等的那把锁，是对方事务的 `transactionid` 锁，不是行锁本身。」这一处是**合入后才发现的**——初稿把行锁当成一把锁、又把加锁入口说成只有一个，读者照着这句去找 `LockAcquire` 会扑空。改这一句时还改过一版更粗的（「行级锁不走 heavyweight lock 那一套」），复核源码后才发现行锁其实是三样东西（元组头里的真值、`LOCKTAG_TUPLE` 号牌、`LOCKTAG_TRANSACTION` 阻塞点），最后按第三版定稿。
 - 补了一段说明十八条 `PG_PROCTYPE` 与十七种进程的差（`B_INVALID` 是第 0 项哨兵），补在十七行进程表之后。
 - 三张目录页（`docs/source-tracks/postgresql/_index.md`、`docs/source-tracks/postgresql/getting-started/_index.md`，以及随之更新的 `drafts/` 那两份）**与这篇文章一起过审**：目录页只能列已过审的内容，两张页原先指向的是 11-24 撤下的那两篇稿子，现在改指这一篇。`docs/source-tracks/_index.md` 不需要改——它只指向「PostgreSQL」这个二级目录。
-- 机械检查：`python3 tools/review-check.py drafts/source-tracks/postgresql/getting-started/postgresql19-architecture.md` → **0 警告 0 提示**，技术深度五要素全过（DEP-01=28、DEP-02=47、DEP-03=7、DEP-04=6、DEP-05=5）。目录页按文件名分流，只查链接、拼写、H1 与图示。
-- 12 张 mermaid 图全部走公众号出包那条路渲染（`platforms/wechat/mermaid.py` 的 `render_mermaid`），逐张看过，版式正确。
+- 机械检查：`python3 tools/review-check.py drafts/source-tracks/postgresql/getting-started/postgresql19-architecture.md` → **0 警告 0 提示**，技术深度五要素全过（DEP-01=28、DEP-02=47、DEP-03=7、DEP-04=6、DEP-05=7）。目录页按文件名分流，只查链接、拼写、H1 与图示。
+- 13 张 mermaid 图全部走公众号出包那条路渲染（`platforms/wechat/mermaid.py` 的 `render_mermaid`），逐张看过，版式正确。
+- **第二轮（作者点名「三摊」之后）**：①按术语纪律把自造词清了一遍，共改九处措辞（详见「优先修改」第 12 条）；②复核数字时发现「七块」与表对不上，改成六块，分组图拆成两张并让框名与表一致；③源码树钉到 `20d6f4a`，「怎么验证」补上目录数与行数两条命令，并写清行数只在干净 checkout 上成立（构建过的树里多 37 个生成文件）。这一轮改动同样先落 `drafts/`，再覆盖 `docs/`，两份逐字节一致；公众号草稿**就地更新**（media_id 不变），头条号重新出包。
 - 视频可行性：正文散文 7 431 字（去所有空白），按语速 7.19 字/秒算，full 档约 17 分钟；short 档压缩比约 17:1（限 100:1）、mid 档约 3.4:1（限 12:1）——三档都落在 `publish/spec/09-长视频三档.md` 的口径里。

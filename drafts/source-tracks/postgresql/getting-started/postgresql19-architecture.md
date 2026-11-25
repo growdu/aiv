@@ -34,16 +34,19 @@ topic: "PostgreSQL 19 的大模块划分、多进程模型与扩展机制"
 
 读完这篇应该能做完三件事：对着 `src/backend/` 的目录名说出它归哪一块；
 在 `pg_stat_activity` 里认出每一种后台进程；
-说清一个扩展从 `.control` 文件到系统目录的落地过程。
+说清一个扩展从 `.control` 文件到装进系统目录的过程。
 
 版本基准是 PostgreSQL 19，源码取自 `REL_19_STABLE` 分支，
 发布说明的落款日期是 2026-11-19（`doc/src/sgml/release-19.sgml`）。
-文里出现的文件与行号都对着这棵树核过。
+
+文里出现的文件与行号都对着这棵树核过——分支头是 `20d6f4a`（2026-11-24）。
+`REL_19_STABLE` 是活的分支，行号会随提交往前走，
+所以这里把提交号也写出来，方便对着核。
 
 边界也划在这里：**只讲结构，不展开单个机制的内部实现**——
 锁怎么加锁、WAL 怎么落盘、MVCC 怎么判断可见性，各归后面的阶段。
 
-## 源码树：先知道哪扇门通往哪间屋子
+## 源码树：先认目录名
 
 ```mermaid
 flowchart TB
@@ -59,50 +62,73 @@ flowchart TB
   X --> CT["contrib/"]
 ```
 
-顶层只分三摊。`src/backend/` 是内核本体，`src/include/` 是它的头文件，
-`src/port/` 与 `src/common/` 是跨平台的底子。
+`src/` 顶层分成三类：内核本体、对外接口、扩展与工具。
+`src/backend/` 是内核本体，`src/include/` 是它的头文件，
+`src/port/` 与 `src/common/` 是跨平台那层代码。
 
-`src/bin/` 放命令行程序（`psql`、`pg_dump`、`pg_ctl` 共 21 个），
+`src/bin/` 放命令行程序：顶层 21 个（`psql`、`pg_dump`、`pg_ctl`、`pgbench` 等），
+`src/bin/scripts/` 里另有 8 个客户端小工具（`createdb`、`dropdb`、`vacuumdb`、
+`pg_isready` 等）。
+
 `src/interfaces/` 放客户端库（`libpq` 与 `ecpg`，
 19 还多了一个可选的 `libpq-oauth` 模块，实现 OAuth 的设备授权流程）。
 
 `src/pl/` 放过程语言（`plpgsql`、`plpython`、`plperl`、`tcl`），
 `contrib/` 放官方随源码一起发的扩展。
 
-读源码的第一步不是打开某个 `.c` 文件，是先知道**哪扇门通往哪一间屋子**。
+读源码的第一步不是打开某个 `.c` 文件，是先知道**哪个目录归哪一块**。
 `src/backend/` 下的目录名基本就是职责名，这是一份现成的架构说明。
 
-## 内核的七块
+## 内核的六块
 
 `src/backend/` 一共 28 个子目录，`.c` 与 `.h` 加起来 116 万行。
-按职责归一归，是七块：
+按职责归一归，是六块：
 
 ```mermaid
 flowchart TB
-  subgraph E["通用设施"]
-    UT["utils/"]
-    LI["lib/"]
-  end
-  subgraph D["谁来跑"]
-    PM["postmaster/"]
-    RP["replication/"]
-    AR["archive/"]
-  end
-  subgraph C["数据落在哪"]
-    AC["access/"]
-    ST["storage/"]
-    CA["catalog/"]
+  subgraph A["请求进来"]
+    PA["parser/"]
+    RW["rewrite/"]
+    OP["optimizer/"]
+    NO["nodes/"]
   end
   subgraph B["把计划做出来"]
     EX["executor/"]
     CM["commands/"]
     TC["tcop/"]
   end
-  subgraph A["把话变成计划"]
-    PA["parser/"]
-    RW["rewrite/"]
-    OP["optimizer/"]
-    NO["nodes/"]
+  subgraph C["数据落在哪"]
+    AC["access/"]
+    ST["storage/"]
+    CA["catalog/"]
+    PT["partitioning/"]
+  end
+  subgraph D["谁来跑"]
+    PM["postmaster/"]
+    RP["replication/"]
+    AR["archive/"]
+  end
+```
+
+```mermaid
+flowchart TB
+  subgraph E["通用设施"]
+    UT["utils/"]
+    LI["lib/"]
+    PO["port/"]
+  end
+  subgraph F["剩下的"]
+    LQ["libpq/"]
+    SN["snowball/"]
+    TS["tsearch/"]
+    RG["regex/"]
+    SX["statistics/"]
+    JT["jit/"]
+    FG["foreign/"]
+    BK["backup/"]
+    BO["bootstrap/"]
+    MN["main/"]
+    PL["po/"]
   end
 ```
 
@@ -139,10 +165,10 @@ flowchart LR
   E --> R["返回结果"]
 ```
 
-一条 `SELECT` 从 socket 进来，到结果发回去，中间是五站。
-每一站对应一个目录：
+一条 `SELECT` 从 socket 进来，到结果发回去，中间是五个环节。
+每个环节对应一个目录：
 
-| 站 | 干什么 | 代码在哪 |
+| 环节 | 干什么 | 代码在哪 |
 | --- | --- | --- |
 | parse | 字符串变成语法树 | `src/backend/parser/gram.y` 生成的解析器 |
 | analyze | 语法树变成带类型和表信息的查询树 | `src/backend/parser/analyze.c` |
@@ -150,10 +176,10 @@ flowchart LR
 | plan | 查询树变成执行计划 | `src/backend/optimizer/`，产出入 `src/backend/nodes/` |
 | execute | 执行计划跑起来 | `src/backend/executor/execMain.c` |
 
-前四站都还在「想」阶段，第五站才真的碰数据。
-`EXPLAIN` 之所以能只给计划不给结果，就是因为它在第四站和第五站之间停住了。
+前四个环节都还在「想」阶段，第五个环节才真的碰数据。
+`EXPLAIN` 之所以能只给计划不给结果，就是因为它在第四个环节和第五个环节之间停住了。
 
-这条链上还有一处容易看漏：`commands/`（114 136 行）不在这五站里，
+这条链上还有一处容易看漏：`commands/`（114 136 行）不在这五个环节里，
 但 `CREATE TABLE`、`ALTER TABLE`、`CREATE INDEX` 全走它。
 换句话说，**DDL 不是 SQL 的特例，它是另一条路**——
 一路进 `parser/`，一路进 `commands/`。
@@ -399,11 +425,20 @@ SELECT name, size FROM pg_shmem_allocations ORDER BY name;
 校验代码与文档的说法对不对得上，可以直接查源码树：
 
 ```console
+$ ls -d src/backend/*/ | wc -l
+28
+$ find src/backend \( -name '*.c' -o -name '*.h' \) -type f -print0 | xargs -0 cat | wc -l
+1161472
 $ grep -c "^PG_SHMEM_SUBSYSTEM" src/include/storage/subsystemlist.h
 43
 $ grep -c "^PG_PROCTYPE" src/include/postmaster/proctypelist.h
 18
 ```
+
+一处细节：行数只算仓库里存着的源文件。构建过的树里还有 `gram.c`、
+`copyfuncs.funcs.c` 这类由 `gram.y`、`.funcs.c` 生成的文件——
+三十几个，加起来十几万行，不算在内。
+所以这个数得在 checkout 出来的干净树上量。
 
 ## 扩展点：代码挂在哪一层
 
@@ -474,7 +509,7 @@ PG_MODULE_MAGIC;
 里面记着 PostgreSQL 的版本号和编译期的关键参数。
 加载时的检查就是比对这份数据——版本对不上就报错，不加载。
 
-这是扩展与内核之间的一道防呆门：编译器 ABI 变了，
+这是扩展与内核之间的一道防呆检查：编译器 ABI 变了，
 老扩展不会被悄悄加载成错的东西，而是当场报一个明确的错。
 
 取舍很清楚：宁可加载失败，也不要加载成错的东西。
@@ -493,7 +528,7 @@ PG_MODULE_MAGIC;
 - `RegisterDynamicBackgroundWorker()`：运行时从普通后端调，
   进程立刻被拉起来。
 
-第三种是**动态共享内存加消息队列**，两个进程之间传数据用。
+进程层还能加上**动态共享内存加消息队列**，两个进程之间传数据用它。
 19 的 `REPACK CONCURRENTLY` 就是这么干的：
 
 ```mermaid
@@ -510,7 +545,7 @@ flowchart TB
 那个解码 worker 的入口是 `RepackWorkerMain`
 （`src/backend/commands/repack_worker.c:59`），
 它挂在动态共享内存段上，跟主会话用消息队列对话。
-**内核自己用上了扩展的那套接口**——这是判断「扩展机制是不是真的」的最好试金石。
+**内核自己用上了扩展的那套接口**——这是判断「扩展机制是不是真的」最直接的办法。
 
 ### contrib 里有什么
 
@@ -564,7 +599,7 @@ flowchart TB
 
 ## PostgreSQL 19 这次动了什么
 
-PostgreSQL 19 这一版的几处改动，正好落在前面讲的三块上。
+PostgreSQL 19 这一版的几处改动，正好落在前面讲的这几块上。
 
 **扩展这块**：新增了两个官方扩展。
 `pg_plan_advice` 用来稳定并控制优化器的决策，
@@ -588,7 +623,7 @@ PostgreSQL 19 这一版的几处改动，正好落在前面讲的三块上。
 
 这一篇给的是地图。三块各收一句：
 
-**模块**：内核按职责切成 28 个目录，归成七块。
+**模块**：内核按职责切成 28 个目录，归成六块。
 最大的三块是 `utils/`、`access/`、`commands/`——
 内存、锁、和「把 SQL 变成目录改动」占了内核一半以上的代码。
 
@@ -597,7 +632,7 @@ PostgreSQL 19 这一版的几处改动，正好落在前面讲的三块上。
 并行工作进程与逻辑复制进程都借用了后台工作进程这套接口。
 
 **扩展**：三个挂载点——系统目录（SQL 层）、
-可加载模块（C 层，带 `PG_MODULE_MAGIC` 版本门）、
+可加载模块（C 层，带 `PG_MODULE_MAGIC` 版本检查）、
 后台工作进程（进程层）。
 `contrib/` 有 55 个官方扩展，社区还有 PostGIS、pgvector、TimescaleDB 这一批。
 
@@ -610,7 +645,7 @@ PostgreSQL 19 这一版的几处改动，正好落在前面讲的三块上。
 而一个 UPDATE 真正在等的那把锁，是对方事务的 `transactionid` 锁，
 不是行锁本身。
 
-从这两条岔路分别读进去，能看清 PostgreSQL 的并发控制到底长什么样。
+从这两条岔路分别读进去，能看清 PostgreSQL 的并发控制长什么样。
 
 想自己核对的话，源码树拿 `REL_19_STABLE` 分支，
 关键入口是这几个：
