@@ -16,6 +16,7 @@ edge case.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -35,6 +36,23 @@ DEFAULT_BACKGROUND = "white"
 # scales images down to the body width, so the extra pixels survive.
 DEFAULT_SCALE = 2
 RENDER_TIMEOUT = 180
+
+#: Chrome flags mermaid-cli has to be given.
+#:
+#: mermaid-cli drives Chrome through puppeteer, and puppeteer takes its
+#: flags from a config file -- not from the environment.  Chrome refuses
+#: to start its sandbox as root, and a container's ``/dev/shm`` is often
+#: too small for it, so without these flags the browser dies with
+#: "Failed to launch the browser process!" and every diagram degrades
+#: to a source block.
+#:
+#: The same ``--no-sandbox`` is already used by ``chrome.py`` for the
+#: screenshot path, so this is one convention, not two.
+PUPPETEER_ARGS = (
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+)
 
 
 @dataclass(frozen=True)
@@ -79,6 +97,18 @@ def _summarize_error(stderr: str, stdout: str) -> str:
     return "mermaid-cli failed"
 
 
+def write_puppeteer_config(directory: Path) -> Path:
+    """Write the puppeteer config mermaid-cli should launch Chrome with.
+
+    The file lives next to the diagram source, so it is removed together
+    with the rest of the render output.
+    """
+    config = directory / "puppeteer-config.json"
+    config.write_text(
+        json.dumps({"args": list(PUPPETEER_ARGS)}), encoding="utf-8")
+    return config
+
+
 def default_runner(source: str, out_file: Path):
     """Render a diagram with mermaid-cli.
 
@@ -88,6 +118,7 @@ def default_runner(source: str, out_file: Path):
     out_file.parent.mkdir(parents=True, exist_ok=True)
     source_file = out_file.with_suffix(".mmd")
     source_file.write_text(source, encoding="utf-8")
+    config_file = write_puppeteer_config(out_file.parent)
 
     env = dict(os.environ)
     chrome = _find_chrome()
@@ -104,6 +135,7 @@ def default_runner(source: str, out_file: Path):
         "-w", str(DEFAULT_WIDTH),
         "-b", DEFAULT_BACKGROUND,
         "-s", str(DEFAULT_SCALE),
+        "-p", str(config_file),
     ]
     try:
         result = subprocess.run(

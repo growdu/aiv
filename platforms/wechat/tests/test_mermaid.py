@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from wechat.mdparse import parse
 from wechat.mermaid import _summarize_error, mermaid_key, render_mermaid
 
@@ -160,3 +162,51 @@ def test_the_browser_on_this_machine_is_handed_to_mermaid_cli(tmp_path, monkeypa
         assert "PUPPETEER_EXECUTABLE_PATH" not in captured["env"]
     else:
         assert captured["env"]["PUPPETEER_EXECUTABLE_PATH"] == expected
+
+
+def test_mermaid_cli_is_given_the_flags_chrome_needs_under_root(tmp_path, monkeypatch):
+    """Chrome 以 root 跑时不带 sandbox 参数会起不来。
+
+    mermaid-cli 通过 puppeteer 驱动 Chrome，而 puppeteer 的启动参数只从
+    配置文件读——不给，浏览器就报 "Failed to launch the browser process!"，
+    每张图都降级成源码块。所以命令行上必须有 ``-p``，指向一份写了
+    ``--no-sandbox`` 的配置文件。
+    """
+    import json
+
+    from wechat import mermaid as mermaid_module
+
+    captured = {}
+
+    class _Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        return _Result()
+
+    monkeypatch.setattr(mermaid_module.subprocess, "run", fake_run)
+
+    mermaid_module.default_runner("graph TD;\nA-->B;\n", tmp_path / "out.png")
+
+    command = captured["command"]
+    assert "-p" in command, "mermaid-cli 没拿到 puppeteer 配置文件"
+    config_path = Path(command[command.index("-p") + 1])
+    assert config_path.is_file(), "puppeteer 配置文件没写出来"
+
+    args = json.loads(config_path.read_text(encoding="utf-8"))["args"]
+    assert "--no-sandbox" in args, "puppeteer 配置里没有 --no-sandbox"
+    assert "--disable-dev-shm-usage" in args, (
+        "容器里的 /dev/shm 常常不够大，puppeteer 配置里缺 --disable-dev-shm-usage"
+    )
+
+
+def test_the_puppeteer_config_is_written_next_to_the_diagram(tmp_path):
+    """配置文件跟图源放一起——产物目录一清，两样一起没。"""
+    from wechat import mermaid as mermaid_module
+
+    config = mermaid_module.write_puppeteer_config(tmp_path)
+    assert config.parent == tmp_path
+    assert config.is_file()
